@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --theme-bg: #121212;
+  --theme-card: rgba(255, 255, 255, 0.04);
+  --theme-accent: #f8d66d;
+  --theme-muted: rgba(255, 255, 255, 0.08);
+  --theme-text: #f5f5f5;
+  --theme-text-muted: #a3a3a3;
+}
+
+[data-period="lunch"] {
+  --theme-accent: #7fb4ff;
+  --theme-muted: rgba(255, 255, 255, 0.09);
+}
+
+[data-period="dinner"] {
+  --theme-accent: #ffb347;
+  --theme-card: rgba(255, 255, 255, 0.06);
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+    background-color: #000;
+  }
+  body {
+    background-color: #000;
+    color: var(--theme-text);
+    @apply font-sans;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+}
+
+/* View Transitions API */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root) {
+    animation: theme-fade-out 0.4s ease-out forwards;
+  }
+  ::view-transition-new(root) {
+    animation: theme-fade-in 0.4s ease-out forwards;
+  }
+}
+
+@keyframes theme-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes theme-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Safe areas for mobile (notch, home indicator) */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Гарантированный чёрный экран (поверх сбросов Tailwind) */
+html,
+body {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+/* Промо-баннер: золотая пульсация кнопки «Перейти в канал» */
+@keyframes promo-btn-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px 2px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(255, 215, 0, 0.6);
+  }
+}
+
+.promo-btn-glow {
+  animation: promo-btn-glow 2s ease-in-out infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.promo-btn-glow:hover,
+.promo-btn-glow:active {
+  animation: none;
+  box-shadow: 0 0 24px 6px rgba(255, 215, 0, 0.65);
+  transform: scale(1.03);
+}

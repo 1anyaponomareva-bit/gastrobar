@@ -1,0 +1,35 @@
+# Все изображения лежат в папке public/menu/. Имена — строго как ниже (маленькие буквы, .png).
+
+# Логотип
+menu/logo_gastrobar.png
+
+# Акция
+menu/promo_happy_hour_ultra.png
+
+# Бар (11 напитков)
+menu/cocktail_b52_ultra.png
+menu/cocktail_aperol_ultra.png
+menu/cocktail_white_wine_ultra.png
+menu/cocktail_red_wine_ultra.png
+menu/cocktail_whisky_sour_ultra.png
+menu/cocktail_whisky_cola_ultra.png
+menu/cocktail_long_island_ultra.png
+menu/cocktail_boulevardier_ultra.png
+menu/cocktail_gin_tonic_ultra.png
+menu/cocktail_tincture_passion_ultra.png
+menu/cocktail_tincture_lemoncello_ultra.png
+
+# Меню (снэки первыми, затем блюда)
+menu/food_cheese_sticks_ultra.png
+menu/food_nuggets_ultra.png
+menu/snack_pistachios_ultra.png
+menu/snack_peanuts_ultra.png
+menu/food_dumplings_mixed_ultra.png
+menu/food_dumplings_chicken_ultra.png
+menu/food_dumplings_fried_mixed_ultra.png
+menu/food_dumplings_potato_mushroom_ultra.png
+menu/food_shrimp_tempura_ultra.png
+menu/food_wings_bbq_ultra.png
+menu/food_french_fries_ultra.png
+menu/food_potato_wedges_ultra.png
+menu/food_sausage_potato_ultra.png

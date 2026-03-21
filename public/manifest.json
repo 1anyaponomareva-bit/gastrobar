@@ -1,0 +1,10 @@
+{
+  "name": "GASTROBAR — Меню",
+  "short_name": "GASTROBAR",
+  "description": "Меню гастробара. Завтраки, обеды, ужин и бар.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12121a",
+  "theme_color": "#eab308",
+  "orientation": "portrait"
+}
