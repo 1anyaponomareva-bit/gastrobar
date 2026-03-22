@@ -5,24 +5,26 @@ import { motion, useMotionValue, animate } from "framer-motion";
 import {
   BONUS_WHEEL_FULL_TURNS,
   computeRotationTargetDegrees,
+  reconcileOutcomeWithRotation,
   type SpinOutcome,
   type WheelSegmentData,
 } from "@/lib/wheel";
 
-/** Только полное колесо в модалке; FAB использует другой файл (fab-wheel-reference.png). */
-const WHEEL_IMAGE_SRC = "/images/bonus-wheel.png";
+/** Полное колесо в модалке (12 секторов); FAB — отдельный файл. */
+const WHEEL_IMAGE_SRC = "/koleso.png";
 
 /** Размер колеса на экране (крупнее на телефоне). */
 const WHEEL_SIZE = "min(92vw, 400px)";
 
-/** Длительность одного спина — дольше = заметнее финальное замедление. */
-const SPIN_DURATION_SEC = 5.8;
+/** Длительность одного спина */
+const SPIN_DURATION_SEC = 5.5;
 
-/**
- * Ease-out: быстрый старт, долгое плавное замедление к стопу (стрелка «выбирает» сектор).
- * cubic-bezier с крутым началом и пологим концом.
- */
-const SPIN_EASE: [number, number, number, number] = [0.12, 0.78, 0.18, 1];
+/** Плавное замедление к стопу, без «рывков» — только вращение вокруг центра */
+const SPIN_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+/** Лёгкое покачивание до нажатия «Крутить» */
+const IDLE_WOBBLE_DEG = 1.8;
+const IDLE_DURATION_SEC = 5.2;
 
 type Props = {
   segments: readonly WheelSegmentData[];
@@ -46,7 +48,7 @@ function WheelImageFallback() {
       <p className="text-[11px] font-semibold uppercase leading-tight text-white/90 drop-shadow">
         Добавьте файл
         <br />
-        <span className="font-mono text-amber-200/90">public/images/bonus-wheel.png</span>
+        <span className="font-mono text-amber-200/90">public/koleso.png</span>
       </p>
     </div>
   );
@@ -66,6 +68,8 @@ export function WheelOfFortune({
   const lastRotationRef = useRef(0);
   const completedSessionRef = useRef<number | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
+
+  const idleEnabled = !spinActive && !isSpinning;
 
   const clearCompleted = useCallback(() => {
     completedSessionRef.current = null;
@@ -90,6 +94,7 @@ export function WheelOfFortune({
       sectorCount,
       BONUS_WHEEL_FULL_TURNS
     );
+    const snappedTarget = Math.round(target * 1000) / 1000;
 
     let cancelled = false;
 
@@ -100,8 +105,9 @@ export function WheelOfFortune({
         if (cancelled) return;
         if (completedSessionRef.current === sessionId) return;
         completedSessionRef.current = sessionId;
-        lastRotationRef.current = target;
-        onSpinComplete(outcome);
+        lastRotationRef.current = snappedTarget;
+        rotation.set(snappedTarget);
+        onSpinComplete(reconcileOutcomeWithRotation(outcome, snappedTarget));
       },
     });
 
@@ -113,7 +119,6 @@ export function WheelOfFortune({
 
   return (
     <div className="relative flex max-w-[100vw] flex-col items-center overflow-x-hidden px-1">
-      {/* Один контейнер: стрелка absolute — кончик на ободе крутящегося круга (не «в воздухе») */}
       <div
         className="relative mx-auto shrink-0"
         style={{
@@ -122,74 +127,87 @@ export function WheelOfFortune({
           maxWidth: "100%",
         }}
       >
+        {/* Круг: обрезка по окружности — колесо не «выкатывается» за край */}
         <div
-          className="pointer-events-none absolute left-1/2 z-30 w-[clamp(2rem,10vw,2.5rem)]"
-          style={{
-            /* Ниже верха блока: у PNG с object-contain обод визуально ниже края контейнера */
-            top: "clamp(0.4rem, 2.2vw, 0.85rem)",
-            transform:
-              "translate(-50%, calc(-100% + clamp(1.05rem, 6.5vw, 2rem)))",
-          }}
-          aria-hidden
-        >
-          <svg viewBox="0 0 40 28" className="h-auto w-full drop-shadow-md">
-            <path
-              d="M20 26 L4 4 Q20 -2 36 4 Z"
-              fill="#C4A35A"
-              stroke="rgba(0,0,0,0.35)"
-              strokeWidth="1"
-            />
-          </svg>
-        </div>
-
-        <div
-          className="relative z-10 flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/30"
+          className="relative isolate z-10 flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0a0a0a] ring-1 ring-white/10"
           style={{
             boxShadow: "0 12px 48px rgba(0,0,0,0.45)",
           }}
         >
-          {/* Обводка по границе клипа вращающегося круга (совпадает с motion.div) */}
-          <div
-            className="pointer-events-none absolute inset-0 z-[15] rounded-full border border-[rgba(196,163,90,0.35)]"
-            aria-hidden
-          />
-
+          {/* Лёгкое покачивание до спина; вращение спина внутри, относительно центра */}
           <motion.div
-            className="relative z-10 h-full w-full overflow-hidden rounded-full"
-            style={{
-              rotate: rotation,
-              transformOrigin: "50% 50%",
-              contain: "paint",
+            className="flex h-full w-full items-center justify-center"
+            style={{ transformOrigin: "50% 50%" }}
+            animate={
+              idleEnabled
+                ? { rotate: [0, IDLE_WOBBLE_DEG, 0, -IDLE_WOBBLE_DEG, 0] }
+                : { rotate: 0 }
+            }
+            transition={{
+              duration: IDLE_DURATION_SEC,
+              repeat: idleEnabled ? Infinity : 0,
+              ease: "easeInOut",
             }}
           >
-            {imageFailed ? (
-              <WheelImageFallback />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element -- локальный арт; при 404 показываем fallback
-              <img
-                src={WHEEL_IMAGE_SRC}
-                alt=""
-                width={400}
-                height={400}
-                decoding="async"
-                loading="eager"
-                className="block h-full w-full max-h-full max-w-full object-contain select-none"
-                draggable={false}
-                onError={() => setImageFailed(true)}
-              />
-            )}
+            <motion.div
+              className="relative h-full w-full overflow-hidden rounded-full"
+              style={{
+                rotate: rotation,
+                transformOrigin: "50% 50%",
+              }}
+            >
+              {imageFailed ? (
+                <WheelImageFallback />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- локальный арт; при 404 показываем fallback
+                <img
+                  src={WHEEL_IMAGE_SRC}
+                  alt=""
+                  width={400}
+                  height={400}
+                  decoding="async"
+                  loading="eager"
+                  className="block h-full w-full max-h-full max-w-full select-none object-contain object-center"
+                  draggable={false}
+                  onError={() => setImageFailed(true)}
+                />
+              )}
+            </motion.div>
           </motion.div>
 
+          {/* Клик по колесу — без круга и надписи поверх картинки */}
           <button
             type="button"
             onClick={() => {
               if (!isSpinning && allowedToSpin) onSpinClick();
             }}
             disabled={isSpinning || !allowedToSpin}
-            className="absolute left-1/2 top-1/2 z-30 flex h-[72px] w-[72px] max-h-[26%] max-w-[26%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-amber-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+            className={`absolute inset-0 z-20 rounded-full border-0 bg-transparent p-0 outline-none transition focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
+              isSpinning || !allowedToSpin
+                ? "cursor-not-allowed"
+                : "cursor-pointer"
+            }`}
             aria-label="Крутить колесо"
-            style={{ cursor: allowedToSpin && !isSpinning ? "pointer" : "default" }}
           />
+        </div>
+
+        {/* Стрелка ниже, кончик на ободе картинки */}
+        <div
+          className="pointer-events-none absolute left-1/2 z-40 w-[clamp(2rem,9vw,2.75rem)] -translate-x-1/2"
+          style={{
+            top: "clamp(10px, 3.5%, 20px)",
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.45))",
+          }}
+          aria-hidden
+        >
+          <svg viewBox="0 0 48 36" className="block h-auto w-full" preserveAspectRatio="xMidYMax meet">
+            <path
+              d="M24 34 L6 6 Q24 -1 42 6 Z"
+              fill="#d4a84b"
+              stroke="rgba(0,0,0,0.4)"
+              strokeWidth="1.25"
+            />
+          </svg>
         </div>
       </div>
     </div>

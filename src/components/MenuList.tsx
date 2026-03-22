@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useFavorites } from "@/components/FavoritesProvider";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
 import { useBarHome } from "@/components/BarHomeContext";
-import { CategoryTabs, type BarCategoryId, type MenuCategoryId } from "@/components/CategoryTabs";
+import { CategoryTabs, type BarCategoryId } from "@/components/CategoryTabs";
 import { MenuListItem } from "@/components/MenuListItem";
 import { MenuDetailView } from "@/components/MenuDetailView";
 import { PromoCarousel } from "@/components/PromoCarousel";
@@ -15,27 +15,23 @@ import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
 import type { MenuItem } from "@/data/menu";
 
 const HEADER_HEIGHT = 60;
-const TABS_HEIGHT = 58; // высота полосы табов (Все, Коктейли, ...)
-const TOP_BUFFER = 24; // зазор между табами и первой карточкой
-/** Высота spacer под хедер + табы (бар) или только под хедер (снеки) */
-const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER; // 142
-const MENU_LIST_TOP = HEADER_HEIGHT + TOP_BUFFER; // 84
-/** Нижний отступ списка: нижняя навигация (высота + bottom-4) + safe-area, чтобы последние карточки не перекрывались */
-const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))"; // ~112px + safe-area
+const TABS_HEIGHT = 58;
+const TOP_BUFFER = 24;
+const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
+const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
-function filterByCategory(
-  items: MenuItem[],
-  period: "bar" | "menu",
-  categoryId: BarCategoryId | MenuCategoryId
-): MenuItem[] {
-  if (period === "bar") {
-    const barItems = items.filter((i) => i.category === "cocktail");
-    if (categoryId === "all") return barItems;
-    return barItems.filter((i) => i.barSubcategory === categoryId);
+/** Напитки, затем снеки — как в MENU_ITEMS */
+function filterBarItems(items: MenuItem[], categoryId: BarCategoryId): MenuItem[] {
+  const drinks = items.filter((i) => i.category === "cocktail");
+  const foods = items.filter((i) => i.category === "food");
+
+  if (categoryId === "all") {
+    return [...drinks, ...foods];
   }
-  const menuItems = items.filter((i) => i.category === "food");
-  if (categoryId === "all") return menuItems;
-  return menuItems.filter((i) => i.menuSubcategory === categoryId);
+  if (categoryId === "snacks") {
+    return foods;
+  }
+  return drinks.filter((i) => i.barSubcategory === categoryId);
 }
 
 export function MenuList({ items }: { items: MenuItem[] }) {
@@ -47,20 +43,13 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   const savedScrollTop = useRef<number>(0);
 
   const [barCategory, setBarCategory] = useState<BarCategoryId>("all");
-  const [menuCategory, setMenuCategory] = useState<MenuCategoryId>("all");
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeBonus, setActiveBonus] = useState<ReturnType<typeof getActiveBonus>>(null);
   const bonusProductId = activeBonus && !isCategoryBonus(activeBonus.type) ? activeBonus.productId : null;
 
-  const categoryId = period === "bar" ? barCategory : menuCategory;
-  const setCategoryId = period === "bar" ? setBarCategory : setMenuCategory;
-
-  const filtered =
-    period === "bar" || period === "menu"
-      ? filterByCategory(items, period, categoryId)
-      : [];
+  const filtered = period === "bar" ? filterBarItems(items, barCategory) : [];
 
   const favoriteItems = useMemo(() => {
     if (period !== "favorites") return [];
@@ -72,7 +61,6 @@ export function MenuList({ items }: { items: MenuItem[] }) {
     setViewMode("list");
     setSelectedItem(null);
     setBarCategory("all");
-    setMenuCategory("all");
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [period]);
 
@@ -95,13 +83,12 @@ export function MenuList({ items }: { items: MenuItem[] }) {
 
   useEffect(() => {
     if (!pendingListCategory) return;
-    if ("bar" in pendingListCategory) setBarCategory(pendingListCategory.bar);
-    if ("menu" in pendingListCategory) setMenuCategory(pendingListCategory.menu);
+    setBarCategory(pendingListCategory.bar);
     clearPendingListCategory();
   }, [pendingListCategory, clearPendingListCategory]);
 
   useEffect(() => {
-    if (!highlightProductId || !scrollRef.current || (period !== "bar" && period !== "menu")) return;
+    if (!highlightProductId || !scrollRef.current || period !== "bar") return;
     const el = scrollRef.current.querySelector(`[data-product-id="${highlightProductId}"]`);
     if (el) {
       requestAnimationFrame(() => {
@@ -110,11 +97,9 @@ export function MenuList({ items }: { items: MenuItem[] }) {
     }
   }, [highlightProductId, period]);
 
-  /** Клик по логотипу: Бар + «Все» + закрыть карточку */
   useEffect(() => {
     if (barHomeToken === 0) return;
     setBarCategory("all");
-    setMenuCategory("all");
     setViewMode("list");
     setSelectedItem(null);
     savedScrollTop.current = 0;
@@ -175,7 +160,6 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                     key={item.id}
                     item={item}
                     index={index}
-                    period={item.category === "cocktail" ? "bar" : "menu"}
                     bonusProductId={bonusProductId}
                     highlightProductId={highlightProductId}
                     onClick={() => openDetail(item, index)}
@@ -197,32 +181,20 @@ export function MenuList({ items }: { items: MenuItem[] }) {
         </div>
       )}
 
-      {(period === "bar" || period === "menu") && (
+      {period === "bar" && (
         <>
           {viewMode === "list" && (
-            <motion.div
+            <div
               key="list"
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
               className="flex h-[100dvh] flex-col overflow-hidden bg-[#030303]"
             >
-              {/* Табы категорий только для Бара; в Снеках — только список */}
-              {period === "bar" && (
-                <div
-                  className="fixed left-0 right-0 z-[999]"
-                  style={{ top: HEADER_HEIGHT }}
-                >
-                  <CategoryTabs
-                    period={period}
-                    value={categoryId}
-                    onChange={(id) => setCategoryId(id as BarCategoryId & MenuCategoryId)}
-                  />
-                </div>
-              )}
+              <div
+                className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
+                style={{ top: HEADER_HEIGHT }}
+              >
+                <CategoryTabs value={barCategory} onChange={setBarCategory} />
+              </div>
 
-              {/* Список: spacer сверху, чтобы первая карточка не перекрывалась хедером и табами */}
               <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
@@ -236,14 +208,11 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                     paddingBottom: LIST_BOTTOM_PADDING,
                   }}
                 >
-                  {/* Spacer: резервирует место под фиксированные хедер и табы (бар) или только хедер (снеки) */}
                   <div
                     aria-hidden
                     className="shrink-0 bg-[#030303]"
                     style={{
-                      minHeight: period === "menu"
-                        ? `calc(${MENU_LIST_TOP}px + env(safe-area-inset-top, 0px))`
-                        : `calc(${BAR_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
+                      minHeight: `calc(${BAR_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
                     }}
                   />
                   {activeBonus && isCategoryBonus(activeBonus.type) && BONUS_PERIOD[activeBonus.type] === period && (
@@ -260,7 +229,6 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       key={item.id}
                       item={item}
                       index={index}
-                      period={period}
                       bonusProductId={bonusProductId}
                       highlightProductId={highlightProductId}
                       onClick={() => openDetail(item, index)}
@@ -268,7 +236,7 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
           <AnimatePresence>

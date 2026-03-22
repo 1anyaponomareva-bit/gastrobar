@@ -4,6 +4,9 @@
 menu/logo_gastrobar.png
 # Запасная иконка вкладки без PNG: public/icon.svg (можно заменить на свой SVG)
 
+# Колесо фортуны (попап): 12 секторов, сектор 0 по центру вверху
+koleso.png
+
 # Акция
 menu/promo_happy_hour_ultra.png
 

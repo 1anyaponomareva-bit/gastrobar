@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 const TABS: { id: MenuPeriod; label: string }[] = [
   { id: "bar", label: "Бар" },
-  { id: "menu", label: "Снеки" },
   { id: "promo", label: "Акции" },
   { id: "favorites", label: "Любимое" },
 ];
@@ -66,7 +65,6 @@ export function BottomNav() {
                 }
               >
                 {tab.id === "bar" && "🍸"}
-                {tab.id === "menu" && "🍿"}
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>

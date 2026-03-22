@@ -4,9 +4,9 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { MenuPeriod } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { getListNavForProductId } from "@/lib/bonusProductNav";
-import type { BarCategoryId, MenuCategoryId } from "@/components/CategoryTabs";
+import type { BarCategoryId } from "@/components/CategoryTabs";
 
-export type PendingListCategory = { bar: BarCategoryId } | { menu: MenuCategoryId };
+export type PendingListCategory = { bar: BarCategoryId };
 
 type HighlightProductContextValue = {
   highlightProductId: string | null;
@@ -31,11 +31,7 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
       const nav = getListNavForProductId(productId);
       if (nav) {
         setPeriod(nav.period);
-        setPendingListCategory(
-          nav.period === "bar"
-            ? { bar: nav.categoryTab as BarCategoryId }
-            : { menu: nav.categoryTab as MenuCategoryId }
-        );
+        setPendingListCategory({ bar: nav.categoryTab });
       } else {
         setPeriod(period);
         setPendingListCategory(null);

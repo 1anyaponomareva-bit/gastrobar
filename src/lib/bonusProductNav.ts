@@ -1,10 +1,10 @@
 import { MENU_ITEMS } from "@/data/menu";
-import type { BarCategoryId, MenuCategoryId } from "@/components/CategoryTabs";
+import type { BarCategoryId } from "@/components/CategoryTabs";
 
-/** Вкладка Бар/Снеки и таб категории для скролла к карточке */
+/** Вкладка Бар и таб категории для скролла к карточке */
 export function getListNavForProductId(productId: string): {
-  period: "bar" | "menu";
-  categoryTab: BarCategoryId | MenuCategoryId;
+  period: "bar";
+  categoryTab: BarCategoryId;
 } | null {
   const item = MENU_ITEMS.find((i) => i.id === productId);
   if (!item) return null;
@@ -16,8 +16,8 @@ export function getListNavForProductId(productId: string): {
   }
   if (item.category === "food") {
     return {
-      period: "menu",
-      categoryTab: (item.menuSubcategory ?? "all") as MenuCategoryId,
+      period: "bar",
+      categoryTab: "snacks",
     };
   }
   return null;

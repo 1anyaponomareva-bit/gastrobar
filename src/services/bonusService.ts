@@ -90,21 +90,21 @@ const DEFAULT_PRODUCT_ID: Record<BonusType, string> = {
   b52_with_cocktail: "b52",
 };
 
-/** В какой раздел открывать: bar или menu */
-export const BONUS_PERIOD: Record<BonusType, "bar" | "menu"> = {
+/** В какой раздел открывать (всё в «Бар») */
+export const BONUS_PERIOD: Record<BonusType, "bar"> = {
   beer: "bar",
   free_shot: "bar",
   second_half: "bar",
-  snack_free: "menu",
-  snack_squid: "menu",
-  snack_peanuts: "menu",
+  snack_free: "bar",
+  snack_squid: "bar",
+  snack_peanuts: "bar",
   two_for_one: "bar",
   discount_5: "bar",
   discount_cocktail_10: "bar",
   discount_cocktail_15: "bar",
   discount_beer_10: "bar",
   discount_cocktail_20: "bar",
-  discount_snack_15: "menu",
+  discount_snack_15: "bar",
   b52_with_cocktail: "bar",
 };
 

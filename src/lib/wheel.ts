@@ -1,7 +1,7 @@
 /**
- * Колесо в попапе: 12 секторов (30°), как на PNG bonus-wheel.png.
+ * Колесо в попапе: 12 секторов (30°), как на public/koleso.png.
  * Кнопка справа — fab-wheel-reference.png (другой файл).
- * Порядок по часовой от 12:00 — как на макете.
+ * Порядок по часовой от 12:00 (сектор 0 по центру вверху).
  */
 
 import {
@@ -40,7 +40,7 @@ export type WheelSegmentData = {
 };
 
 /**
- * 12 секторов (30°), порядок по часовой как на финальном PNG bonus-wheel.png:
+ * 12 секторов (30°), порядок по часовой от верха (koleso.png):
  * 0 Сегодня без бонуса → 1 −10% → 2 Б-52 → 3 −10% → 4 Sapporo → 5–6 Б-52 →
  * 7 кальмар → 8–9 джерки → 10 мимо → 11 без бонуса
  */
@@ -118,9 +118,9 @@ export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
 export type WheelSegmentId = (typeof WHEEL_SEGMENTS)[number]["id"];
 
 /**
- * Угол (0° = вверх, дальше по часовой) левой границы сектора 0 на PNG bonus-wheel.png.
- * Раньше считали границу на 12:00 — на макете первый сектор «вверху слева», центр ~11:00 → ~315°.
- * Если стрелка всё ещё между секторами — подкрутите на ±1…3°.
+ * Угол (0° = вверх, по часовой) левой границы сектора 0 на koleso.png.
+ * Должен совпадать с порядком подписей в WHEEL_SEGMENTS по часовой от макета.
+ * Раньше 345° давал сдвиг на 1 сектор относительно арта → визу «кальмар», текст «Б-52».
  */
 export const BONUS_WHEEL_BOUNDARY_START_DEG = 315;
 
@@ -158,6 +158,23 @@ export function computeRotationTargetDegrees(
   const next = currentRotationDeg + fullTurns * 360 + delta;
   /** Целые градусы — меньше дрожания на границе сектора из‑за float */
   return Math.round(next * 1000) / 1000;
+}
+
+/**
+ * Какой сектор (индекс 0…11) оказался под стрелкой после вращения на rotationDeg (градусы по часовой).
+ * Должен совпадать с segmentIndex, для которого считали computeRotationTargetDegrees.
+ */
+export function segmentIndexFromWheelRotation(
+  rotationDeg: number,
+  sectorCount: number = 12,
+  boundaryStartDeg: number = BONUS_WHEEL_BOUNDARY_START_DEG
+): number {
+  const seg = 360 / sectorCount;
+  const tMod = ((rotationDeg % 360) + 360) % 360;
+  const phi = ((360 - tMod) % 360 + 360) % 360;
+  const normalized = (phi - boundaryStartDeg + 360) % 360;
+  const idx = Math.floor(normalized / seg);
+  return Math.min(Math.max(idx, 0), sectorCount - 1);
 }
 
 export const WHEEL_SEGMENTS_FIRST = WHEEL_SEGMENTS;
@@ -222,6 +239,20 @@ export type SpinOutcome = {
   isLoss: boolean;
   isFirstWheel: boolean;
 };
+
+/**
+ * Итог спина всегда совпадает с тем, что выбрала `computeSpinOutcome` и куда
+ * целится анимация (`computeRotationTargetDegrees`). Раньше здесь пересчитывали
+ * сектор по углу остановки — из‑за пограничных градусов индекс сдвигался на 1
+ * (например «без бонуса» → −10% на коктейль). Угол нужен только для визуала.
+ */
+export function reconcileOutcomeWithRotation(
+  outcome: SpinOutcome,
+  finalRotationDeg: number
+): SpinOutcome {
+  void finalRotationDeg;
+  return outcome;
+}
 
 export function getWheelSegments(isFirstWheel: boolean): readonly WheelSegmentData[] {
   void isFirstWheel;

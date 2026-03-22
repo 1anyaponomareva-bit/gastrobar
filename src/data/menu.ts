@@ -1,6 +1,4 @@
-import type { MenuPeriod } from "@/lib/utils";
-
-export type BarSubcategory = "cocktail" | "wine" | "beer" | "tincture";
+export type BarSubcategory = "cocktail" | "wine" | "beer" | "tincture" | "snacks";
 export type MenuSubcategory = "snack" | "sausage" | "dumpling";
 
 export type MenuItem = {
@@ -13,8 +11,8 @@ export type MenuItem = {
   category: "food" | "cocktail";
   price: string; // VND
   grammage?: string;
-  barSubcategory?: BarSubcategory;   // для раздела Бар
-  menuSubcategory?: MenuSubcategory; // для раздела Меню
+  barSubcategory?: BarSubcategory; // напитки; «snacks» не на карточке — только вкладка
+  menuSubcategory?: MenuSubcategory; // тип снека (закуски / сосиски / пельмени)
   /** Бейдж «Хит продаж» / рекомендация (огонёк) */
   badge?: "hit";
   /** Вкус: короткая строка под напитком, напр. "кисло-сладкий, виски, лимон, мёд" */
@@ -198,7 +196,7 @@ export const MENU_ITEMS: MenuItem[] = [
     taste: "сладкий, лимон, цедра, освежающий",
     strength: "medium",
   },
-  // СНЕКИ (сначала джерки, потом остальное; пометки к пиву/коктейлям/вину)
+  // СНЕКИ в общем списке «Бар» после напитков
   {
     id: "chicken-jerky",
     name: "Джерки куриные",

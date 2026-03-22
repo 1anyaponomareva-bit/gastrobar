@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
-import type { SpinOutcome } from "@/lib/wheel";
+import { WHEEL_SEGMENTS, type SpinOutcome } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
 import { getBonusStatus, BONUS_PERIOD, isCategoryBonus } from "@/services/bonusService";
 import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
@@ -63,6 +63,13 @@ function pickLoseVariant(): (typeof LOSE_VARIANTS)[number] {
   return LOSE_VARIANTS[Math.floor(Math.random() * LOSE_VARIANTS.length)]!;
 }
 
+function segmentLabel(outcome: SpinOutcome): string {
+  const seg = WHEEL_SEGMENTS[outcome.segmentIndex];
+  if (!seg) return "";
+  const l2 = seg.line2 ? ` · ${seg.line2}` : "";
+  return `${seg.line1}${l2}`;
+}
+
 type Props = {
   outcome: SpinOutcome;
   bonus: Bonus | null;
@@ -119,6 +126,9 @@ export function WheelResultView({
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
             Ты выиграл
+          </p>
+          <p className="mt-2 text-lg font-semibold leading-snug text-amber-200/95">
+            {segmentLabel(outcome)}
           </p>
           <h2 className="mt-2 text-xl font-bold leading-snug text-white">{bonus.title}</h2>
           <p className="mt-3 text-sm leading-relaxed text-white/70">{bonus.description}</p>
@@ -185,7 +195,11 @@ export function WheelResultView({
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
       }}
     >
-      <p className="text-xl font-semibold text-white">{loseVariant.title}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
+        Выпало на колесе
+      </p>
+      <p className="mt-2 text-2xl font-bold leading-tight text-white">{segmentLabel(outcome)}</p>
+      <p className="mt-3 text-xl font-semibold text-white/90">{loseVariant.title}</p>
       <p className="text-white/70">{loseVariant.subtitle}</p>
       <button
         type="button"

@@ -30,28 +30,69 @@ function getLocalIp() {
 }
 
 const ip = getLocalIp();
-const port = Number(process.env.PORT) || 3000;
+const startPort = Number(process.env.PORT) || 3000;
+const PORT_RANGE = 25;
+
+/**
+ * Если порт занят (второй терминал, другой процесс) — берём следующий свободный,
+ * чтобы `npm run dev` не падал с EADDRINUSE.
+ */
+async function pickFreePort() {
+  const end = startPort + PORT_RANGE;
+  for (let p = startPort; p <= end; p++) {
+    if (await isPortFree(p)) {
+      if (p !== startPort) {
+        console.log("");
+        console.log(
+          "  ℹ Порт " + startPort + " занят — запуск на " + p + " (закройте лишний dev или задайте PORT)."
+        );
+        console.log("");
+      }
+      return p;
+    }
+  }
+  console.error("");
+  console.error(
+    "  ✗ Нет свободного порта в диапазоне " + startPort + "–" + end + "."
+  );
+  console.error("    Остановите лишние процессы node (старый npm run dev) или задайте PORT.");
+  console.error("");
+  process.exit(1);
+}
 
 (async function main() {
-  const free = await isPortFree(port);
-  if (!free) {
-    console.error("");
-    console.error("  ✗ Порт " + port + " уже занят.");
-    console.error("    Остановите старый npm run dev (Ctrl+C в том терминале) или задайте другой порт:");
-    console.error('    $env:PORT="3001"; npm run dev');
-    console.error("");
-    process.exit(1);
-  }
+  const port = await pickFreePort();
 
   console.log("");
-  console.log("  ✓ Доступ с телефона/планшета:");
+  console.log("  ✓ Локально в браузере:");
+  console.log("     http://localhost:" + port);
+  console.log("");
+  console.log("  ✓ С телефона/планшета (одна Wi‑Fi сеть с ПК):");
   console.log("     http://" + ip + ":" + port);
   console.log("");
+  console.log("  Если страница пустая: брандмауэр Windows может блокировать порт " + port + ".");
+  console.log('  PowerShell от администратора: New-NetFirewallRule -DisplayName "Next dev ' + port + '" -Direction Inbound -LocalPort ' + port + " -Protocol TCP -Action Allow");
+  console.log("");
+  console.log("  Cloudflare Tunnel (trycloudflare.com) — в другом терминале тот же порт:");
+  console.log("    cloudflared tunnel --url http://127.0.0.1:" + port);
+  console.log("  или:  $env:PORT=\"" + port + '\"; npm run tunnel:cf');
+  console.log("");
 
-  /** Turbopack в dev реже ломается на «Cannot find module ./xxx.js» в .next; отключить: NEXT_NO_TURBO=1 */
-  const useTurbo = process.env.NEXT_NO_TURBO !== "1";
+  /**
+   * По умолчанию без Turbopack: на Windows он часто даёт ENOENT / 500 при параллельных
+   * запросах (телефон + ПК) и битые manifest в .next.
+   * Включить Turbopack (быстрее холодный старт): NEXT_USE_TURBO=1
+   * Старый флаг NEXT_NO_TURBO=1 по смыслу совпадает с режимом по умолчанию.
+   */
+  const useTurbo =
+    process.env.NEXT_USE_TURBO === "1" && process.env.NEXT_NO_TURBO !== "1";
   const nextArgs = ["next", "dev", "--hostname", "0.0.0.0", "--port", String(port)];
   if (useTurbo) nextArgs.splice(2, 0, "--turbo");
+
+  if (!useTurbo) {
+    console.log("  ℹ Dev на Webpack (стабильнее). Turbopack: NEXT_USE_TURBO=1 npm run dev");
+    console.log("");
+  }
 
   const child = spawn("npx", nextArgs, {
     stdio: "inherit",

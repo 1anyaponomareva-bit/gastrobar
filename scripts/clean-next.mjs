@@ -1,7 +1,10 @@
 /**
- * Удаляет .next (кэш сборки). Если чанки «ломаются» (Cannot find module './xxx.js') — запусти: npm run clean
+ * Удаляет .next (кэш сборки). Если чанки «ломаются» (Cannot find module './xxx.js'):
+ *   npm run clean && npm run dev
+ * или
+ *   npm run dev:rebuild
  *
- * Пропуск: NEXT_DEV_SKIP_CLEAN=1 (быстрый перезапуск dev, если кэш точно целый)
+ * (predev больше не чистит .next автоматически — иначе параллельные запросы с телефона давали ENOENT / 500.)
  */
 import fs from "node:fs";
 import path from "node:path";

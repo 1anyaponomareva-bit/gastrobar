@@ -28,14 +28,12 @@ const HeartIcon = ({ filled }: { filled: boolean }) =>
 export function MenuListItem({
   item,
   index: _index,
-  period,
   bonusProductId,
   highlightProductId,
   onClick,
 }: {
   item: MenuItem;
   index: number;
-  period: "bar" | "menu";
   bonusProductId?: string | null;
   highlightProductId?: string | null;
   onClick: () => void;

@@ -130,9 +130,14 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
               className="flex flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="mb-4 text-center text-lg font-medium tracking-wide text-white/95">
-                Крути колесо — получи бонус
-              </h2>
+              <div className="mb-4 max-w-[min(92vw,24rem)] text-center">
+                <h2 className="text-lg font-semibold tracking-wide text-white/95">
+                  Крути колесо - получи бонус
+                </h2>
+                <p className="mt-2 text-sm font-medium uppercase tracking-[0.12em] text-amber-400/95">
+                  Нажми на кнопку КРУТИТЬ
+                </p>
+              </div>
               <WheelOfFortune
                 segments={segments}
                 spinSession={spinSession}

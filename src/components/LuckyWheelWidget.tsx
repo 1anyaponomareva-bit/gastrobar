@@ -57,14 +57,16 @@ export function LuckyWheelWidget() {
         remainingTime={remainingTime}
         onClick={handleFabClick}
       />
-      <AnimatePresence>
-        {wheelOpen && (
-          <LuckyWheelPopup isOpen={wheelOpen} onClose={handleCloseWheel} />
-        )}
-        {myBonusesOpen && (
-          <MyBonusesScreen onClose={handleCloseMyBonuses} />
-        )}
-      </AnimatePresence>
+      {(wheelOpen || myBonusesOpen) && (
+        <AnimatePresence>
+          {wheelOpen && (
+            <LuckyWheelPopup isOpen={wheelOpen} onClose={handleCloseWheel} />
+          )}
+          {myBonusesOpen && (
+            <MyBonusesScreen onClose={handleCloseMyBonuses} />
+          )}
+        </AnimatePresence>
+      )}
     </>
   );
 }

@@ -15,15 +15,16 @@ const nextConfig: NextConfig = {
   },
   /**
    * Dev: разрешить загрузку /_next/* не только с localhost.
-   * Без этого ngrok / Cloudflare Tunnel / телефон по IP ломают сайт (пустая страница).
-   * Формат — hostname без протокола; поддерживаются wildcard-поддомены.
+   * Иначе с телефона по LAN (http://192.168.x.x:3000) — пустой экран: JS/CSS режутся.
+   * Wildcard по октетам как у доменов: 192.168.*.* = любой 192.168.x.y
    * @see https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
    */
   allowedDevOrigins: [
     "localhost",
     "127.0.0.1",
-    "192.168.1.102",
-    "192.168.0.1",
+    "192.168.*.*",
+    "10.*.*.*",
+    ...Array.from({ length: 16 }, (_, i) => `172.${16 + i}.*.*`),
     "*.ngrok-free.app",
     "*.ngrok-free.dev",
     "*.ngrok.io",

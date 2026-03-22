@@ -28,12 +28,7 @@ export function ThemeProvider({
       setPeriodState(p);
       return;
     }
-    const apply = () => document.documentElement.setAttribute("data-period", p);
-    if ("startViewTransition" in document) {
-      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(apply);
-    } else {
-      apply();
-    }
+    document.documentElement.setAttribute("data-period", p);
     setPeriodState(p);
   };
 
