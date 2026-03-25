@@ -30,17 +30,16 @@ export type WheelSegmentData = {
  * 0..7 — строго в этом порядке
  */
 /**
- * Индексы 2–4: «Настойки» → «Снеки» → «Пиво». Индексы 5 и 7: «−50 % на 2 напиток» и «мимо»
- * подогнаны под углы koleso.png (иначе выигрыш показывается как проигрыш).
+ * Часть индексов (1↔6 «без бонуса» / «−50 % на 1», 3–4, 5↔7 и т.д.) подогнана под углы koleso.png.
  */
 export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
   { id: "disc5_bar", kind: "discount", line1: "-5 % на весь заказ бара" },
-  { id: "disc50_1", kind: "discount", line1: "-50 % на 1 напиток" },
+  { id: "no_bonus", kind: "other", line1: "без бонуса" },
   { id: "tincture", kind: "product", line1: "Настойки" },
   { id: "snack", kind: "product", line1: "Снеки" },
   { id: "beer", kind: "product", line1: "Пиво" },
   { id: "disc50_2", kind: "discount", line1: "-50 % на 2 напиток" },
-  { id: "no_bonus", kind: "other", line1: "без бонуса" },
+  { id: "disc50_1", kind: "discount", line1: "-50 % на 1 напиток" },
   { id: "mimo", kind: "other", line1: "мимо" },
 ];
 
@@ -104,11 +103,11 @@ export type RegularSegmentId = WheelSegmentId;
 
 /**
  * Веса выпадения по индексу сегмента 0..7 (сумма 100).
- * 0: -5% на весь заказ · 1: -50% на 1 напиток · 2: настойки · 3: снеки ·
- * 4: пиво · 5: -50% на 2 напитка · 6: без бонуса · 7: мимо
- * Веса 3/27 на 5 и 7 — прежние шансы для «2-й напиток» и «мимо».
+ * 0: -5% · 1: без бонуса · 2: настойки · 3: снеки · 4: пиво ·
+ * 5: -50% на 2 напитка · 6: -50% на 1 напиток · 7: мимо
+ * Веса 22/6 на 1 и 6 — без бонуса / −50% на 1 (как раньше 6 и 22).
  */
-export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 6, 10, 15, 13, 3, 22, 27];
+export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 22, 10, 15, 13, 3, 6, 27];
 
 function pickWeightedSegmentIndex(weights: readonly number[]): number {
   const total = weights.reduce((s, w) => s + w, 0);
@@ -123,12 +122,12 @@ function pickWeightedSegmentIndex(weights: readonly number[]): number {
 
 const REGULAR_SEGMENT_BONUS: (BonusType | null)[] = [
   "wheel_d5_bar",
-  "wheel_d50_1",
+  null,
   "wheel_tincture",
   "wheel_snack",
   "wheel_beer",
   "wheel_d50_2",
-  null,
+  "wheel_d50_1",
   null,
 ];
 
@@ -230,7 +229,7 @@ function segmentProductIdForBonus(_segmentIndex: number): string | null {
 }
 
 function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | null {
-  if (segmentIndex === 0 || segmentIndex === 1 || segmentIndex === 5) return "all";
+  if (segmentIndex === 0 || segmentIndex === 5 || segmentIndex === 6) return "all";
   if (segmentIndex === 2) return "tincture";
   if (segmentIndex === 3) return "snacks";
   if (segmentIndex === 4) return "beer";
