@@ -11,8 +11,8 @@ import {
   type WheelSegmentData,
 } from "@/lib/wheel";
 
-/** Арт диска колеса: `public/fab-wheel-reference.png`. */
-const WHEEL_IMAGE_SRC = "/fab-wheel-reference.png" as const;
+/** Диск колеса в попапе (с текстом секторов): `public/koleso.png`. */
+const WHEEL_IMAGE_SRC = "/koleso.png" as const;
 
 /** Размер колеса на экране (крупнее на телефоне). */
 const WHEEL_SIZE = "min(92vw, 400px)";
@@ -49,7 +49,7 @@ function WheelImageFallback() {
       <p className="text-[11px] font-semibold uppercase leading-tight text-white/90 drop-shadow">
         Добавьте файл
         <br />
-        <span className="font-mono text-amber-200/90">public/fab-wheel-reference.png</span>
+        <span className="font-mono text-amber-200/90">public/koleso.png</span>
       </p>
     </div>
   );
