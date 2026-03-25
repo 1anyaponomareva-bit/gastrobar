@@ -16,6 +16,7 @@ import {
   type SpinOutcome,
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
+import { submitWheelSpinAnalytics } from "@/lib/wheelSpinAnalytics";
 
 type View = "wheel" | "result";
 
@@ -53,6 +54,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
     if (!bonus && !outcome.isLoss) {
       bonus = saveSpinOutcome(outcome);
     }
+    submitWheelSpinAnalytics(outcome);
     setResultOutcome(outcome);
     setWonBonus(bonus ?? null);
     setIsSpinning(false);
