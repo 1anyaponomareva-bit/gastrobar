@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { BonusRibbonTimer } from "@/components/BonusRibbonTimer";
 
-/** Иконка кнопки справа (обычное состояние) */
-const WHEEL_DEFAULT = "/images/fab-wheel-reference.png";
-/** После выигрыша: положите в public/images/ */
-const WHEEL_WON = "/images/fab-wheel-won.png";
+/**
+ * Иконка FAB: тот же арт, что и колесо в попапе (файл в репозитории).
+ * Отдельные fab-wheel-reference.png / fab-wheel-won.png в public/images/ опциональны;
+ * без них раньше шёл 404 на fab-wheel-won.png при активном бонусе.
+ */
+const FAB_WHEEL_SRC = "/koleso.png";
 
 const FAB_WHEEL_ROTATION_SEC = 36;
 
@@ -20,14 +22,7 @@ type Props = {
 
 export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
   const [baseError, setBaseError] = useState(false);
-  const [wonImageError, setWonImageError] = useState(false);
 
-  useEffect(() => {
-    if (!hasBonus) setWonImageError(false);
-  }, [hasBonus]);
-
-  const useWonAsset = hasBonus && !wonImageError;
-  const src = useWonAsset ? WHEEL_WON : WHEEL_DEFAULT;
   const showFallbackGradient = baseError;
 
   const showRibbon = hasBonus && Boolean(remainingTime);
@@ -74,19 +69,15 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
                 aria-hidden
               >
                 <Image
-                  key={src}
-                  src={src}
+                  src={FAB_WHEEL_SRC}
                   alt=""
                   width={128}
                   height={128}
                   unoptimized
                   className="h-full w-full select-none rounded-full object-cover"
                   draggable={false}
-                  priority={useWonAsset}
-                  onError={() => {
-                    if (useWonAsset) setWonImageError(true);
-                    else setBaseError(true);
-                  }}
+                  priority={hasBonus}
+                  onError={() => setBaseError(true)}
                 />
               </motion.div>
             ) : (
