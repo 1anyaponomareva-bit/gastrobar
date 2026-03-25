@@ -108,7 +108,7 @@ export function bonusDisplayTitle(type: BonusTypeKey, productId: string | null):
     case "wheel_beer":
       return "Пиво";
     case "wheel_tincture":
-      return "Настойки";
+      return "Настойка";
     case "wheel_snack":
       return "Снеки";
     case "beer":

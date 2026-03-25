@@ -30,7 +30,9 @@ export type WheelSegmentData = {
  * 0..7 — строго в этом порядке
  */
 /**
- * Часть индексов (1↔6 «без бонуса» / «−50 % на 1», 3–4, 5↔7 и т.д.) подогнана под углы koleso.png.
+ * Индексы 0…7 — доли круга по BONUS_WHEEL_BOUNDARY_START_DEG под koleso.png.
+ * «без бонуса» — 1; «мимо» — 5 (на арте без бонуса попадал в угол бывшего «мимо» → плашка путала заголовки).
+ * «−50 % на 2-й» — 6; «−50 % на 1-й» — 7.
  */
 export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
   { id: "disc5_bar", kind: "discount", line1: "-5 % на весь заказ бара" },
@@ -38,9 +40,9 @@ export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
   { id: "tincture", kind: "product", line1: "Настойки" },
   { id: "snack", kind: "product", line1: "Снеки" },
   { id: "beer", kind: "product", line1: "Пиво" },
+  { id: "mimo", kind: "other", line1: "мимо" },
   { id: "disc50_2", kind: "discount", line1: "-50 % на 2 напиток" },
   { id: "disc50_1", kind: "discount", line1: "-50 % на 1 напиток" },
-  { id: "mimo", kind: "other", line1: "мимо" },
 ];
 
 export type WheelSegmentId = (typeof WHEEL_SEGMENTS)[number]["id"];
@@ -102,12 +104,9 @@ export type FirstSegmentId = WheelSegmentId;
 export type RegularSegmentId = WheelSegmentId;
 
 /**
- * Веса выпадения по индексу сегмента 0..7 (сумма 100).
- * 0: -5% · 1: без бонуса · 2: настойки · 3: снеки · 4: пиво ·
- * 5: -50% на 2 напитка · 6: -50% на 1 напиток · 7: мимо
- * Веса 22/6 на 1 и 6 — без бонуса / −50% на 1 (как раньше 6 и 22).
+ * Веса 0..7, сумма 100. «без бонуса» — индекс 1 (22%), «мимо» — 5 (27%).
  */
-export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 22, 10, 15, 13, 3, 6, 27];
+export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 22, 10, 15, 13, 27, 3, 6];
 
 function pickWeightedSegmentIndex(weights: readonly number[]): number {
   const total = weights.reduce((s, w) => s + w, 0);
@@ -126,9 +125,9 @@ const REGULAR_SEGMENT_BONUS: (BonusType | null)[] = [
   "wheel_tincture",
   "wheel_snack",
   "wheel_beer",
+  null,
   "wheel_d50_2",
   "wheel_d50_1",
-  null,
 ];
 
 export type SpinOutcome = {
@@ -140,10 +139,9 @@ export type SpinOutcome = {
 };
 
 /**
- * Итог спина берётся из RNG (`computeSpinOutcome`), а не из пересчёта по углу:
- * иначе из‑за погрешности анимации/калибровки картинки соседний сектор (например «без бонуса»
- * вместо «-50 % на 2 напитка») подменяет карточку и бонус.
- * Анимация по-прежнему целится в `outcome.segmentIndex` — визуал и текст совпадают с логикой.
+ * Итог спина = запланированный RNG + анимация (тот же segmentIndex).
+ * Пересчёт по углу отключён: из‑за float / easing индекс по формуле иногда «прыгал»
+ * на соседа (напр. −50 % → «без бонуса»).
  */
 export function reconcileOutcomeWithRotation(
   outcome: SpinOutcome,
@@ -229,7 +227,7 @@ function segmentProductIdForBonus(_segmentIndex: number): string | null {
 }
 
 function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | null {
-  if (segmentIndex === 0 || segmentIndex === 5 || segmentIndex === 6) return "all";
+  if (segmentIndex === 0 || segmentIndex === 6 || segmentIndex === 7) return "all";
   if (segmentIndex === 2) return "tincture";
   if (segmentIndex === 3) return "snacks";
   if (segmentIndex === 4) return "beer";

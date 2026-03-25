@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
-import type { SpinOutcome } from "@/lib/wheel";
+import { WHEEL_SEGMENTS, type SpinOutcome, type WheelSegmentId } from "@/lib/wheel";
 import {
   pickMimoLoseCopy,
   pickNoBonusLoseCopy,
@@ -11,13 +11,42 @@ import {
 } from "@/lib/wheelLoseCopy";
 import type { Bonus } from "@/services/bonusService";
 import { getBonusStatus, BONUS_PERIOD } from "@/services/bonusService";
-import { BONUS_VALIDITY_LABEL, barNavigateButtonLabel } from "@/lib/bonusCopy";
+import {
+  BONUS_VALIDITY_LABEL,
+  barNavigateButtonLabel,
+  bonusDisplayTitle,
+  type BonusTypeKey,
+} from "@/lib/bonusCopy";
 
 function formatLeft(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Главный заголовок свитка при проигрыше — по id сектора из WHEEL_SEGMENTS. */
+function wheelLoseSectorTitle(segmentId: string | undefined): string | null {
+  if (segmentId === "mimo") return "Мимо";
+  if (segmentId === "no_bonus") return "Без бонуса";
+  return null;
+}
+
+/** Единый источник: подпись проигрышного сектора по индексу (segmentId в outcome может рассинхрониться). */
+function lossWheelSegmentId(outcome: SpinOutcome): WheelSegmentId | undefined {
+  if (!outcome.isLoss) return undefined;
+  return WHEEL_SEGMENTS[outcome.segmentIndex]?.id;
+}
+
+/** Не показываем loseBundle.title вторым абзацем, если там снова то же, что в заголовке сектора. */
+function loseTitleDuplicatesHeading(heading: string | null, bundleTitle: string): boolean {
+  if (!heading) return false;
+  const n = (s: string) => s.toLowerCase().replace(/ё/g, "е");
+  const h = n(heading);
+  const t = n(bundleTitle);
+  if (h === n("Без бонуса") && t.includes("без бонуса")) return true;
+  if (h === n("Мимо") && t.includes("мимо")) return true;
+  return false;
 }
 
 type Props = {
@@ -40,10 +69,11 @@ export function WheelResultView({
   const [leftMs, setLeftMs] = useState(
     bonus ? Math.max(0, bonus.expiresAt - Date.now()) : 0
   );
-  const [loseBundle] = useState<WheelLoseCopyBundle | null>(() => {
+  const loseBundle = useMemo<WheelLoseCopyBundle | null>(() => {
     if (!outcome.isLoss) return null;
-    return outcome.segmentId === "no_bonus" ? pickNoBonusLoseCopy() : pickMimoLoseCopy();
-  });
+    const id = lossWheelSegmentId(outcome);
+    return id === "no_bonus" ? pickNoBonusLoseCopy() : pickMimoLoseCopy();
+  }, [outcome.isLoss, outcome.segmentIndex]);
 
   useEffect(() => {
     if (!bonus) return;
@@ -146,8 +176,40 @@ export function WheelResultView({
     );
   }
 
+  if (!isLose && !bonus) {
+    const title = outcome.bonusType
+      ? bonusDisplayTitle(outcome.bonusType as BonusTypeKey, null)
+      : (WHEEL_SEGMENTS[outcome.segmentIndex]?.line1 ?? "Выигрыш");
+    return (
+      <div
+        className="flex max-h-[min(85dvh,640px)] flex-col gap-4 px-5 py-6 text-center"
+        style={{
+          paddingTop: "max(1rem, env(safe-area-inset-top))",
+          paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">Ты выиграл</p>
+        <p className="text-xl font-bold leading-snug text-white">{title}</p>
+        <p className="text-sm leading-relaxed text-white/55">
+          Не удалось сохранить код в приложении. Закрой окно и открой «Твои бонусы» или обратись к персоналу
+          гастробара.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-2 w-full max-w-sm self-center rounded-full border border-amber-500/45 py-3 text-sm font-semibold text-amber-400"
+        >
+          Закрыть
+        </button>
+      </div>
+    );
+  }
+
   if (!isLose) return null;
   if (!loseBundle) return null;
+
+  const sectorHeading = wheelLoseSectorTitle(lossWheelSegmentId(outcome));
+  const showLoseBundleTitle = !loseTitleDuplicatesHeading(sectorHeading, loseBundle.title);
 
   return (
     <div
@@ -157,7 +219,16 @@ export function WheelResultView({
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
       }}
     >
-      <p className="text-2xl font-bold leading-tight text-white">{loseBundle.title}</p>
+      {sectorHeading && (
+        <p className="text-2xl font-bold leading-tight text-white">{sectorHeading}</p>
+      )}
+      {showLoseBundleTitle ? (
+        <p
+          className={`max-w-[22rem] text-base font-semibold leading-snug text-white/90 ${sectorHeading ? "mt-2" : "text-2xl leading-tight text-white"}`}
+        >
+          {loseBundle.title}
+        </p>
+      ) : null}
       <p className="mt-3 max-w-[22rem] text-sm leading-relaxed text-white/70">{loseBundle.subtitle}</p>
       <button
         type="button"

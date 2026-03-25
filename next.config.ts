@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "picsum.photos", pathname: "/**" },
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
     ],
+    /** Колесо и прочие файлы из `public/` для `next/image` (Next.js 15). */
+    localPatterns: [
+      { pathname: "/koleso.png" },
+      { pathname: "/images/**" },
+      { pathname: "/menu/**" },
+    ],
   },
   /**
    * Dev: разрешить загрузку /_next/* не только с localhost.

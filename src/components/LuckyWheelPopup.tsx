@@ -49,7 +49,10 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
   }, [onClose]);
 
   const handleSpinComplete = useCallback((outcome: SpinOutcome) => {
-    const bonus = saveSpinOutcome(outcome);
+    let bonus = saveSpinOutcome(outcome);
+    if (!bonus && !outcome.isLoss) {
+      bonus = saveSpinOutcome(outcome);
+    }
     setResultOutcome(outcome);
     setWonBonus(bonus ?? null);
     setIsSpinning(false);

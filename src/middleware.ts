@@ -16,3 +16,10 @@ export function middleware(request: NextRequest) {
   response.headers.set("x-menu-period", period);
   return response;
 }
+
+/** Не гоняем статику и оптимизацию картинок через middleware — стабильная выдача `public/*.png` и т.п. */
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+  ],
+};

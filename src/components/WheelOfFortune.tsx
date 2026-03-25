@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, animate } from "framer-motion";
 import {
   BONUS_WHEEL_FULL_TURNS,
@@ -10,8 +11,8 @@ import {
   type WheelSegmentData,
 } from "@/lib/wheel";
 
-/** Полное колесо в модалке (12 секторов); FAB — отдельный файл. */
-const WHEEL_IMAGE_SRC = "/koleso.png";
+/** Локальный арт из `public/koleso.png` (абсолютный путь от корня сайта). */
+const WHEEL_IMAGE_SRC = "/koleso.png" as const;
 
 /** Размер колеса на экране (крупнее на телефоне). */
 const WHEEL_SIZE = "min(92vw, 400px)";
@@ -105,8 +106,8 @@ export function WheelOfFortune({
         if (cancelled) return;
         if (completedSessionRef.current === sessionId) return;
         completedSessionRef.current = sessionId;
-        lastRotationRef.current = snappedTarget;
         rotation.set(snappedTarget);
+        lastRotationRef.current = snappedTarget;
         onSpinComplete(reconcileOutcomeWithRotation(outcome, snappedTarget));
       },
     });
@@ -150,7 +151,7 @@ export function WheelOfFortune({
             }}
           >
             <motion.div
-              className="relative h-full w-full overflow-hidden rounded-full"
+              className="relative h-full min-h-0 w-full min-w-0 overflow-hidden rounded-full"
               style={{
                 rotate: rotation,
                 transformOrigin: "50% 50%",
@@ -159,16 +160,14 @@ export function WheelOfFortune({
               {imageFailed ? (
                 <WheelImageFallback />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element -- локальный арт; при 404 показываем fallback
-                <img
+                <Image
                   src={WHEEL_IMAGE_SRC}
-                  alt=""
-                  width={400}
-                  height={400}
-                  decoding="async"
-                  loading="eager"
-                  className="block h-full w-full max-h-full max-w-full select-none object-contain object-center"
-                  draggable={false}
+                  alt="Колесо удачи"
+                  fill
+                  unoptimized
+                  priority
+                  sizes="min(92vw, 400px)"
+                  className="pointer-events-none select-none object-contain object-center"
                   onError={() => setImageFailed(true)}
                 />
               )}

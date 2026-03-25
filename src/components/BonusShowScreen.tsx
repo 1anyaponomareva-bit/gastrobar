@@ -128,118 +128,114 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
         </button>
       </div>
 
-      {/* Карточка — скролл, не выталкивает нижние кнопки за экран */}
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-2">
-        <div
-          className="relative mx-auto w-full max-w-sm rounded-3xl border border-amber-500/40 px-5 py-5 shadow-[0_0_48px_rgba(212,175,55,0.08)] sm:px-6 sm:py-6"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(26,24,22,0.95) 0%, rgba(15,14,13,0.98) 100%)",
-          }}
-        >
-        <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/75">
-          Бонус
-        </p>
-        <h1 className="mt-2 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
-          {bonus.title}
-        </h1>
-        <p className="mt-2 text-center text-sm text-white/55">
-          Покажи этот экран бармену
-        </p>
-
-        <p className="mt-3 text-center text-[15px] leading-relaxed text-white/78">
-          {bonus.description ?? getBonusDescription(bonus.type, bonus.productId)}
-        </p>
-        <p className="mt-1.5 text-center text-xs text-amber-500/70">
-          Действует 2 часа
-        </p>
-
-        {isActive && (
-          <p className="mt-3 text-center font-mono text-2xl tabular-nums text-amber-400/95">
-            Осталось {formatRemainingTime(initialBonus.expiresAt)}
-          </p>
-        )}
-
-        <div className="mt-4 rounded-2xl border border-amber-500/35 bg-black/50 px-4 py-4">
-          <p className="text-center text-[10px] uppercase tracking-widest text-white/50">
-            Код бонуса
-          </p>
-          <p className="mt-1.5 text-center font-mono text-3xl font-bold tracking-[0.25em] text-amber-400">
-            {bonus.id}
-          </p>
-        </div>
-
-        <div className="mt-4 flex justify-center">
-          <span
-            className={`inline-flex rounded-full px-5 py-2 text-sm font-semibold ${
-              status === "active"
-                ? "bg-amber-500/20 text-amber-400"
-                : status === "redeemed"
-                  ? "bg-white/10 text-white/50"
-                  : "bg-red-950/40 text-red-400/90"
-            }`}
-          >
-            {STATUS_LABELS[status]}
-          </span>
-        </div>
-
-        {status === "redeemed" && (
-          <p className="mt-3 text-center text-sm text-white/40">
-            Бонус погашен
-          </p>
-        )}
-
-        {status === "expired" && (
-          <p className="mt-3 text-center text-sm text-white/40">
-            Время действия истекло
-          </p>
-        )}
-        </div>
-      </div>
-
-      {/* Низ: сначала «Закрыть», ниже — только для персонала (долгое нажатие = погашение) */}
+      {/* Карточка + кнопки сразу под жёлтой рамкой */}
       <div
-        className="shrink-0 border-t border-white/[0.06] bg-[#0b0b0b]/98 px-4 pt-3"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4"
         style={{
-          paddingBottom: "max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 20px))",
+          paddingBottom: "max(1rem, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >
-        <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-full border border-amber-500/45 bg-transparent py-3 text-sm font-semibold text-amber-400"
+        <div className="mx-auto w-full max-w-sm">
+          <div
+            className="relative w-full rounded-3xl border border-amber-500/40 px-5 py-5 shadow-[0_0_48px_rgba(212,175,55,0.08)] sm:px-6 sm:py-6"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(26,24,22,0.95) 0%, rgba(15,14,13,0.98) 100%)",
+            }}
           >
-            Закрыть
-          </button>
+            <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/75">
+              Бонус
+            </p>
+            <h1 className="mt-2 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
+              {bonus.title}
+            </h1>
+            <p className="mt-2 text-center text-sm text-white/55">
+              Покажи этот экран бармену
+            </p>
 
-          {isActive ? (
-            <div className="pb-0.5">
-              <p className="text-center text-[10px] uppercase tracking-wider text-white/45">
-                Для персонала
+            <p className="mt-3 text-center text-[15px] leading-relaxed text-white/78">
+              {bonus.description ?? getBonusDescription(bonus.type, bonus.productId)}
+            </p>
+            <p className="mt-1.5 text-center text-xs text-amber-500/70">
+              Действует 2 часа
+            </p>
+
+            {isActive && (
+              <p className="mt-3 text-center font-mono text-2xl tabular-nums text-amber-400/95">
+                Осталось {formatRemainingTime(initialBonus.expiresAt)}
               </p>
-              <div
-                role="button"
-                tabIndex={0}
-                className="relative mx-auto mt-2 w-full max-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-white/5 py-2.5"
-                onTouchStart={startHold}
-                onTouchEnd={cancelHold}
-                onTouchCancel={cancelHold}
-                onMouseDown={startHold}
-                onMouseUp={cancelHold}
-                onMouseLeave={cancelHold}
-                aria-label="Удерживайте для погашения бонуса"
+            )}
+
+            <div className="mt-4 rounded-2xl border border-amber-500/35 bg-black/50 px-4 py-4">
+              <p className="text-center text-[10px] uppercase tracking-widest text-white/50">
+                Код бонуса
+              </p>
+              <p className="mt-1.5 text-center font-mono text-3xl font-bold tracking-[0.25em] text-amber-400">
+                {bonus.id}
+              </p>
+            </div>
+
+            <div className="mt-4 flex justify-center">
+              <span
+                className={`inline-flex rounded-full px-5 py-2 text-sm font-semibold ${
+                  status === "active"
+                    ? "bg-amber-500/20 text-amber-400"
+                    : status === "redeemed"
+                      ? "bg-white/10 text-white/50"
+                      : "bg-red-950/40 text-red-400/90"
+                }`}
               >
+                {STATUS_LABELS[status]}
+              </span>
+            </div>
+
+            {status === "redeemed" && (
+              <p className="mt-3 text-center text-sm text-white/40">Бонус погашен</p>
+            )}
+
+            {status === "expired" && (
+              <p className="mt-3 text-center text-sm text-white/40">Время действия истекло</p>
+            )}
+          </div>
+
+          {/* Сразу под карточкой: отступ от жёлтой рамки, закрыть, блок персонала */}
+          <div className="mt-3 flex w-full flex-col gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-full border border-amber-500/45 bg-transparent py-3 text-sm font-semibold text-amber-400"
+            >
+              Закрыть
+            </button>
+
+            {isActive ? (
+              <div className="flex flex-col gap-2">
                 <div
-                  className="absolute inset-y-0 left-0 bg-amber-500/25 transition-[width] duration-75"
-                  style={{ width: `${holdProgress * 100}%` }}
-                />
-                <p className="relative z-10 text-center text-sm font-medium text-white/75">
-                  {isHolding ? "Удерживайте для погашения" : "Погасить бонус"}
+                  role="button"
+                  tabIndex={0}
+                  className="relative w-full overflow-hidden rounded-xl border border-white/15 bg-white/5 py-2.5"
+                  onTouchStart={startHold}
+                  onTouchEnd={cancelHold}
+                  onTouchCancel={cancelHold}
+                  onMouseDown={startHold}
+                  onMouseUp={cancelHold}
+                  onMouseLeave={cancelHold}
+                  aria-label="Удерживайте для погашения бонуса"
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 bg-amber-500/25 transition-[width] duration-75"
+                    style={{ width: `${holdProgress * 100}%` }}
+                  />
+                  <p className="relative z-10 text-center text-sm font-medium text-white/75">
+                    {isHolding ? "Подождите…" : "Погасить бонус"}
+                  </p>
+                </div>
+                <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  Для персонала
                 </p>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
 
