@@ -30,7 +30,8 @@ export type WheelSegmentData = {
  * 0..7 — строго в этом порядке
  */
 /**
- * Индексы 2–4: на koleso.png по часовой «Настойки» → «Снеки» → «Пиво» (подстройка под арт; иначе бонус и попап не совпадут со стрелкой).
+ * Индексы 2–4: «Настойки» → «Снеки» → «Пиво». Индексы 5 и 7: «−50 % на 2 напиток» и «мимо»
+ * подогнаны под углы koleso.png (иначе выигрыш показывается как проигрыш).
  */
 export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
   { id: "disc5_bar", kind: "discount", line1: "-5 % на весь заказ бара" },
@@ -38,9 +39,9 @@ export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
   { id: "tincture", kind: "product", line1: "Настойки" },
   { id: "snack", kind: "product", line1: "Снеки" },
   { id: "beer", kind: "product", line1: "Пиво" },
-  { id: "mimo", kind: "other", line1: "мимо" },
-  { id: "no_bonus", kind: "other", line1: "без бонуса" },
   { id: "disc50_2", kind: "discount", line1: "-50 % на 2 напиток" },
+  { id: "no_bonus", kind: "other", line1: "без бонуса" },
+  { id: "mimo", kind: "other", line1: "мимо" },
 ];
 
 export type WheelSegmentId = (typeof WHEEL_SEGMENTS)[number]["id"];
@@ -104,10 +105,10 @@ export type RegularSegmentId = WheelSegmentId;
 /**
  * Веса выпадения по индексу сегмента 0..7 (сумма 100).
  * 0: -5% на весь заказ · 1: -50% на 1 напиток · 2: настойки · 3: снеки ·
- * 4: пиво · 5: мимо · 6: без бонуса · 7: -50% на 2 напитка
- * Веса 15/13 на позициях 3–4 — «Снеки» / «Пиво» на колесе.
+ * 4: пиво · 5: -50% на 2 напитка · 6: без бонуса · 7: мимо
+ * Веса 3/27 на 5 и 7 — прежние шансы для «2-й напиток» и «мимо».
  */
-export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 6, 10, 15, 13, 27, 22, 3];
+export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 6, 10, 15, 13, 3, 22, 27];
 
 function pickWeightedSegmentIndex(weights: readonly number[]): number {
   const total = weights.reduce((s, w) => s + w, 0);
@@ -126,9 +127,9 @@ const REGULAR_SEGMENT_BONUS: (BonusType | null)[] = [
   "wheel_tincture",
   "wheel_snack",
   "wheel_beer",
-  null,
-  null,
   "wheel_d50_2",
+  null,
+  null,
 ];
 
 export type SpinOutcome = {
@@ -229,7 +230,7 @@ function segmentProductIdForBonus(_segmentIndex: number): string | null {
 }
 
 function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | null {
-  if (segmentIndex === 0 || segmentIndex === 1 || segmentIndex === 7) return "all";
+  if (segmentIndex === 0 || segmentIndex === 1 || segmentIndex === 5) return "all";
   if (segmentIndex === 2) return "tincture";
   if (segmentIndex === 3) return "snacks";
   if (segmentIndex === 4) return "beer";
