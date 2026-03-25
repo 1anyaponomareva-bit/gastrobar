@@ -3,7 +3,12 @@
  * Источник истины: localStorage "activeBonus" + проверка expiresAt / redeemed.
  */
 
-import { bonusDisplayDescription, bonusDisplayTitle } from "@/lib/bonusCopy";
+import type { BarCategoryId } from "@/components/CategoryTabs";
+import {
+  bonusDisplayDescription,
+  bonusDisplayTitle,
+  type BonusTypeKey,
+} from "@/lib/bonusCopy";
 
 export type BonusType =
   | "beer"
@@ -19,7 +24,13 @@ export type BonusType =
   | "discount_beer_10"
   | "discount_cocktail_20"
   | "discount_snack_15"
-  | "b52_with_cocktail";
+  | "b52_with_cocktail"
+  | "wheel_d50_1"
+  | "wheel_d5_bar"
+  | "wheel_d50_2"
+  | "wheel_beer"
+  | "wheel_tincture"
+  | "wheel_snack";
 
 export type BonusStatus = "active" | "redeemed" | "expired";
 
@@ -29,6 +40,8 @@ export type Bonus = {
   title: string;
   /** id позиции в меню (MenuItem.id) для перехода "Перейти к позиции" */
   productId: string | null;
+  /** Вкладка бара без привязки к позиции (скидки «на всё») */
+  navBarCategory?: BarCategoryId | null;
   /** Краткое описание для экрана бармену */
   description?: string;
   createdAt: number;
@@ -53,6 +66,12 @@ const PREFIX: Record<BonusType, string> = {
   discount_cocktail_20: "C20",
   discount_snack_15: "S15",
   b52_with_cocktail: "B52C",
+  wheel_d50_1: "W50_1",
+  wheel_d5_bar: "W5BAR",
+  wheel_d50_2: "W502",
+  wheel_beer: "WBEER",
+  wheel_tincture: "WTINCT",
+  wheel_snack: "WSNACK",
 };
 
 const TITLE_BY_TYPE: Record<BonusType, string> = {
@@ -70,6 +89,12 @@ const TITLE_BY_TYPE: Record<BonusType, string> = {
   discount_cocktail_20: "",
   discount_snack_15: "",
   b52_with_cocktail: "",
+  wheel_d50_1: "",
+  wheel_d5_bar: "",
+  wheel_d50_2: "",
+  wheel_beer: "",
+  wheel_tincture: "",
+  wheel_snack: "",
 };
 
 /** id продукта в меню для перехода к позиции */
@@ -88,6 +113,12 @@ const DEFAULT_PRODUCT_ID: Record<BonusType, string> = {
   discount_cocktail_20: "whisky-sour",
   discount_snack_15: "chicken-jerky",
   b52_with_cocktail: "b52",
+  wheel_d50_1: "",
+  wheel_d5_bar: "",
+  wheel_d50_2: "",
+  wheel_beer: "",
+  wheel_tincture: "",
+  wheel_snack: "",
 };
 
 /** В какой раздел открывать (всё в «Бар») */
@@ -106,6 +137,12 @@ export const BONUS_PERIOD: Record<BonusType, "bar"> = {
   discount_cocktail_20: "bar",
   discount_snack_15: "bar",
   b52_with_cocktail: "bar",
+  wheel_d50_1: "bar",
+  wheel_d5_bar: "bar",
+  wheel_d50_2: "bar",
+  wheel_beer: "bar",
+  wheel_tincture: "bar",
+  wheel_snack: "bar",
 };
 
 const DESCRIPTION_BY_TYPE: Record<BonusType, string> = {
@@ -123,7 +160,27 @@ const DESCRIPTION_BY_TYPE: Record<BonusType, string> = {
   discount_cocktail_20: "",
   discount_snack_15: "",
   b52_with_cocktail: "",
+  wheel_d50_1: "",
+  wheel_d5_bar: "",
+  wheel_d50_2: "",
+  wheel_beer: "",
+  wheel_tincture: "",
+  wheel_snack: "",
 };
+
+/** Типы бонуса колеса с плашкой по вкладке бара (скидки «Все» + подарки по разделам). */
+export const WHEEL_NAV_BANNER_TYPES: readonly BonusType[] = [
+  "wheel_d50_1",
+  "wheel_d5_bar",
+  "wheel_d50_2",
+  "wheel_beer",
+  "wheel_tincture",
+  "wheel_snack",
+];
+
+export function isWheelNavBannerType(type: BonusType): boolean {
+  return (WHEEL_NAV_BANNER_TYPES as readonly string[]).includes(type);
+}
 
 /** Бонус на правило/категорию (скидка, 2-й -50%): не показывать «бесплатно» на карточке, показывать инфо-блок в категории */
 export function isCategoryBonus(type: BonusType): boolean {
@@ -137,6 +194,12 @@ export function isCategoryBonus(type: BonusType): boolean {
     "second_half",
     "two_for_one",
     "b52_with_cocktail",
+    "wheel_d50_1",
+    "wheel_d5_bar",
+    "wheel_d50_2",
+    "wheel_beer",
+    "wheel_tincture",
+    "wheel_snack",
   ].includes(type);
 }
 
@@ -178,11 +241,14 @@ function readFromStorage(): Bonus | null {
     if (!raw) return null;
     const data = JSON.parse(raw) as Bonus;
     if (!data || typeof data.expiresAt !== "number") return null;
-    if (data.productId === undefined && data.type) data.productId = DEFAULT_PRODUCT_ID[data.type as BonusType] ?? null;
+    if (data.productId === undefined && data.type) {
+      const d = DEFAULT_PRODUCT_ID[data.type as BonusType];
+      data.productId = d && d !== "" ? d : null;
+    }
     if (data.type) {
       const t = data.type as BonusType;
-      data.title = bonusDisplayTitle(t, data.productId ?? null);
-      data.description = bonusDisplayDescription(t, data.productId ?? null);
+      data.title = bonusDisplayTitle(t as BonusTypeKey, data.productId ?? null);
+      data.description = bonusDisplayDescription(t as BonusTypeKey, data.productId ?? null);
     }
     return data;
   } catch {
@@ -225,18 +291,36 @@ export function getCurrentBonus(): Bonus | null {
 
 /** Описание бонуса (для экрана бармену). */
 export function getBonusDescription(type: BonusType, productId?: string | null): string {
-  return bonusDisplayDescription(type, productId ?? DEFAULT_PRODUCT_ID[type] ?? null);
+  const pid = productId ?? resolveProductId(type, undefined);
+  return bonusDisplayDescription(type as BonusTypeKey, pid);
 }
 
-/** Создать и сохранить бонус. Возвращает созданный бонус. */
-export function createBonus(type: BonusType, expiresAt: number, productId?: string | null): Bonus {
-  const pid = productId ?? DEFAULT_PRODUCT_ID[type] ?? null;
+function resolveProductId(
+  type: BonusType,
+  productId: string | null | undefined
+): string | null {
+  if (productId !== undefined && productId !== null) return productId;
+  if (productId === null) return null;
+  const d = DEFAULT_PRODUCT_ID[type];
+  if (d === undefined || d === "") return null;
+  return d;
+}
+
+/** Создать и сохранить бонус. `productId: null` — явно без позиции; `navBarCategory` — вкладка бара. */
+export function createBonus(
+  type: BonusType,
+  expiresAt: number,
+  productId?: string | null,
+  navBarCategory?: BarCategoryId | null
+): Bonus {
+  const pid = resolveProductId(type, productId);
   const bonus: Bonus = {
     id: generateBonusId(type),
     type,
-    title: bonusDisplayTitle(type, pid),
+    title: bonusDisplayTitle(type as BonusTypeKey, pid),
     productId: pid,
-    description: bonusDisplayDescription(type, pid),
+    navBarCategory: navBarCategory ?? null,
+    description: bonusDisplayDescription(type as BonusTypeKey, pid),
     createdAt: Date.now(),
     expiresAt,
     redeemed: false,

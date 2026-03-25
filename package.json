@@ -16,7 +16,9 @@
     "tunnel:url": "node scripts/tunnel-url.js",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",

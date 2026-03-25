@@ -89,6 +89,12 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
     setShowConfirmModal(false);
   }, [bonus.id]);
 
+  const handleCloseAndRedeem = useCallback(() => {
+    if (!isActive) return;
+    redeemBonus(bonus.id);
+    onClose();
+  }, [bonus.id, isActive, onClose]);
+
   const isHolding = holdProgress > 0 && holdProgress < 1;
 
   return (
@@ -96,21 +102,21 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[1200] flex flex-col items-center justify-center overflow-y-auto bg-[#0b0b0b]"
+      className="fixed inset-0 z-[1200] flex min-h-0 flex-col bg-[#0b0b0b]"
       style={{
+        minHeight: "100dvh",
         background:
-          "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(30,26,20,0.6) 0%, #0b0b0b 60%)",
+          "radial-gradient(ellipse 80% 60% at 50% 35%, rgba(30,26,20,0.6) 0%, #0b0b0b 60%)",
       }}
     >
-      {/* Кнопка закрытия */}
+      {/* Верх: закрыть — в потоке, не absolute */}
       <div
-        className="absolute left-0 right-0 top-0 z-10 flex justify-end px-4 py-3"
-        style={{ paddingTop: "max(1rem, calc(env(safe-area-inset-top) + 8px))" }}
+        className="flex shrink-0 justify-end px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top,0px))]"
       >
         <button
           type="button"
           onClick={onClose}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white"
           aria-label="Закрыть"
         >
           <svg
@@ -128,48 +134,76 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
         </button>
       </div>
 
-      {/* Центральный блок — premium pass */}
-      <div
-        className="relative mx-4 mt-4 mb-40 w-full max-w-sm shrink-0 rounded-3xl border border-amber-500/40 px-6 py-8 shadow-[0_0_48px_rgba(212,175,55,0.08)]"
-        style={{
-          marginTop: "max(3.5rem, calc(env(safe-area-inset-top) + 2.5rem))",
-          background:
-            "linear-gradient(180deg, rgba(26,24,22,0.95) 0%, rgba(15,14,13,0.98) 100%)",
-        }}
-      >
+      {/* Карточка — скролл, не выталкивает нижние кнопки за экран */}
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-3">
+        <div
+          className="relative mx-auto w-full max-w-sm rounded-3xl border border-amber-500/40 px-5 py-5 shadow-[0_0_48px_rgba(212,175,55,0.08)] sm:px-6 sm:py-6"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(26,24,22,0.95) 0%, rgba(15,14,13,0.98) 100%)",
+          }}
+        >
         <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/75">
           Бонус
         </p>
         <h1 className="mt-2 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
           {bonus.title}
         </h1>
-        <p className="mt-3 text-center text-sm text-white/55">
+        <p className="mt-2 text-center text-sm text-white/55">
           Покажи этот экран бармену
         </p>
 
-        <p className="mt-5 text-center text-[15px] leading-relaxed text-white/78">
+        <p className="mt-3 text-center text-[15px] leading-relaxed text-white/78">
           {bonus.description ?? getBonusDescription(bonus.type, bonus.productId)}
         </p>
-        <p className="mt-2 text-center text-xs text-amber-500/70">
+        <p className="mt-1.5 text-center text-xs text-amber-500/70">
           Действует 2 часа
         </p>
 
         {isActive && (
-          <p className="mt-4 text-center font-mono text-2xl tabular-nums text-amber-400/95">
+          <p className="mt-3 text-center font-mono text-2xl tabular-nums text-amber-400/95">
             Осталось {formatRemainingTime(initialBonus.expiresAt)}
           </p>
         )}
 
-        <div className="mt-6 rounded-2xl border border-amber-500/35 bg-black/50 px-5 py-5">
+        <div className="mt-4 rounded-2xl border border-amber-500/35 bg-black/50 px-4 py-4">
           <p className="text-center text-[10px] uppercase tracking-widest text-white/50">
             Код бонуса
           </p>
-          <p className="mt-2 text-center font-mono text-3xl font-bold tracking-[0.25em] text-amber-400">
+          <p className="mt-1.5 text-center font-mono text-3xl font-bold tracking-[0.25em] text-amber-400">
             {bonus.id}
           </p>
         </div>
 
-        <div className="mt-6 flex justify-center">
+        {isActive && (
+          <div className="mt-3">
+            <p className="text-center text-[10px] uppercase tracking-wider text-white/45">
+              Для персонала
+            </p>
+            <div
+              role="button"
+              tabIndex={0}
+              className="relative mx-auto mt-2 w-full max-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-white/5 py-2.5"
+              onTouchStart={startHold}
+              onTouchEnd={cancelHold}
+              onTouchCancel={cancelHold}
+              onMouseDown={startHold}
+              onMouseUp={cancelHold}
+              onMouseLeave={cancelHold}
+              aria-label="Удерживайте для погашения бонуса"
+            >
+              <div
+                className="absolute inset-y-0 left-0 bg-amber-500/25 transition-[width] duration-75"
+                style={{ width: `${holdProgress * 100}%` }}
+              />
+              <p className="relative z-10 text-center text-sm font-medium text-white/75">
+                {isHolding ? "Удерживайте для погашения" : "Погасить бонус"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 flex justify-center">
           <span
             className={`inline-flex rounded-full px-5 py-2 text-sm font-semibold ${
               status === "active"
@@ -184,65 +218,44 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
         </div>
 
         {status === "redeemed" && (
-          <p className="mt-4 text-center text-sm text-white/40">
+          <p className="mt-3 text-center text-sm text-white/40">
             Бонус погашен
           </p>
         )}
 
         {status === "expired" && (
-          <p className="mt-4 text-center text-sm text-white/40">
+          <p className="mt-3 text-center text-sm text-white/40">
             Время действия истекло
           </p>
         )}
+        </div>
       </div>
 
-      {/* Нижняя зона — отступ сверху, чтобы не заходить на карточку */}
+      {/* Низ: крупное действие — погасить и выйти */}
       <div
-        className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 px-4 pb-6 pt-6"
+        className="shrink-0 border-t border-white/[0.06] bg-[#0b0b0b]/98 px-4 pt-2"
         style={{
-          paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
-          minHeight: "140px",
+          paddingBottom: "max(0.65rem, calc(env(safe-area-inset-bottom, 0px) + 8px))",
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-full border border-amber-500/50 bg-transparent py-3.5 font-semibold text-amber-400"
-        >
-          Закрыть
-        </button>
-
-        {/* Зона погашения для персонала: long press */}
-        {isActive && (
-          <div className="flex flex-col items-center gap-1.5">
-            <div
-              role="button"
-              tabIndex={0}
-              className="relative w-full max-w-[200px] overflow-hidden rounded-xl border border-white/15 bg-white/5 py-2.5"
-              onTouchStart={startHold}
-              onTouchEnd={cancelHold}
-              onTouchCancel={cancelHold}
-              onMouseDown={startHold}
-              onMouseUp={cancelHold}
-              onMouseLeave={cancelHold}
-              aria-label="Удерживайте для погашения бонуса"
+        <div className="mx-auto flex w-full max-w-sm flex-col gap-2">
+          {isActive ? (
+            <button
+              type="button"
+              onClick={handleCloseAndRedeem}
+              className="w-full rounded-full bg-amber-500 py-3 text-sm font-semibold text-black"
             >
-              {/* Линейный прогресс удержания */}
-              <div
-                className="absolute inset-y-0 left-0 bg-amber-500/25 transition-[width] duration-75"
-                style={{ width: `${holdProgress * 100}%` }}
-              />
-              <p className="relative z-10 text-center text-sm font-medium text-white/70">
-                {isHolding
-                  ? "Удерживайте для погашения"
-                  : "Погасить бонус"}
-              </p>
-            </div>
-            <span className="text-[10px] uppercase tracking-wider text-white/30">
-              Для персонала
-            </span>
-          </div>
-        )}
+              Закрыть и погасить бонус
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-full border border-amber-500/45 bg-transparent py-3 font-semibold text-amber-400"
+          >
+            {isActive ? "Только закрыть" : "Закрыть"}
+          </button>
+        </div>
       </div>
 
       {/* Модал подтверждения погашения */}
@@ -252,9 +265,9 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-[1300] flex items-end justify-center bg-black/70 p-4"
             style={{
-              paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+              paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))",
             }}
             onClick={() => setShowConfirmModal(false)}
           >

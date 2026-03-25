@@ -1,9 +1,9 @@
 /**
- * Колесо в попапе: 12 секторов (30°), как на public/koleso.png.
- * Кнопка справа — fab-wheel-reference.png (другой файл).
- * Порядок по часовой от 12:00 (сектор 0 по центру вверху).
+ * Колесо в попапе: 8 секторов (45°), public/koleso.png.
+ * Порядок по часовой от верха — как на макете картинки.
  */
 
+import type { BarCategoryId } from "@/components/CategoryTabs";
 import {
   createBonus,
   clearCurrentBonus,
@@ -19,119 +19,43 @@ const WIN_EXPIRY_MIN = 120;
 
 export type WheelSegmentKind = "discount" | "product" | "other";
 
-export type WheelSegmentIconKey =
-  | "cocktail"
-  | "beer"
-  | "shot"
-  | "squid"
-  | "nut"
-  | "meat"
-  | "gift"
-  | "refresh"
-  | "miss";
-
 export type WheelSegmentData = {
   id: string;
   kind: WheelSegmentKind;
   line1: string;
-  line2?: string;
-  icon?: WheelSegmentIconKey;
-  productId?: string;
 };
 
 /**
- * 12 секторов (30°), порядок по часовой от верха (koleso.png):
- * 0 Сегодня без бонуса → 1 −10% → 2 Б-52 → 3 −10% → 4 Sapporo → 5–6 Б-52 →
- * 7 кальмар → 8–9 джерки → 10 мимо → 11 без бонуса
+ * 8 секторов по часовой от верха (koleso.png):
+ * 0..7 — строго в этом порядке
+ */
+/**
+ * Индексы 2–4: на koleso.png по часовой «Настойки» → «Снеки» → «Пиво» (подстройка под арт; иначе бонус и попап не совпадут со стрелкой).
  */
 export const WHEEL_SEGMENTS: readonly WheelSegmentData[] = [
-  { id: "no_bonus_smile", kind: "other", line1: "СЕГОДНЯ БЕЗ БОНУСА" },
-  {
-    id: "disc10_a",
-    kind: "discount",
-    line1: "−10%",
-    line2: "на коктейль",
-    icon: "cocktail",
-    productId: "whisky-sour",
-  },
-  {
-    id: "b52_a",
-    kind: "product",
-    line1: "Б-52",
-    icon: "shot",
-    productId: "b52",
-  },
-  {
-    id: "disc10_b",
-    kind: "discount",
-    line1: "−10%",
-    line2: "на коктейль",
-    icon: "cocktail",
-    productId: "whisky-sour",
-  },
-  {
-    id: "beer_sapporo",
-    kind: "product",
-    line1: "SAPPORO",
-    icon: "beer",
-    productId: "beer-light",
-  },
-  {
-    id: "b52_b",
-    kind: "product",
-    line1: "Б-52",
-    icon: "shot",
-    productId: "b52",
-  },
-  {
-    id: "b52_c",
-    kind: "product",
-    line1: "Б-52",
-    icon: "shot",
-    productId: "b52",
-  },
-  {
-    id: "snack_squid",
-    kind: "product",
-    line1: "КАЛЬМАР",
-    icon: "squid",
-    productId: "dried-squid",
-  },
-  {
-    id: "snack_jerky_a",
-    kind: "product",
-    line1: "ДЖЕРКИ",
-    icon: "meat",
-    productId: "chicken-jerky",
-  },
-  {
-    id: "snack_jerky_b",
-    kind: "product",
-    line1: "ДЖЕРКИ",
-    icon: "meat",
-    productId: "chicken-jerky",
-  },
-  { id: "mimo_miss", kind: "other", line1: "В ЭТОТ РАЗ МИМО" },
-  { id: "no_bonus_plain", kind: "other", line1: "СЕГОДНЯ БЕЗ БОНУСА" },
+  { id: "disc5_bar", kind: "discount", line1: "-5 % на весь заказ бара" },
+  { id: "disc50_1", kind: "discount", line1: "-50 % на 1 напиток" },
+  { id: "tincture", kind: "product", line1: "Настойки" },
+  { id: "snack", kind: "product", line1: "Снеки" },
+  { id: "beer", kind: "product", line1: "Пиво" },
+  { id: "mimo", kind: "other", line1: "мимо" },
+  { id: "no_bonus", kind: "other", line1: "без бонуса" },
+  { id: "disc50_2", kind: "discount", line1: "-50 % на 2 напиток" },
 ];
 
 export type WheelSegmentId = (typeof WHEEL_SEGMENTS)[number]["id"];
 
 /**
- * Угол (0° = вверх, по часовой) левой границы сектора 0 на koleso.png.
- * Должен совпадать с порядком подписей в WHEEL_SEGMENTS по часовой от макета.
- * Раньше 345° давал сдвиг на 1 сектор относительно арта → визу «кальмар», текст «Б-52».
+ * Левая граница сектора 0 в градусах (подстройка под арт koleso.png).
+ * Если стрелка останавливается на линии между секторами, а не по центру,
+ * сдвиньте на ±(360 / sectorCount / 2), например при 8 секторах: 315 ± 22.5.
  */
-export const BONUS_WHEEL_BOUNDARY_START_DEG = 315;
+export const BONUS_WHEEL_BOUNDARY_START_DEG = 292.5;
 
-/** Доп. сдвиг стрелки относительно «верха» (редко нужен). */
 export const BONUS_WHEEL_POINTER_BIAS_DEG = 0;
 
 export const BONUS_WHEEL_FULL_TURNS = 5;
 
-/**
- * Центр сектора i в координатах картинки (0° = вверх, по часовой).
- */
 export function segmentCenterDegrees(
   segmentIndex: number,
   sectorCount: number,
@@ -146,7 +70,6 @@ export function computeRotationTargetDegrees(
   segmentIndex: number,
   sectorCount: number,
   fullTurns: number,
-  /** Устаревший параметр: оставлен для совместимости; используйте BONUS_WHEEL_BOUNDARY_START_DEG / BONUS_WHEEL_POINTER_BIAS_DEG */
   offsetDeg: number = 0
 ): number {
   const centerDeg = segmentCenterDegrees(segmentIndex, sectorCount);
@@ -156,17 +79,12 @@ export function computeRotationTargetDegrees(
   let delta = (desiredMod - prevMod + 360) % 360;
   if (delta === 0) delta = 360;
   const next = currentRotationDeg + fullTurns * 360 + delta;
-  /** Целые градусы — меньше дрожания на границе сектора из‑за float */
   return Math.round(next * 1000) / 1000;
 }
 
-/**
- * Какой сектор (индекс 0…11) оказался под стрелкой после вращения на rotationDeg (градусы по часовой).
- * Должен совпадать с segmentIndex, для которого считали computeRotationTargetDegrees.
- */
 export function segmentIndexFromWheelRotation(
   rotationDeg: number,
-  sectorCount: number = 12,
+  sectorCount: number = 8,
   boundaryStartDeg: number = BONUS_WHEEL_BOUNDARY_START_DEG
 ): number {
   const seg = 360 / sectorCount;
@@ -183,53 +101,34 @@ export const WHEEL_SEGMENTS_REGULAR = WHEEL_SEGMENTS;
 export type FirstSegmentId = WheelSegmentId;
 export type RegularSegmentId = WheelSegmentId;
 
-/** Первый спин: без проигрышей (0, 10, 11 — вес 0) */
-const FIRST_WEIGHTS = [
-  0,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  1 / 9,
-  0,
-  0,
-];
+/**
+ * Веса выпадения по индексу сегмента 0..7 (сумма 100).
+ * 0: -5% на весь заказ · 1: -50% на 1 напиток · 2: настойки · 3: снеки ·
+ * 4: пиво · 5: мимо · 6: без бонуса · 7: -50% на 2 напитка
+ * Веса 15/13 на позициях 3–4 — «Снеки» / «Пиво» на колесе.
+ */
+export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 6, 10, 15, 13, 27, 22, 3];
 
-const FIRST_SEGMENT_BONUS: BonusType[] = [
-  "beer",
-  "discount_cocktail_10",
-  "free_shot",
-  "discount_cocktail_10",
-  "beer",
-  "free_shot",
-  "free_shot",
-  "snack_squid",
-  "snack_free",
-  "snack_free",
-  "beer",
-  "beer",
-];
-
-/** Обычный спин: равная вероятность каждого сектора */
-const REGULAR_WEIGHTS = Array.from({ length: 12 }, () => 1 / 12);
+function pickWeightedSegmentIndex(weights: readonly number[]): number {
+  const total = weights.reduce((s, w) => s + w, 0);
+  if (total <= 0) return 0;
+  let r = Math.random() * total;
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]!;
+    if (r < 0) return i;
+  }
+  return weights.length - 1;
+}
 
 const REGULAR_SEGMENT_BONUS: (BonusType | null)[] = [
-  null,
-  "discount_cocktail_10",
-  "free_shot",
-  "discount_cocktail_10",
-  "beer",
-  "free_shot",
-  "free_shot",
-  "snack_squid",
-  "snack_free",
-  "snack_free",
+  "wheel_d5_bar",
+  "wheel_d50_1",
+  "wheel_tincture",
+  "wheel_snack",
+  "wheel_beer",
   null,
   null,
+  "wheel_d50_2",
 ];
 
 export type SpinOutcome = {
@@ -241,10 +140,10 @@ export type SpinOutcome = {
 };
 
 /**
- * Итог спина всегда совпадает с тем, что выбрала `computeSpinOutcome` и куда
- * целится анимация (`computeRotationTargetDegrees`). Раньше здесь пересчитывали
- * сектор по углу остановки — из‑за пограничных градусов индекс сдвигался на 1
- * (например «без бонуса» → −10% на коктейль). Угол нужен только для визуала.
+ * Итог спина берётся из RNG (`computeSpinOutcome`), а не из пересчёта по углу:
+ * иначе из‑за погрешности анимации/калибровки картинки соседний сектор (например «без бонуса»
+ * вместо «-50 % на 2 напитка») подменяет карточку и бонус.
+ * Анимация по-прежнему целится в `outcome.segmentIndex` — визуал и текст совпадают с логикой.
  */
 export function reconcileOutcomeWithRotation(
   outcome: SpinOutcome,
@@ -281,47 +180,16 @@ function markHasPlayed(): void {
 
 export function computeSpinOutcome(): SpinOutcome {
   const played = hasPlayedWheelBefore();
-
-  if (!played) {
-    const r = Math.random();
-    let cum = 0;
-    let idx = WHEEL_SEGMENTS_FIRST.length - 1;
-    for (let i = 0; i < FIRST_WEIGHTS.length; i++) {
-      cum += FIRST_WEIGHTS[i]!;
-      if (r < cum) {
-        idx = i;
-        break;
-      }
-    }
-    const bonusType = FIRST_SEGMENT_BONUS[idx]!;
-    return {
-      segmentIndex: idx,
-      segmentId: WHEEL_SEGMENTS_FIRST[idx]!.id,
-      bonusType,
-      isLoss: false,
-      isFirstWheel: true,
-    };
-  }
-
-  const r = Math.random();
-  let cum = 0;
-  let idx = WHEEL_SEGMENTS_REGULAR.length - 1;
-  for (let i = 0; i < REGULAR_WEIGHTS.length; i++) {
-    cum += REGULAR_WEIGHTS[i]!;
-    if (r < cum) {
-      idx = i;
-      break;
-    }
-  }
+  const idx = pickWeightedSegmentIndex(SEGMENT_SPIN_WEIGHTS);
   const bonusType = REGULAR_SEGMENT_BONUS[idx] ?? null;
   const isLoss = bonusType === null;
 
   return {
     segmentIndex: idx,
-    segmentId: WHEEL_SEGMENTS_REGULAR[idx]!.id,
+    segmentId: WHEEL_SEGMENTS[idx]!.id,
     bonusType: isLoss ? null : bonusType,
     isLoss,
-    isFirstWheel: false,
+    isFirstWheel: !played,
   };
 }
 
@@ -355,15 +223,28 @@ export function canSpin(): boolean {
   return Date.now() - lastSpinAt >= SPIN_COOLDOWN_MS;
 }
 
+/** Бонусы «пиво / настойка / снек» — на весь раздел, без привязки к одной карточке */
+function segmentProductIdForBonus(_segmentIndex: number): string | null {
+  return null;
+}
+
+function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | null {
+  if (segmentIndex === 0 || segmentIndex === 1 || segmentIndex === 7) return "all";
+  if (segmentIndex === 2) return "tincture";
+  if (segmentIndex === 3) return "snacks";
+  if (segmentIndex === 4) return "beer";
+  return null;
+}
+
 export function saveSpinOutcome(outcome: SpinOutcome): Bonus | null {
   setStorage({ lastSpinAt: Date.now() });
   markHasPlayed();
 
   if (outcome.isLoss || !outcome.bonusType) return null;
   const expiresAt = Date.now() + WIN_EXPIRY_MIN * 60 * 1000;
-  const segment = WHEEL_SEGMENTS[outcome.segmentIndex];
-  const productId = segment && "productId" in segment ? segment.productId : undefined;
-  return createBonus(outcome.bonusType, expiresAt, productId);
+  const productId = segmentProductIdForBonus(outcome.segmentIndex);
+  const navBarCategory = segmentNavBarCategoryForBonus(outcome.segmentIndex);
+  return createBonus(outcome.bonusType, expiresAt, productId, navBarCategory);
 }
 
 export function resetWheelForTest(): void {

@@ -10,8 +10,18 @@ import { CategoryTabs, type BarCategoryId } from "@/components/CategoryTabs";
 import { MenuListItem } from "@/components/MenuListItem";
 import { MenuDetailView } from "@/components/MenuDetailView";
 import { PromoCarousel } from "@/components/PromoCarousel";
-import { getActiveBonus, isCategoryBonus, BONUS_PERIOD } from "@/services/bonusService";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import {
+  getActiveBonus,
+  isCategoryBonus,
+  BONUS_PERIOD,
+  isWheelNavBannerType,
+} from "@/services/bonusService";
+import {
+  BONUS_VALIDITY_LABEL,
+  barSectionDisplayName,
+  wheelNavBannerScopeLine,
+  wheelNavBannerShowTitle,
+} from "@/lib/bonusCopy";
 import type { MenuItem } from "@/data/menu";
 
 const HEADER_HEIGHT = 60;
@@ -50,6 +60,20 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   const bonusProductId = activeBonus && !isCategoryBonus(activeBonus.type) ? activeBonus.productId : null;
 
   const filtered = period === "bar" ? filterBarItems(items, barCategory) : [];
+
+  const showWheelNavBanner =
+    period === "bar" &&
+    activeBonus &&
+    activeBonus.navBarCategory != null &&
+    activeBonus.navBarCategory === barCategory &&
+    isWheelNavBannerType(activeBonus.type);
+
+  const showLegacyCategoryBanner =
+    period === "bar" &&
+    activeBonus &&
+    isCategoryBonus(activeBonus.type) &&
+    !isWheelNavBannerType(activeBonus.type) &&
+    BONUS_PERIOD[activeBonus.type] === period;
 
   const favoriteItems = useMemo(() => {
     if (period !== "favorites") return [];
@@ -215,10 +239,32 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       minHeight: `calc(${BAR_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
                     }}
                   />
-                  {activeBonus && isCategoryBonus(activeBonus.type) && BONUS_PERIOD[activeBonus.type] === period && (
+                  {showWheelNavBanner && activeBonus && (
+                    <div
+                      className="mb-3 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-br from-amber-500/[0.12] to-transparent px-4 py-3.5"
+                      style={{
+                        boxShadow:
+                          "inset 0 0 0 1px rgba(212, 175, 55, 0.45), 0 0 24px rgba(212, 175, 55, 0.2)",
+                      }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400/95">
+                        По бонусу колеса
+                      </p>
+                      <p className="mt-2 text-sm font-semibold leading-snug text-white">
+                        {wheelNavBannerScopeLine(activeBonus.type, barSectionDisplayName(barCategory))}
+                      </p>
+                      {wheelNavBannerShowTitle(activeBonus.type) && (
+                        <p className="mt-1.5 text-base font-bold leading-snug text-amber-100/95">
+                          {activeBonus.title}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-white/50">Действует {BONUS_VALIDITY_LABEL}</p>
+                    </div>
+                  )}
+                  {showLegacyCategoryBanner && activeBonus && (
                     <div className="mb-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-500/80">
-                        По бонусу колеса
+                        Акция по бонусу
                       </p>
                       <p className="mt-1 text-sm font-semibold text-white">{activeBonus.title}</p>
                       <p className="mt-0.5 text-xs text-white/55">Действует {BONUS_VALIDITY_LABEL}</p>

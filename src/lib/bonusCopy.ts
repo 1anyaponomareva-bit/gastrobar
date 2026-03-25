@@ -1,9 +1,11 @@
 import { MENU_ITEMS } from "@/data/menu";
+import type { BarCategoryId } from "@/components/CategoryTabs";
 
 export const BONUS_VALIDITY_HOURS = 2;
 export const BONUS_VALIDITY_LABEL = "2 часа";
 
-type BonusTypeKey =
+/** Подмножество полей для отображения (совместимо с BonusType в bonusService). */
+export type BonusTypeKey =
   | "beer"
   | "free_shot"
   | "snack_free"
@@ -17,18 +19,98 @@ type BonusTypeKey =
   | "two_for_one"
   | "discount_cocktail_20"
   | "discount_snack_15"
-  | "b52_with_cocktail";
+  | "b52_with_cocktail"
+  | "wheel_d50_1"
+  | "wheel_d5_bar"
+  | "wheel_d50_2"
+  | "wheel_beer"
+  | "wheel_tincture"
+  | "wheel_snack";
 
 export function menuProductName(productId: string | null): string | null {
   if (!productId) return null;
   return MENU_ITEMS.find((i) => i.id === productId)?.name ?? null;
 }
 
-/** Заголовок бонуса: конкретная позиция или правило */
+/** Подпись кнопки перехода в раздел бара (колесо / «Мои бонусы»). */
+export function barNavigateButtonLabel(
+  navBarCategory: BarCategoryId | null | undefined,
+  hasProductId: boolean
+): string | null {
+  if (navBarCategory === "all") return "Перейти в раздел «Все»";
+  if (navBarCategory === "beer") return "Перейти в раздел «Пиво»";
+  if (navBarCategory === "tincture") return "Перейти в раздел «Настойки»";
+  if (navBarCategory === "snacks") return "Перейти в раздел «Снеки»";
+  if (hasProductId) return "Перейти к позиции в меню";
+  return null;
+}
+
+/** Название раздела бара для плашки (как на вкладках). */
+export function barSectionDisplayName(categoryId: BarCategoryId): string {
+  const m: Record<BarCategoryId, string> = {
+    all: "Все",
+    cocktail: "Коктейли",
+    wine: "Вино",
+    beer: "Пиво",
+    tincture: "Настойки",
+    snacks: "Снеки",
+  };
+  return m[categoryId];
+}
+
+/**
+ * Вторая строка плашки «по бонусу колеса» над списком на вкладке.
+ * Скидки — формулировка со «скидкой»; подарки по разделу — на все позиции.
+ */
+export function wheelNavBannerScopeLine(
+  type: BonusTypeKey,
+  sectionLabel: string
+): string {
+  if (type === "wheel_d50_1" || type === "wheel_d5_bar" || type === "wheel_d50_2") {
+    return `Скидка на раздел «${sectionLabel}»`;
+  }
+  return `Действует на все позиции раздела «${sectionLabel}»`;
+}
+
+/** Показывать ли крупный заголовок бонуса в плашке «по бонусу колеса» (для подарков по разделу он дублирует scope line). */
+export function wheelNavBannerShowTitle(type: BonusTypeKey): boolean {
+  return (
+    type === "wheel_d50_1" || type === "wheel_d5_bar" || type === "wheel_d50_2"
+  );
+}
+
+/** Короткая подсказка под заголовком бонуса при привязке к вкладке бара. */
+export function barNavigateHintLine(
+  navBarCategory: BarCategoryId | null | undefined
+): string | null {
+  if (navBarCategory === "all")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Все» на вкладке «Бар».`;
+  if (navBarCategory === "beer")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Пиво».`;
+  if (navBarCategory === "tincture")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Настойки».`;
+  if (navBarCategory === "snacks")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Снеки».`;
+  return null;
+}
+
+/** Заголовок бонуса (для колеса — дословно как на сегменте). */
 export function bonusDisplayTitle(type: BonusTypeKey, productId: string | null): string {
   const pid = productId ?? null;
   const name = pid ? menuProductName(pid) : null;
   switch (type) {
+    case "wheel_d50_1":
+      return "-50 % на 1 напиток";
+    case "wheel_d5_bar":
+      return "-5 % на весь заказ бара";
+    case "wheel_d50_2":
+      return "-50 % на 2 напиток";
+    case "wheel_beer":
+      return "Пиво";
+    case "wheel_tincture":
+      return "Настойки";
+    case "wheel_snack":
+      return "Снеки";
     case "beer":
       return name
         ? `Ты выиграл(а) ${name}`
@@ -81,6 +163,16 @@ export function bonusDisplayDescription(type: BonusTypeKey, productId: string | 
   const name = menuProductName(productId ?? "");
   const hours = BONUS_VALIDITY_LABEL;
   switch (type) {
+    case "wheel_d50_1":
+    case "wheel_d5_bar":
+    case "wheel_d50_2":
+      return `Покажи бармену код. Действует ${hours}.`;
+    case "wheel_beer":
+      return `Покажи бармену код — бонус на весь раздел «Пиво». Действует ${hours}.`;
+    case "wheel_tincture":
+      return `Покажи бармену код — бонус на весь раздел «Настойки». Действует ${hours}.`;
+    case "wheel_snack":
+      return `Покажи бармену код — бонус на весь раздел «Снеки». Действует ${hours}.`;
     case "beer":
     case "free_shot":
       return name

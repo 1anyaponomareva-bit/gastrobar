@@ -12,7 +12,11 @@ import {
   BONUS_PERIOD,
   isCategoryBonus,
 } from "@/services/bonusService";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import {
+  BONUS_VALIDITY_LABEL,
+  barNavigateButtonLabel,
+  barNavigateHintLine,
+} from "@/lib/bonusCopy";
 import { useBonusScreen } from "@/components/BonusScreenContext";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
 
@@ -27,7 +31,7 @@ type Props = { onClose: () => void };
 export function MyBonusesScreen({ onClose }: Props) {
   const [bonus, setBonus] = useState<Bonus | null>(() => getActiveBonus());
   const { openBonusScreen } = useBonusScreen();
-  const { goToProduct } = useHighlightProduct();
+  const { goToProduct, goToBarCategory } = useHighlightProduct();
 
   useEffect(() => {
     const b = getActiveBonus();
@@ -92,13 +96,21 @@ export function MyBonusesScreen({ onClose }: Props) {
   const status = getBonusStatus(bonus);
   const period = BONUS_PERIOD[bonus.type];
   const productId = bonus.productId;
+  const navCat = bonus.navBarCategory ?? null;
+  const navBtnLabel = barNavigateButtonLabel(navCat, Boolean(productId));
+  const navHint = barNavigateHintLine(navCat);
 
   const handleShowBartender = () => {
     openBonusScreen(bonus);
     onClose();
   };
 
-  const handleGoToProduct = () => {
+  const handleNavigateToMenu = () => {
+    if (navCat) {
+      goToBarCategory(navCat);
+      onClose();
+      return;
+    }
     if (period && productId) goToProduct(period, productId);
     onClose();
   };
@@ -136,9 +148,11 @@ export function MyBonusesScreen({ onClose }: Props) {
           >
             <h2 className="text-lg font-bold leading-snug text-white">{bonus.title}</h2>
             <p className="mt-2 text-sm text-white/55">
-              {isCategoryBonus(bonus.type)
-                ? `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «${period === "bar" ? "Бар" : "Меню"}».`
-                : `В меню — та же позиция. Действует ${BONUS_VALIDITY_LABEL}.`}
+              {navHint
+                ? navHint
+                : isCategoryBonus(bonus.type)
+                  ? `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «${period === "bar" ? "Бар" : "Меню"}».`
+                  : `В меню — та же позиция. Действует ${BONUS_VALIDITY_LABEL}.`}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
@@ -171,13 +185,13 @@ export function MyBonusesScreen({ onClose }: Props) {
               >
                 Показать бармену
               </button>
-              {productId && status === "active" && (
+              {status === "active" && navBtnLabel && (
                 <button
                   type="button"
-                  onClick={handleGoToProduct}
+                  onClick={handleNavigateToMenu}
                   className="w-full rounded-full border border-white/25 bg-white/10 py-3.5 font-semibold text-white"
                 >
-                  {isCategoryBonus(bonus.type) ? "Перейти в категорию" : "Перейти к позиции"}
+                  {navBtnLabel}
                 </button>
               )}
             </div>

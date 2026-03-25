@@ -15,6 +15,8 @@ type HighlightProductContextValue = {
   clearPendingListCategory: () => void;
   /** Открыть нужный раздел и вкладку, подсветить карточку */
   goToProduct: (period: MenuPeriod, productId: string) => void;
+  /** Бар: перейти на вкладку списка (без подсветки позиции) */
+  goToBarCategory: (categoryTab: BarCategoryId) => void;
 };
 
 const HighlightProductContext = createContext<HighlightProductContextValue | null>(null);
@@ -42,6 +44,15 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
     [setPeriod]
   );
 
+  const goToBarCategory = useCallback(
+    (categoryTab: BarCategoryId) => {
+      setPeriod("bar");
+      setPendingListCategory({ bar: categoryTab });
+      setHighlightProductId(null);
+    },
+    [setPeriod]
+  );
+
   return (
     <HighlightProductContext.Provider
       value={{
@@ -50,6 +61,7 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
         pendingListCategory,
         clearPendingListCategory,
         goToProduct,
+        goToBarCategory,
       }}
     >
       {children}

@@ -3,71 +3,21 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
-import { WHEEL_SEGMENTS, type SpinOutcome } from "@/lib/wheel";
+import type { SpinOutcome } from "@/lib/wheel";
+import {
+  pickMimoLoseCopy,
+  pickNoBonusLoseCopy,
+  type WheelLoseCopyBundle,
+} from "@/lib/wheelLoseCopy";
 import type { Bonus } from "@/services/bonusService";
-import { getBonusStatus, BONUS_PERIOD, isCategoryBonus } from "@/services/bonusService";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import { getBonusStatus, BONUS_PERIOD } from "@/services/bonusService";
+import { BONUS_VALIDITY_LABEL, barNavigateButtonLabel } from "@/lib/bonusCopy";
 
 function formatLeft(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-}
-
-const LOSE_VARIANTS: Array<{
-  title: string;
-  subtitle: string;
-  button: string;
-  footnote: string;
-}> = [
-  {
-    title: "В этот раз мимо 😏",
-    subtitle: "Но это не та история, где уходят с пустыми руками",
-    button: "Выбрать напиток",
-    footnote: "Б-52 сейчас берут чаще всего 👀",
-  },
-  {
-    title: "Не сегодня 😏",
-    subtitle: "Но ты явно знаешь, куда заходить",
-    button: "Выбрать напиток",
-    footnote: "Виски сауэр сейчас в топе 👀",
-  },
-  {
-    title: "Без бонуса… но с хорошим вкусом 😏",
-    subtitle: "А это здесь важнее",
-    button: "Найти свой коктейль",
-    footnote: "Бармен сегодня часто делает Б-52 👀",
-  },
-  {
-    title: "Колесо капризничает 😏",
-    subtitle: "Зато меню сегодня в настроении",
-    button: "Посмотреть хиты",
-    footnote: "Светлое Sapporo сейчас разлетается 👀",
-  },
-  {
-    title: "Не выпало 😏",
-    subtitle: "Значит возьмёшь что-то поинтереснее",
-    button: "Выбрать напиток",
-    footnote: "Попробуй Виски сауэр — не промахнёшься 👀",
-  },
-  {
-    title: "Сегодня без подарка 😏",
-    subtitle: "Но с таким выбором он и не нужен",
-    button: "Открыть меню",
-    footnote: "Б-52 сейчас чаще всего заказывают 👀",
-  },
-];
-
-function pickLoseVariant(): (typeof LOSE_VARIANTS)[number] {
-  return LOSE_VARIANTS[Math.floor(Math.random() * LOSE_VARIANTS.length)]!;
-}
-
-function segmentLabel(outcome: SpinOutcome): string {
-  const seg = WHEEL_SEGMENTS[outcome.segmentIndex];
-  if (!seg) return "";
-  const l2 = seg.line2 ? ` · ${seg.line2}` : "";
-  return `${seg.line1}${l2}`;
 }
 
 type Props = {
@@ -86,11 +36,14 @@ export function WheelResultView({
   onShowToBartender,
 }: Props) {
   const { setPeriod } = useTheme();
-  const { goToProduct } = useHighlightProduct();
+  const { goToProduct, goToBarCategory } = useHighlightProduct();
   const [leftMs, setLeftMs] = useState(
     bonus ? Math.max(0, bonus.expiresAt - Date.now()) : 0
   );
-  const [loseVariant] = useState(() => pickLoseVariant());
+  const [loseBundle] = useState<WheelLoseCopyBundle | null>(() => {
+    if (!outcome.isLoss) return null;
+    return outcome.segmentId === "no_bonus" ? pickNoBonusLoseCopy() : pickMimoLoseCopy();
+  });
 
   useEffect(() => {
     if (!bonus) return;
@@ -105,10 +58,17 @@ export function WheelResultView({
   if (bonus && !isLose) {
     const status = getBonusStatus(bonus);
     const hasProduct = Boolean(bonus.productId);
+    const navCat = bonus.navBarCategory ?? null;
     const period = BONUS_PERIOD[bonus.type];
-    const isCategory = isCategoryBonus(bonus.type);
+    const navLabel = barNavigateButtonLabel(navCat, hasProduct);
+    const showNavButton = Boolean(navCat || hasProduct);
 
-    const handleGoToProduct = () => {
+    const handleNavigateToMenu = () => {
+      if (navCat) {
+        goToBarCategory(navCat);
+        onClose();
+        return;
+      }
       if (bonus.productId) {
         goToProduct(period, bonus.productId);
         onClose();
@@ -127,10 +87,7 @@ export function WheelResultView({
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
             Ты выиграл
           </p>
-          <p className="mt-2 text-lg font-semibold leading-snug text-amber-200/95">
-            {segmentLabel(outcome)}
-          </p>
-          <h2 className="mt-2 text-xl font-bold leading-snug text-white">{bonus.title}</h2>
+          <p className="mt-2 text-xl font-bold leading-snug text-white">{bonus.title}</p>
           <p className="mt-3 text-sm leading-relaxed text-white/70">{bonus.description}</p>
         </div>
 
@@ -155,7 +112,9 @@ export function WheelResultView({
         </div>
 
         <p className="text-xs text-white/50">
-          Покажи код бармену при заказе · в меню открой позицию по кнопке ниже
+          {navCat
+            ? "Покажи код бармену при заказе · перейди в нужный раздел по кнопке ниже"
+            : "Покажи код бармену при заказе · в меню открой позицию по кнопке ниже"}
         </p>
 
         <div className="flex w-full max-w-sm flex-col gap-2.5">
@@ -166,13 +125,13 @@ export function WheelResultView({
           >
             Показать бармену
           </button>
-          {hasProduct && (
+          {showNavButton && navLabel && (
             <button
               type="button"
-              onClick={handleGoToProduct}
+              onClick={handleNavigateToMenu}
               className="w-full rounded-full border border-amber-500/45 bg-transparent py-3.5 text-sm font-semibold text-amber-400"
             >
-              {isCategory ? "Перейти в категорию" : "Перейти к позиции в меню"}
+              {navLabel}
             </button>
           )}
           <button
@@ -187,31 +146,30 @@ export function WheelResultView({
     );
   }
 
+  if (!isLose) return null;
+  if (!loseBundle) return null;
+
   return (
     <div
-      className="flex flex-col items-center gap-6 px-6 py-8 text-center"
+      className="flex flex-col items-center px-6 py-8 text-center"
       style={{
         paddingTop: "max(1rem, env(safe-area-inset-top))",
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
       }}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
-        Выпало на колесе
-      </p>
-      <p className="mt-2 text-2xl font-bold leading-tight text-white">{segmentLabel(outcome)}</p>
-      <p className="mt-3 text-xl font-semibold text-white/90">{loseVariant.title}</p>
-      <p className="text-white/70">{loseVariant.subtitle}</p>
+      <p className="text-2xl font-bold leading-tight text-white">{loseBundle.title}</p>
+      <p className="mt-3 max-w-[22rem] text-sm leading-relaxed text-white/70">{loseBundle.subtitle}</p>
       <button
         type="button"
         onClick={() => {
           setPeriod("bar");
           onAction("menu");
         }}
-        className="rounded-full bg-amber-500 px-8 py-3 font-semibold text-black"
+        className="mt-6 rounded-full bg-amber-500 px-8 py-3 font-semibold text-black"
       >
-        {loseVariant.button}
+        Найти свой коктейль
       </button>
-      <p className="text-xs text-white/45">{loseVariant.footnote}</p>
+      <p className="mt-3 max-w-[22rem] text-xs leading-relaxed text-white/45">{loseBundle.footer}</p>
     </div>
   );
 }

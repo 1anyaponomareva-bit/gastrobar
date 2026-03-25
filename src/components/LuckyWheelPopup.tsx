@@ -147,11 +147,6 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
                 allowedToSpin={allowedToSpin}
                 isSpinning={isSpinning}
               />
-              {isFirstWheel && (
-                <p className="mt-4 text-center text-xs text-white/55">
-                  Все бонусы действуют при заказе напитка
-                </p>
-              )}
               {!isSpinning && !allowedToSpin && (
                 <p className="mt-4 text-center text-xs text-white/50">
                   {IS_TEST_MODE ? "Крутить можно через 8 сек" : "Крутить можно раз в 24 часа"}
