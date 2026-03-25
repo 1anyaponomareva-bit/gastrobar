@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     /** Колесо и прочие файлы из `public/` для `next/image` (Next.js 15). */
     localPatterns: [
       { pathname: "/koleso.png" },
+      { pathname: "/fab-wheel-reference.png" },
+      { pathname: "/fab-wheel-won.png" },
       { pathname: "/images/**" },
       { pathname: "/menu/**" },
     ],

@@ -11,12 +11,13 @@ import {
   saveSpinOutcome,
   hasPlayedWheelBefore,
   getWheelSegments,
+  WHEEL_SEGMENTS,
   IS_TEST_MODE,
   resetWheelForTest,
   type SpinOutcome,
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
-import { submitWheelSpinAnalytics } from "@/lib/wheelSpinAnalytics";
+import { sendSpin } from "@/lib/sendWheelSpin";
 
 type View = "wheel" | "result";
 
@@ -54,7 +55,10 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
     if (!bonus && !outcome.isLoss) {
       bonus = saveSpinOutcome(outcome);
     }
-    submitWheelSpinAnalytics(outcome);
+    const spinResult =
+      WHEEL_SEGMENTS[outcome.segmentIndex]?.line1 ?? outcome.segmentId;
+    void sendSpin(spinResult);
+
     setResultOutcome(outcome);
     setWonBonus(bonus ?? null);
     setIsSpinning(false);

@@ -1,16 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { BonusRibbonTimer } from "@/components/BonusRibbonTimer";
 
-/**
- * Иконка FAB: тот же арт, что и колесо в попапе (файл в репозитории).
- * Отдельные fab-wheel-reference.png / fab-wheel-won.png в public/images/ опциональны;
- * без них раньше шёл 404 на fab-wheel-won.png при активном бонусе.
- */
-const FAB_WHEEL_SRC = "/koleso.png";
+/** Мини-колесо справа и базовый диск в попапе — один референс. */
+const FAB_WHEEL_DEFAULT = "/fab-wheel-reference.png";
+/** После выигрыша — опционально `public/fab-wheel-won.png`; иначе остаётся reference. */
+const FAB_WHEEL_WON = "/fab-wheel-won.png";
 
 const FAB_WHEEL_ROTATION_SEC = 36;
 
@@ -69,15 +67,19 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
                 aria-hidden
               >
                 <Image
-                  src={FAB_WHEEL_SRC}
+                  key={src}
+                  src={src}
                   alt=""
                   width={128}
                   height={128}
                   unoptimized
                   className="h-full w-full select-none rounded-full object-cover"
                   draggable={false}
-                  priority={hasBonus}
-                  onError={() => setBaseError(true)}
+                  priority={useWonAsset}
+                  onError={() => {
+                    if (useWonAsset) setWonImageError(true);
+                    else setBaseError(true);
+                  }}
                 />
               </motion.div>
             ) : (
