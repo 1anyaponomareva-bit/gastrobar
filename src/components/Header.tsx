@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useBarHome } from "@/components/BarHomeContext";
@@ -45,6 +47,8 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   useTheme();
   const { requestBarHome } = useBarHome();
+  const pathname = usePathname();
+  const isDurak = pathname === "/durak";
 
   useEffect(() => {
     const onScroll = () => {
@@ -98,25 +102,46 @@ export function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-center bg-transparent">
-          <button
-            type="button"
-            onClick={requestBarHome}
-            className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
-            aria-label="На главный экран — Бар"
-          >
-            <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
-              <Image
-                src={CONFIG.logoSrc}
-                alt="GASTROBAR"
-                fill
-                sizes="160px"
-                priority
-                unoptimized
-                className="object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]"
-                draggable={false}
-              />
-            </span>
-          </button>
+          {isDurak ? (
+            <Link
+              href="/"
+              className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
+              aria-label="На главную — GASTROBAR"
+            >
+              <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
+                <Image
+                  src={CONFIG.logoSrc}
+                  alt="GASTROBAR"
+                  fill
+                  sizes="160px"
+                  priority
+                  unoptimized
+                  className="object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]"
+                  draggable={false}
+                />
+              </span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={requestBarHome}
+              className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
+              aria-label="На главный экран — Бар"
+            >
+              <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
+                <Image
+                  src={CONFIG.logoSrc}
+                  alt="GASTROBAR"
+                  fill
+                  sizes="160px"
+                  priority
+                  unoptimized
+                  className="object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]"
+                  draggable={false}
+                />
+              </span>
+            </button>
+          )}
         </div>
 
         <button

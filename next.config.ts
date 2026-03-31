@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos", pathname: "/**" },
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+      /** Рубашка и лица карт для игры «Дурак» (deckofcardsapi). */
+      { protocol: "https", hostname: "deckofcardsapi.com", pathname: "/**" },
     ],
     /** Колесо и прочие файлы из `public/` для `next/image` (Next.js 15). */
     localPatterns: [
