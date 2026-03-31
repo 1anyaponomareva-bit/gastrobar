@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Card, GameTable, Rank } from "@/games/durak/types";
 import {
@@ -19,6 +19,48 @@ import { cn } from "@/lib/utils";
 
 const HUMAN_ID = "human";
 const BOT_ID = "bot";
+
+const PLAYER_NAME_LS = "player_name";
+/** Имя при нажатии «Пропустить» (сохраняется в localStorage, как обычное имя). */
+const GUEST_PLAYER_NAME = "Гость";
+
+/** Имя соперника: простые имена, шутливые «типажи», часть — со смайлом. */
+const BOT_NAMES = [
+  "Леся",
+  "Петр",
+  "Даша",
+  "Костя",
+  "Сосед",
+  "Сосед 🍺",
+  "Турист",
+  "Турист 🇦🇺",
+  "Местный",
+  "Постоялец",
+  "Знакомец",
+  "Mary 🥃",
+  "Никита 🍸",
+  "Маша",
+  "Олег",
+  "Света",
+  "Гриша",
+  "Вика",
+  "Толик",
+  "Аня",
+  "Слава",
+  "Иван 😏",
+  "Прохожий",
+  "Бариста ☕",
+] as const;
+
+function normalizePlayerNameInput(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  return [...t].slice(0, 12).join("");
+}
+
+function pickRandomBotName(): string {
+  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]!;
+}
 
 /** Под фиксированный `Header` (высота 60px + safe-area). */
 const HEADER_OFFSET_TOP =
@@ -60,6 +102,21 @@ function WinConfetti() {
 const DEAL_STAGGER_SEC = 0.07;
 const DEAL_MOVE_SEC = 0.36;
 const DEAL_BUFFER_MS = 380;
+
+/**
+ * Задержка перед ходом бота: не фиксированная, чтобы не было ощущения «машины».
+ * ~45% быстрый ответ, ~35% нормальная пауза, ~20% подольше «думает».
+ */
+function randomBotThinkDelayMs(): number {
+  const r = Math.random();
+  if (r < 0.2) {
+    return Math.round(1700 + Math.random() * 2600);
+  }
+  if (r < 0.55) {
+    return Math.round(580 + Math.random() * 920);
+  }
+  return Math.round(260 + Math.random() * 540);
+}
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
 const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
@@ -301,16 +358,137 @@ function toggleTossSelection(
   return [...selected, id];
 }
 
+function DurakNameGate({
+  onSubmit,
+  onSkip,
+}: {
+  onSubmit: (name: string) => void;
+  onSkip: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const [showError, setShowError] = useState(false);
+
+  const submit = () => {
+    const n = normalizePlayerNameInput(value);
+    if (!n) {
+      setShowError(true);
+      return;
+    }
+    setShowError(false);
+    onSubmit(n);
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-auto",
+        HEADER_OFFSET_TOP
+      )}
+      style={{
+        background:
+          "radial-gradient(ellipse 85% 70% at 50% 20%, rgba(26, 107, 69, 0.14) 0%, transparent 52%), #14100c",
+      }}
+    >
+      <div className="flex min-h-[min(100%,32rem)] flex-1 flex-col items-center justify-center px-4 py-8 sm:min-h-0 sm:py-10">
+        <div
+          className={cn(
+            "w-full max-w-[min(100%,20rem)] rounded-[1.35rem] border border-white/[0.09] bg-gradient-to-b from-[#1e1814] via-[#17110e] to-[#120e0b]",
+            "p-6 shadow-[0_28px_90px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)] sm:max-w-sm sm:rounded-3xl sm:p-8",
+            "ring-1 ring-black/40"
+          )}
+        >
+          <div className="mb-5 flex flex-col items-center gap-2 text-center sm:mb-6">
+            <span
+              className="rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f8d66d]/95"
+              aria-hidden
+            >
+              Подкидной дурак
+            </span>
+            <h1 className="text-[1.35rem] font-semibold leading-tight tracking-tight text-white sm:text-2xl">
+              Как тебя называть за столом?
+            </h1>
+            <p className="text-[13px] leading-relaxed text-white/50 sm:text-sm">
+              До 12 символов — или зайди как гость и назовись потом в игре.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <input
+              type="text"
+              value={value}
+              maxLength={12}
+              autoComplete="nickname"
+              placeholder="Например, Аня"
+              onChange={(e) => {
+                setValue(e.target.value);
+                setShowError(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              className={cn(
+                "w-full rounded-xl border border-white/[0.12] bg-black/35 px-4 py-3.5 text-center text-[15px] text-white placeholder:text-white/30",
+                "shadow-inner outline-none transition",
+                "focus:border-[#f8d66d]/45 focus:ring-2 focus:ring-[#f8d66d]/20"
+              )}
+            />
+            {showError ? (
+              <p className="text-center text-[13px] text-amber-200/90">Введи имя или нажми «Пропустить»</p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={submit}
+              className={cn(
+                "w-full rounded-full py-3.5 text-[15px] font-semibold shadow-lg transition",
+                "bg-[#f8d66d] text-[#1a1612] hover:brightness-105 active:scale-[0.99]",
+                "shadow-[0_8px_28px_rgba(248,214,109,0.28)]"
+              )}
+            >
+              Начать игру
+            </button>
+
+            <button
+              type="button"
+              onClick={onSkip}
+              className="w-full rounded-full border border-white/[0.14] bg-white/[0.04] py-3 text-[13px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.07] hover:text-white/90"
+            >
+              Пропустить — играть как гость
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DurakGame() {
+  const [nameHydrated, setNameHydrated] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [tableGreeting, setTableGreeting] = useState<string | null>(null);
   const [game, setGame] = useState<GameTable | null>(null);
   const [attackPick, setAttackPick] = useState<string[]>([]);
   const [tossPick, setTossPick] = useState<string[]>([]);
   const [defenseTargetAttackId, setDefenseTargetAttackId] = useState<string | null>(null);
   const [dealing, setDealing] = useState(false);
+  const [nameEditing, setNameEditing] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const skipNameBlurCommitRef = useRef(false);
 
   useEffect(() => {
-    setGame(newGame());
+    try {
+      const raw = localStorage.getItem(PLAYER_NAME_LS);
+      setPlayerName(normalizePlayerNameInput(raw ?? ""));
+    } finally {
+      setNameHydrated(true);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!nameHydrated || !playerName) return;
+    setGame(newGame({ human: playerName, bot: pickRandomBotName() }));
+  }, [nameHydrated, playerName]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -343,9 +521,78 @@ export function DurakGame() {
   }, []);
 
   const restart = useCallback(() => {
-    setGame(newGame());
+    if (!playerName) return;
+    setGame(newGame({ human: playerName, bot: pickRandomBotName() }));
     clearPicks();
-  }, [clearPicks]);
+  }, [playerName, clearPicks]);
+
+  const commitNameEdit = useCallback(() => {
+    const n = normalizePlayerNameInput(nameDraft);
+    if (!n) {
+      setNameEditing(false);
+      return;
+    }
+    try {
+      localStorage.setItem(PLAYER_NAME_LS, n);
+    } catch {
+      /* ignore */
+    }
+    setPlayerName(n);
+    setGame((g) => {
+      if (!g) return g;
+      return {
+        ...g,
+        players: g.players.map((p) =>
+          p.type === "human" ? { ...p, name: n } : p
+        ),
+      };
+    });
+    setNameEditing(false);
+  }, [nameDraft]);
+
+  const cancelNameEdit = useCallback(() => {
+    skipNameBlurCommitRef.current = true;
+    setNameEditing(false);
+    window.setTimeout(() => {
+      skipNameBlurCommitRef.current = false;
+    }, 0);
+  }, []);
+
+  const startNameEdit = useCallback(() => {
+    const d = human?.name ?? playerName;
+    setNameDraft(d);
+    setNameEditing(true);
+  }, [human?.name, playerName]);
+
+  useEffect(() => {
+    if (!nameEditing) return;
+    const el = nameInputRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, [nameEditing]);
+
+  const onPlayerNameChosen = useCallback((name: string) => {
+    const n = normalizePlayerNameInput(name);
+    if (!n) return;
+    try {
+      localStorage.setItem(PLAYER_NAME_LS, n);
+    } catch {
+      /* ignore */
+    }
+    setTableGreeting(`За столом: ${n}`);
+    window.setTimeout(() => setTableGreeting(null), 2800);
+    setPlayerName(n);
+  }, []);
+
+  const onSkipNameAsGuest = useCallback(() => {
+    try {
+      localStorage.setItem(PLAYER_NAME_LS, GUEST_PLAYER_NAME);
+    } catch {
+      /* ignore */
+    }
+    setPlayerName(GUEST_PLAYER_NAME);
+  }, []);
 
   useEffect(() => {
     if (!game || game.state !== "playing" || dealing) return;
@@ -362,7 +609,7 @@ export function DurakGame() {
         const next = applyBotMove(g);
         return next ?? g;
       });
-    }, 420);
+    }, randomBotThinkDelayMs());
     return () => window.clearTimeout(t);
   }, [game, dealing]);
 
@@ -481,18 +728,20 @@ export function DurakGame() {
 
   const phaseLine = (() => {
     if (!game) return "";
+    const hn = game.players.find((p) => p.type === "human")?.name ?? playerName;
+    const bn = game.players.find((p) => p.type === "bot")?.name ?? "Соперник";
     if (dealing) return "Раздача карт…";
     if (game.state === "finished") return "Партия окончена";
     if (game.phase === "attack_initial")
-      return humanIsAttacker ? "Ваш ход: атака" : "Противник атакует";
+      return humanIsAttacker ? `${hn}, ваш ход: атака` : `${bn} атакует`;
     if (game.phase === "defend")
-      return humanIsDefender ? "Ваш ход: отбой или «Взять»" : "Противник отбивается";
+      return humanIsDefender ? `${hn}, ваш ход: отбой или «Взять»` : `${bn} отбивается`;
     if (game.phase === "attack_toss")
-      return humanIsAttacker ? "Подкините или «Бито»" : "Противник подкидывает";
+      return humanIsAttacker ? "Подкините или «Бито»" : `${bn} подкидывает`;
     if (game.phase === "player_can_throw_more")
       return humanIsAttacker
-        ? "Противник не бьётся — подкиньте или «Бито»"
-        : "Ожидание подкидывания…";
+        ? `${bn} не бьётся — подкиньте или «Бито»`
+        : `${bn} подкидывает…`;
     return "";
   })();
 
@@ -500,6 +749,22 @@ export function DurakGame() {
     !!game &&
     humanIsAttacker &&
     (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
+
+  if (!nameHydrated) {
+    return (
+      <div
+        className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+      >
+        <div className="flex flex-1 items-center justify-center py-20">
+          <span className="text-sm text-white/50">Загрузка…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!playerName) {
+    return <DurakNameGate onSubmit={onPlayerNameChosen} onSkip={onSkipNameAsGuest} />;
+  }
 
   if (!game) {
     return (
@@ -519,6 +784,17 @@ export function DurakGame() {
     <div
       className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
     >
+      {tableGreeting ? (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="mx-3 mb-2 rounded-xl border border-emerald-500/40 bg-emerald-950/55 px-3 py-2 text-center text-sm font-medium text-emerald-100"
+          role="status"
+        >
+          {tableGreeting}
+        </motion.div>
+      ) : null}
       {game.message ? (
         <motion.div
           initial={{ opacity: 0, y: -6 }}
@@ -535,7 +811,7 @@ export function DurakGame() {
         <section className="relative z-10 shrink-0 px-0 pt-0">
           <div className="flex items-end justify-between gap-2 px-1">
             <div>
-              <p className="text-[13px] font-medium text-white/90">{bot?.name ?? "Бот"}</p>
+              <p className="text-[13px] font-medium text-white/90">{bot?.name ?? "Соперник"}</p>
               <p className="text-[10px] text-white/45">{bh.length} карт</p>
             </div>
           </div>
@@ -656,62 +932,107 @@ export function DurakGame() {
           </div>
         </div>
 
-        <div className="relative z-20 mt-0.5 flex shrink-0 flex-wrap items-center justify-center gap-1.5 px-0.5 py-1">
-          <button
-            type="button"
-            onClick={restart}
-            className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-medium text-white/90 shadow-md backdrop-blur-sm hover:bg-white/15 sm:px-4 sm:text-sm"
-          >
-            Новая игра
-          </button>
-          {humanIsDefender && (game.phase === "defend" || game.phase === "attack_toss") ? (
+        <div className="relative z-20 mt-0.5 grid w-full min-w-0 shrink-0 grid-cols-2 items-center gap-x-2 gap-y-2 px-0.5 py-1 sm:gap-x-3">
+          <div className="flex min-w-0 justify-center">
             <button
               type="button"
-              onClick={onTake}
-              disabled={game.state !== "playing"}
-              className="rounded-full border border-white/25 bg-white/10 px-3 py-2 text-xs font-medium text-white/90 shadow-md hover:bg-white/15 disabled:opacity-40 sm:px-4 sm:text-sm"
+              onClick={restart}
+              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/90 shadow-md backdrop-blur-sm hover:bg-white/15 sm:px-4 sm:text-sm"
             >
-              Взять
+              Новая игра
             </button>
-          ) : null}
-          {humanCanToss ? (
-            <button
-              type="button"
-              onClick={onBeat}
-              disabled={game.state !== "playing"}
-              className="rounded-full border border-emerald-400/45 bg-emerald-900/50 px-3 py-2 text-xs font-medium text-emerald-50 shadow-md hover:bg-emerald-800/50 disabled:opacity-40 sm:px-4 sm:text-sm"
-            >
-              Бито
-            </button>
-          ) : null}
-          {humanIsAttacker && game.phase === "attack_initial" ? (
-            <button
-              type="button"
-              onClick={onAttackSubmit}
-              disabled={!attackInitialValid || game.state !== "playing"}
-              className="rounded-full border border-amber-400/55 bg-amber-900/45 px-3 py-2 text-xs font-medium text-amber-50 shadow-md hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:text-sm"
-            >
-              Атаковать
-            </button>
-          ) : null}
-          {humanCanToss && tossPick.length > 0 ? (
-            <button
-              type="button"
-              onClick={onTossSubmit}
-              disabled={!tossValid || game.state !== "playing"}
-              className="rounded-full border border-amber-400/55 bg-amber-900/45 px-3 py-1.5 text-[11px] font-medium text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:py-2 sm:text-xs"
-            >
-              Подкинуть
-            </button>
-          ) : null}
+          </div>
+          <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-x-1 sm:gap-x-2">
+            {/* Левый 1fr — баланс, чтобы центр был по центру; «Взять» всегда в правом слоте, не подменяет «Атаковать». */}
+            <span className="min-w-0 shrink" aria-hidden />
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+              {humanIsAttacker && game.phase === "attack_initial" ? (
+                <button
+                  type="button"
+                  onClick={onAttackSubmit}
+                  disabled={!attackInitialValid || game.state !== "playing"}
+                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2.5 py-2 text-[11px] font-medium text-amber-50 shadow-md hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:text-sm"
+                >
+                  Атаковать
+                </button>
+              ) : null}
+              {humanCanToss && tossPick.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={onTossSubmit}
+                  disabled={!tossValid || game.state !== "playing"}
+                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2 py-1.5 text-[10px] font-medium text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:py-2 sm:text-xs"
+                >
+                  Подкинуть
+                </button>
+              ) : null}
+              {humanCanToss ? (
+                <button
+                  type="button"
+                  onClick={onBeat}
+                  disabled={game.state !== "playing"}
+                  className="shrink-0 rounded-full border border-emerald-400/45 bg-emerald-900/50 px-2.5 py-2 text-[11px] font-medium text-emerald-50 shadow-md hover:bg-emerald-800/50 disabled:opacity-40 sm:px-4 sm:text-sm"
+                >
+                  Бито
+                </button>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 justify-end">
+              {humanIsDefender && (game.phase === "defend" || game.phase === "attack_toss") ? (
+                <button
+                  type="button"
+                  onClick={onTake}
+                  disabled={game.state !== "playing"}
+                  className="shrink-0 rounded-full border border-white/25 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/90 shadow-md hover:bg-white/15 disabled:opacity-40 sm:px-4 sm:text-sm"
+                >
+                  Взять
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Вне overflow-y-auto — веер не режется; без отрицательных margin — низ карт не подрезает фон. */}
       <section className="relative z-[25] -mt-2 shrink-0 px-1.5 pb-1 pt-0 sm:-mt-3">
         <div className="mb-0 flex items-center justify-between px-1">
-          <div>
-            <p className="text-[13px] font-medium text-white/90">{human?.name ?? "Вы"}</p>
+          <div className="min-w-0">
+            {nameEditing ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={nameDraft}
+                onChange={(e) =>
+                  setNameDraft([...e.target.value].slice(0, 12).join(""))
+                }
+                onBlur={() => {
+                  if (skipNameBlurCommitRef.current) return;
+                  commitNameEdit();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitNameEdit();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    cancelNameEdit();
+                  }
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                className="block w-full max-w-[11rem] rounded-md border border-amber-300/40 bg-black/35 px-2 py-0.5 text-[13px] font-medium text-white outline-none ring-0 placeholder:text-white/35 focus:border-amber-200/70"
+                aria-label="Твоё имя"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={startNameEdit}
+                className="block max-w-full truncate text-left text-[13px] font-medium text-white/90 underline decoration-white/25 decoration-dotted underline-offset-2 transition hover:text-white hover:decoration-white/55"
+              >
+                {human?.name ?? playerName}
+              </button>
+            )}
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
         </div>
@@ -821,13 +1142,15 @@ export function DurakGame() {
               className="relative z-10 w-full max-w-sm rounded-2xl border border-white/20 bg-[#14100c] px-7 py-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
             >
               <p id="durak-result-title" className="text-xl font-bold leading-tight text-white sm:text-2xl">
-                {game.winnerId === HUMAN_ID ? "🔥 Вы выиграли" : "Вы в пролёте"}
+                {game.winnerId === HUMAN_ID
+                  ? `🔥 ${human?.name ?? playerName}, с победой!`
+                  : `${human?.name ?? playerName}, в пролёте`}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-white/65">
                 {game.loserId === HUMAN_ID
-                  ? "Дурак — вы остались с картами."
+                  ? `Дурак — карты остались у тебя. Ничего, бывает — ты молодец, что дошли до конца раздачи.`
                   : game.winnerId === HUMAN_ID
-                    ? "Противник остался с картами."
+                    ? `Ты умничка: у соперника ещё карты, у тебя пусто — с победой, так держать!`
                     : ""}
               </p>
               <button

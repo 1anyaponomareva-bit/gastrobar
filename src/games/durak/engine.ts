@@ -18,18 +18,20 @@ function tableId(): string {
   return `durak-${Date.now()}`;
 }
 
-export function createInitialPlayersMvp(): GameTable["players"] {
+export function createInitialPlayersMvp(names?: { human: string; bot: string }): GameTable["players"] {
+  const humanName = names?.human && names.human.length > 0 ? names.human : "Вы";
+  const botName = names?.bot && names.bot.length > 0 ? names.bot : "Бот";
   return [
     {
       id: "human",
-      name: "Вы",
+      name: humanName,
       type: "human",
       hand: [],
       seatIndex: 0,
     },
     {
       id: "bot",
-      name: "Бот",
+      name: botName,
       type: "bot",
       hand: [],
       seatIndex: 1,
@@ -98,9 +100,9 @@ function checkGameEnd(t: GameTable): GameTable {
   return t;
 }
 
-export function newGame(): GameTable {
+export function newGame(names?: { human: string; bot: string }): GameTable {
   const deckShuffled = shuffle(createDeck36());
-  const players = createInitialPlayersMvp();
+  const players = createInitialPlayersMvp(names);
 
   const deck = [...deckShuffled];
   for (let round = 0; round < 6; round++) {
