@@ -63,9 +63,11 @@ const DEAL_BUFFER_MS = 380;
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
 const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
-/** Максимально крупная рука: веер из-под нижнего тулбара (z ниже BottomNav). */
-const HAND_CARD_W_CLASS = "w-[6.75rem] sm:w-[7.6rem]";
-const HAND_CARD_H_CLASS = "h-[9.35rem] sm:h-[10.45rem]";
+/** Ширина колонки «только колода» на сукне — карты стола сюда не заходят */
+const DECK_COLUMN_W_CLASS = "w-[4.85rem] shrink-0 sm:w-[5.35rem]";
+/** Максимально крупная рука, поднята выше к столу (z ниже BottomNav). */
+const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
+const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
 
 function handFanStyle(
   n: number,
@@ -77,7 +79,7 @@ function handFanStyle(
   const rel = i - mid;
   const spread = n <= 1 ? 0 : Math.min(50 / (n - 1), 9);
   const rot = rel * spread;
-  const tx = rel * (n > 8 ? 16.5 : 20.5);
+  const tx = rel * (n > 8 ? 20.5 : 25.5);
   const curve = Math.abs(rel) * 3.2;
   const ty = mode === "opponent" ? curve : -curve;
   return {
@@ -502,7 +504,7 @@ export function DurakGame() {
   if (!game) {
     return (
       <div
-        className={`mx-auto flex max-h-[100dvh] min-h-0 max-w-lg flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(5rem,calc(env(safe-area-inset-bottom,0px)+4.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50">Раздаём колоду…</span>
@@ -515,7 +517,7 @@ export function DurakGame() {
 
   return (
     <div
-      className={`mx-auto flex max-h-[100dvh] min-h-0 max-w-lg flex-col overflow-x-hidden bg-[#14100c] pb-[max(5rem,calc(env(safe-area-inset-bottom,0px)+4.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+      className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
     >
       {game.message ? (
         <motion.div
@@ -556,10 +558,10 @@ export function DurakGame() {
           </div>
         </section>
 
-        {/* Сукно + колода + центр */}
-        <div className="relative z-0 my-1 min-h-[min(44dvh,188px)] max-h-[46dvh] shrink-0 flex-1 rounded-[1.35rem] border-[6px] border-[#3d2814] bg-[#2a1a0e] shadow-[inset_0_2px_16px_rgba(0,0,0,0.45),0_12px_28px_rgba(0,0,0,0.45)] sm:min-h-[min(42dvh,200px)] sm:max-h-[44dvh] sm:rounded-[1.5rem] sm:border-[8px]">
+        {/* Сукно: flex вместо height:100% + absolute — иначе зона стола иногда 0px и карты не видны */}
+        <div className="relative z-0 my-1 flex min-h-[12rem] w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[1.35rem] border-[6px] border-[#3d2814] bg-[#2a1a0e] shadow-[inset_0_2px_16px_rgba(0,0,0,0.45),0_12px_28px_rgba(0,0,0,0.45)] max-sm:min-h-[min(40dvh,14rem)] max-h-[46dvh] sm:min-h-[min(38dvh,13rem)] sm:max-h-[44dvh] sm:rounded-[1.5rem] sm:border-[8px]">
           <div
-            className="absolute inset-1.5 rounded-[1rem] sm:inset-2 sm:rounded-[1.15rem]"
+            className="pointer-events-none absolute inset-1.5 rounded-[1rem] sm:inset-2 sm:rounded-[1.15rem]"
             style={{
               background:
                 "radial-gradient(ellipse 120% 90% at 50% 45%, #1a6b45 0%, #135a38 42%, #0d4028 100%)",
@@ -567,16 +569,13 @@ export function DurakGame() {
             }}
           />
 
-          <div className="relative z-[1] h-full min-h-0">
-            <div className="pointer-events-none absolute right-2.5 top-2.5 z-[40] sm:right-3 sm:top-3">
-              <DeckPile count={deckCount} trumpCard={trumpShow ?? null} />
-            </div>
-
-            <div className="absolute inset-2.5 z-10 flex min-h-0 flex-col overflow-hidden sm:inset-3">
-              <p className="pointer-events-none shrink-0 py-1.5 text-center text-[10px] font-medium leading-snug text-emerald-100/75 sm:py-2 sm:text-[11px]">
-                {phaseLine}
-              </p>
-              <div className="relative z-[15] flex min-h-0 flex-1 flex-wrap content-center items-center justify-center gap-x-2.5 gap-y-3 px-1 pb-2 pt-2 sm:gap-x-3 sm:px-2 sm:pt-2.5">
+          <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col px-2.5 pb-2 pt-2 sm:px-3 sm:pb-2.5 sm:pt-2.5">
+            {/* Сетка: слева только карты стола, справа зона колоды — без перекрытий */}
+            <p className="pointer-events-none shrink-0 py-0.5 text-center text-[10px] font-medium leading-snug text-emerald-100/75 sm:py-1 sm:text-[11px]">
+              {phaseLine}
+            </p>
+            <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-2 min-[400px]:gap-x-2.5">
+              <div className="relative z-[15] flex min-h-[7.5rem] min-w-0 flex-wrap content-center items-center justify-center gap-x-2.5 gap-y-3 py-2 sm:min-h-[8rem] sm:gap-x-3">
                 {game.tablePairs.length === 0 ? (
                   <span className="text-sm text-emerald-200/35">
                     {dealing ? "Карты раздаются…" : "Ждите ход"}
@@ -595,7 +594,7 @@ export function DurakGame() {
                         <div className="relative h-[5.4rem] w-[3.65rem] sm:h-[5.7rem] sm:w-[4rem]">
                           <motion.div
                             className="absolute bottom-0 left-1/2 -translate-x-1/2"
-                            initial={{ opacity: 0, y: 56, scale: 0.86, rotate: -2.5 }}
+                            initial={false}
                             animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
                           >
@@ -624,7 +623,7 @@ export function DurakGame() {
                           {tp.defense ? (
                             <motion.div
                               className="absolute bottom-1 left-1/2 z-20 -translate-x-[42%]"
-                              initial={{ opacity: 0, y: -48, x: 8, scale: 0.88, rotate: -4 }}
+                              initial={false}
                               animate={{ opacity: 1, y: -12, x: 5, scale: 1, rotate: 2 }}
                               transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
                             >
@@ -644,6 +643,14 @@ export function DurakGame() {
                     );
                   })
                 )}
+              </div>
+              <div
+                className={cn(
+                  "pointer-events-none relative z-50 flex flex-col items-end justify-start self-stretch pt-0.5",
+                  DECK_COLUMN_W_CLASS
+                )}
+              >
+                <DeckPile count={deckCount} trumpCard={trumpShow ?? null} />
               </div>
             </div>
           </div>
@@ -700,15 +707,15 @@ export function DurakGame() {
         </div>
       </div>
 
-      {/* Вне overflow-y-auto: иначе веер обрезается (видна была только «верхушка» карт). */}
-      <section className="relative z-[25] -mb-[5.25rem] shrink-0 px-1.5 pb-0 pt-0 sm:-mb-[6.75rem]">
+      {/* Вне overflow-y-auto — веер не режется; без отрицательных margin — низ карт не подрезает фон. */}
+      <section className="relative z-[25] -mt-2 shrink-0 px-1.5 pb-1 pt-0 sm:-mt-3">
         <div className="mb-0 flex items-center justify-between px-1">
           <div>
             <p className="text-[13px] font-medium text-white/90">{human?.name ?? "Вы"}</p>
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
         </div>
-        <div className="relative mx-auto mt-3 flex h-[13.5rem] max-w-full items-end justify-center overflow-visible sm:mt-4 sm:h-[16rem]">
+        <div className="relative mx-auto mt-1 flex h-[16.5rem] max-w-full -translate-y-1 items-end justify-center overflow-visible sm:mt-1.5 sm:h-[19rem] sm:-translate-y-2">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && humanIsAttacker && attackPick.includes(c.id);
@@ -755,7 +762,7 @@ export function DurakGame() {
             return (
               <div key={c.id} className="absolute" style={fan}>
                 <motion.div
-                  initial={{ opacity: 0, y: 72, scale: 0.82, rotate: 5 }}
+                  initial={{ opacity: 0, y: 88, scale: 0.82, rotate: 5 }}
                   animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                   transition={{
                     delay: 2 * i * DEAL_STAGGER_SEC,
@@ -764,7 +771,7 @@ export function DurakGame() {
                   }}
                 >
                   <motion.div
-                    animate={{ y: selected ? -40 : 0 }}
+                    animate={{ y: selected ? -52 : 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 26 }}
                   >
                     <CardSprite
