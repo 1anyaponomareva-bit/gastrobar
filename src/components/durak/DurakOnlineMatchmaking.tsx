@@ -115,30 +115,11 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
   useEffect(() => {
     if (!supabase || !roomId) return;
-    const ch = supabase
-      .channel(`durak-room-${roomId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
-        () => {
-          void tick();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "room_players", filter: `room_id=eq.${roomId}` },
-        () => {
-          void tick();
-        }
-      )
-      .subscribe();
+    /* Без Realtime/WebSocket: в части браузеров wss даёт TypeError: Load failed. */
     const interval = window.setInterval(() => {
       void tick();
     }, 1000);
-    return () => {
-      window.clearInterval(interval);
-      supabase.removeChannel(ch);
-    };
+    return () => window.clearInterval(interval);
   }, [supabase, roomId, tick]);
 
   useEffect(() => {

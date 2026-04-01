@@ -39,9 +39,8 @@ function durakGameMaterialSignature(gt: GameTable): string {
  * Старт игры: после `rooms.status === 'playing'` + запись в `room_state`.
  * Добавление бота: RPC `durak_finalize_room_if_ready` (см. SQL) при 1 игроке после дедлайна.
  *
- * Синхронизация ходов: upsert в `room_state` + postgres_changes по `room_state`.
- * В Dashboard → Database → Replication для проекта должна быть включена таблица `room_state`.
- * Дополнительно — опрос раз в ~1.5 с (только если updated_at строго новее), запас к Realtime.
+ * Синхронизация ходов: upsert в `room_state` + опрос по HTTP (без Supabase Realtime/WebSocket:
+ * в Safari / встроенных браузерах и при блокировке wss часто «TypeError: Load failed»).
  * Persist не должен захватывать `game` в замыкание debounce — иначе поздний upsert затирает отбой соперника.
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
@@ -301,33 +300,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     };
   }, [supabase, roomId, playerId, applyRemoteRow]);
 
-  useEffect(() => {
-    if (!supabase) return;
-    const ch = supabase
-      .channel(`durak-state-${roomId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "room_state",
-          filter: `room_id=eq.${roomId}`,
-        },
-        (payload) => {
-          const row = payload.new as {
-            state?: RoomStatePayload;
-            updated_at?: string;
-          } | null;
-          applyRemoteRow(row);
-        }
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [supabase, roomId, applyRemoteRow]);
-
-  /** Запасной канал, если Realtime по `room_state` не включён в проекте. До первой загрузки стола — чаще. */
+  /** Опрос `room_state` по HTTP (без Realtime — см. комментарий к модулю). До первой загрузки стола — чаще. */
   useEffect(() => {
     if (!supabase) return;
     const tickMs = tableHydrated ? 1500 : 450;
