@@ -1,27 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Клиент Supabase для браузера (anon key). */
-export function createSupabaseBrowserClient() {
-  let url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+/**
+ * Клиент в браузере: запросы идут на тот же домен (`/supabase-proxy`), Next rewrites → Supabase.
+ * Прямой `fetch` на `*.supabase.co` у части пользователей падает с «TypeError: Load failed».
+ */
+export function createSupabaseBrowserClient(): SupabaseClient | null {
+  if (typeof window === "undefined") return null;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
-  if (!url || !key) {
-    return null;
-  }
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
-  if (url.endsWith("/")) {
-    url = url.slice(0, -1);
-  }
-  return createClient(url, key, {
-    global: {
-      fetch: (input, init) =>
-        fetch(input, init).catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          throw new Error(
-            `Сеть Supabase: ${msg}. Проверьте URL проекта и что домен *.supabase.co не блокируется.`
-          );
-        }),
-    },
-  });
+  if (!key) return null;
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) return null;
+  const url = `${window.location.origin}/supabase-proxy`;
+  return createClient(url, key);
 }

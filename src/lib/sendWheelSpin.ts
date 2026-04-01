@@ -3,13 +3,17 @@
  * чтобы сборка не падала, если пакет не попал в node_modules / package-lock.
  */
 async function insertSpinRow(row: { user_id: string; result: string }): Promise<Error | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
+  const backend = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  if (!key || !backend) {
     return new Error("missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
+  const base =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/supabase-proxy`
+      : backend;
 
-  const res = await fetch(`${url}/rest/v1/spins`, {
+  const res = await fetch(`${base}/rest/v1/spins`, {
     method: "POST",
     headers: {
       apikey: key,

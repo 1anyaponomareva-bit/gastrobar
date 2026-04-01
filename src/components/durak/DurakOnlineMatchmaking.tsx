@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
@@ -42,7 +43,7 @@ const WAITING_HINTS: string[] = [
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
  */
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomRow | null>(null);
@@ -83,10 +84,15 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   }, [supabase, roomId, onRoomPlaying]);
 
   useEffect(() => {
-    if (!supabase) {
+    const client = createSupabaseBrowserClient();
+    setSupabase(client);
+    if (!client) {
       setError("Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY");
-      return;
     }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
     let cancelled = false;
     (async () => {
       try {
@@ -145,6 +151,18 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
           >
             Назад
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!supabase) {
+    return (
+      <div
+        className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+      >
+        <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
+          Подключение…
         </div>
       </div>
     );

@@ -6,7 +6,35 @@ const extraDevOrigins =
     .map((s) => s.trim())
     .filter(Boolean) ?? [];
 
+const supabaseBackend =
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+
 const nextConfig: NextConfig = {
+  /**
+   * Браузер ходит на тот же origin → /supabase-proxy → реальный Supabase.
+   * Иначе прямой fetch к *.supabase.co часто даёт «Load failed» (Safari, встроенные браузеры, блокировки).
+   */
+  async rewrites() {
+    if (!supabaseBackend) return [];
+    return [
+      {
+        source: "/supabase-proxy/rest/v1/:path*",
+        destination: `${supabaseBackend}/rest/v1/:path*`,
+      },
+      {
+        source: "/supabase-proxy/auth/v1/:path*",
+        destination: `${supabaseBackend}/auth/v1/:path*`,
+      },
+      {
+        source: "/supabase-proxy/storage/v1/:path*",
+        destination: `${supabaseBackend}/storage/v1/:path*`,
+      },
+      {
+        source: "/supabase-proxy/functions/v1/:path*",
+        destination: `${supabaseBackend}/functions/v1/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos", pathname: "/**" },

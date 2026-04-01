@@ -10,6 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { GameTable } from "@/games/durak/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
@@ -45,8 +46,14 @@ function durakGameMaterialSignature(gt: GameTable): string {
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
 export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
+
+  useEffect(() => {
+    const c = createSupabaseBrowserClient();
+    setSupabase(c);
+    if (!c) setError("Нет настроек Supabase");
+  }, []);
   const [game, setGame] = useState<GameTable | null>(null);
   /** После первого не-null стола — реже опрашивать БД (не привязывать интервал к каждому ходу). */
   const [tableHydrated, setTableHydrated] = useState(false);
@@ -325,6 +332,14 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         <button type="button" onClick={onLeave} className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90">
           Назад
         </button>
+      </div>
+    );
+  }
+
+  if (!supabase) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
+        Подключение…
       </div>
     );
   }
