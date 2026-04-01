@@ -55,11 +55,16 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.rooms TO anon, authenticated, ser
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.room_players TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.room_state TO anon, authenticated, service_role;
 
+-- Без USAGE на схему public роль anon не видит RPC → часто HTTP 500 с пустым телом.
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
 -- ============================================================================
--- RPC (как раньше)
+-- RPC: сначала убрать все перегрузки (иначе PostgREST может выбрать не ту функцию → 500).
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS public.durak_join_queue(text, text);
+DROP FUNCTION IF EXISTS public.durak_join_queue(jsonb);
+DROP FUNCTION IF EXISTS public.durak_finalize_room_if_ready(uuid);
 
 CREATE OR REPLACE FUNCTION public.durak_finalize_room_if_ready(p_room_id uuid)
 RETURNS void

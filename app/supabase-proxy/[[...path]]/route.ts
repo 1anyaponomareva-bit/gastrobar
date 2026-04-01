@@ -63,12 +63,25 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
 
-  const upstream = await fetch(target, {
-    method: req.method,
-    headers: buildUpstreamRequestHeaders(req.headers),
-    body: hasBody ? body : undefined,
-    redirect: "manual",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: req.method,
+      headers: buildUpstreamRequestHeaders(req.headers),
+      body: hasBody ? body : undefined,
+      redirect: "manual",
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      {
+        message: `Proxy fetch failed: ${msg}`,
+        hint: "Проверьте NEXT_PUBLIC_SUPABASE_URL и доступность проекта Supabase.",
+        code: "PROXY_FETCH_ERROR",
+      },
+      { status: 502 },
+    );
+  }
 
   const resHeaders = forwardResponseHeaders(upstream.headers);
 
@@ -81,8 +94,20 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
   }
 
   /* Буфер: без стрима нет рассинхрона «тело уже распаковано / заголовок gzip» между Node, Next и Chrome. */
-  const buf = await upstream.arrayBuffer();
-  return new NextResponse(buf, {
+  const rawBuf = await upstream.arrayBuffer();
+  /* Иногда PostgREST/шлюз отдаёт 4xx/5xx с нулевым телом — подставляем JSON, чтобы в UI был текст. */
+  let bodyOut: BodyInit = rawBuf;
+  if (rawBuf.byteLength === 0 && upstream.status >= 400) {
+    const hint = JSON.stringify({
+      message: `Upstream HTTP ${upstream.status} (${upstream.statusText}) with empty body.`,
+      hint: "Проверьте Supabase → Logs → Postgres; выполните GRANT USAGE ON SCHEMA public для anon и скрипт supabase/sql/durak_queue_functions_only.sql. Локальный тест: supabase/sql/durak_debug_test_rpc.sql",
+      code: "EMPTY_UPSTREAM_BODY",
+    });
+    bodyOut = new TextEncoder().encode(hint);
+    resHeaders.set("content-type", "application/json; charset=utf-8");
+  }
+
+  return new NextResponse(bodyOut, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: resHeaders,
