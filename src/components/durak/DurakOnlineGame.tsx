@@ -17,7 +17,10 @@ import {
   buildGameFromRoomPlayers,
   roomStateMatchesRoomPlayers,
 } from "@/lib/durak/online/buildRoomGame";
-import { fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
+import {
+  fetchRoomPlayers,
+  formatPostgrestError,
+} from "@/lib/durak/online/matchmaking";
 import type { RoomStatePayload } from "@/lib/durak/online/types";
 import type { DurakGameEmbeddedProps } from "./DurakGame";
 
@@ -296,7 +299,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           setGame(null);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Ошибка загрузки");
+        if (!cancelled) setError(formatPostgrestError(e));
       }
     })();
 

@@ -1,16 +1,52 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RoomPlayerRow, RoomRow } from "./types";
 
-/** Текст ошибки PostgREST / Supabase для UI и логов. */
+/** Текст ошибки PostgREST / Supabase / сети для UI (без «[object Object]»). */
 export function formatPostgrestError(err: unknown): string {
-  if (err && typeof err === "object") {
-    const o = err as { message?: string; details?: string; hint?: string };
-    const parts = [o.message, o.details, o.hint].filter(
-      (x): x is string => typeof x === "string" && x.length > 0
-    );
+  if (err == null) return "Неизвестная ошибка";
+  if (typeof err === "string") return err;
+  if (typeof err === "number" || typeof err === "boolean") return String(err);
+
+  if (err instanceof Error) {
+    const any = err as Error & {
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
+    const parts = [
+      any.message,
+      typeof any.code === "string" && any.code ? `[${any.code}]` : "",
+      typeof any.details === "string" ? any.details : "",
+      typeof any.hint === "string" ? any.hint : "",
+    ].filter((s) => typeof s === "string" && s.length > 0);
     if (parts.length) return parts.join(" — ");
+    return any.name && any.name !== "Error" ? any.name : "Ошибка";
   }
-  if (err instanceof Error) return err.message;
+
+  if (typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    const parts: string[] = [];
+    const push = (s: unknown) => {
+      if (typeof s === "string" && s.length > 0) parts.push(s);
+    };
+    push(o.message);
+    push(o.details);
+    push(o.hint);
+    if (typeof o.code === "string" && o.code.length > 0) parts.push(`[${o.code}]`);
+    if (typeof o.status === "number") parts.push(`HTTP ${o.status}`);
+    const nested = o.error;
+    if (typeof nested === "string") push(nested);
+    else if (nested != null && typeof nested === "object") {
+      parts.push(formatPostgrestError(nested));
+    }
+    if (parts.length) return parts.join(" — ");
+    try {
+      return JSON.stringify(o);
+    } catch {
+      return "Ошибка сервера или сети";
+    }
+  }
+
   return String(err);
 }
 
