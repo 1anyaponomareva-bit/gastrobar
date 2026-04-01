@@ -21,10 +21,15 @@ function forwardRequestHeaders(incoming: Headers): Headers {
   return out;
 }
 
-/**
- * Node fetch распаковывает gzip/deflate, но иногда оставляет Content-Encoding.
- * Браузер тогда ждёт сжатые байты → net::ERR_CONTENT_DECODING_FAILED.
- */
+/** К Supabase: не форвардить gzip/br от браузера — иначе Node распаковывает, а цепочка до клиента ломается (ERR_CONTENT_DECODING_FAILED). */
+function buildUpstreamRequestHeaders(incoming: Headers): Headers {
+  const out = forwardRequestHeaders(incoming);
+  out.delete("accept-encoding");
+  out.set("Accept-Encoding", "identity");
+  return out;
+}
+
+/** Убираем заголовки, которые ломают повторную выдачу через Vercel/браузер при буферизованном теле. */
 const STRIP_FROM_PROXY_RESPONSE = new Set([
   "content-encoding",
   "content-length",
@@ -60,15 +65,27 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
 
   const upstream = await fetch(target, {
     method: req.method,
-    headers: forwardRequestHeaders(req.headers),
+    headers: buildUpstreamRequestHeaders(req.headers),
     body: hasBody ? body : undefined,
     redirect: "manual",
   });
 
-  return new NextResponse(upstream.body, {
+  const resHeaders = forwardResponseHeaders(upstream.headers);
+
+  if (req.method === "HEAD") {
+    return new NextResponse(null, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: resHeaders,
+    });
+  }
+
+  /* Буфер: без стрима нет рассинхрона «тело уже распаковано / заголовок gzip» между Node, Next и Chrome. */
+  const buf = await upstream.arrayBuffer();
+  return new NextResponse(buf, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: forwardResponseHeaders(upstream.headers),
+    headers: resHeaders,
   });
 }
 
