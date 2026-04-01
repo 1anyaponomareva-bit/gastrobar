@@ -23,15 +23,10 @@ import { canBeat } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { HEADER_OFFSET_TOP } from "@/components/durak/durakLayoutConstants";
 import { DurakOnlineMatchmaking } from "@/components/durak/DurakOnlineMatchmaking";
-
-const DurakOnlineGame = dynamic(
-  () => import("./DurakOnlineGame").then((m) => m.DurakOnlineGame),
-  { ssr: false }
-);
+import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
 
 const HUMAN_ID = "human";
 
@@ -812,6 +807,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         roomId={onlineRoomId}
         playerName={playerName}
         onLeave={() => setOnlineRoomId(null)}
+        renderGame={(embedded) => <DurakGame embedded={embedded} />}
       />
     );
   }

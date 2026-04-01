@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import type { GameTable } from "@/games/durak/types";
@@ -17,12 +18,14 @@ import {
 } from "@/lib/durak/online/buildRoomGame";
 import { fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
 import type { RoomStatePayload } from "@/lib/durak/online/types";
-import { DurakGame } from "./DurakGame";
+import type { DurakGameEmbeddedProps } from "./DurakGame";
 
 type Props = {
   roomId: string;
   playerName: string;
   onLeave: () => void;
+  /** Рендер стола без циклического import — иначе dynamic chunk и «TypeError: Load failed» на проде/Safari. */
+  renderGame: (embedded: DurakGameEmbeddedProps) => ReactNode;
 };
 
 /** Сравнение стола без `message` — чтобы «только очистка сообщения» не затирала чужой отбой из realtime. */
@@ -42,7 +45,7 @@ function durakGameMaterialSignature(gt: GameTable): string {
  * Persist не должен захватывать `game` в замыкание debounce — иначе поздний upsert затирает отбой соперника.
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
-export function DurakOnlineGame({ roomId, playerName, onLeave }: Props) {
+export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
   const [game, setGame] = useState<GameTable | null>(null);
@@ -361,16 +364,12 @@ export function DurakOnlineGame({ roomId, playerName, onLeave }: Props) {
     );
   }
 
-  return (
-    <DurakGame
-      embedded={{
-        roomId,
-        localPlayerId: playerId,
-        playerName,
-        game,
-        onGameChange: onRemoteGameChange,
-        onLeave,
-      }}
-    />
-  );
+  return renderGame({
+    roomId,
+    localPlayerId: playerId,
+    playerName,
+    game,
+    onGameChange: onRemoteGameChange,
+    onLeave,
+  });
 }
