@@ -118,22 +118,90 @@ function parseJoinQueueResult(data: unknown): {
   return { roomId, searchDeadline, rejoined };
 }
 
+type ClientKeys = { supabaseUrl: string; supabaseKey: string };
+
+function getClientKeys(client: SupabaseClient): ClientKeys {
+  return client as unknown as ClientKeys;
+}
+
+/** Прямой POST к PostgREST RPC — в ошибке всегда есть HTTP status и сырое тело (client.rpc часто даёт { message: "" }). */
+function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
+  const head = `HTTP ${status} ${statusText}`;
+  const t = body.trim();
+  if (t) {
+    try {
+      const j = JSON.parse(t) as Record<string, unknown>;
+      const parts: string[] = [head];
+      if (hasMeaningfulString(j.message)) parts.push(String(j.message));
+      if (typeof j.code === "string" && j.code) parts.push(`[${j.code}]`);
+      if (hasMeaningfulString(j.details)) parts.push(String(j.details));
+      if (hasMeaningfulString(j.hint)) parts.push(String(j.hint));
+      if (parts.length > 1) return parts.join(" — ");
+      return `${head} — ${t.slice(0, 400)}`;
+    } catch {
+      return `${head}: ${t.slice(0, 400)}`;
+    }
+  }
+  return `${head}. Открой Supabase → SQL Editor и выполни supabase/sql/durak_queue_functions_only.sql (функции + GRANT + политики).`;
+}
+
+async function rpcPost(
+  client: SupabaseClient,
+  fn: string,
+  args: Record<string, unknown>
+): Promise<{ data: unknown } | { error: string }> {
+  const { supabaseUrl, supabaseKey } = getClientKeys(client);
+  const url = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${encodeURIComponent(fn)}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(args),
+    });
+  } catch (e) {
+    return {
+      error: formatPostgrestError(e),
+    };
+  }
+  const text = await res.text();
+  if (!res.ok) {
+    return { error: formatRpcHttpFailure(res.status, res.statusText, text) };
+  }
+  if (!text.trim()) {
+    return { data: null };
+  }
+  try {
+    return { data: JSON.parse(text) as unknown };
+  } catch {
+    return {
+      error: `Некорректный JSON ответа: ${text.slice(0, 200)}`,
+    };
+  }
+}
+
 /** Matchmaking: RPC `durak_join_queue` в Supabase. */
 export async function durakJoinQueue(
   client: SupabaseClient,
   playerId: string,
   displayName: string
 ): Promise<{ roomId: string; searchDeadline: string; rejoined: boolean }> {
-  const { data, error } = await client.rpc("durak_join_queue", {
+  const out = await rpcPost(client, "durak_join_queue", {
     payload: {
       player_id: playerId,
       display_name: displayName,
     },
   });
-  if (error) {
-    throw new Error(formatPostgrestError(error));
+  if ("error" in out) {
+    throw new Error(out.error);
   }
-  return parseJoinQueueResult(data);
+  return parseJoinQueueResult(out.data);
 }
 
 /** Таймаут очереди: вызывать периодически, пока комната в `waiting`. */
@@ -141,10 +209,12 @@ export async function durakFinalizeRoomIfReady(
   client: SupabaseClient,
   roomId: string
 ): Promise<void> {
-  const { error } = await client.rpc("durak_finalize_room_if_ready", {
+  const out = await rpcPost(client, "durak_finalize_room_if_ready", {
     p_room_id: roomId,
   });
-  if (error) throw new Error(formatPostgrestError(error));
+  if ("error" in out) {
+    throw new Error(out.error);
+  }
 }
 
 export async function fetchRoom(
