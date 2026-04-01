@@ -1,12 +1,16 @@
+import { getSupabasePublicApiKey } from "@/lib/supabase/public-key";
+
 /**
  * Запись спина через Supabase PostgREST (fetch) — без @supabase/supabase-js,
  * чтобы сборка не падала, если пакет не попал в node_modules / package-lock.
  */
 async function insertSpinRow(row: { user_id: string; result: string }): Promise<Error | null> {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = getSupabasePublicApiKey();
   const backend = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   if (!key || !backend) {
-    return new Error("missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    return new Error(
+      "missing NEXT_PUBLIC_SUPABASE_URL and public API key (NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
+    );
   }
   const base =
     typeof window !== "undefined"

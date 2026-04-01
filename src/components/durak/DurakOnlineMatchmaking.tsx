@@ -87,7 +87,9 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     const client = createSupabaseBrowserClient();
     setSupabase(client);
     if (!client) {
-      setError("Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY");
+      setError(
+        "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
+      );
     }
   }, []);
 
