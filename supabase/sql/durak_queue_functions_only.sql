@@ -1,8 +1,62 @@
 -- ============================================================================
--- Дурак: только RPC и RLS — БЕЗ CREATE TABLE
--- Запускай в Supabase → SQL Editor, если таблицы rooms / room_players / room_state УЖЕ есть
--- и полная миграция падает с "relation rooms already exists".
--- Если схема room_players старая — см. durak_room_players_column_player_name.sql
+-- Дурак: СХЕМА + RPC + RLS
+-- Выполни в Supabase → SQL Editor ОДНИМ запуском СВЕРХУ ВНИЗ.
+-- Если был HTTP 500: чаще всего таблицы старые — нет колонки started_with_bot
+-- или room_players без player_name. Блок «СХЕМА» ниже это чинит.
+-- ============================================================================
+
+-- --- СХЕМА: таблицы и недостающие колонки (без этого INSERT в RPC падает с 500) ---
+
+CREATE TABLE IF NOT EXISTS public.rooms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
+  max_players int NOT NULL DEFAULT 3 CHECK (max_players >= 2 AND max_players <= 5),
+  search_deadline timestamptz NOT NULL DEFAULT (now() + interval '1 hour'),
+  started_with_bot boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.room_players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id uuid NOT NULL REFERENCES public.rooms (id) ON DELETE CASCADE,
+  player_id text NOT NULL,
+  player_name text NOT NULL DEFAULT '',
+  is_bot boolean NOT NULL DEFAULT false,
+  seat_index int NOT NULL DEFAULT 0,
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (room_id, player_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_players_room ON public.room_players (room_id);
+CREATE INDEX IF NOT EXISTS idx_rooms_waiting_deadline
+  ON public.rooms (status, search_deadline)
+  WHERE status = 'waiting';
+
+CREATE TABLE IF NOT EXISTS public.room_state (
+  room_id uuid PRIMARY KEY REFERENCES public.rooms (id) ON DELETE CASCADE,
+  state jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Если таблицы уже были, но без колонок под новый RPC:
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS started_with_bot boolean NOT NULL DEFAULT false;
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS search_deadline timestamptz;
+UPDATE public.rooms SET search_deadline = now() + interval '1 hour' WHERE search_deadline IS NULL;
+ALTER TABLE public.rooms ALTER COLUMN search_deadline SET NOT NULL;
+ALTER TABLE public.rooms ALTER COLUMN search_deadline SET DEFAULT (now() + interval '1 hour');
+
+ALTER TABLE public.room_players ADD COLUMN IF NOT EXISTS player_name text NOT NULL DEFAULT '';
+ALTER TABLE public.room_players ADD COLUMN IF NOT EXISTS is_bot boolean NOT NULL DEFAULT false;
+ALTER TABLE public.room_players ADD COLUMN IF NOT EXISTS seat_index int NOT NULL DEFAULT 0;
+ALTER TABLE public.room_players ADD COLUMN IF NOT EXISTS joined_at timestamptz NOT NULL DEFAULT now();
+
+-- Права на таблицы (на случай кастомных ролей)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.rooms TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.room_players TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.room_state TO anon, authenticated, service_role;
+
+-- ============================================================================
+-- RPC (как раньше)
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS public.durak_join_queue(text, text);

@@ -128,21 +128,29 @@ function getClientKeys(client: SupabaseClient): ClientKeys {
 function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
   const head = `HTTP ${status} ${statusText}`;
   const t = body.trim();
+  const emptyHint =
+    `${head}. Тело ответа пустое — открой Supabase → Logs → Postgres и найди ошибку в момент вызова RPC. ` +
+    `Чаще всего: в public.rooms нет колонки started_with_bot или таблицы созданы вручную без части полей. ` +
+    `В SQL Editor выполни весь файл с начала: supabase/sql/durak_queue_functions_only.sql (блок «СХЕМА», затем функции).`;
+
   if (t) {
     try {
       const j = JSON.parse(t) as Record<string, unknown>;
       const parts: string[] = [head];
       if (hasMeaningfulString(j.message)) parts.push(String(j.message));
-      if (typeof j.code === "string" && j.code) parts.push(`[${j.code}]`);
+      if (typeof j.error === "string" && j.error.trim()) parts.push(j.error.trim());
+      const code = j.code;
+      if (typeof code === "string" && code) parts.push(`[${code}]`);
+      else if (typeof code === "number") parts.push(`[${code}]`);
       if (hasMeaningfulString(j.details)) parts.push(String(j.details));
       if (hasMeaningfulString(j.hint)) parts.push(String(j.hint));
       if (parts.length > 1) return parts.join(" — ");
-      return `${head} — ${t.slice(0, 400)}`;
+      return `${head} — ${t.slice(0, 500)}`;
     } catch {
-      return `${head}: ${t.slice(0, 400)}`;
+      return `${head}: ${t.slice(0, 500)}`;
     }
   }
-  return `${head}. Открой Supabase → SQL Editor и выполни supabase/sql/durak_queue_functions_only.sql (функции + GRANT + политики).`;
+  return emptyHint;
 }
 
 async function rpcPost(
