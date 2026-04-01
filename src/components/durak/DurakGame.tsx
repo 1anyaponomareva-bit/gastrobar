@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Card, GameTable, Rank } from "@/games/durak/types";
 import {
@@ -8,49 +15,29 @@ import {
   attackToss,
   attackerBeat,
   defendPlay,
+  defenderCannotBeat,
   defenderTake,
-  newGame,
 } from "@/games/durak/engine";
 import { applyBotMove } from "@/games/durak/bot";
 import { canBeat } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { HEADER_OFFSET_TOP } from "@/components/durak/durakLayoutConstants";
+import { DurakOnlineMatchmaking } from "@/components/durak/DurakOnlineMatchmaking";
+
+const DurakOnlineGame = dynamic(
+  () => import("./DurakOnlineGame").then((m) => m.DurakOnlineGame),
+  { ssr: false }
+);
 
 const HUMAN_ID = "human";
-const BOT_ID = "bot";
 
 const PLAYER_NAME_LS = "player_name";
 /** Имя при нажатии «Пропустить» (сохраняется в localStorage, как обычное имя). */
 const GUEST_PLAYER_NAME = "Гость";
-
-/** Имя соперника: простые имена, шутливые «типажи», часть — со смайлом. */
-const BOT_NAMES = [
-  "Леся",
-  "Петр",
-  "Даша",
-  "Костя",
-  "Сосед",
-  "Сосед 🍺",
-  "Турист",
-  "Турист 🇦🇺",
-  "Местный",
-  "Постоялец",
-  "Знакомец",
-  "Mary 🥃",
-  "Никита 🍸",
-  "Маша",
-  "Олег",
-  "Света",
-  "Гриша",
-  "Вика",
-  "Толик",
-  "Аня",
-  "Слава",
-  "Иван 😏",
-  "Прохожий",
-  "Бариста ☕",
-] as const;
 
 function normalizePlayerNameInput(raw: string): string {
   const t = raw.trim();
@@ -58,13 +45,19 @@ function normalizePlayerNameInput(raw: string): string {
   return [...t].slice(0, 12).join("");
 }
 
-function pickRandomBotName(): string {
-  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]!;
-}
+export type DurakGameEmbeddedProps = {
+  roomId: string;
+  localPlayerId: string;
+  playerName: string;
+  game: GameTable;
+  /** Как setState: функция получает актуальный стол родителя, а не снимок `embedded.game` с прошлого рендера. */
+  onGameChange: (update: SetStateAction<GameTable>) => void;
+  onLeave: () => void;
+};
 
-/** Под фиксированный `Header` (высота 60px + safe-area). */
-const HEADER_OFFSET_TOP =
-  "pt-[calc(60px+max(0px,env(safe-area-inset-top,0px)))]";
+type DurakGameRootProps = {
+  embedded?: DurakGameEmbeddedProps;
+};
 
 function WinConfetti() {
   const pieces = useMemo(
@@ -462,11 +455,26 @@ function DurakNameGate({
   );
 }
 
-export function DurakGame() {
+export function DurakGame(props: DurakGameRootProps = {}) {
+  const router = useRouter();
+  const embedded = props.embedded;
+  const localPlayerId = embedded?.localPlayerId ?? HUMAN_ID;
+
   const [nameHydrated, setNameHydrated] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const displayName = embedded?.playerName ?? playerName;
+  const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [tableGreeting, setTableGreeting] = useState<string | null>(null);
-  const [game, setGame] = useState<GameTable | null>(null);
+
+  const game = embedded?.game ?? null;
+  const setGame = useCallback(
+    (updater: SetStateAction<GameTable | null>) => {
+      const e = props.embedded;
+      if (!e) return;
+      e.onGameChange(updater as SetStateAction<GameTable>);
+    },
+    [props.embedded]
+  );
   const [attackPick, setAttackPick] = useState<string[]>([]);
   const [tossPick, setTossPick] = useState<string[]>([]);
   const [defenseTargetAttackId, setDefenseTargetAttackId] = useState<string | null>(null);
@@ -486,11 +494,6 @@ export function DurakGame() {
   }, []);
 
   useEffect(() => {
-    if (!nameHydrated || !playerName) return;
-    setGame(newGame({ human: playerName, bot: pickRandomBotName() }));
-  }, [nameHydrated, playerName]);
-
-  useEffect(() => {
     if (!game?.id) return;
     setDealing(true);
     const ms = Math.ceil(12 * DEAL_STAGGER_SEC * 1000) + DEAL_BUFFER_MS;
@@ -498,9 +501,9 @@ export function DurakGame() {
     return () => window.clearTimeout(t);
   }, [game?.id]);
 
-  const human = game?.players.find((p) => p.type === "human");
-  const bot = game?.players.find((p) => p.type === "bot");
-  const humanHand = human?.hand ?? [];
+  const selfPlayer = game?.players.find((p) => p.id === localPlayerId);
+  const opponents = game?.players.filter((p) => p.id !== localPlayerId) ?? [];
+  const humanHand = selfPlayer?.hand ?? [];
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -514,6 +517,13 @@ export function DurakGame() {
     return s;
   }, [game]);
 
+  /** Онлайн: ходы бота считает только первый живой игрок по кругу — иначе два клиента вызывают applyBotMove и затирают room_state. */
+  const onlineBotDriverId = useMemo(() => {
+    if (!game) return null;
+    const firstLive = game.players.find((p) => p.type !== "bot");
+    return firstLive?.id ?? null;
+  }, [game]);
+
   const clearPicks = useCallback(() => {
     setAttackPick([]);
     setTossPick([]);
@@ -521,10 +531,10 @@ export function DurakGame() {
   }, []);
 
   const restart = useCallback(() => {
-    if (!playerName) return;
-    setGame(newGame({ human: playerName, bot: pickRandomBotName() }));
-    clearPicks();
-  }, [playerName, clearPicks]);
+    if (props.embedded) {
+      props.embedded.onLeave();
+    }
+  }, [props.embedded]);
 
   const commitNameEdit = useCallback(() => {
     const n = normalizePlayerNameInput(nameDraft);
@@ -543,7 +553,7 @@ export function DurakGame() {
       return {
         ...g,
         players: g.players.map((p) =>
-          p.type === "human" ? { ...p, name: n } : p
+          p.id === localPlayerId ? { ...p, name: n } : p
         ),
       };
     });
@@ -559,10 +569,10 @@ export function DurakGame() {
   }, []);
 
   const startNameEdit = useCallback(() => {
-    const d = human?.name ?? playerName;
+    const d = selfPlayer?.name ?? playerName;
     setNameDraft(d);
     setNameEditing(true);
-  }, [human?.name, playerName]);
+  }, [selfPlayer?.name, playerName]);
 
   useEffect(() => {
     if (!nameEditing) return;
@@ -597,6 +607,13 @@ export function DurakGame() {
   useEffect(() => {
     if (!game || game.state !== "playing" || dealing) return;
     if (game.phase === "player_can_throw_more") return;
+    if (
+      embedded &&
+      onlineBotDriverId != null &&
+      localPlayerId !== onlineBotDriverId
+    ) {
+      return;
+    }
     const botActs =
       (game.phase === "attack_initial" && game.players[game.attackerIndex]!.type === "bot") ||
       (game.phase === "defend" && game.players[game.defenderIndex]!.type === "bot") ||
@@ -611,13 +628,13 @@ export function DurakGame() {
       });
     }, randomBotThinkDelayMs());
     return () => window.clearTimeout(t);
-  }, [game, dealing]);
+  }, [game, dealing, embedded, localPlayerId, onlineBotDriverId]);
 
   const setErr = (msg: string) => setGame((g) => (g ? { ...g, message: msg } : g));
 
   const onAttackSubmit = () => {
     if (!game) return;
-    const r = attackInitial(game, HUMAN_ID, attackPick);
+    const r = attackInitial(game, localPlayerId, attackPick);
     if ("error" in r) {
       setErr(r.error);
       return;
@@ -626,8 +643,8 @@ export function DurakGame() {
     setAttackPick([]);
   };
 
-  const humanIsAttacker = game ? game.players[game.attackerIndex]?.id === HUMAN_ID : false;
-  const humanIsDefender = game ? game.players[game.defenderIndex]?.id === HUMAN_ID : false;
+  const selfIsAttacker = game ? game.players[game.attackerIndex]?.id === localPlayerId : false;
+  const selfIsDefender = game ? game.players[game.defenderIndex]?.id === localPlayerId : false;
 
   const uncoveredPairs = game ? game.tablePairs.filter((tp) => tp.defense === null) : [];
   const effectiveDefenseAttackId =
@@ -640,7 +657,7 @@ export function DurakGame() {
       : undefined;
 
   const defendPlayableFor = (c: Card): boolean => {
-    if (!game || !humanIsDefender || game.phase !== "defend" || game.state !== "playing") return false;
+    if (!game || !selfIsDefender || game.phase !== "defend" || game.state !== "playing") return false;
     if (!defendPair) return false;
     return canBeat(defendPair.attack, c, game.trumpSuit);
   };
@@ -655,7 +672,7 @@ export function DurakGame() {
       );
       return;
     }
-    const r = defendPlay(game, HUMAN_ID, effectiveDefenseAttackId, defenseId);
+    const r = defendPlay(game, localPlayerId, effectiveDefenseAttackId, defenseId);
     if ("error" in r) {
       setErr(r.error);
       return;
@@ -666,7 +683,18 @@ export function DurakGame() {
 
   const onTake = () => {
     if (!game) return;
-    const r = defenderTake(game, HUMAN_ID);
+    /* В защите «Взять» = отказ отбиваться: сначала фаза подкидывания для атакующего, затем «Бито» забирает стол. */
+    if (game.phase === "defend") {
+      const r = defenderCannotBeat(game, localPlayerId);
+      if ("error" in r) {
+        setErr(r.error);
+        return;
+      }
+      setGame({ ...r.table, message: null });
+      clearPicks();
+      return;
+    }
+    const r = defenderTake(game, localPlayerId);
     if ("error" in r) {
       setErr(r.error);
       return;
@@ -678,7 +706,9 @@ export function DurakGame() {
   const onBeat = () => {
     if (!game) return;
     if (game.phase === "player_can_throw_more") {
-      const r = defenderTake(game, BOT_ID);
+      const defPl = game.players[game.defenderIndex];
+      if (!defPl) return;
+      const r = defenderTake(game, defPl.id);
       if ("error" in r) {
         setErr(r.error);
         return;
@@ -687,7 +717,7 @@ export function DurakGame() {
       clearPicks();
       return;
     }
-    const r = attackerBeat(game, HUMAN_ID);
+    const r = attackerBeat(game, localPlayerId);
     if ("error" in r) {
       setErr(r.error);
       return;
@@ -698,7 +728,7 @@ export function DurakGame() {
 
   const onTossSubmit = () => {
     if (!game) return;
-    const r = attackToss(game, HUMAN_ID, tossPick);
+    const r = attackToss(game, localPlayerId, tossPick);
     if ("error" in r) {
       setErr(r.error);
       return;
@@ -728,26 +758,27 @@ export function DurakGame() {
 
   const phaseLine = (() => {
     if (!game) return "";
-    const hn = game.players.find((p) => p.type === "human")?.name ?? playerName;
-    const bn = game.players.find((p) => p.type === "bot")?.name ?? "Соперник";
+    const selfName = selfPlayer?.name ?? displayName;
+    const attackerName = game.players[game.attackerIndex]?.name ?? "Игрок";
+    const defenderName = game.players[game.defenderIndex]?.name ?? "Игрок";
     if (dealing) return "Раздача карт…";
     if (game.state === "finished") return "Партия окончена";
     if (game.phase === "attack_initial")
-      return humanIsAttacker ? `${hn}, ваш ход: атака` : `${bn} атакует`;
+      return selfIsAttacker ? `${selfName}, ваш ход: атака` : `${attackerName} атакует`;
     if (game.phase === "defend")
-      return humanIsDefender ? `${hn}, ваш ход: отбой или «Взять»` : `${bn} отбивается`;
+      return selfIsDefender ? `${selfName}, ваш ход: отбой или «Взять»` : `${defenderName} отбивается`;
     if (game.phase === "attack_toss")
-      return humanIsAttacker ? "Подкините или «Бито»" : `${bn} подкидывает`;
+      return selfIsAttacker ? "Подкините или «Бито»" : `${attackerName} подкидывает`;
     if (game.phase === "player_can_throw_more")
-      return humanIsAttacker
-        ? `${bn} не бьётся — подкиньте или «Бито»`
-        : `${bn} подкидывает…`;
+      return selfIsAttacker
+        ? `${defenderName} не бьётся — подкиньте или «Бито»`
+        : `${attackerName} подкидывает…`;
     return "";
   })();
 
-  const humanCanToss =
+  const selfCanToss =
     !!game &&
-    humanIsAttacker &&
+    selfIsAttacker &&
     (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
 
   if (!nameHydrated) {
@@ -762,8 +793,27 @@ export function DurakGame() {
     );
   }
 
-  if (!playerName) {
+  if (!embedded && !playerName) {
     return <DurakNameGate onSubmit={onPlayerNameChosen} onSkip={onSkipNameAsGuest} />;
+  }
+
+  if (!embedded) {
+    if (!onlineRoomId) {
+      return (
+        <DurakOnlineMatchmaking
+          playerName={playerName}
+          onRoomPlaying={(id) => setOnlineRoomId(id)}
+          onCancel={() => router.push("/")}
+        />
+      );
+    }
+    return (
+      <DurakOnlineGame
+        roomId={onlineRoomId}
+        playerName={playerName}
+        onLeave={() => setOnlineRoomId(null)}
+      />
+    );
   }
 
   if (!game) {
@@ -777,8 +827,6 @@ export function DurakGame() {
       </div>
     );
   }
-
-  const bh = bot?.hand ?? [];
 
   return (
     <div
@@ -807,31 +855,38 @@ export function DurakGame() {
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-1.5 [-webkit-overflow-scrolling:touch]">
-        {/* Противник */}
-        <section className="relative z-10 shrink-0 px-0 pt-0">
-          <div className="flex items-end justify-between gap-2 px-1">
-            <div>
-              <p className="text-[13px] font-medium text-white/90">{bot?.name ?? "Соперник"}</p>
-              <p className="text-[10px] text-white/45">{bh.length} карт</p>
-            </div>
-          </div>
-          <div className="relative mx-auto mt-2 flex h-[5.25rem] max-w-full items-end justify-center overflow-visible sm:mt-2.5 sm:h-[5.5rem]">
-            {bh.map((c, i) => (
-              <div key={c.id} className="absolute" style={handFanStyle(bh.length, i, "opponent")}>
-                <motion.div
-                  initial={{ opacity: 0, y: -52, scale: 0.82, rotate: -6 }}
-                  animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                  transition={{
-                    delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                    duration: DEAL_MOVE_SEC,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  <CardSprite faceDown />
-                </motion.div>
+        {/* Противники (онлайн — может быть несколько) */}
+        <section className="relative z-10 shrink-0 space-y-3 px-0 pt-0">
+          {opponents.map((opp) => {
+            const bh = opp.hand;
+            return (
+              <div key={opp.id}>
+                <div className="flex items-end justify-between gap-2 px-1">
+                  <div>
+                    <p className="text-[13px] font-medium text-white/90">{opp.name}</p>
+                    <p className="text-[10px] text-white/45">{bh.length} карт</p>
+                  </div>
+                </div>
+                <div className="relative mx-auto mt-2 flex h-[5.25rem] max-w-full items-end justify-center overflow-visible sm:mt-2.5 sm:h-[5.5rem]">
+                  {bh.map((c, i) => (
+                    <div key={c.id} className="absolute" style={handFanStyle(bh.length, i, "opponent")}>
+                      <motion.div
+                        initial={{ opacity: 0, y: -52, scale: 0.82, rotate: -6 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                        transition={{
+                          delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                          duration: DEAL_MOVE_SEC,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        <CardSprite faceDown />
+                      </motion.div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </section>
 
         {/* Сукно: flex вместо height:100% + absolute — иначе зона стола иногда 0px и карты не видны */}
@@ -859,7 +914,7 @@ export function DurakGame() {
                 ) : (
                   game.tablePairs.map((tp) => {
                     const uncovered = tp.defense === null;
-                    const humanMustDefend = humanIsDefender && game.phase === "defend" && uncovered;
+                    const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
                     const attackSelectedForDefense =
                       humanMustDefend && defenseTargetAttackId === tp.attack.id;
                     const highlightUnbeaten =
@@ -946,7 +1001,7 @@ export function DurakGame() {
             {/* Левый 1fr — баланс, чтобы центр был по центру; «Взять» всегда в правом слоте, не подменяет «Атаковать». */}
             <span className="min-w-0 shrink" aria-hidden />
             <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-              {humanIsAttacker && game.phase === "attack_initial" ? (
+              {selfIsAttacker && game.phase === "attack_initial" ? (
                 <button
                   type="button"
                   onClick={onAttackSubmit}
@@ -956,7 +1011,7 @@ export function DurakGame() {
                   Атаковать
                 </button>
               ) : null}
-              {humanCanToss && tossPick.length > 0 ? (
+              {selfCanToss && tossPick.length > 0 ? (
                 <button
                   type="button"
                   onClick={onTossSubmit}
@@ -966,7 +1021,7 @@ export function DurakGame() {
                   Подкинуть
                 </button>
               ) : null}
-              {humanCanToss ? (
+              {selfCanToss ? (
                 <button
                   type="button"
                   onClick={onBeat}
@@ -978,7 +1033,7 @@ export function DurakGame() {
               ) : null}
             </div>
             <div className="flex min-w-0 justify-end">
-              {humanIsDefender && (game.phase === "defend" || game.phase === "attack_toss") ? (
+              {selfIsDefender && game.phase === "defend" ? (
                 <button
                   type="button"
                   onClick={onTake}
@@ -1030,7 +1085,7 @@ export function DurakGame() {
                 onClick={startNameEdit}
                 className="block max-w-full truncate text-left text-[13px] font-medium text-white/90 underline decoration-white/25 decoration-dotted underline-offset-2 transition hover:text-white hover:decoration-white/55"
               >
-                {human?.name ?? playerName}
+                {selfPlayer?.name ?? playerName}
               </button>
             )}
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
@@ -1039,39 +1094,39 @@ export function DurakGame() {
         <div className="relative mx-auto mt-1 flex h-[16.5rem] max-w-full -translate-y-1 items-end justify-center overflow-visible sm:mt-1.5 sm:h-[19rem] sm:-translate-y-2">
           {humanHand.map((c, i) => {
             const selAttack =
-              game.phase === "attack_initial" && humanIsAttacker && attackPick.includes(c.id);
-            const selToss = humanCanToss && tossPick.includes(c.id);
+              game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
+            const selToss = selfCanToss && tossPick.includes(c.id);
 
             const attackPlayable =
-              humanIsAttacker && game.phase === "attack_initial" && game.state === "playing";
+              selfIsAttacker && game.phase === "attack_initial" && game.state === "playing";
 
-            const tossPlayable = humanCanToss && game.state === "playing" && ranksOnTable.has(c.rank);
+            const tossPlayable = selfCanToss && game.state === "playing" && ranksOnTable.has(c.rank);
 
             const defendPlayable = defendPlayableFor(c);
 
             let playable = false;
             if (game.state === "playing" && !dealing) {
-              if (humanIsAttacker && game.phase === "attack_initial") playable = attackPlayable;
-              else if (humanCanToss) playable = tossPlayable;
-              else if (humanIsDefender && game.phase === "defend") playable = defendPlayable;
+              if (selfIsAttacker && game.phase === "attack_initial") playable = attackPlayable;
+              else if (selfCanToss) playable = tossPlayable;
+              else if (selfIsDefender && game.phase === "defend") playable = defendPlayable;
             }
 
             const selected = selAttack || selToss;
 
             const onPress =
-              humanIsAttacker && game.phase === "attack_initial"
+              selfIsAttacker && game.phase === "attack_initial"
                 ? () => {
                     if (!attackPlayable) return;
                     setAttackPick((p) => toggleAttackSelection(humanHand, p, c.id));
                     setGame((g) => (g ? { ...g, message: null } : g));
                   }
-                : humanCanToss
+                : selfCanToss
                   ? () => {
                       if (!tossPlayable) return;
                       setTossPick((p) => toggleTossSelection(humanHand, p, c.id, ranksOnTable));
                       setGame((g) => (g ? { ...g, message: null } : g));
                     }
-                  : humanIsDefender && game.phase === "defend"
+                  : selfIsDefender && game.phase === "defend"
                     ? () => {
                         if (!defendPlayable) return;
                         onDefendCard(c.id);
@@ -1132,7 +1187,7 @@ export function DurakGame() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
-            {game.winnerId === HUMAN_ID ? <WinConfetti /> : null}
+            {game.winnerId === localPlayerId ? <WinConfetti /> : null}
             <motion.div
               id="durak-result-panel"
               initial={{ opacity: 0, scale: 0.88, y: 12 }}
@@ -1142,14 +1197,14 @@ export function DurakGame() {
               className="relative z-10 w-full max-w-sm rounded-2xl border border-white/20 bg-[#14100c] px-7 py-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
             >
               <p id="durak-result-title" className="text-xl font-bold leading-tight text-white sm:text-2xl">
-                {game.winnerId === HUMAN_ID
-                  ? `🔥 ${human?.name ?? playerName}, с победой!`
-                  : `${human?.name ?? playerName}, в пролёте`}
+                {game.winnerId === localPlayerId
+                  ? `🔥 ${selfPlayer?.name ?? playerName}, с победой!`
+                  : `${selfPlayer?.name ?? playerName}, в пролёте`}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-white/65">
-                {game.loserId === HUMAN_ID
+                {game.loserId === localPlayerId
                   ? `Дурак — карты остались у тебя. Ничего, бывает — ты молодец, что дошли до конца раздачи.`
-                  : game.winnerId === HUMAN_ID
+                  : game.winnerId === localPlayerId
                     ? `Ты умничка: у соперника ещё карты, у тебя пусто — с победой, так держать!`
                     : ""}
               </p>

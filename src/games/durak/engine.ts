@@ -1,4 +1,4 @@
-import type { Card, GameTable, Rank, Suit, TablePair } from "./types";
+import type { Card, GameTable, PlayerType, Rank, Suit, TablePair } from "./types";
 import {
   canBeat,
   createDeck36,
@@ -107,6 +107,63 @@ export function newGame(names?: { human: string; bot: string }): GameTable {
   const deck = [...deckShuffled];
   for (let round = 0; round < 6; round++) {
     for (let p = 0; p < players.length; p++) {
+      const c = deck.shift();
+      if (c) players[p]!.hand.push(c);
+    }
+  }
+
+  const trumpCard = deck.length > 0 ? deck[deck.length - 1]! : null;
+  const trumpSuit: Suit = trumpCard?.suit ?? "spades";
+
+  for (const pl of players) {
+    pl.hand = sortHand(pl.hand);
+  }
+
+  const attackerIndex = findFirstAttackerIndex(players, trumpSuit);
+  const defenderIndex = nextDefenderIndex(attackerIndex, players.length);
+
+  let table: GameTable = {
+    id: tableId(),
+    mode: "podkidnoy",
+    players,
+    deck,
+    trumpCard,
+    trumpSuit,
+    tablePairs: [],
+    discardPile: [],
+    attackerIndex,
+    defenderIndex,
+    state: "playing",
+    phase: "attack_initial",
+    winnerId: null,
+    loserId: null,
+    roundDefenderInitialHand: 0,
+    message: null,
+  };
+  table = checkGameEnd(table);
+  return table;
+}
+
+/** Онлайн / N игроков: раздача по кругу 6 карт каждому, затем как в `newGame`. */
+export function newGameForPlayers(
+  slots: { id: string; name: string; type: PlayerType }[]
+): GameTable {
+  const n = slots.length;
+  if (n < 2) {
+    throw new Error("Нужно минимум 2 игрока");
+  }
+  const deckShuffled = shuffle(createDeck36());
+  const players = slots.map((s, seatIndex) => ({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    hand: [] as Card[],
+    seatIndex,
+  }));
+
+  const deck = [...deckShuffled];
+  for (let round = 0; round < 6; round++) {
+    for (let p = 0; p < n; p++) {
       const c = deck.shift();
       if (c) players[p]!.hand.push(c);
     }

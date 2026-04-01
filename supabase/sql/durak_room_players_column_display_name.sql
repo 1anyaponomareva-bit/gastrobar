@@ -1,0 +1,1 @@
+-- Переименовано: см. durak_room_players_column_player_name.sql (колонка player_name в room_players).

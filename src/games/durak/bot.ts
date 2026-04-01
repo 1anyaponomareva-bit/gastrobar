@@ -2,7 +2,10 @@ import type { Card, GameTable, Rank } from "./types";
 import * as engine from "./engine";
 import { canBeat, rankValue } from "./cards";
 
-const BOT_ID = "bot";
+function botPlayerId(table: GameTable): string | null {
+  const b = table.players.find((p) => p.type === "bot");
+  return b?.id ?? null;
+}
 
 function sortAttackPreference(hand: Card[], trumpSuit: GameTable["trumpSuit"]) {
   return [...hand].sort((a, b) => {
@@ -16,7 +19,7 @@ function sortAttackPreference(hand: Card[], trumpSuit: GameTable["trumpSuit"]) {
 /** Одна минимальная карта для первой атаки (сначала не козыри, затем по рангу). */
 export function botChooseAttackInitial(table: GameTable): string[] {
   const attacker = table.players[table.attackerIndex];
-  if (attacker.id !== BOT_ID || attacker.hand.length === 0) return [];
+  if (attacker.type !== "bot" || attacker.hand.length === 0) return [];
   const sorted = sortAttackPreference(attacker.hand, table.trumpSuit);
   const first = sorted[0];
   return first ? [first.id] : [];
@@ -26,7 +29,7 @@ export function botChooseDefend(
   table: GameTable
 ): { attackId: string; defenseId: string } | "take" {
   const defender = table.players[table.defenderIndex];
-  if (defender.id !== BOT_ID) return "take";
+  if (defender.type !== "bot") return "take";
 
   const pair = table.tablePairs.find((p) => p.defense === null);
   if (!pair) return "take";
@@ -48,7 +51,7 @@ export function botChooseDefend(
 
 export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: string[] } | { type: "beat" } {
   const attacker = table.players[table.attackerIndex];
-  if (attacker.id !== BOT_ID) return { type: "beat" };
+  if (attacker.type !== "bot") return { type: "beat" };
 
   const ranksOnTable = new Set<Rank>();
   for (const tp of table.tablePairs) {
@@ -71,30 +74,33 @@ export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: stri
 export function applyBotMove(table: GameTable): GameTable | null {
   if (table.state !== "playing") return null;
 
+  const bid = botPlayerId(table);
+  if (!bid) return null;
+
   if (table.phase === "attack_initial" && table.players[table.attackerIndex]!.type === "bot") {
     const ids = botChooseAttackInitial(table);
     if (ids.length === 0) return null;
-    const r = engine.attackInitial(table, BOT_ID, ids);
+    const r = engine.attackInitial(table, bid, ids);
     return "error" in r ? null : r.table;
   }
 
   if (table.phase === "defend" && table.players[table.defenderIndex]!.type === "bot") {
     const d = botChooseDefend(table);
     if (d === "take") {
-      const r = engine.defenderCannotBeat(table, BOT_ID);
+      const r = engine.defenderCannotBeat(table, bid);
       return "error" in r ? null : r.table;
     }
-    const r = engine.defendPlay(table, BOT_ID, d.attackId, d.defenseId);
+    const r = engine.defendPlay(table, bid, d.attackId, d.defenseId);
     return "error" in r ? null : r.table;
   }
 
   if (table.phase === "attack_toss" && table.players[table.attackerIndex]!.type === "bot") {
     const choice = botChooseTossOrBeat(table);
     if (choice.type === "beat") {
-      const r = engine.attackerBeat(table, BOT_ID);
+      const r = engine.attackerBeat(table, bid);
       return "error" in r ? null : r.table;
     }
-    const r = engine.attackToss(table, BOT_ID, choice.ids);
+    const r = engine.attackToss(table, bid, choice.ids);
     return "error" in r ? null : r.table;
   }
 
