@@ -20,6 +20,7 @@ export function middleware(request: NextRequest) {
 /** Не гоняем статику и оптимизацию картинок через middleware — стабильная выдача `public/*.png` и т.п. */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    /* supabase-proxy: без лишнего edge-hop перед Node Route Handler (меньше сбоев fetch). */
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|supabase-proxy|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

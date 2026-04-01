@@ -19,6 +19,7 @@ async function insertSpinRow(row: { user_id: string; result: string }): Promise<
 
   const res = await fetch(`${base}/rest/v1/spins`, {
     method: "POST",
+    cache: "no-store",
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
