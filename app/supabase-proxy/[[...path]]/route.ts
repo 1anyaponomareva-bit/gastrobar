@@ -21,11 +21,21 @@ function forwardRequestHeaders(incoming: Headers): Headers {
   return out;
 }
 
+/**
+ * Node fetch распаковывает gzip/deflate, но иногда оставляет Content-Encoding.
+ * Браузер тогда ждёт сжатые байты → net::ERR_CONTENT_DECODING_FAILED.
+ */
+const STRIP_FROM_PROXY_RESPONSE = new Set([
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+]);
+
 function forwardResponseHeaders(upstream: Headers): Headers {
   const out = new Headers();
   upstream.forEach((value, key) => {
     const low = key.toLowerCase();
-    if (low === "transfer-encoding") return;
+    if (STRIP_FROM_PROXY_RESPONSE.has(low)) return;
     out.set(key, value);
   });
   return out;
