@@ -47,6 +47,7 @@ function durakGameMaterialSignature(gt: GameTable): string {
  */
 export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
 
   useEffect(() => {
@@ -57,7 +58,6 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   const [game, setGame] = useState<GameTable | null>(null);
   /** После первого не-null стола — реже опрашивать БД (не привязывать интервал к каждому ходу). */
   const [tableHydrated, setTableHydrated] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Актуальный стол (в т.ч. после realtime); persist читает отсюда, иначе debounce затирает чужой ход старым замыканием. */
   const gameRef = useRef<GameTable | null>(null);
@@ -207,10 +207,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   );
 
   useEffect(() => {
-    if (!supabase) {
-      setError("Нет настроек Supabase");
-      return;
-    }
+    /* Не вызывать setError при !supabase: в том же тике после mount клиент ещё null — гонка с init-effect. */
+    if (!supabase) return;
     let cancelled = false;
 
     (async () => {
