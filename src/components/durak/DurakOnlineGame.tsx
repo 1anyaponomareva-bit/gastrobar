@@ -449,12 +449,16 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     );
   }
 
-  return renderGame({
-    roomId,
-    localPlayerId: playerId,
-    playerName,
-    game,
-    onGameChange: onRemoteGameChange,
-    onLeave,
-  });
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col basis-0">
+      {renderGame({
+        roomId,
+        localPlayerId: playerId,
+        playerName,
+        game,
+        onGameChange: onRemoteGameChange,
+        onLeave,
+      })}
+    </div>
+  );
 }

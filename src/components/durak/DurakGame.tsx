@@ -935,7 +935,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         "flex w-full min-h-0 flex-col overflow-hidden bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "h-full max-h-full flex-1"
+          ? "flex-1 basis-0"
           : cn("h-[100dvh] max-h-[100dvh]", HEADER_OFFSET_TOP),
         "pb-[max(0.35rem,env(safe-area-inset-bottom,0px))]"
       )}
@@ -967,17 +967,23 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </p>
       </div>
 
-      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,520px)] flex-1 items-center justify-center px-0.5 py-0.5">
-        <div className="relative aspect-square w-[min(92vw,54dvh,24rem)] max-w-full shrink-0">
+      <div className="relative mx-auto flex w-full max-w-[min(100%,520px)] flex-1 flex-col items-center justify-center px-0.5 py-1">
+        <div
+          className="relative max-w-full shrink-0 rounded-full"
+          style={{
+            width: "min(92vw, 24rem, 78vmin)",
+            aspectRatio: "1",
+          }}
+        >
           <div className="pointer-events-none absolute inset-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
 
           <div
-            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#8e8e96] sm:border-[3px] sm:border-[#9a9aa3]"
+            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#6a8a72]/85 sm:border-[3px] sm:border-[#7a9880]"
             style={{
               background:
-                "radial-gradient(circle at 48% 40%, #4f4f58 0%, #3d3d45 38%, #2f2f36 72%, #232328 100%)",
+                "radial-gradient(circle at 48% 38%, #3f5a46 0%, #2d4234 35%, #223328 68%, #161f1a 100%)",
               boxShadow:
-                "inset 0 0 48px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.1)",
+                "inset 0 0 48px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.12)",
             }}
           />
           <div
