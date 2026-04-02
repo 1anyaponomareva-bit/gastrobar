@@ -94,14 +94,33 @@ export function applyBotMove(table: GameTable): GameTable | null {
     return "error" in r ? null : r.table;
   }
 
-  if (table.phase === "attack_toss" && table.players[table.attackerIndex]!.type === "bot") {
+  const tossPhases = table.phase === "attack_toss" || table.phase === "player_can_throw_more";
+  if (tossPhases && table.players[table.attackerIndex]!.type === "bot") {
     const choice = botChooseTossOrBeat(table);
     if (choice.type === "beat") {
+      if (table.phase === "player_can_throw_more") {
+        const def = table.players[table.defenderIndex];
+        if (!def) return null;
+        const r = engine.defenderTake(table, def.id);
+        return "error" in r ? null : r.table;
+      }
       const r = engine.attackerBeat(table, bid);
       return "error" in r ? null : r.table;
     }
     const r = engine.attackToss(table, bid, choice.ids);
-    return "error" in r ? null : r.table;
+    if ("error" in r) {
+      /* Рассинхрон/краевой случай — не оставляем стол зависшим: сдать партию в легальный финал хода. */
+      if (table.phase === "player_can_throw_more") {
+        const def = table.players[table.defenderIndex];
+        if (def) {
+          const take = engine.defenderTake(table, def.id);
+          if (!("error" in take)) return take.table;
+        }
+      }
+      const beat = engine.attackerBeat(table, bid);
+      return "error" in beat ? null : beat.table;
+    }
+    return r.table;
   }
 
   return null;

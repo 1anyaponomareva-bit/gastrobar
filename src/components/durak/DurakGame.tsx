@@ -161,35 +161,57 @@ function opponentSeatOnCircle(
 ): { wrapClass: string; fanTowardCenterDeg: number } {
   const n = Math.min(5, Math.max(1, count));
   const i = Math.min(index, n - 1);
+  /**
+   * Расположение «на ободке»: центр веера ближе к границе круга (как в референсе), не глубоко внутри сукна.
+   */
   if (n === 1) {
-    return { wrapClass: "left-1/2 top-[4%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
+    return {
+      wrapClass: "left-1/2 top-[0%] z-30 -translate-x-1/2 -translate-y-1/3",
+      fanTowardCenterDeg: 0,
+    };
   }
   if (n === 2) {
     return i === 0
-      ? { wrapClass: "left-[0%] top-[8%] z-30 sm:left-[1%]", fanTowardCenterDeg: 24 }
-      : { wrapClass: "right-[0%] top-[8%] z-30 sm:right-[1%]", fanTowardCenterDeg: -24 };
+      ? {
+          wrapClass: "left-[0%] top-[36%] z-30 -translate-x-1 translate-y-[-45%] sm:left-[0.5%]",
+          fanTowardCenterDeg: 22,
+        }
+      : {
+          wrapClass: "right-[0%] top-[36%] z-30 translate-x-1 translate-y-[-45%] sm:right-[0.5%]",
+          fanTowardCenterDeg: -22,
+        };
   }
   if (n === 3) {
-    if (i === 0) return { wrapClass: "left-[0%] top-[10%] z-30 sm:left-[0%]", fanTowardCenterDeg: 32 };
+    if (i === 0)
+      return {
+        wrapClass: "left-[2%] top-[34%] z-30 translate-y-[-48%] sm:left-[3%]",
+        fanTowardCenterDeg: 34,
+      };
     if (i === 1)
-      return { wrapClass: "left-1/2 top-[2%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
-    return { wrapClass: "right-[0%] top-[10%] z-30 sm:right-[0%]", fanTowardCenterDeg: -32 };
+      return {
+        wrapClass: "left-1/2 top-[-1%] z-30 -translate-x-1/2 -translate-y-1/2",
+        fanTowardCenterDeg: 0,
+      };
+    return {
+      wrapClass: "right-[2%] top-[34%] z-30 translate-y-[-48%] sm:right-[3%]",
+      fanTowardCenterDeg: -34,
+    };
   }
   if (n === 4) {
     const seats: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-      { wrapClass: "left-[0%] top-[12%] z-30 sm:left-[2%]", fanTowardCenterDeg: 38 },
-      { wrapClass: "left-[18%] top-[4%] z-30", fanTowardCenterDeg: 14 },
-      { wrapClass: "right-[18%] top-[4%] z-30", fanTowardCenterDeg: -14 },
-      { wrapClass: "right-[0%] top-[12%] z-30 sm:right-[2%]", fanTowardCenterDeg: -38 },
+      { wrapClass: "left-[1%] top-[38%] z-30 translate-y-[-50%] sm:left-[2%]", fanTowardCenterDeg: 40 },
+      { wrapClass: "left-[16%] top-[4%] z-30 -translate-y-[35%]", fanTowardCenterDeg: 12 },
+      { wrapClass: "right-[16%] top-[4%] z-30 -translate-y-[35%]", fanTowardCenterDeg: -12 },
+      { wrapClass: "right-[1%] top-[38%] z-30 translate-y-[-50%] sm:right-[2%]", fanTowardCenterDeg: -40 },
     ];
     return seats[i]!;
   }
   const seats5: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-    { wrapClass: "left-[4%] top-[14%] z-30", fanTowardCenterDeg: 42 },
-    { wrapClass: "left-[20%] top-[6%] z-30", fanTowardCenterDeg: 18 },
-    { wrapClass: "left-1/2 top-[2%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 },
-    { wrapClass: "right-[20%] top-[6%] z-30", fanTowardCenterDeg: -18 },
-    { wrapClass: "right-[4%] top-[14%] z-30", fanTowardCenterDeg: -42 },
+    { wrapClass: "left-[3%] top-[40%] z-30 translate-y-[-52%]", fanTowardCenterDeg: 44 },
+    { wrapClass: "left-[18%] top-[6%] z-30 -translate-y-[40%]", fanTowardCenterDeg: 16 },
+    { wrapClass: "left-1/2 top-[-1%] z-30 -translate-x-1/2 -translate-y-[45%]", fanTowardCenterDeg: 0 },
+    { wrapClass: "right-[18%] top-[6%] z-30 -translate-y-[40%]", fanTowardCenterDeg: -16 },
+    { wrapClass: "right-[3%] top-[40%] z-30 translate-y-[-52%]", fanTowardCenterDeg: -44 },
   ];
   return seats5[i]!;
 }
@@ -226,7 +248,7 @@ function BrandedCardBack({
     <div
       className={cn(
         "relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden rounded-[10px]",
-        "border-2 border-[#5c534c] bg-gradient-to-br from-[#f5f0ea] via-[#e8dfd6] to-[#d4cbc2]",
+        "border border-[#5c534c] bg-gradient-to-br from-[#f5f0ea] via-[#e8dfd6] to-[#d4cbc2]",
         "shadow-[0_4px_14px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.85)]",
         selected &&
           "shadow-[0_0_0_3px_rgba(252,211,77,0.95),0_10px_24px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.85)] ring-2 ring-amber-200/90",
@@ -293,7 +315,8 @@ function CardSprite({
           : CARD_H_CLASS;
 
   const wrap = cn(
-    "relative shrink-0 overflow-hidden rounded-[10px]",
+    "relative shrink-0 rounded-[10px]",
+    isBack ? "overflow-hidden" : "overflow-visible",
     !isBack ? "bg-white" : "bg-transparent ring-2 ring-white/75 ring-offset-0 shadow-[0_2px_8px_rgba(0,0,0,0.35)]",
     dimW,
     dimH,
@@ -395,7 +418,7 @@ function DeckPile({
   /* Козырь под стопкой (z ниже), без поворота; низ карты выступает вниз из-под колоды */
   if (trumpCard) {
     /* Козырь сильнее выглядывает из-под стопки: стопка чуть выше, козырь ниже + больший min-height */
-    const trumpShift = compact ? "translate-y-4 sm:translate-y-5" : "translate-y-5 sm:translate-y-6";
+    const trumpShift = compact ? "translate-y-5 sm:translate-y-7" : "translate-y-6 sm:translate-y-8";
     const stackLift = compact ? "-top-1" : "-top-0.5";
     return (
       <div
@@ -720,7 +743,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   useEffect(() => {
     if (!game || game.state !== "playing" || dealing) return;
-    if (game.phase === "player_can_throw_more") return;
     if (
       embedded &&
       onlineBotDriverId != null &&
@@ -734,7 +756,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     const botActs =
       (game.phase === "attack_initial" && attacker.type === "bot") ||
       (game.phase === "defend" && defender.type === "bot") ||
-      (game.phase === "attack_toss" && attacker.type === "bot");
+      (game.phase === "attack_toss" && attacker.type === "bot") ||
+      (game.phase === "player_can_throw_more" && attacker.type === "bot");
     if (!botActs) return;
 
     const t = window.setTimeout(() => {
@@ -1032,7 +1055,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   <p className="truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
                     {opp.name}
                   </p>
-                  <p className="text-[9px] text-white/55">{bh.length} карт</p>
                 </div>
                 <div
                   className="relative flex h-[2.85rem] w-[4.75rem] items-end justify-center overflow-visible sm:h-[3.2rem] sm:w-[5.1rem]"

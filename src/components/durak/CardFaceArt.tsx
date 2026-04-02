@@ -24,32 +24,38 @@ export function CardFaceArt({
         className
       )}
     >
-      <div className={cn("absolute left-[6px] top-[5px] z-10 flex flex-col items-center leading-none", color)}>
-        <span className="text-[0.72rem] font-extrabold tracking-tight tabular-nums sm:text-[0.85rem]">
+      {/* Углы: ранг и масть в строку — не наезжают друг на друга (Q и ♣). */}
+      <div
+        className={cn(
+          "absolute left-[4px] top-[5px] z-10 flex flex-row items-start gap-0.5 leading-none",
+          color
+        )}
+      >
+        <span className="text-[0.68rem] font-extrabold tabular-nums leading-none sm:text-[0.78rem]">
           {rank}
         </span>
-        <span className="mt-px text-[0.95rem] font-bold leading-none sm:text-[1.05rem]" aria-hidden>
+        <span className="text-[0.72rem] font-bold leading-[0.95] sm:text-[0.82rem]" aria-hidden>
           {suit}
         </span>
       </div>
       <div
         className={cn(
-          "absolute bottom-[5px] right-[6px] z-10 flex flex-col items-center leading-none [transform:rotate(180deg)]",
+          "absolute bottom-[5px] right-[4px] z-10 flex flex-row items-end gap-0.5 leading-none [transform:rotate(180deg)]",
           color
         )}
       >
-        <span className="text-[0.72rem] font-extrabold tracking-tight tabular-nums sm:text-[0.85rem]">
+        <span className="text-[0.68rem] font-extrabold tabular-nums leading-none sm:text-[0.78rem]">
           {rank}
         </span>
-        <span className="mt-px text-[0.95rem] font-bold leading-none sm:text-[1.05rem]" aria-hidden>
+        <span className="text-[0.72rem] font-bold leading-[0.95] sm:text-[0.82rem]" aria-hidden>
           {suit}
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-2 pb-5 pt-6">
+      <div className="flex flex-1 flex-col items-center justify-center px-2 pb-5 pt-5">
         <span
           className={cn(
-            "select-none text-[1.35rem] font-black tabular-nums leading-none tracking-tight sm:text-[1.55rem]",
+            "select-none text-[1.28rem] font-black tabular-nums leading-none tracking-tight sm:text-[1.48rem]",
             color
           )}
         >
@@ -57,7 +63,7 @@ export function CardFaceArt({
         </span>
         <span
           className={cn(
-            "mt-0.5 select-none text-[2.15rem] font-bold leading-none sm:text-[2.45rem]",
+            "mt-0.5 select-none text-[1.95rem] font-bold leading-none sm:text-[2.2rem]",
             color
           )}
           aria-hidden
