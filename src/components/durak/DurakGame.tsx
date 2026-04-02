@@ -923,8 +923,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       return (
         <DurakOnlineMatchmaking
           playerName={playerName}
-          onRoomPlaying={(id) => setOnlineRoomId(id)}
-          onCancel={() => router.push("/")}
+          onRoomPlaying={onRoomPlayingStable}
+          onCancel={onMatchmakingCancelStable}
         />
       );
     }
@@ -932,8 +932,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       <DurakOnlineGame
         roomId={onlineRoomId}
         playerName={playerName}
-        onLeave={() => setOnlineRoomId(null)}
-        renderGame={(embedded) => <DurakGame embedded={embedded} />}
+        onLeave={onLeaveOnlineRoomStable}
+        renderGame={renderEmbeddedGame}
       />
     );
   }
