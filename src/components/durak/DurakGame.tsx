@@ -110,9 +110,9 @@ const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
 /** Компактные карты: центр стола, колода и рубашки соперника — один размер. */
 const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
 const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
-/** Максимально крупная рука, поднята выше к столу (z ниже BottomNav). */
-const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
-const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
+/** Рука: тот же порядок величины, что колода/стол (`tableCompact`), иначе веер залезает на кнопки и статус. */
+const HAND_CARD_W_CLASS = "w-[3.5rem] sm:w-[3.95rem]";
+const HAND_CARD_H_CLASS = "h-[4.85rem] sm:h-[5.45rem]";
 
 function handFanStyle(
   n: number,
@@ -1013,7 +1013,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,580px)] flex-1 flex-col justify-center items-center px-0.5 pb-1 pt-3 sm:pt-5">
+      <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-2 sm:pt-3">
         <div
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
@@ -1223,7 +1223,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-[25] shrink-0 bg-[#14100c] px-1 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+6.75rem))] pt-1 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-1.5">
+      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+6.75rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1336,7 +1336,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   }}
                 >
                   <motion.div
-                    animate={{ y: selected ? -52 : 0 }}
+                    animate={{ y: selected ? -30 : 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 26 }}
                   >
                     <CardSprite
