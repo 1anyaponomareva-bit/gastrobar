@@ -1227,7 +1227,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-1 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-1.5">
+      {phaseLine ? (
+        <p
+          className="relative z-20 mx-auto mt-2 max-w-[min(100%,580px)] shrink-0 line-clamp-3 px-2 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-2.5 sm:text-[11px]"
+          role="status"
+        >
+          {phaseLine}
+        </p>
+      ) : null}
+
+      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2.5">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1279,12 +1288,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {game.message}
           </motion.div>
         ) : null}
-        {phaseLine ? (
-          <p className="mt-1 shrink-0 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-1.5 sm:text-[11px]">
-            {phaseLine}
-          </p>
-        ) : null}
-        <div className="relative z-0 mx-auto mt-1 flex min-h-[11rem] w-full max-w-full flex-1 -translate-y-4 items-end justify-center overflow-visible pb-1 pt-1 sm:min-h-[12rem] sm:mt-1.5 sm:-translate-y-5 sm:pt-2">
+        <div className="relative z-0 mx-auto mt-3 flex min-h-[11rem] w-full max-w-full flex-1 items-end justify-center overflow-visible pb-1 pt-1 sm:min-h-[12rem] sm:mt-4 sm:pt-2">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
