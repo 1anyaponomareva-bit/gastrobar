@@ -173,7 +173,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         cur &&
         ts <= last &&
         remoteSig !== localSig &&
-        localRoundAheadOfRemote(cur, g)
+        localTableAheadOfRemotePoll(cur, g)
       ) {
         return;
       }
@@ -331,7 +331,13 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         }
         if (existingMatches && existingGame) {
           setGame(existingGame);
-          lastAppliedServerTsRef.current = 0;
+          if (stateRow?.updated_at) {
+            advanceLastAppliedRef(
+              lastAppliedServerTsRef,
+              Date.parse(String(stateRow.updated_at))
+            );
+          }
+          /* без updated_at last остаётся 0 — persist не должен затирать чужой локальный ход (см. serverWouldRevertLocalMove) */
           return;
         }
 
