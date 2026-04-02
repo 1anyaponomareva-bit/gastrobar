@@ -953,11 +953,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   return (
     <div
       className={cn(
-        "flex w-full min-h-0 flex-col overflow-hidden bg-[#14100c] text-slate-100",
+        "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "flex-1 basis-0"
-          : cn("flex-1 min-h-0", HEADER_OFFSET_TOP),
+          ? "flex-1 basis-0 min-h-[280px] overflow-x-hidden overflow-y-auto"
+          : cn("flex-1 min-h-0 overflow-hidden", HEADER_OFFSET_TOP),
         "pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))]"
       )}
     >

@@ -88,6 +88,37 @@ function advanceLastAppliedRef(ref: { current: number }, serverTsMs: number): vo
   ref.current = serverTsMs > p ? serverTsMs : p + 1;
 }
 
+/** Из jsonb с сервера: неполные объекты иначе ломают рендер (чёрный экран). */
+function coerceRemoteGame(raw: unknown): GameTable | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const g = raw as Partial<GameTable>;
+  if (!Array.isArray(g.players) || g.players.length < 2) return null;
+  const n = g.players.length;
+  if (typeof g.attackerIndex !== "number" || typeof g.defenderIndex !== "number") return null;
+  if (g.attackerIndex < 0 || g.attackerIndex >= n || g.defenderIndex < 0 || g.defenderIndex >= n)
+    return null;
+  if (!Array.isArray(g.deck) || !Array.isArray(g.tablePairs)) return null;
+  if (g.state !== "playing" && g.state !== "finished" && g.state !== "waiting") return null;
+  if (typeof g.phase !== "string") return null;
+  if (!g.id || typeof g.id !== "string") return null;
+  return {
+    ...g,
+    deck: g.deck,
+    tablePairs: g.tablePairs,
+    players: g.players,
+    discardPile: Array.isArray(g.discardPile) ? g.discardPile : [],
+    roundDefenderInitialHand: Number.isFinite(g.roundDefenderInitialHand)
+      ? Number(g.roundDefenderInitialHand)
+      : 6,
+    message: g.message ?? null,
+    winnerId: g.winnerId ?? null,
+    loserId: g.loserId ?? null,
+    trumpCard: g.trumpCard ?? null,
+    trumpSuit: g.trumpSuit ?? "spades",
+    mode: g.mode ?? "podkidnoy",
+  } as GameTable;
+}
+
 /**
  * Онлайн-партия: `room_state` в Supabase, realtime, сидирование стола лидером.
  * Старт игры: после `rooms.status === 'playing'` + запись в `room_state`.
@@ -318,26 +349,23 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .maybeSingle();
 
         const existing = stateRow?.state as RoomStatePayload | undefined;
-        const existingGame = existing?.game;
+        const existingGame = coerceRemoteGame(existing?.game);
         const existingMatches =
           existingGame != null && roomStateMatchesRoomPlayers(rows, existingGame);
 
-        if (existingMatches && stateRow?.updated_at && existing) {
-          applyRemoteRow({
-            state: existing,
-            updated_at: stateRow.updated_at,
-          });
-          return;
-        }
+        /*
+         * Всегда через setGame: раньше вызывали только applyRemoteRow, а он мог
+         * выйти без применения (NaN updated_at, совпадение подписей и т.д.) → вечная «Загрузка стола».
+         */
         if (existingMatches && existingGame) {
+          gameRef.current = existingGame;
           setGame(existingGame);
           if (stateRow?.updated_at) {
-            advanceLastAppliedRef(
-              lastAppliedServerTsRef,
-              Date.parse(String(stateRow.updated_at))
-            );
+            const ts = Date.parse(String(stateRow.updated_at));
+            if (!Number.isNaN(ts)) {
+              advanceLastAppliedRef(lastAppliedServerTsRef, ts);
+            }
           }
-          /* без updated_at last остаётся 0 — persist не должен затирать чужой локальный ход (см. serverWouldRevertLocalMove) */
           return;
         }
 
@@ -371,7 +399,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .select("state, updated_at")
           .eq("room_id", roomId)
           .maybeSingle();
-        const g = (after?.state as RoomStatePayload | undefined)?.game;
+        const g = coerceRemoteGame((after?.state as RoomStatePayload | undefined)?.game);
         const gOk = g != null && roomStateMatchesRoomPlayers(rows, g);
         let next: GameTable | null;
         if (gOk) {
