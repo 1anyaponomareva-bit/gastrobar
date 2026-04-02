@@ -93,6 +93,24 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
     });
   }
 
+  const status = upstream.status;
+
+  /*
+   * PostgREST для RPC с RETURNS void отдаёт 204 No Content.
+   * В WHATWG/undici/Next нельзя создать Response с телом при 204 — иначе:
+   * TypeError: Response constructor: Invalid response status code 204
+   */
+  if (status === 204 || status === 205 || status === 304) {
+    await upstream.arrayBuffer(); /* сбросить тело upstream */
+    resHeaders.delete("content-length");
+    resHeaders.delete("content-type");
+    return new NextResponse(null, {
+      status,
+      statusText: upstream.statusText,
+      headers: resHeaders,
+    });
+  }
+
   /* Буфер: без стрима нет рассинхрона «тело уже распаковано / заголовок gzip» между Node, Next и Chrome. */
   const rawBuf = await upstream.arrayBuffer();
   const decodedTrim = new TextDecoder().decode(rawBuf).trim();
