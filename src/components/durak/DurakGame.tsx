@@ -110,9 +110,9 @@ const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
 /** Компактные карты: центр стола, колода и рубашки соперника — один размер. */
 const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
 const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
-/** Рука: тот же порядок величины, что колода/стол (`tableCompact`), иначе веер залезает на кнопки и статус. */
-const HAND_CARD_W_CLASS = "w-[3.5rem] sm:w-[3.95rem]";
-const HAND_CARD_H_CLASS = "h-[4.85rem] sm:h-[5.45rem]";
+/** Крупная рука внизу (как в исходном дизайне). Нижний padding контейнера компенсирует BottomNav. */
+const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
+const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
 
 function handFanStyle(
   n: number,
@@ -168,14 +168,17 @@ function opponentSeatOnCircle(
     };
   }
   if (n === 2) {
+    /** Два соперника (трое за столом) — по краям ободка, не по «поясу» в середине круга. */
     return i === 0
       ? {
-          wrapClass: "left-[0%] top-[38%] z-30 -translate-x-1 translate-y-[-45%] sm:left-[0.5%]",
-          fanTowardCenterDeg: 22,
+          wrapClass:
+            "left-[0%] top-[14%] z-30 -translate-x-1 -translate-y-[38%] sm:left-[0.5%] sm:top-[15%]",
+          fanTowardCenterDeg: 32,
         }
       : {
-          wrapClass: "right-[0%] top-[38%] z-30 translate-x-1 translate-y-[-45%] sm:right-[0.5%]",
-          fanTowardCenterDeg: -22,
+          wrapClass:
+            "right-[0%] top-[14%] z-30 translate-x-1 -translate-y-[38%] sm:right-[0.5%] sm:top-[15%]",
+          fanTowardCenterDeg: -32,
         };
   }
   if (n === 3) {
@@ -995,8 +998,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         embedded
           ? "flex-1 basis-0 min-h-[280px] overflow-x-hidden overflow-y-auto"
           : "flex-1 min-h-0 overflow-hidden",
-        /* Запас под BottomNav + safe-area — строка состояния и нижний край руки не уходят под «чёрную» зону */
-        "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+7.5rem))]"
+        /* Крупная рука + BottomNav + safe-area */
+        "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+9.25rem))]"
       )}
     >
       <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
@@ -1223,7 +1226,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+6.75rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2">
+      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1336,7 +1339,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   }}
                 >
                   <motion.div
-                    animate={{ y: selected ? -30 : 0 }}
+                    animate={{ y: selected ? -52 : 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 26 }}
                   >
                     <CardSprite
