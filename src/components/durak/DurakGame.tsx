@@ -1166,8 +1166,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="mt-6 shrink-0 space-y-0 bg-[#14100c] px-1 pt-2 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-7 sm:px-2 sm:pt-3">
-        <div className="relative z-20 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
+      <div className="mt-4 shrink-0 space-y-0 bg-[#14100c] px-1 pt-2 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-5 sm:px-2 sm:pt-3">
+        <div className="relative z-30 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
@@ -1227,7 +1227,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2">
+      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-1 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-1.5">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1273,18 +1273,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-1 shrink-0 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
+            className="mt-0.5 shrink-0 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
             role="status"
           >
             {game.message}
           </motion.div>
         ) : null}
         {phaseLine ? (
-          <p className="mt-3 shrink-0 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-4 sm:text-[11px]">
+          <p className="mt-1 shrink-0 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-1.5 sm:text-[11px]">
             {phaseLine}
           </p>
         ) : null}
-        <div className="relative mx-auto mt-2 flex min-h-[11rem] w-full max-w-full flex-1 items-end justify-center overflow-visible pb-1 pt-3 sm:min-h-[12rem] sm:mt-3 sm:pt-4">
+        <div className="relative z-0 mx-auto mt-1 flex min-h-[11rem] w-full max-w-full flex-1 -translate-y-4 items-end justify-center overflow-visible pb-1 pt-1 sm:min-h-[12rem] sm:mt-1.5 sm:-translate-y-5 sm:pt-2">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
