@@ -6,7 +6,7 @@ const DurakPageClient = dynamic(() => import("./DurakPageClient"), {
   ssr: false,
   loading: () => (
     <div
-      className="mx-auto flex min-h-[calc(100svh-7rem)] w-full max-w-lg flex-col items-center justify-center bg-[#14100c] px-4 pt-[calc(60px+env(safe-area-inset-top,0px))] text-center text-sm text-emerald-100/70"
+      className="mx-auto flex min-h-[min(100dvh,720px)] w-full max-w-lg flex-1 flex-col items-center justify-center bg-[#14100c] px-4 text-center text-sm text-emerald-100/70"
       aria-live="polite"
     >
       Загрузка игры…

@@ -12,7 +12,6 @@ import {
   formatPostgrestError,
 } from "@/lib/durak/online/matchmaking";
 import type { RoomRow } from "@/lib/durak/online/types";
-import { HEADER_OFFSET_TOP } from "./durakLayoutConstants";
 
 type Props = {
   playerName: string;
@@ -142,7 +141,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   if (error) {
     return (
       <div
-        className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
       >
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12 text-center">
           <p className="text-sm text-amber-200/90">{error}</p>
@@ -161,7 +160,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   if (!supabase) {
     return (
       <div
-        className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
       >
         <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
           Подключение…
@@ -172,7 +171,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
   return (
     <div
-      className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+      className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">
         <p className="text-lg font-medium text-white/95">Онлайн-стол</p>
