@@ -56,6 +56,29 @@ function durakGameMaterialSignature(gt: GameTable): string {
   return stableJsonForSignature(rest);
 }
 
+/** Пары на столе и число отбитых — чтобы не тянуть устаревший poll без отбоя, пока локально уже отбились. */
+function durakRoundTableProgress(gt: GameTable): readonly [number, number] {
+  const pairs = gt.tablePairs.length;
+  const defenses = gt.tablePairs.filter((p) => p.defense !== null).length;
+  return [pairs, defenses];
+}
+
+function localRoundAheadOfRemote(loc: GameTable, rem: GameTable): boolean {
+  const a = durakRoundTableProgress(loc);
+  const b = durakRoundTableProgress(rem);
+  return a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]);
+}
+
+/**
+ * lastApplied должен строго расти после каждого нашего upsert / принятого с сервера снимка.
+ * Иначе при неменяющемся `updated_at` (нет триггера в БД / тот же ms) poll с прежним ts затирает отбой 2-го игрока.
+ */
+function advanceLastAppliedRef(ref: { current: number }, serverTsMs: number): void {
+  if (Number.isNaN(serverTsMs)) return;
+  const p = ref.current;
+  ref.current = serverTsMs > p ? serverTsMs : p + 1;
+}
+
 /**
  * Онлайн-партия: `room_state` в Supabase, realtime, сидирование стола лидером.
  * Старт игры: после `rooms.status === 'playing'` + запись в `room_state`.
@@ -229,10 +252,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         }
 
         if (saveGenAtRun === roomSaveGenRef.current) pendingRoomSaveRef.current = false;
-        const ts = Date.parse(upRaw);
-        if (!Number.isNaN(ts)) {
-          lastAppliedServerTsRef.current = Math.max(lastAppliedServerTsRef.current, ts);
-        }
+        advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(upRaw));
       })();
     }, 80);
   }, [supabase, roomId, applyRemoteRow]);
@@ -317,8 +337,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           }
           const raw = upData?.updated_at;
           if (raw) {
-            const ts = Date.parse(String(raw));
-            if (!Number.isNaN(ts)) lastAppliedServerTsRef.current = ts;
+            advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(String(raw)));
           }
         }
 
@@ -341,8 +360,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           setGame(next);
           const raw = after?.updated_at;
           if (raw) {
-            const ts = Date.parse(String(raw));
-            if (!Number.isNaN(ts)) lastAppliedServerTsRef.current = ts;
+            advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(String(raw)));
           } else {
             lastAppliedServerTsRef.current = 0;
           }
