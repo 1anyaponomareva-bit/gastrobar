@@ -81,9 +81,9 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   /**
    * @param mode
-   *   poll — только ts > lastRef (старый JSON при том же updated_at).
-   *   realtime — если ts < lastRef, но JSON стола уже другой (подкинул соперник), всё равно применяем:
-   *   иначе при рассинхроне часов/своем persist lastRef может быть «новее» строки в БД от партнёра.
+   *   poll — если снимок стола уже совпадает с локальным, пропуск; иначе только «устаревший» ts < last
+   *   (равенство ts допускаем при другом JSON — коллизии now() / один ms).
+   *   realtime — если ts < lastRef, но JSON стола уже другой (подкинул соперник), всё равно применяем.
    */
   const applyRemoteRow = useCallback(
     (
@@ -96,16 +96,12 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       const ts = Date.parse(raw);
       if (Number.isNaN(ts)) return;
       const last = lastAppliedServerTsRef.current;
-      if (mode === "poll") {
-        if (ts <= last) return;
-      } else {
-        const cur = gameRef.current;
-        if (ts < last && cur) {
-          const sameSnapshot =
-            durakGameMaterialSignature(g) === durakGameMaterialSignature(cur);
-          if (sameSnapshot) return;
-        }
-      }
+      const cur = gameRef.current;
+      const remoteSig = durakGameMaterialSignature(g);
+      const localSig = cur ? durakGameMaterialSignature(cur) : "";
+      if (remoteSig === localSig) return;
+      /* poll: не откатывать локальный опережающий ход устаревшим ts с сервера. realtime: отличия уже отсеяны сверху. */
+      if (mode === "poll" && ts < last) return;
       if (persistTimer.current) {
         clearTimeout(persistTimer.current);
         persistTimer.current = null;
@@ -140,13 +136,12 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         const last = lastAppliedServerTsRef.current;
         const sigG = durakGameMaterialSignature(g);
         const sigS = sGame != null ? durakGameMaterialSignature(sGame) : "";
-        /* Только tsS > last: нельзя сравнивать «число отбоев» при смене фазы (напр. «Бито» чистит стол —
-           у g 0 пар, у sGame ещё полный стол — ложно принимали бы сервер и откатывали ход). */
+        /* Берём более свежую строку с сервера: tsS >= last (тот же ms при другом JSON — отбой соперника). */
         if (
           sGame &&
           !Number.isNaN(tsS) &&
           sigS !== sigG &&
-          tsS > last
+          tsS >= last
         ) {
           applyRemoteRow(
             { state: row?.state as RoomStatePayload, updated_at: raw },
@@ -254,7 +249,6 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
               {
                 room_id: roomId,
                 state: { game: initial },
-                updated_at: new Date().toISOString(),
               },
               { onConflict: "room_id" }
             )
@@ -324,7 +318,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       })();
     }, tickMs);
     return () => window.clearInterval(id);
-  }, [supabase, roomId, applyRemoteRow, tableHydrated]);
+  }, [supabase, roomId, applyRemoteRow, tableHydrated, game?.phase, game?.state]);
 
   if (error) {
     return (
