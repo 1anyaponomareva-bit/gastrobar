@@ -107,12 +107,9 @@ function randomBotThinkDelayMs(): number {
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
 const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
-/** Компактные карты в центре стола (чуть выше при увеличенном сукне). */
+/** Компактные карты: центр стола, колода и рубашки соперника — один размер. */
 const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
 const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
-/** Рубашки у соперников вокруг стола */
-const OPP_HAND_W = "w-[2.25rem] sm:w-[2.55rem]";
-const OPP_HAND_H = "h-[3.2rem] sm:h-[3.55rem]";
 /** Максимально крупная рука, поднята выше к столу (z ниже BottomNav). */
 const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
 const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
@@ -216,15 +213,16 @@ function opponentSeatOnCircle(
   return seats5[i]!;
 }
 
-/** Компактный веер рубашек у соперника. */
+/** Веер рубашек у соперника: плотнее, но каждая карта частично видна (счёт по краям). */
 function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
   const rel = i - mid;
-  const spread = n <= 1 ? 0 : Math.min(20 / Math.max(1, n - 1), 6);
+  const spread = n <= 1 ? 0 : Math.min(12 / Math.max(1, n - 1), 3.8);
   const rot = rel * spread;
-  const tx = rel * (n > 8 ? 9 : 11);
-  const curve = Math.abs(rel) * 1.8;
+  const step = n > 8 ? 5.5 : n >= 5 ? 6.5 : 7;
+  const tx = rel * step;
+  const curve = Math.abs(rel) * 1.1;
   return {
     left: "50%",
     bottom: 0,
@@ -293,8 +291,8 @@ function CardSprite({
   playableHighlight?: boolean;
   onPress?: () => void;
   imgClassName?: string;
-  /** `hand` — рука внизу; `tableCompact` — центр стола на телефоне; `opponent` — рубашки у соперников. */
-  size?: "table" | "hand" | "tableCompact" | "opponent";
+  /** `hand` — рука внизу; `tableCompact` — центр стола и рубашки соперников (те же габариты, что колода). */
+  size?: "table" | "hand" | "tableCompact";
 }) {
   const isBack = faceDown || !card;
   const dimW =
@@ -302,17 +300,13 @@ function CardSprite({
       ? HAND_CARD_W_CLASS
       : size === "tableCompact"
         ? CARD_TABLE_COMPACT_W
-        : size === "opponent"
-          ? OPP_HAND_W
-          : CARD_W_CLASS;
+        : CARD_W_CLASS;
   const dimH =
     size === "hand"
       ? HAND_CARD_H_CLASS
       : size === "tableCompact"
         ? CARD_TABLE_COMPACT_H
-        : size === "opponent"
-          ? OPP_HAND_H
-          : CARD_H_CLASS;
+        : CARD_H_CLASS;
 
   const tableLike = size === "tableCompact" || size === "table";
   const wrap = cn(
@@ -1001,7 +995,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         embedded
           ? "flex-1 basis-0 min-h-[280px] overflow-x-hidden overflow-y-auto"
           : "flex-1 min-h-0 overflow-hidden",
-        "pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))]"
+        /* Запас под BottomNav + safe-area — строка состояния и нижний край руки не уходят под «чёрную» зону */
+        "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+7.5rem))]"
       )}
     >
       <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
@@ -1057,13 +1052,19 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   seat.wrapClass
                 )}
               >
-                <div className="max-w-full px-0.5 text-center leading-tight">
+                <div className="flex max-w-full items-center justify-center gap-1 px-0.5 leading-tight">
                   <p className="truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
                     {opp.name}
                   </p>
+                  <span
+                    className="shrink-0 rounded-full border border-white/20 bg-black/45 px-1.5 py-px text-[9px] font-bold tabular-nums text-emerald-100/95 sm:text-[10px]"
+                    title={`Карт: ${bh.length}`}
+                  >
+                    {bh.length}
+                  </span>
                 </div>
                 <div
-                  className="relative flex h-[2.85rem] w-[4.75rem] items-end justify-center overflow-visible sm:h-[3.2rem] sm:w-[5.1rem]"
+                  className="relative flex min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] items-end justify-center overflow-visible sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
                   style={{
                     transform: `rotate(${seat.fanTowardCenterDeg}deg)`,
                     transformOrigin: "center bottom",
@@ -1080,7 +1081,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           ease: [0.22, 1, 0.36, 1],
                         }}
                       >
-                        <CardSprite faceDown size="opponent" />
+                        <CardSprite faceDown size="tableCompact" />
                       </motion.div>
                     </div>
                   ))}
@@ -1161,7 +1162,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="shrink-0 space-y-0 bg-[#0f0c0a]/90 px-1 pt-1 shadow-[0_-6px_20px_rgba(0,0,0,0.25)] backdrop-blur-md sm:px-2">
+      <div className="mt-6 shrink-0 space-y-0 bg-[#14100c] px-1 pt-2 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-7 sm:px-2 sm:pt-3">
         <div className="relative z-20 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1222,7 +1223,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-[25] shrink-0 bg-[#0f0c0a]/90 px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] pt-0.5 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2">
+      <section className="relative z-[25] shrink-0 bg-[#14100c] px-1 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+6.75rem))] pt-1 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-1.5">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1275,11 +1276,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </motion.div>
         ) : null}
         {phaseLine ? (
-          <p className="mt-1.5 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:text-[11px]">
+          <p className="mt-3 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-4 sm:text-[11px]">
             {phaseLine}
           </p>
         ) : null}
-        <div className="relative mx-auto mt-1 flex h-[min(30dvh,14.5rem)] max-w-full items-end justify-center overflow-visible sm:mt-1.5 sm:h-[min(32dvh,17.5rem)]">
+        <div className="relative mx-auto mt-4 flex h-[min(30dvh,14.5rem)] max-w-full translate-y-3 items-end justify-center overflow-visible sm:mt-5 sm:h-[min(32dvh,17.5rem)] sm:translate-y-4">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
