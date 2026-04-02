@@ -32,10 +32,28 @@ type Props = {
   renderGame: (embedded: DurakGameEmbeddedProps) => ReactNode;
 };
 
+/**
+ * Каноническая сериализация: в Postgres `jsonb` переупорядочивает ключи — иначе один и тот же стол
+ * даёт разные строки у клиента и после `select`, ложный рассинхрон и откат хода по poll.
+ */
+function stableJsonForSignature(x: unknown): string {
+  if (x === null || typeof x !== "object") {
+    return JSON.stringify(x);
+  }
+  if (Array.isArray(x)) {
+    return `[${x.map(stableJsonForSignature).join(",")}]`;
+  }
+  const o = x as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableJsonForSignature(o[k])}`)
+    .join(",")}}`;
+}
+
 /** Сравнение стола без `message` — чтобы «только очистка сообщения» не затирала чужой отбой из realtime. */
 function durakGameMaterialSignature(gt: GameTable): string {
   const { message: _m, ...rest } = gt;
-  return JSON.stringify(rest);
+  return stableJsonForSignature(rest);
 }
 
 /**
@@ -66,6 +84,10 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   const gameRef = useRef<GameTable | null>(null);
   /** Время последнего применённого с сервера `room_state.updated_at` (чтобы не откатывать ход по опросу). */
   const lastAppliedServerTsRef = useRef(0);
+  /** Локальный ход ещё не записан в БД — не подменять стол устаревшим poll / pre-upsert select с тем же `updated_at`. */
+  const pendingRoomSaveRef = useRef(false);
+  /** Увеличивается на каждый материальный ход; upsert снимает pending только если совпал с актуальным (параллельные async после debounce). */
+  const roomSaveGenRef = useRef(0);
 
   useEffect(() => {
     gameRef.current = game;
@@ -75,6 +97,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   useEffect(() => {
     setTableHydrated(false);
     lastAppliedServerTsRef.current = 0;
+    pendingRoomSaveRef.current = false;
+    roomSaveGenRef.current = 0;
     gameRef.current = null;
     setGame(null);
   }, [roomId]);
@@ -102,6 +126,16 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       if (remoteSig === localSig) return;
       /* poll: не откатывать локальный опережающий ход устаревшим ts с сервера. realtime: отличия уже отсеяны сверху. */
       if (mode === "poll" && ts < last) return;
+      /* Ожидаем upsert: пока `updated_at` на сервере не ушёл вперёд от last, poll не должен затирать локальный ход. */
+      if (
+        mode === "poll" &&
+        pendingRoomSaveRef.current &&
+        ts <= last &&
+        remoteSig !== localSig
+      ) {
+        return;
+      }
+      pendingRoomSaveRef.current = false;
       if (persistTimer.current) {
         clearTimeout(persistTimer.current);
         persistTimer.current = null;
@@ -118,6 +152,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     if (persistTimer.current) clearTimeout(persistTimer.current);
     persistTimer.current = setTimeout(() => {
       void (async () => {
+        const saveGenAtRun = roomSaveGenRef.current;
         let g = gameRef.current;
         if (!g) return;
         const { data: row, error: selErr } = await supabase
@@ -136,12 +171,12 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         const last = lastAppliedServerTsRef.current;
         const sigG = durakGameMaterialSignature(g);
         const sigS = sGame != null ? durakGameMaterialSignature(sGame) : "";
-        /* Берём более свежую строку с сервера: tsS >= last (тот же ms при другом JSON — отбой соперника). */
+        /* Только tsS > last: при равенстве строка в БД часто ещё без нашего upsert — откат анимации хода. */
         if (
           sGame &&
           !Number.isNaN(tsS) &&
           sigS !== sigG &&
-          tsS >= last
+          tsS > last
         ) {
           applyRemoteRow(
             { state: row?.state as RoomStatePayload, updated_at: raw },
@@ -151,31 +186,52 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         }
         g = gameRef.current;
         if (!g) return;
-        const { data: upData, error: upErr } = await supabase
-          .from("room_state")
-          .upsert(
-            {
-              room_id: roomId,
-              state: { game: g } satisfies RoomStatePayload,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "room_id" }
-          )
-          .select("updated_at")
-          .single();
-        if (upErr) {
-          console.warn("[durak] room_state upsert:", upErr.message);
+
+        const delaysMs = [0, 120, 300, 700];
+        let upRaw: string | undefined;
+        for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => window.setTimeout(r, delaysMs[attempt]));
+            g = gameRef.current;
+            if (!g) return;
+            if (saveGenAtRun !== roomSaveGenRef.current) return;
+          }
+          const { data: upData, error: upErr } = await supabase
+            .from("room_state")
+            .upsert(
+              {
+                room_id: roomId,
+                state: { game: g } satisfies RoomStatePayload,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "room_id" }
+            )
+            .select("updated_at")
+            .maybeSingle();
+          if (!upErr && upData?.updated_at) {
+            upRaw = String(upData.updated_at);
+            break;
+          }
+          if (upErr) {
+            console.warn("[durak] room_state upsert:", upErr.message, `(attempt ${attempt + 1})`);
+          }
+        }
+
+        if (!upRaw) {
+          console.warn("[durak] room_state upsert: all retries failed; will retry save");
+          if (saveGenAtRun === roomSaveGenRef.current) {
+            pendingRoomSaveRef.current = true;
+            persistTimer.current = setTimeout(() => {
+              persistGame();
+            }, 1600);
+          }
           return;
         }
-        const upRaw = upData?.updated_at;
-        if (upRaw) {
-          const ts = Date.parse(String(upRaw));
-          if (!Number.isNaN(ts)) {
-            lastAppliedServerTsRef.current = Math.max(
-              lastAppliedServerTsRef.current,
-              ts
-            );
-          }
+
+        if (saveGenAtRun === roomSaveGenRef.current) pendingRoomSaveRef.current = false;
+        const ts = Date.parse(upRaw);
+        if (!Number.isNaN(ts)) {
+          lastAppliedServerTsRef.current = Math.max(lastAppliedServerTsRef.current, ts);
         }
       })();
     }, 80);
@@ -194,6 +250,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         const material =
           durakGameMaterialSignature(current) !== durakGameMaterialSignature(next);
         if (material) {
+          roomSaveGenRef.current += 1;
+          pendingRoomSaveRef.current = true;
           gameRef.current = next;
           persistGame();
           return next;
