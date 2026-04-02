@@ -69,6 +69,15 @@ function localRoundAheadOfRemote(loc: GameTable, rem: GameTable): boolean {
   return a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]);
 }
 
+/** Карты на столе (атака+отбой) — доп. check, если кортеж пар совпал, а подпись всё же разошлась. */
+function tableCardsOnBoard(gt: GameTable): number {
+  return gt.tablePairs.reduce((n, p) => n + 1 + (p.defense ? 1 : 0), 0);
+}
+
+function localTableAheadOfRemotePoll(loc: GameTable, rem: GameTable): boolean {
+  return localRoundAheadOfRemote(loc, rem) || tableCardsOnBoard(loc) > tableCardsOnBoard(rem);
+}
+
 /**
  * lastApplied должен строго расти после каждого нашего upsert / принятого с сервера снимка.
  * Иначе при неменяющемся `updated_at` (нет триггера в БД / тот же ms) poll с прежним ts затирает отбой 2-го игрока.
@@ -158,12 +167,22 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       ) {
         return;
       }
+      /* Upsert уже прошёл, но пришёл кэш/старый ряд без вашего хода при том же ts — не откатывать стол. */
+      if (
+        mode === "poll" &&
+        cur &&
+        ts <= last &&
+        remoteSig !== localSig &&
+        localRoundAheadOfRemote(cur, g)
+      ) {
+        return;
+      }
       pendingRoomSaveRef.current = false;
       if (persistTimer.current) {
         clearTimeout(persistTimer.current);
         persistTimer.current = null;
       }
-      lastAppliedServerTsRef.current = Math.max(last, ts);
+      advanceLastAppliedRef(lastAppliedServerTsRef, ts);
       gameRef.current = g;
       setGame(g);
     },
@@ -381,7 +400,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   /** Опрос `room_state` по HTTP (без Realtime — см. комментарий к модулю). До первой загрузки стола — чаще. */
   useEffect(() => {
     if (!supabase) return;
-    const tickMs = tableHydrated ? 1500 : 450;
+    /* Чаще во время партии — меньше окно, когда успевает прийти устаревший poll без вашего хода. */
+    const tickMs = tableHydrated ? (game?.state === "playing" ? 650 : 1500) : 450;
     const id = window.setInterval(() => {
       void (async () => {
         const { data, error } = await supabase
