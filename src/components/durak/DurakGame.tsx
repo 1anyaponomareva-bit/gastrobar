@@ -163,34 +163,34 @@ function opponentSeatOnCircle(
   const n = Math.min(5, Math.max(1, count));
   const i = Math.min(index, n - 1);
   if (n === 1) {
-    return { wrapClass: "left-1/2 top-[-4%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
+    return { wrapClass: "left-1/2 top-[4%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
   }
   if (n === 2) {
     return i === 0
-      ? { wrapClass: "left-[-1%] top-[5%] z-30 sm:left-[1%]", fanTowardCenterDeg: 24 }
-      : { wrapClass: "right-[-1%] top-[5%] z-30 sm:right-[1%]", fanTowardCenterDeg: -24 };
+      ? { wrapClass: "left-[0%] top-[8%] z-30 sm:left-[1%]", fanTowardCenterDeg: 24 }
+      : { wrapClass: "right-[0%] top-[8%] z-30 sm:right-[1%]", fanTowardCenterDeg: -24 };
   }
   if (n === 3) {
-    if (i === 0) return { wrapClass: "left-[-2%] top-[7%] z-30 sm:left-[0%]", fanTowardCenterDeg: 32 };
+    if (i === 0) return { wrapClass: "left-[0%] top-[10%] z-30 sm:left-[0%]", fanTowardCenterDeg: 32 };
     if (i === 1)
-      return { wrapClass: "left-1/2 top-[-8%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
-    return { wrapClass: "right-[-2%] top-[7%] z-30 sm:right-[0%]", fanTowardCenterDeg: -32 };
+      return { wrapClass: "left-1/2 top-[2%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
+    return { wrapClass: "right-[0%] top-[10%] z-30 sm:right-[0%]", fanTowardCenterDeg: -32 };
   }
   if (n === 4) {
     const seats: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-      { wrapClass: "left-[0%] top-[10%] z-30 sm:left-[2%]", fanTowardCenterDeg: 38 },
-      { wrapClass: "left-[18%] top-[-4%] z-30", fanTowardCenterDeg: 14 },
-      { wrapClass: "right-[18%] top-[-4%] z-30", fanTowardCenterDeg: -14 },
-      { wrapClass: "right-[0%] top-[10%] z-30 sm:right-[2%]", fanTowardCenterDeg: -38 },
+      { wrapClass: "left-[0%] top-[12%] z-30 sm:left-[2%]", fanTowardCenterDeg: 38 },
+      { wrapClass: "left-[18%] top-[4%] z-30", fanTowardCenterDeg: 14 },
+      { wrapClass: "right-[18%] top-[4%] z-30", fanTowardCenterDeg: -14 },
+      { wrapClass: "right-[0%] top-[12%] z-30 sm:right-[2%]", fanTowardCenterDeg: -38 },
     ];
     return seats[i]!;
   }
   const seats5: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-    { wrapClass: "left-[4%] top-[12%] z-30", fanTowardCenterDeg: 42 },
-    { wrapClass: "left-[20%] top-[0%] z-30", fanTowardCenterDeg: 18 },
-    { wrapClass: "left-1/2 top-[-9%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 },
-    { wrapClass: "right-[20%] top-[0%] z-30", fanTowardCenterDeg: -18 },
-    { wrapClass: "right-[4%] top-[12%] z-30", fanTowardCenterDeg: -42 },
+    { wrapClass: "left-[4%] top-[14%] z-30", fanTowardCenterDeg: 42 },
+    { wrapClass: "left-[20%] top-[6%] z-30", fanTowardCenterDeg: 18 },
+    { wrapClass: "left-1/2 top-[2%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 },
+    { wrapClass: "right-[20%] top-[6%] z-30", fanTowardCenterDeg: -18 },
+    { wrapClass: "right-[4%] top-[14%] z-30", fanTowardCenterDeg: -42 },
   ];
   return seats5[i]!;
 }
@@ -395,24 +395,28 @@ function DeckPile({
 
   /* Козырь под стопкой (z ниже), без поворота; низ карты выступает вниз из-под колоды */
   if (trumpCard) {
+    /* Козырь сильнее выглядывает из-под стопки: стопка чуть выше, козырь ниже + больший min-height */
+    const trumpShift = compact ? "translate-y-4 sm:translate-y-5" : "translate-y-5 sm:translate-y-6";
+    const stackLift = compact ? "-top-1" : "-top-0.5";
     return (
       <div
         className={cn(
           "relative shrink-0",
           cw,
-          compact ? "min-h-[5.5rem] sm:min-h-[8.85rem]" : "min-h-[8.85rem] sm:min-h-[9.65rem]"
+          compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
         )}
       >
-        <div className="absolute bottom-0 left-1/2 z-[1] -translate-x-1/2">
+        <div className={cn("absolute bottom-0 left-1/2 z-[1] -translate-x-1/2", trumpShift)}>
           <CardSprite
             card={trumpCard}
             size={size}
-            className="shadow-[0_8px_18px_rgba(0,0,0,0.5)] ring-1 ring-white/50"
+            className="shadow-[0_8px_18px_rgba(0,0,0,0.5)] ring-2 ring-amber-200/80"
           />
         </div>
         <div
           className={cn(
-            "absolute left-1/2 top-0 z-[25] -translate-x-1/2",
+            "absolute left-1/2 z-[25] -translate-x-1/2",
+            stackLift,
             cw,
             ch
           )}
@@ -937,10 +941,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         embedded
           ? "flex-1 basis-0"
           : cn("h-[100dvh] max-h-[100dvh]", HEADER_OFFSET_TOP),
-        "pb-[max(0.35rem,env(safe-area-inset-bottom,0px))]"
+        "pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))]"
       )}
     >
-      <div className="shrink-0 space-y-0.5 px-2 pb-1 pt-0.5">
+      <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
         {tableGreeting ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -952,45 +956,32 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {tableGreeting}
           </motion.div>
         ) : null}
-        {game.message ? (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
-            role="status"
-          >
-            {game.message}
-          </motion.div>
-        ) : null}
-        <p className="line-clamp-2 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/85 sm:text-[11px]">
-          {phaseLine}
-        </p>
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-[min(100%,520px)] flex-1 flex-col items-center justify-center px-0.5 py-1">
+      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,520px)] flex-1 flex-col justify-end items-center px-0.5 pt-0 pb-1">
         <div
-          className="relative max-w-full shrink-0 rounded-full"
+          className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
-            width: "min(92vw, 24rem, 78vmin)",
+            width: "min(88vw, 24rem, 72vmin)",
             aspectRatio: "1",
           }}
         >
           <div className="pointer-events-none absolute inset-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
 
           <div
-            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#6a8a72]/85 sm:border-[3px] sm:border-[#7a9880]"
+            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#5a9a6a]/90 sm:border-[3px] sm:border-[#6dae7e]"
             style={{
               background:
-                "radial-gradient(circle at 48% 38%, #3f5a46 0%, #2d4234 35%, #223328 68%, #161f1a 100%)",
+                "radial-gradient(ellipse 92% 88% at 50% 42%, #2d6b45 0%, #245538 22%, #1a3d28 52%, #0f2418 78%, #081810 100%)",
               boxShadow:
-                "inset 0 0 48px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.12)",
+                "inset 0 0 56px rgba(0,0,0,0.42), inset 0 2px 3px rgba(255,255,255,0.14)",
             }}
           />
           <div
             className="pointer-events-none absolute inset-[5%] rounded-full"
             style={{
               background:
-                "radial-gradient(circle at 42% 36%, rgba(255,255,255,0.1) 0%, transparent 58%)",
+                "radial-gradient(circle at 40% 34%, rgba(180,220,160,0.16) 0%, transparent 55%)",
             }}
           />
 
@@ -1001,18 +992,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               <div
                 key={opp.id}
                 className={cn(
-                  "absolute flex max-w-[46%] flex-col items-center sm:max-w-[42%]",
+                  "absolute flex max-w-[46%] flex-col items-center gap-1 sm:max-w-[42%]",
                   seat.wrapClass
                 )}
               >
-                <div className="mb-0.5 max-w-full px-0.5 text-center">
-                  <p className="truncate text-[10px] font-semibold leading-tight text-white sm:text-[11px]">
+                <div className="max-w-full px-0.5 text-center leading-tight">
+                  <p className="truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
                     {opp.name}
                   </p>
-                  <p className="text-[9px] text-white/45">{bh.length} карт</p>
+                  <p className="text-[9px] text-white/55">{bh.length} карт</p>
                 </div>
                 <div
-                  className="relative flex h-[2.75rem] w-[4.5rem] items-end justify-center overflow-visible sm:h-[3.1rem] sm:w-[5rem]"
+                  className="relative flex h-[2.85rem] w-[4.75rem] items-end justify-center overflow-visible sm:h-[3.2rem] sm:w-[5.1rem]"
                   style={{
                     transform: `rotate(${seat.fanTowardCenterDeg}deg)`,
                     transformOrigin: "center bottom",
@@ -1038,12 +1029,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             );
           })}
 
-          <div className="absolute inset-[11%] z-10 min-h-0 overflow-hidden rounded-full">
-            <div className="relative flex h-full min-h-0 w-full items-center justify-center">
-              <div className="pointer-events-auto absolute left-[1%] top-1/2 z-20 -translate-y-1/2 sm:left-[3%]">
+          <div className="absolute inset-[8%] z-10 min-h-0 overflow-visible">
+            <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-visible">
+              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-20 -translate-y-1/2 sm:left-[2%]">
                 <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
               </div>
-              <div className="flex max-h-full min-h-0 max-w-[62%] flex-wrap content-center items-center justify-center gap-x-1 gap-y-1.5 overflow-hidden pl-[22%] pr-[4%] sm:max-w-[58%] sm:gap-x-1.5 sm:gap-y-2 sm:pl-[24%]">
+              <div className="mx-auto flex max-h-none min-h-0 w-[min(100%,18rem)] max-w-[78%] flex-wrap content-center items-center justify-center gap-x-1.5 gap-y-2 overflow-visible px-[2%] py-1 sm:w-[min(100%,20rem)] sm:max-w-[75%] sm:gap-x-2 sm:gap-y-2.5 sm:px-[3%]">
               {game.tablePairs.length === 0 ? (
                 <span className="text-center text-[10px] text-white/35 sm:text-[11px]">
                   {dealing ? "Карты раздаются…" : "Ждите ход"}
@@ -1058,10 +1049,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
 
                   return (
-                    <div key={tp.attack.id} className="relative flex flex-col items-center gap-0.5">
-                      <div className="relative h-[4.35rem] w-[2.85rem] sm:h-[5.5rem] sm:w-[3.85rem]">
+                    <div key={tp.attack.id} className="relative flex flex-col items-center">
+                      <div className="relative h-[4.55rem] w-[3rem] overflow-visible sm:h-[5.65rem] sm:w-[3.95rem]">
                         <motion.div
-                          className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                          className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2"
                           initial={false}
                           animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                           transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
@@ -1100,25 +1091,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           </motion.div>
                         ) : null}
                       </div>
-                        <span
-                          className={cn(
-                            "text-[7px] font-semibold uppercase tracking-wide sm:text-[8px]",
-                            tp.defense ? "text-white/40" : "text-amber-200/75"
-                          )}
-                        >
-                          {tp.defense ? "Отбито" : "Атака"}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
+                    </div>
+                  );
+                })
+              )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="shrink-0 space-y-0 border-t border-white/[0.07] bg-[#0f0c0a]/90 px-1 pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md sm:px-2">
+      <div className="shrink-0 space-y-0 bg-[#0f0c0a]/90 px-1 pt-1 shadow-[0_-6px_20px_rgba(0,0,0,0.25)] backdrop-blur-md sm:px-2">
         <div className="relative z-20 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1179,7 +1162,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <section className="relative z-[25] shrink-0 bg-[#0f0c0a]/90 px-1 pb-[max(0.35rem,calc(env(safe-area-inset-bottom,0px)+3.25rem))] pt-0.5 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2">
+      <section className="relative z-[25] shrink-0 bg-[#0f0c0a]/90 px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] pt-0.5 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1221,7 +1204,22 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
         </div>
-        <div className="relative mx-auto mt-0.5 flex h-[min(30dvh,14.5rem)] max-w-full -translate-y-1 items-end justify-center overflow-visible sm:mt-1 sm:h-[min(32dvh,17.5rem)] sm:-translate-y-1.5">
+        {game.message ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-1 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
+            role="status"
+          >
+            {game.message}
+          </motion.div>
+        ) : null}
+        {phaseLine ? (
+          <p className="mt-1.5 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:text-[11px]">
+            {phaseLine}
+          </p>
+        ) : null}
+        <div className="relative mx-auto mt-1 flex h-[min(30dvh,14.5rem)] max-w-full items-end justify-center overflow-visible sm:mt-1.5 sm:h-[min(32dvh,17.5rem)]">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
