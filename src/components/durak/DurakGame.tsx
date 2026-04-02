@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { Card, GameTable, Rank } from "@/games/durak/types";
+import type { Card, GameTable, Player, Rank } from "@/games/durak/types";
 import {
   attackInitial,
   attackToss,
@@ -108,8 +108,12 @@ function randomBotThinkDelayMs(): number {
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
 const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
-/** Ширина колонки «только колода» на сукне — карты стола сюда не заходят */
-const DECK_COLUMN_W_CLASS = "w-[4.85rem] shrink-0 sm:w-[5.35rem]";
+/** Компактные карты в центре овального стола на узком экране */
+const CARD_TABLE_COMPACT_W = "w-[2.85rem] sm:w-[3.65rem]";
+const CARD_TABLE_COMPACT_H = "h-[4.05rem] sm:h-[5.15rem]";
+/** Рубашки у соперников вокруг стола */
+const OPP_HAND_W = "w-[2.25rem] sm:w-[2.55rem]";
+const OPP_HAND_H = "h-[3.2rem] sm:h-[3.55rem]";
 /** Максимально крупная рука, поднята выше к столу (z ниже BottomNav). */
 const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
 const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
@@ -133,6 +137,66 @@ function handFanStyle(
     transform: `translate(calc(-50% + ${tx}px), ${ty}px) rotate(${rot}deg)`,
     transformOrigin: "bottom center",
     /** Крайние карты выше по z — не уходят «под» соседей и не выглядят «белыми». */
+    zIndex: 10 + i,
+  };
+}
+
+/** Соперники по часовой стрелке от «меня» внизу — как рассадка за столом. */
+function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[] {
+  const idx = game.players.findIndex((p) => p.id === localId);
+  if (idx < 0) return game.players.filter((p) => p.id !== localId);
+  const out: Player[] = [];
+  for (let k = 1; k < game.players.length; k++) {
+    out.push(game.players[(idx + k) % game.players.length]!);
+  }
+  return out;
+}
+
+/** Классы позиционирования для 1–5 соперников вокруг овала (me = низ экрана). */
+function opponentSeatPositionClasses(count: number, index: number): string {
+  const layouts: Record<number, string[]> = {
+    1: ["left-1/2 top-0 z-30 -translate-x-1/2"],
+    2: [
+      "left-[2%] top-[1%] z-30 sm:left-[6%]",
+      "right-[2%] top-[1%] z-30 sm:right-[6%]",
+    ],
+    3: [
+      "left-[1%] top-0 z-30 sm:left-[5%]",
+      "left-1/2 top-0 z-30 -translate-x-1/2",
+      "right-[1%] top-0 z-30 sm:right-[5%]",
+    ],
+    4: [
+      "left-[3%] top-[3%] z-30 sm:left-[7%]",
+      "left-1/2 top-0 z-30 -translate-x-1/2 sm:top-[1%]",
+      "right-[3%] top-[3%] z-30 sm:right-[7%]",
+      "left-[2%] top-[38%] z-30 -translate-y-1/2 sm:left-[5%]",
+    ],
+    5: [
+      "left-[6%] top-[4%] z-30",
+      "left-[26%] top-0 z-30 -translate-x-1/2",
+      "left-1/2 top-0 z-30 -translate-x-1/2",
+      "right-[26%] top-0 z-30 translate-x-1/2",
+      "right-[6%] top-[4%] z-30",
+    ],
+  };
+  const row = layouts[Math.min(5, Math.max(1, count))] ?? layouts[1]!;
+  return row[Math.min(index, row.length - 1)]!;
+}
+
+/** Компактный веер рубашек у соперника. */
+function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
+  if (n <= 0) return {};
+  const mid = (n - 1) / 2;
+  const rel = i - mid;
+  const spread = n <= 1 ? 0 : Math.min(20 / Math.max(1, n - 1), 6);
+  const rot = rel * spread;
+  const tx = rel * (n > 8 ? 9 : 11);
+  const curve = Math.abs(rel) * 1.8;
+  return {
+    left: "50%",
+    bottom: 0,
+    transform: `translate(calc(-50% + ${tx}px), ${curve}px) rotate(${rot}deg)`,
+    transformOrigin: "bottom center",
     zIndex: 10 + i,
   };
 }
@@ -196,12 +260,26 @@ function CardSprite({
   playableHighlight?: boolean;
   onPress?: () => void;
   imgClassName?: string;
-  /** `hand` — чуть крупнее (рука игрока). */
-  size?: "table" | "hand";
+  /** `hand` — рука внизу; `tableCompact` — центр стола на телефоне; `opponent` — рубашки у соперников. */
+  size?: "table" | "hand" | "tableCompact" | "opponent";
 }) {
   const isBack = faceDown || !card;
-  const dimW = size === "hand" ? HAND_CARD_W_CLASS : CARD_W_CLASS;
-  const dimH = size === "hand" ? HAND_CARD_H_CLASS : CARD_H_CLASS;
+  const dimW =
+    size === "hand"
+      ? HAND_CARD_W_CLASS
+      : size === "tableCompact"
+        ? CARD_TABLE_COMPACT_W
+        : size === "opponent"
+          ? OPP_HAND_W
+          : CARD_W_CLASS;
+  const dimH =
+    size === "hand"
+      ? HAND_CARD_H_CLASS
+      : size === "tableCompact"
+        ? CARD_TABLE_COMPACT_H
+        : size === "opponent"
+          ? OPP_HAND_H
+          : CARD_H_CLASS;
 
   const wrap = cn(
     "relative shrink-0 overflow-hidden rounded-[10px]",
@@ -251,8 +329,20 @@ function CardSprite({
   );
 }
 
-function DeckPile({ count, trumpCard }: { count: number; trumpCard: Card | null }) {
+function DeckPile({
+  count,
+  trumpCard,
+  compact,
+}: {
+  count: number;
+  trumpCard: Card | null;
+  /** Меньшая колода у края овального стола */
+  compact?: boolean;
+}) {
   const stackLayers = count > 0 ? Math.min(8, Math.max(2, Math.ceil(count / 5))) : 0;
+  const cw = compact ? CARD_TABLE_COMPACT_W : CARD_W_CLASS;
+  const ch = compact ? CARD_TABLE_COMPACT_H : CARD_H_CLASS;
+  const size = compact ? ("tableCompact" as const) : ("table" as const);
 
   const stackBlock = (
     <>
@@ -262,13 +352,14 @@ function DeckPile({ count, trumpCard }: { count: number; trumpCard: Card | null 
               key={i}
               className="absolute overflow-visible"
               style={{
-                right: `${i * 1.15}px`,
-                top: `${i}px`,
+                right: `${i * (compact ? 0.85 : 1.15)}px`,
+                top: `${i * (compact ? 0.85 : 1)}px`,
                 zIndex: 30 + i,
               }}
             >
               <CardSprite
                 faceDown
+                size={size}
                 className="shadow-[0_8px_18px_rgba(0,0,0,0.5)]"
               />
             </div>
@@ -278,9 +369,9 @@ function DeckPile({ count, trumpCard }: { count: number; trumpCard: Card | null 
         <div className="flex h-full w-full items-center justify-center">
           <div
             className={cn(
-              "flex items-center justify-center rounded-[10px] border border-dashed border-emerald-700/45 bg-black/30 text-[10px] text-emerald-200/55",
-              CARD_W_CLASS,
-              CARD_H_CLASS
+              "flex items-center justify-center rounded-[10px] border border-dashed border-emerald-700/45 bg-black/30 text-[8px] text-emerald-200/55 sm:text-[10px]",
+              cw,
+              ch
             )}
           >
             —
@@ -296,21 +387,22 @@ function DeckPile({ count, trumpCard }: { count: number; trumpCard: Card | null 
       <div
         className={cn(
           "relative shrink-0",
-          CARD_W_CLASS,
-          "min-h-[8.85rem] sm:min-h-[9.65rem]"
+          cw,
+          compact ? "min-h-[5.5rem] sm:min-h-[8.85rem]" : "min-h-[8.85rem] sm:min-h-[9.65rem]"
         )}
       >
         <div className="absolute bottom-0 left-1/2 z-[1] -translate-x-1/2">
           <CardSprite
             card={trumpCard}
+            size={size}
             className="shadow-[0_8px_18px_rgba(0,0,0,0.5)] ring-1 ring-white/50"
           />
         </div>
         <div
           className={cn(
             "absolute left-1/2 top-0 z-[25] -translate-x-1/2",
-            CARD_W_CLASS,
-            CARD_H_CLASS
+            cw,
+            ch
           )}
         >
           {stackBlock}
@@ -319,9 +411,7 @@ function DeckPile({ count, trumpCard }: { count: number; trumpCard: Card | null 
     );
   }
 
-  return (
-    <div className={cn("relative shrink-0", CARD_W_CLASS, CARD_H_CLASS)}>{stackBlock}</div>
-  );
+  return <div className={cn("relative shrink-0", cw, ch)}>{stackBlock}</div>;
 }
 
 function toggleAttackSelection(hand: Card[], selected: string[], id: string): string[] {
@@ -497,7 +587,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [game?.id]);
 
   const selfPlayer = game?.players.find((p) => p.id === localPlayerId);
-  const opponents = game?.players.filter((p) => p.id !== localPlayerId) ?? [];
+  const opponents = useMemo(
+    () => (game ? opponentsClockwiseFromLocal(game, localPlayerId) : []),
+    [game, localPlayerId]
+  );
   const humanHand = selfPlayer?.hand ?? [];
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
@@ -826,183 +919,198 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   return (
     <div
-      className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+      className={cn(
+        "flex w-full min-h-0 flex-col overflow-hidden bg-[#14100c] text-slate-100",
+        /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
+        embedded
+          ? "h-full max-h-full flex-1"
+          : cn("h-[100dvh] max-h-[100dvh]", HEADER_OFFSET_TOP),
+        "pb-[max(0.35rem,env(safe-area-inset-bottom,0px))]"
+      )}
     >
-      {tableGreeting ? (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="mx-3 mb-2 rounded-xl border border-emerald-500/40 bg-emerald-950/55 px-3 py-2 text-center text-sm font-medium text-emerald-100"
-          role="status"
-        >
-          {tableGreeting}
-        </motion.div>
-      ) : null}
-      {game.message ? (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-3 mb-2 rounded-xl border border-amber-500/35 bg-amber-950/50 px-3 py-2 text-center text-sm text-amber-100/95"
-          role="status"
-        >
-          {game.message}
-        </motion.div>
-      ) : null}
+      <div className="shrink-0 space-y-0.5 px-2 pb-1 pt-0.5">
+        {tableGreeting ? (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
+            role="status"
+          >
+            {tableGreeting}
+          </motion.div>
+        ) : null}
+        {game.message ? (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
+            role="status"
+          >
+            {game.message}
+          </motion.div>
+        ) : null}
+        <p className="line-clamp-2 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/85 sm:text-[11px]">
+          {phaseLine}
+        </p>
+      </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-1.5 [-webkit-overflow-scrolling:touch]">
-        {/* Противники (онлайн — может быть несколько) */}
-        <section className="relative z-10 shrink-0 space-y-3 px-0 pt-0">
-          {opponents.map((opp) => {
-            const bh = opp.hand;
-            return (
-              <div key={opp.id}>
-                <div className="flex items-end justify-between gap-2 px-1">
-                  <div>
-                    <p className="text-[13px] font-medium text-white/90">{opp.name}</p>
-                    <p className="text-[10px] text-white/45">{bh.length} карт</p>
+      <div className="relative mx-auto min-h-0 w-full max-w-[min(100%,520px)] flex-1 px-0.5">
+        {opponents.map((opp, oi) => {
+          const bh = opp.hand;
+          return (
+            <div
+              key={opp.id}
+              className={cn(
+                "absolute flex max-w-[40%] flex-col items-center sm:max-w-[38%]",
+                opponentSeatPositionClasses(opponents.length, oi)
+              )}
+            >
+              <div className="mb-0.5 max-w-full px-0.5 text-center">
+                <p className="truncate text-[10px] font-semibold leading-tight text-white/90 sm:text-[11px]">
+                  {opp.name}
+                </p>
+                <p className="text-[9px] text-emerald-100/50">{bh.length} карт</p>
+              </div>
+              <div className="relative flex h-[2.75rem] w-[4.5rem] items-end justify-center overflow-visible sm:h-[3.1rem] sm:w-[5rem]">
+                {bh.map((c, i) => (
+                  <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
+                    <motion.div
+                      initial={{ opacity: 0, y: -20, scale: 0.88 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{
+                        delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                        duration: DEAL_MOVE_SEC,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                    >
+                      <CardSprite faceDown size="opponent" />
+                    </motion.div>
                   </div>
-                </div>
-                <div className="relative mx-auto mt-2 flex h-[5.25rem] max-w-full items-end justify-center overflow-visible sm:mt-2.5 sm:h-[5.5rem]">
-                  {bh.map((c, i) => (
-                    <div key={c.id} className="absolute" style={handFanStyle(bh.length, i, "opponent")}>
-                      <motion.div
-                        initial={{ opacity: 0, y: -52, scale: 0.82, rotate: -6 }}
-                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        transition={{
-                          delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                          duration: DEAL_MOVE_SEC,
-                          ease: [0.22, 1, 0.36, 1],
-                        }}
-                      >
-                        <CardSprite faceDown />
-                      </motion.div>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
-            );
-          })}
-        </section>
+            </div>
+          );
+        })}
 
-        {/* Сукно: flex вместо height:100% + absolute — иначе зона стола иногда 0px и карты не видны */}
-        <div className="relative z-0 my-1 flex min-h-[12rem] w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[1.35rem] border-[6px] border-[#3d2814] bg-[#2a1a0e] shadow-[inset_0_2px_16px_rgba(0,0,0,0.45),0_12px_28px_rgba(0,0,0,0.45)] max-sm:min-h-[min(40dvh,14rem)] max-h-[46dvh] sm:min-h-[min(38dvh,13rem)] sm:max-h-[44dvh] sm:rounded-[1.5rem] sm:border-[8px]">
-          <div
-            className="pointer-events-none absolute inset-1.5 rounded-[1rem] sm:inset-2 sm:rounded-[1.15rem]"
-            style={{
-              background:
-                "radial-gradient(ellipse 120% 90% at 50% 45%, #1a6b45 0%, #135a38 42%, #0d4028 100%)",
-              boxShadow: "inset 0 0 80px rgba(0,0,0,0.35)",
-            }}
-          />
+        {/* Овальный зелёный стол */}
+        <div
+          className="pointer-events-none absolute inset-x-[3%] inset-y-[8%] rounded-[50%] border-[5px] border-[#3d2612] shadow-[0_10px_28px_rgba(0,0,0,0.4)] sm:inset-x-[5%] sm:border-[6px] sm:border-[#4a3218]"
+          style={{
+            background:
+              "radial-gradient(ellipse 74% 70% at 50% 40%, #23a06a 0%, #158050 35%, #0d5c3a 68%, #083a24 100%)",
+            boxShadow:
+              "inset 0 0 55px rgba(0,0,0,0.45), inset 0 -25px 45px rgba(0,0,0,0.2), 0 10px 28px rgba(0,0,0,0.4)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-[5%] inset-y-[10%] rounded-[50%] sm:inset-x-[7%] sm:inset-y-[9%]"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 65% at 50% 38%, rgba(255,255,255,0.07) 0%, transparent 52%)",
+          }}
+        />
 
-          <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col px-2.5 pb-2 pt-2 sm:px-3 sm:pb-2.5 sm:pt-2.5">
-            {/* Сетка: слева только карты стола, справа зона колоды — без перекрытий */}
-            <p className="pointer-events-none shrink-0 py-0.5 text-center text-[10px] font-medium leading-snug text-emerald-100/75 sm:py-1 sm:text-[11px]">
-              {phaseLine}
-            </p>
-            <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-2 min-[400px]:gap-x-2.5">
-              <div className="relative z-[15] flex min-h-[7.5rem] min-w-0 flex-wrap content-center items-center justify-center gap-x-2.5 gap-y-3 py-2 sm:min-h-[8rem] sm:gap-x-3">
-                {game.tablePairs.length === 0 ? (
-                  <span className="text-sm text-emerald-200/35">
-                    {dealing ? "Карты раздаются…" : "Ждите ход"}
-                  </span>
-                ) : (
-                  game.tablePairs.map((tp) => {
-                    const uncovered = tp.defense === null;
-                    const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
-                    const attackSelectedForDefense =
-                      humanMustDefend && defenseTargetAttackId === tp.attack.id;
-                    const highlightUnbeaten =
-                      uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
+        <div className="absolute inset-x-0 top-[10%] z-10 flex min-h-0 flex-col pb-[2%] pt-[6%] sm:top-[9%] sm:pt-[5%]">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-1">
+            <div className="flex max-h-[min(38dvh,15rem)] min-h-0 max-w-[min(94%,24rem)] flex-wrap content-center items-center justify-center gap-x-1.5 gap-y-2 overflow-hidden sm:max-h-[min(40dvh,17rem)] sm:gap-x-2 sm:gap-y-2.5">
+              {game.tablePairs.length === 0 ? (
+                <span className="text-center text-[11px] text-emerald-100/40 sm:text-sm">
+                  {dealing ? "Карты раздаются…" : "Ждите ход"}
+                </span>
+              ) : (
+                game.tablePairs.map((tp) => {
+                  const uncovered = tp.defense === null;
+                  const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
+                  const attackSelectedForDefense =
+                    humanMustDefend && defenseTargetAttackId === tp.attack.id;
+                  const highlightUnbeaten =
+                    uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
 
-                    return (
-                      <div key={tp.attack.id} className="relative flex flex-col items-center gap-0.5">
-                        <div className="relative h-[5.4rem] w-[3.65rem] sm:h-[5.7rem] sm:w-[4rem]">
-                          <motion.div
-                            className="absolute bottom-0 left-1/2 -translate-x-1/2"
-                            initial={false}
-                            animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                          >
-                            <CardSprite
-                              card={tp.attack}
-                              selected={!!attackSelectedForDefense}
-                              disabled={false}
-                              className={
-                                highlightUnbeaten
-                                  ? "ring-[3px] ring-amber-300/85 ring-offset-0 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]"
-                                  : undefined
-                              }
-                              onPress={
-                                humanMustDefend
-                                  ? () => {
-                                      setDefenseTargetAttackId((prev) =>
-                                        prev === tp.attack.id ? null : tp.attack.id
-                                      );
-                                      setGame((g) => (g ? { ...g, message: null } : g));
-                                    }
-                                  : undefined
-                              }
-                            />
-                          </motion.div>
-
-                          {tp.defense ? (
-                            <motion.div
-                              className="absolute bottom-1 left-1/2 z-20 -translate-x-[42%]"
-                              initial={false}
-                              animate={{ opacity: 1, y: -12, x: 5, scale: 1, rotate: 2 }}
-                              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-                            >
-                              <CardSprite card={tp.defense} />
-                            </motion.div>
-                          ) : null}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-[8px] font-semibold uppercase tracking-wide sm:text-[9px]",
-                            tp.defense ? "text-emerald-200/55" : "text-amber-200/80"
-                          )}
+                  return (
+                    <div key={tp.attack.id} className="relative flex flex-col items-center gap-0.5">
+                      <div className="relative h-[4.35rem] w-[2.85rem] sm:h-[5.5rem] sm:w-[3.85rem]">
+                        <motion.div
+                          className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                          initial={false}
+                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
                         >
-                          {tp.defense ? "Отбито" : "Атака"}
-                        </span>
+                          <CardSprite
+                            card={tp.attack}
+                            size="tableCompact"
+                            selected={!!attackSelectedForDefense}
+                            disabled={false}
+                            className={
+                              highlightUnbeaten
+                                ? "ring-[2px] ring-amber-300/90 ring-offset-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)] sm:ring-[3px]"
+                                : undefined
+                            }
+                            onPress={
+                              humanMustDefend
+                                ? () => {
+                                    setDefenseTargetAttackId((prev) =>
+                                      prev === tp.attack.id ? null : tp.attack.id
+                                    );
+                                    setGame((g) => (g ? { ...g, message: null } : g));
+                                  }
+                                : undefined
+                            }
+                          />
+                        </motion.div>
+
+                        {tp.defense ? (
+                          <motion.div
+                            className="absolute bottom-0.5 left-1/2 z-20 -translate-x-[42%]"
+                            initial={false}
+                            animate={{ opacity: 1, y: -10, x: 4, scale: 1, rotate: 2 }}
+                            transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                          >
+                            <CardSprite card={tp.defense} size="tableCompact" />
+                          </motion.div>
+                        ) : null}
                       </div>
-                    );
-                  })
-                )}
-              </div>
-              <div
-                className={cn(
-                  "pointer-events-none relative z-50 flex flex-col items-end justify-start self-stretch pt-0.5",
-                  DECK_COLUMN_W_CLASS
-                )}
-              >
-                <DeckPile count={deckCount} trumpCard={trumpShow ?? null} />
-              </div>
+                      <span
+                        className={cn(
+                          "text-[7px] font-semibold uppercase tracking-wide sm:text-[8px]",
+                          tp.defense ? "text-emerald-200/55" : "text-amber-200/85"
+                        )}
+                      >
+                        {tp.defense ? "Отбито" : "Атака"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pointer-events-auto absolute right-[1%] top-1/2 z-20 -translate-y-1/2 sm:right-[3%]">
+              <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="relative z-20 mt-0.5 grid w-full min-w-0 shrink-0 grid-cols-2 items-center gap-x-2 gap-y-2 px-0.5 py-1 sm:gap-x-3">
+      <div className="shrink-0 space-y-0 border-t border-white/[0.07] bg-[#0f0c0a]/90 px-1 pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md sm:px-2">
+        <div className="relative z-20 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
               onClick={restart}
-              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/90 shadow-md backdrop-blur-sm hover:bg-white/15 sm:px-4 sm:text-sm"
+              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-md backdrop-blur-sm hover:bg-white/15 sm:px-3 sm:py-2 sm:text-[11px]"
             >
               Новая игра
             </button>
           </div>
-          <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-x-1 sm:gap-x-2">
-            {/* Левый 1fr — баланс, чтобы центр был по центру; «Взять» всегда в правом слоте, не подменяет «Атаковать». */}
+          <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-x-0.5 sm:gap-x-2">
             <span className="min-w-0 shrink" aria-hidden />
-            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
               {selfIsAttacker && game.phase === "attack_initial" ? (
                 <button
                   type="button"
                   onClick={onAttackSubmit}
                   disabled={!attackInitialValid || game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2.5 py-2 text-[11px] font-medium text-amber-50 shadow-md hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:text-sm"
+                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2 py-1.5 text-[10px] font-medium text-amber-50 shadow-md hover:bg-amber-800/45 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
                   Атаковать
                 </button>
@@ -1012,7 +1120,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   type="button"
                   onClick={onTossSubmit}
                   disabled={!tossValid || game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2 py-1.5 text-[10px] font-medium text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-4 sm:py-2 sm:text-xs"
+                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-1.5 py-1 text-[9px] font-medium text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-2.5 sm:text-[10px]"
                 >
                   Подкинуть
                 </button>
@@ -1022,7 +1130,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   type="button"
                   onClick={onBeat}
                   disabled={game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-emerald-400/45 bg-emerald-900/50 px-2.5 py-2 text-[11px] font-medium text-emerald-50 shadow-md hover:bg-emerald-800/50 disabled:opacity-40 sm:px-4 sm:text-sm"
+                  className="shrink-0 rounded-full border border-emerald-400/45 bg-emerald-900/50 px-2 py-1.5 text-[10px] font-medium text-emerald-50 shadow-md hover:bg-emerald-800/50 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
                   Бито
                 </button>
@@ -1034,7 +1142,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   type="button"
                   onClick={onTake}
                   disabled={game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-white/25 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/90 shadow-md hover:bg-white/15 disabled:opacity-40 sm:px-4 sm:text-sm"
+                  className="shrink-0 rounded-full border border-white/25 bg-white/10 px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-md hover:bg-white/15 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
                   Взять
                 </button>
@@ -1044,8 +1152,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      {/* Вне overflow-y-auto — веер не режется; без отрицательных margin — низ карт не подрезает фон. */}
-      <section className="relative z-[25] -mt-2 shrink-0 px-1.5 pb-1 pt-0 sm:-mt-3">
+      <section className="relative z-[25] shrink-0 bg-[#0f0c0a]/90 px-1 pb-[max(0.35rem,calc(env(safe-area-inset-bottom,0px)+3.25rem))] pt-0.5 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2">
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -1087,7 +1194,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
         </div>
-        <div className="relative mx-auto mt-1 flex h-[16.5rem] max-w-full -translate-y-1 items-end justify-center overflow-visible sm:mt-1.5 sm:h-[19rem] sm:-translate-y-2">
+        <div className="relative mx-auto mt-0.5 flex h-[min(30dvh,14.5rem)] max-w-full -translate-y-1 items-end justify-center overflow-visible sm:mt-1 sm:h-[min(32dvh,17.5rem)] sm:-translate-y-1.5">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
