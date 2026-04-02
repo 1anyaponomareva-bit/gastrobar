@@ -95,12 +95,15 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
 
   /* Буфер: без стрима нет рассинхрона «тело уже распаковано / заголовок gzip» между Node, Next и Chrome. */
   const rawBuf = await upstream.arrayBuffer();
-  /* Иногда PostgREST/шлюз отдаёт 4xx/5xx с нулевым телом — подставляем JSON, чтобы в UI был текст. */
+  const decodedTrim = new TextDecoder().decode(rawBuf).trim();
+  /* PostgREST иногда отдаёт 5xx с пустым или «пробельным» телом — подставляем JSON для UI. */
   let bodyOut: BodyInit = rawBuf;
-  if (rawBuf.byteLength === 0 && upstream.status >= 400) {
+  if (upstream.status >= 400 && decodedTrim.length === 0) {
     const hint = JSON.stringify({
-      message: `Upstream HTTP ${upstream.status} (${upstream.statusText}) with empty body.`,
-      hint: "Проверьте Supabase → Logs → Postgres; выполните GRANT USAGE ON SCHEMA public для anon и скрипт supabase/sql/durak_queue_functions_only.sql. Локальный тест: supabase/sql/durak_debug_test_rpc.sql",
+      message: `Upstream HTTP ${upstream.status} (${upstream.statusText}) — пустое тело ответа.`,
+      details:
+        "Выполни в Supabase SQL Editor: GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role; затем весь файл supabase/sql/durak_queue_functions_only.sql. Проверка RPC: supabase/sql/durak_debug_test_rpc.sql. Логи: Supabase → Logs → Postgres.",
+      hint: "После правок SQL сделай Redeploy на Vercel (нужна актуальная версия прокси /supabase-proxy).",
       code: "EMPTY_UPSTREAM_BODY",
     });
     bodyOut = new TextEncoder().encode(hint);

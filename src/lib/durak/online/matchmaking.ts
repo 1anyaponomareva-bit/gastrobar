@@ -124,14 +124,20 @@ function getClientKeys(client: SupabaseClient): ClientKeys {
   return client as unknown as ClientKeys;
 }
 
+/** Смени число при следующем изменении текста ошибок — по нему видно, что задеплоена свежая сборка. */
+const DURAK_NET_HINT_REV = 3;
+
 /** Прямой POST к PostgREST RPC — в ошибке всегда есть HTTP status и сырое тело (client.rpc часто даёт { message: "" }). */
 function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
   const head = `HTTP ${status} ${statusText}`;
   const t = body.trim();
   const emptyHint =
-    `${head}. Тело ответа пустое — открой Supabase → Logs → Postgres и найди ошибку в момент вызова RPC. ` +
-    `Чаще всего: в public.rooms нет колонки started_with_bot или таблицы созданы вручную без части полей. ` +
-    `В SQL Editor выполни весь файл с начала: supabase/sql/durak_queue_functions_only.sql (блок «СХЕМА», затем функции).`;
+    `[durak-net-v${DURAK_NET_HINT_REV}] ${head}, тело ответа пустое. ` +
+    `1) SQL: supabase/sql/durak_grant_schema_only.sql затем целиком supabase/sql/durak_queue_functions_only.sql. ` +
+    `2) Проверка: supabase/sql/durak_debug_test_rpc.sql. ` +
+    `3) Supabase → Logs → Postgres. ` +
+    `4) Запушь этот репозиторий и сделай Redeploy на Vercel, на телефоне открой сайт в приватном окне (иначе старый JS). ` +
+    `Если в ошибке НЕТ префикса [durak-net-v${DURAK_NET_HINT_REV}] — ты всё ещё на старой версии сайта.`;
 
   if (t) {
     try {
