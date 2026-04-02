@@ -567,6 +567,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [tableGreeting, setTableGreeting] = useState<string | null>(null);
 
+  const onRoomPlayingStable = useCallback((id: string) => {
+    setOnlineRoomId(id);
+  }, []);
+  const onLeaveOnlineRoomStable = useCallback(() => {
+    setOnlineRoomId(null);
+  }, []);
+  const onMatchmakingCancelStable = useCallback(() => {
+    router.push("/");
+  }, [router]);
+  const renderEmbeddedGame = useCallback(
+    (embedded: DurakGameEmbeddedProps) => <DurakGame embedded={embedded} />,
+    []
+  );
+
   const game = embedded?.game ?? null;
   const setGame = useCallback(
     (updater: SetStateAction<GameTable | null>) => {
@@ -718,10 +732,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ) {
       return;
     }
+    const attacker = game.players[game.attackerIndex];
+    const defender = game.players[game.defenderIndex];
+    if (!attacker || !defender) return;
     const botActs =
-      (game.phase === "attack_initial" && game.players[game.attackerIndex]!.type === "bot") ||
-      (game.phase === "defend" && game.players[game.defenderIndex]!.type === "bot") ||
-      (game.phase === "attack_toss" && game.players[game.attackerIndex]!.type === "bot");
+      (game.phase === "attack_initial" && attacker.type === "bot") ||
+      (game.phase === "defend" && defender.type === "bot") ||
+      (game.phase === "attack_toss" && attacker.type === "bot");
     if (!botActs) return;
 
     const t = window.setTimeout(() => {

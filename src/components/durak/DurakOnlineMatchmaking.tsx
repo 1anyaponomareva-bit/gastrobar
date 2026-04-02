@@ -42,9 +42,20 @@ const WAITING_HINTS: string[] = [
  * Онлайн-очередь: поиск комнаты + realtime.
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
  */
+function mmInitSupabase(): SupabaseClient | null {
+  return typeof window === "undefined" ? null : createSupabaseBrowserClient();
+}
+
+function mmInitError(): string | null {
+  if (typeof window === "undefined") return null;
+  return createSupabaseBrowserClient()
+    ? null
+    : "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)";
+}
+
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [supabase] = useState<SupabaseClient | null>(mmInitSupabase);
+  const [error, setError] = useState<string | null>(mmInitError);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomRow | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
@@ -82,16 +93,6 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       setError(formatPostgrestError(e));
     }
   }, [supabase, roomId, onRoomPlaying]);
-
-  useEffect(() => {
-    const client = createSupabaseBrowserClient();
-    setSupabase(client);
-    if (!client) {
-      setError(
-        "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
-      );
-    }
-  }, []);
 
   useEffect(() => {
     if (!supabase) return;

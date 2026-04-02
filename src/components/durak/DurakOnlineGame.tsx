@@ -6,7 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
+  type ReactElement,
   type SetStateAction,
 } from "react";
 import type { GameTable } from "@/games/durak/types";
@@ -29,7 +29,7 @@ type Props = {
   playerName: string;
   onLeave: () => void;
   /** Рендер стола без циклического import — иначе dynamic chunk и «TypeError: Load failed» на проде/Safari. */
-  renderGame: (embedded: DurakGameEmbeddedProps) => ReactNode;
+  renderGame: (embedded: DurakGameEmbeddedProps) => ReactElement;
 };
 
 /**
@@ -98,16 +98,19 @@ function advanceLastAppliedRef(ref: { current: number }, serverTsMs: number): vo
  * Persist не должен захватывать `game` в замыкание debounce — иначе поздний upsert затирает отбой соперника.
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
-export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
+function initialSupabaseForClient(): SupabaseClient | null {
+  return typeof window === "undefined" ? null : createSupabaseBrowserClient();
+}
 
-  useEffect(() => {
-    const c = createSupabaseBrowserClient();
-    setSupabase(c);
-    if (!c) setError("Нет настроек Supabase");
-  }, []);
+function initialOnlineError(): string | null {
+  if (typeof window === "undefined") return null;
+  return createSupabaseBrowserClient() ? null : "Нет настроек Supabase";
+}
+
+export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
+  const [supabase] = useState<SupabaseClient | null>(initialSupabaseForClient);
+  const [error, setError] = useState<string | null>(initialOnlineError);
+  const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
   const [game, setGame] = useState<GameTable | null>(null);
   /** После первого не-null стола — реже опрашивать БД (не привязывать интервал к каждому ходу). */
   const [tableHydrated, setTableHydrated] = useState(false);
@@ -422,6 +425,18 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     return () => window.clearInterval(id);
   }, [supabase, roomId, applyRemoteRow, tableHydrated, game?.phase, game?.state]);
 
+  const embeddedProps = useMemo((): DurakGameEmbeddedProps | null => {
+    if (!game) return null;
+    return {
+      roomId,
+      localPlayerId: playerId,
+      playerName,
+      game,
+      onGameChange: onRemoteGameChange,
+      onLeave,
+    };
+  }, [roomId, playerId, playerName, game, onRemoteGameChange, onLeave]);
+
   if (error) {
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center text-amber-200">
@@ -435,13 +450,13 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (!supabase) {
     return (
-      <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50">
         Подключение…
       </div>
     );
   }
 
-  if (!game) {
+  if (!game || !embeddedProps) {
     return (
       <div className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50">
         Загрузка стола…
@@ -451,14 +466,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col basis-0">
-      {renderGame({
-        roomId,
-        localPlayerId: playerId,
-        playerName,
-        game,
-        onGameChange: onRemoteGameChange,
-        onLeave,
-      })}
+      {renderGame(embeddedProps)}
     </div>
   );
 }
