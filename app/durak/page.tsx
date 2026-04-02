@@ -15,7 +15,7 @@ export default function DurakPage() {
       <Header />
       {/* Header/BottomNav fixed — отступ сверху только здесь, иначе стол уезжает под чёрную шапку. */}
       <div
-        className={`durak-page flex min-h-0 w-full flex-1 flex-col overflow-x-hidden ${HEADER_OFFSET_TOP}`}
+        className={`durak-page flex min-h-[calc(100svh-5rem)] w-full min-w-0 flex-1 flex-col overflow-x-hidden ${HEADER_OFFSET_TOP}`}
       >
         <DurakShell />
       </div>
