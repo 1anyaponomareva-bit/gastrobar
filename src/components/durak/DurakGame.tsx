@@ -110,9 +110,9 @@ const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
 /** Компактные карты: центр стола, колода и рубашки соперника — один размер. */
 const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
 const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
-/** Крупная рука внизу (как в исходном дизайне). Нижний padding контейнера компенсирует BottomNav. */
-const HAND_CARD_W_CLASS = "w-[8.15rem] sm:w-[9.15rem]";
-const HAND_CARD_H_CLASS = "h-[11.2rem] sm:h-[12.45rem]";
+/** Рука: крупнее прежнего; зона веера растягивается между статусом и нижним баром. */
+const HAND_CARD_W_CLASS = "w-[8.95rem] sm:w-[9.55rem]";
+const HAND_CARD_H_CLASS = "h-[12.2rem] sm:h-[13.1rem]";
 
 function handFanStyle(
   n: number,
@@ -311,7 +311,8 @@ function CardSprite({
         ? CARD_TABLE_COMPACT_H
         : CARD_H_CLASS;
 
-  const tableLike = size === "tableCompact" || size === "table";
+  /** Одинаковое лицо карты и обрезка скругления — в руке и на столе. */
+  const tableLike = size === "tableCompact" || size === "table" || size === "hand";
   const wrap = cn(
     "relative shrink-0 rounded-[10px]",
     isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
@@ -334,7 +335,7 @@ function CardSprite({
     <div className="h-full w-full overflow-hidden rounded-[10px]">
       <CardFaceArt
         card={card}
-        compact={size === "tableCompact" || size === "table"}
+        compact
         className={cn("h-full w-full", imgClassName)}
       />
     </div>
@@ -996,10 +997,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "flex-1 basis-0 min-h-[280px] overflow-x-hidden overflow-y-auto"
-          : "flex-1 min-h-0 overflow-hidden",
-        /* Крупная рука + BottomNav + safe-area */
-        "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+9.25rem))]"
+          ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-auto"
+          : "min-h-0 flex-1 overflow-hidden",
+        /* Один отступ под BottomNav + safe-area (без дублирования с секцией руки) */
+        "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+5.85rem))]"
       )}
     >
       <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
@@ -1272,18 +1273,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-1 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
+            className="mt-1 shrink-0 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
             role="status"
           >
             {game.message}
           </motion.div>
         ) : null}
         {phaseLine ? (
-          <p className="mt-3 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-4 sm:text-[11px]">
+          <p className="mt-3 shrink-0 line-clamp-3 px-1 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-4 sm:text-[11px]">
             {phaseLine}
           </p>
         ) : null}
-        <div className="relative mx-auto mt-4 flex h-[min(30dvh,14.5rem)] max-w-full translate-y-3 items-end justify-center overflow-visible sm:mt-5 sm:h-[min(32dvh,17.5rem)] sm:translate-y-4">
+        <div className="relative mx-auto mt-2 flex min-h-[11rem] w-full max-w-full flex-1 items-end justify-center overflow-visible pb-1 pt-3 sm:min-h-[12rem] sm:mt-3 sm:pt-4">
           {humanHand.map((c, i) => {
             const selAttack =
               game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
