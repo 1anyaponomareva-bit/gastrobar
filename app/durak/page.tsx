@@ -10,13 +10,18 @@ export const metadata: Metadata = {
 
 export default function DurakPage() {
   return (
-    <div className="durak-page flex h-[100svh] min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c]">
+    <>
+      {/*
+        Header и BottomNav с position:fixed не должны быть flex‑детьми вместе с колонкой игры:
+        в части WebView средний flex-1 схлопывается в ~0 → «чёрный экран».
+      */}
       <Header />
-      {/* Явная колонка высоты: иначе flex-1 у игры схлопывается, стол и кнопки не видны */}
-      <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col basis-0">
-        <DurakGame />
+      <div className="durak-page flex h-[100svh] min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c]">
+        <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
+          <DurakGame />
+        </div>
       </div>
       <BottomNav />
-    </div>
+    </>
   );
 }

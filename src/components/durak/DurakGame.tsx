@@ -888,7 +888,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   if (!nameHydrated) {
     return (
       <div
-        className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50">Загрузка…</span>
@@ -924,7 +924,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   if (!game) {
     return (
       <div
-        className={`flex h-full min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50">Раздаём колоду…</span>
@@ -940,7 +940,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
           ? "flex-1 basis-0"
-          : cn("h-[100dvh] max-h-[100dvh]", HEADER_OFFSET_TOP),
+          : cn("flex-1 min-h-0", HEADER_OFFSET_TOP),
         "pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))]"
       )}
     >

@@ -424,7 +424,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (error) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center text-amber-200">
+      <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center text-amber-200">
         <p className="text-sm">{error}</p>
         <button type="button" onClick={onLeave} className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90">
           Назад
@@ -443,7 +443,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (!game) {
     return (
-      <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50">
         Загрузка стола…
       </div>
     );
