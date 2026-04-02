@@ -107,9 +107,9 @@ function randomBotThinkDelayMs(): number {
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
 const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
-/** Компактные карты в центре овального стола на узком экране */
-const CARD_TABLE_COMPACT_W = "w-[2.85rem] sm:w-[3.65rem]";
-const CARD_TABLE_COMPACT_H = "h-[4.05rem] sm:h-[5.15rem]";
+/** Компактные карты в центре стола (чуть выше при увеличенном сукне). */
+const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
+const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
 /** Рубашки у соперников вокруг стола */
 const OPP_HAND_W = "w-[2.25rem] sm:w-[2.55rem]";
 const OPP_HAND_H = "h-[3.2rem] sm:h-[3.55rem]";
@@ -166,52 +166,52 @@ function opponentSeatOnCircle(
    */
   if (n === 1) {
     return {
-      wrapClass: "left-1/2 top-[0%] z-30 -translate-x-1/2 -translate-y-1/3",
+      wrapClass: "left-1/2 top-[8%] z-30 -translate-x-1/2 -translate-y-1/4 sm:top-[9%]",
       fanTowardCenterDeg: 0,
     };
   }
   if (n === 2) {
     return i === 0
       ? {
-          wrapClass: "left-[0%] top-[36%] z-30 -translate-x-1 translate-y-[-45%] sm:left-[0.5%]",
+          wrapClass: "left-[0%] top-[38%] z-30 -translate-x-1 translate-y-[-45%] sm:left-[0.5%]",
           fanTowardCenterDeg: 22,
         }
       : {
-          wrapClass: "right-[0%] top-[36%] z-30 translate-x-1 translate-y-[-45%] sm:right-[0.5%]",
+          wrapClass: "right-[0%] top-[38%] z-30 translate-x-1 translate-y-[-45%] sm:right-[0.5%]",
           fanTowardCenterDeg: -22,
         };
   }
   if (n === 3) {
     if (i === 0)
       return {
-        wrapClass: "left-[2%] top-[34%] z-30 translate-y-[-48%] sm:left-[3%]",
+        wrapClass: "left-[2%] top-[36%] z-30 translate-y-[-48%] sm:left-[3%]",
         fanTowardCenterDeg: 34,
       };
     if (i === 1)
       return {
-        wrapClass: "left-1/2 top-[-1%] z-30 -translate-x-1/2 -translate-y-1/2",
+        wrapClass: "left-1/2 top-[7%] z-30 -translate-x-1/2 -translate-y-[38%] sm:top-[8%]",
         fanTowardCenterDeg: 0,
       };
     return {
-      wrapClass: "right-[2%] top-[34%] z-30 translate-y-[-48%] sm:right-[3%]",
+      wrapClass: "right-[2%] top-[36%] z-30 translate-y-[-48%] sm:right-[3%]",
       fanTowardCenterDeg: -34,
     };
   }
   if (n === 4) {
     const seats: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-      { wrapClass: "left-[1%] top-[38%] z-30 translate-y-[-50%] sm:left-[2%]", fanTowardCenterDeg: 40 },
-      { wrapClass: "left-[16%] top-[4%] z-30 -translate-y-[35%]", fanTowardCenterDeg: 12 },
-      { wrapClass: "right-[16%] top-[4%] z-30 -translate-y-[35%]", fanTowardCenterDeg: -12 },
-      { wrapClass: "right-[1%] top-[38%] z-30 translate-y-[-50%] sm:right-[2%]", fanTowardCenterDeg: -40 },
+      { wrapClass: "left-[1%] top-[40%] z-30 translate-y-[-50%] sm:left-[2%]", fanTowardCenterDeg: 40 },
+      { wrapClass: "left-[16%] top-[11%] z-30 -translate-y-[32%]", fanTowardCenterDeg: 12 },
+      { wrapClass: "right-[16%] top-[11%] z-30 -translate-y-[32%]", fanTowardCenterDeg: -12 },
+      { wrapClass: "right-[1%] top-[40%] z-30 translate-y-[-50%] sm:right-[2%]", fanTowardCenterDeg: -40 },
     ];
     return seats[i]!;
   }
   const seats5: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-    { wrapClass: "left-[3%] top-[40%] z-30 translate-y-[-52%]", fanTowardCenterDeg: 44 },
-    { wrapClass: "left-[18%] top-[6%] z-30 -translate-y-[40%]", fanTowardCenterDeg: 16 },
-    { wrapClass: "left-1/2 top-[-1%] z-30 -translate-x-1/2 -translate-y-[45%]", fanTowardCenterDeg: 0 },
-    { wrapClass: "right-[18%] top-[6%] z-30 -translate-y-[40%]", fanTowardCenterDeg: -16 },
-    { wrapClass: "right-[3%] top-[40%] z-30 translate-y-[-52%]", fanTowardCenterDeg: -44 },
+    { wrapClass: "left-[3%] top-[42%] z-30 translate-y-[-52%]", fanTowardCenterDeg: 44 },
+    { wrapClass: "left-[18%] top-[12%] z-30 -translate-y-[36%]", fanTowardCenterDeg: 16 },
+    { wrapClass: "left-1/2 top-[7%] z-30 -translate-x-1/2 -translate-y-[40%] sm:top-[8%]", fanTowardCenterDeg: 0 },
+    { wrapClass: "right-[18%] top-[12%] z-30 -translate-y-[36%]", fanTowardCenterDeg: -16 },
+    { wrapClass: "right-[3%] top-[42%] z-30 translate-y-[-52%]", fanTowardCenterDeg: -44 },
   ];
   return seats5[i]!;
 }
@@ -314,9 +314,10 @@ function CardSprite({
           ? OPP_HAND_H
           : CARD_H_CLASS;
 
+  const tableLike = size === "tableCompact" || size === "table";
   const wrap = cn(
     "relative shrink-0 rounded-[10px]",
-    isBack ? "overflow-hidden" : "overflow-visible",
+    isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
     !isBack ? "bg-white" : "bg-transparent ring-2 ring-white/75 ring-offset-0 shadow-[0_2px_8px_rgba(0,0,0,0.35)]",
     dimW,
     dimH,
@@ -333,8 +334,12 @@ function CardSprite({
   const inner = isBack ? (
     <BrandedCardBack selected={selected} disabled={disabled} className={imgClassName} />
   ) : (
-    <div className="h-full w-full">
-      <CardFaceArt card={card} className={cn("h-full w-full", imgClassName)} />
+    <div className="h-full w-full overflow-hidden rounded-[10px]">
+      <CardFaceArt
+        card={card}
+        compact={size === "tableCompact" || size === "table"}
+        className={cn("h-full w-full", imgClassName)}
+      />
     </div>
   );
 
@@ -1013,12 +1018,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,520px)] flex-1 flex-col justify-end items-center px-0.5 pt-0 pb-1">
+      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,580px)] flex-1 flex-col justify-center items-center px-0.5 pb-1 pt-3 sm:pt-5">
         <div
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
-            width: "min(88vw, 24rem, 72vmin)",
+            width: "min(94vw, 30rem, 88vmin)",
             aspectRatio: "1",
+            transform: "translateY(min(1.5rem, 4vmin))",
           }}
         >
           <div className="pointer-events-none absolute inset-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1104,7 +1110,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                   return (
                     <div key={tp.attack.id} className="relative flex flex-col items-center">
-                      <div className="relative h-[4.55rem] w-[3rem] overflow-visible sm:h-[5.65rem] sm:w-[3.95rem]">
+                      <div className="relative h-[4.75rem] w-[3.1rem] overflow-visible sm:h-[5.85rem] sm:w-[4.05rem]">
                         <motion.div
                           className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2"
                           initial={false}

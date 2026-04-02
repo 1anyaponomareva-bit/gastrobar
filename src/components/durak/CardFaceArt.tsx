@@ -8,9 +8,12 @@ import { cn } from "@/lib/utils";
 export function CardFaceArt({
   card,
   className,
+  /** Меньшие центральные масть/ранг — для узких карт на столе, без вылезания за скругление. */
+  compact,
 }: {
   card: Card;
   className?: string;
+  compact?: boolean;
 }) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   const rank = rankLabel(card.rank);
@@ -21,41 +24,74 @@ export function CardFaceArt({
     <div
       className={cn(
         "pointer-events-none relative flex h-full w-full flex-col overflow-hidden rounded-[10px] border border-slate-300/90 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_8px_rgba(0,0,0,0.14)]",
+        compact && "rounded-[8px] border-slate-300",
         className
       )}
     >
       {/* Углы: ранг и масть в строку — не наезжают друг на друга (Q и ♣). */}
       <div
         className={cn(
-          "absolute left-[4px] top-[5px] z-10 flex flex-row items-start gap-0.5 leading-none",
+          "absolute z-10 flex flex-row items-start gap-0.5 leading-none",
+          compact ? "left-[3px] top-[3px]" : "left-[4px] top-[5px]",
           color
         )}
       >
-        <span className="text-[0.68rem] font-extrabold tabular-nums leading-none sm:text-[0.78rem]">
+        <span
+          className={cn(
+            "font-extrabold tabular-nums leading-none",
+            compact ? "text-[0.58rem] sm:text-[0.62rem]" : "text-[0.68rem] sm:text-[0.78rem]"
+          )}
+        >
           {rank}
         </span>
-        <span className="text-[0.72rem] font-bold leading-[0.95] sm:text-[0.82rem]" aria-hidden>
+        <span
+          className={cn(
+            "font-bold leading-[0.95]",
+            compact ? "text-[0.6rem] sm:text-[0.68rem]" : "text-[0.72rem] sm:text-[0.82rem]"
+          )}
+          aria-hidden
+        >
           {suit}
         </span>
       </div>
       <div
         className={cn(
-          "absolute bottom-[5px] right-[4px] z-10 flex flex-row items-end gap-0.5 leading-none [transform:rotate(180deg)]",
+          "absolute z-10 flex flex-row items-end gap-0.5 leading-none [transform:rotate(180deg)]",
+          compact ? "bottom-[3px] right-[3px]" : "bottom-[5px] right-[4px]",
           color
         )}
       >
-        <span className="text-[0.68rem] font-extrabold tabular-nums leading-none sm:text-[0.78rem]">
+        <span
+          className={cn(
+            "font-extrabold tabular-nums leading-none",
+            compact ? "text-[0.58rem] sm:text-[0.62rem]" : "text-[0.68rem] sm:text-[0.78rem]"
+          )}
+        >
           {rank}
         </span>
-        <span className="text-[0.72rem] font-bold leading-[0.95] sm:text-[0.82rem]" aria-hidden>
+        <span
+          className={cn(
+            "font-bold leading-[0.95]",
+            compact ? "text-[0.6rem] sm:text-[0.68rem]" : "text-[0.72rem] sm:text-[0.82rem]"
+          )}
+          aria-hidden
+        >
           {suit}
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-2 pb-5 pt-5">
+      <div
+        className={cn(
+          "flex flex-1 flex-col items-center justify-center",
+          compact ? "px-1 pb-3 pt-2 sm:px-1.5 sm:pb-3.5 sm:pt-2.5" : "px-2 pb-5 pt-5"
+        )}
+      >
         <span
           className={cn(
-            "select-none text-[1.28rem] font-black tabular-nums leading-none tracking-tight sm:text-[1.48rem]",
+            "select-none font-black tabular-nums leading-none tracking-tight",
+            compact
+              ? "text-[0.82rem] sm:text-[0.95rem]"
+              : "text-[1.28rem] sm:text-[1.48rem]",
             color
           )}
         >
@@ -63,7 +99,8 @@ export function CardFaceArt({
         </span>
         <span
           className={cn(
-            "mt-0.5 select-none text-[1.95rem] font-bold leading-none sm:text-[2.2rem]",
+            "mt-0.5 select-none font-bold leading-none",
+            compact ? "text-[1.15rem] sm:text-[1.32rem]" : "text-[1.95rem] sm:text-[2.2rem]",
             color
           )}
           aria-hidden
