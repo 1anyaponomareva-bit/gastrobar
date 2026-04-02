@@ -569,9 +569,30 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (error) {
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center text-amber-200">
-        <p className="text-sm">{error}</p>
-        <button type="button" onClick={onLeave} className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90">
+      <div
+        className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 px-4 py-12 text-center text-amber-200"
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "1rem",
+          padding: "3rem 1rem",
+          textAlign: "center",
+          backgroundColor: "#14100c",
+          color: "#fde68a",
+        }}
+      >
+        <p className="text-sm" style={{ fontSize: 14 }}>
+          {error}
+        </p>
+        <button
+          type="button"
+          onClick={onLeave}
+          className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90"
+          style={{ color: "#f8fafc", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9999, padding: "0.5rem 1rem" }}
+        >
           Назад
         </button>
       </div>
@@ -580,7 +601,19 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (!supabase) {
     return (
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50">
+      <div
+        className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50"
+        style={{
+          display: "flex",
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "5rem 1rem",
+          backgroundColor: "#14100c",
+          color: "rgba(248,250,252,0.55)",
+          fontSize: 14,
+        }}
+      >
         Подключение…
       </div>
     );
@@ -588,9 +621,26 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (!game || !embeddedProps) {
     return (
-      <div className="flex min-h-[min(50dvh,420px)] min-w-0 w-full flex-1 flex-col items-center justify-center gap-2 px-4 py-20 text-center text-sm text-white/55">
+      <div
+        className="flex min-h-[min(50dvh,420px)] min-w-0 w-full flex-1 flex-col items-center justify-center gap-2 px-4 py-20 text-center text-sm text-white/55"
+        style={{
+          display: "flex",
+          minHeight: "min(50vh, 420px)",
+          width: "100%",
+          flex: 1,
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.5rem",
+          padding: "5rem 1rem",
+          textAlign: "center",
+          backgroundColor: "#14100c",
+          color: "rgba(248,250,252,0.7)",
+          fontSize: 14,
+        }}
+      >
         <span>Загрузка стола…</span>
-        <span className="max-w-[20rem] text-xs text-white/35">
+        <span className="max-w-[20rem] text-xs text-white/35" style={{ maxWidth: "20rem", fontSize: 12, color: "rgba(248,250,252,0.45)" }}>
           Если экран пустой долго, обновите страницу или проверьте сеть.
         </span>
       </div>

@@ -34,28 +34,12 @@
   }
 }
 
-/* View Transitions API */
+/* View Transitions API: без анимации — иначе в части Chromium/WebKit старый снимок root залипает с opacity:0 → «вечный» чёрный экран при переходах. */
 @supports (view-transition-name: none) {
-  ::view-transition-old(root) {
-    animation: theme-fade-out 0.4s ease-out forwards;
-  }
+  ::view-transition-old(root),
   ::view-transition-new(root) {
-    animation: theme-fade-in 0.4s ease-out forwards;
-  }
-}
-
-@keyframes theme-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes theme-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+    animation: none !important;
+    opacity: 1 !important;
   }
 }
 
@@ -67,11 +51,17 @@
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* Гарантированный чёрный экран (поверх сбросов Tailwind) */
+/* Гарантированный чёрный фон меню (поверх сбросов Tailwind) */
 html,
 body {
   background-color: #000 !important;
   color: #fff !important;
+}
+
+/* Страница «Дурак»: фон как у стола — иначе при сбое рендера виден только #000 от html/body */
+html[data-durak-route="1"],
+html[data-durak-route="1"] body {
+  background-color: #14100c !important;
 }
 
 /* Промо-баннер: золотая пульсация кнопки «Перейти в канал» */

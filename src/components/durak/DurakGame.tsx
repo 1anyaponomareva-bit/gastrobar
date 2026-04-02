@@ -900,9 +900,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   if (!nameHydrated) {
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100">
+      <div
+        className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          overflowX: "hidden",
+          backgroundColor: "#14100c",
+          color: "#e2e8f0",
+        }}
+      >
         <div className="flex flex-1 items-center justify-center py-20">
-          <span className="text-sm text-white/50">Загрузка…</span>
+          <span className="text-sm text-white/50" style={{ color: "rgba(248,250,252,0.55)", fontSize: 14 }}>
+            Загрузка…
+          </span>
         </div>
       </div>
     );
@@ -934,9 +946,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   if (!game) {
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100">
+      <div
+        className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          backgroundColor: "#14100c",
+          color: "#e2e8f0",
+        }}
+      >
         <div className="flex flex-1 items-center justify-center py-20">
-          <span className="text-sm text-white/50">Раздаём колоду…</span>
+          <span className="text-sm text-white/50" style={{ color: "rgba(248,250,252,0.55)", fontSize: 14 }}>
+            Раздаём колоду…
+          </span>
         </div>
       </div>
     );

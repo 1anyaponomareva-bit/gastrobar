@@ -23,10 +23,23 @@ class DurakRouteErrorBoundary extends Component<
       return (
         <div
           className="flex min-h-[min(100dvh,900px)] w-full flex-col items-center justify-center gap-4 bg-[#14100c] px-6 py-16 text-center"
+          style={{
+            minHeight: "min(100vh, 900px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+            backgroundColor: "#14100c",
+            color: "#f1f5f9",
+            padding: "2rem 1.5rem",
+          }}
           role="alert"
         >
-          <p className="text-base font-semibold text-white">Ошибка при отображении игры</p>
-          <p className="max-w-sm text-sm text-white/60">
+          <p className="text-base font-semibold text-white" style={{ color: "#f8fafc", fontWeight: 600 }}>
+            Ошибка при отображении игры
+          </p>
+          <p className="max-w-sm text-sm text-white/60" style={{ maxWidth: "24rem", color: "rgba(248,250,252,0.65)" }}>
             {msg ||
               "Попробуйте обновить страницу. Если заходите с телефона по Wi‑Fi — откройте тот же адрес, что в `npm run dev` (см. allowedDevOrigins в next.config)."}
           </p>
