@@ -42,20 +42,9 @@ const WAITING_HINTS: string[] = [
  * Онлайн-очередь: поиск комнаты + realtime.
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
  */
-function mmInitSupabase(): SupabaseClient | null {
-  return typeof window === "undefined" ? null : createSupabaseBrowserClient();
-}
-
-function mmInitError(): string | null {
-  if (typeof window === "undefined") return null;
-  return createSupabaseBrowserClient()
-    ? null
-    : "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)";
-}
-
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
-  const [supabase] = useState<SupabaseClient | null>(mmInitSupabase);
-  const [error, setError] = useState<string | null>(mmInitError);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomRow | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
@@ -74,6 +63,16 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       setHintIdx((i) => (i + 1) % WAITING_HINTS.length);
     }, 5300);
     return () => window.clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const c = createSupabaseBrowserClient();
+    setSupabase(c);
+    if (!c) {
+      setError(
+        "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
+      );
+    }
   }, []);
 
   const tick = useCallback(async () => {

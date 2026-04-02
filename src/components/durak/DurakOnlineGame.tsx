@@ -98,19 +98,16 @@ function advanceLastAppliedRef(ref: { current: number }, serverTsMs: number): vo
  * Persist не должен захватывать `game` в замыкание debounce — иначе поздний upsert затирает отбой соперника.
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
-function initialSupabaseForClient(): SupabaseClient | null {
-  return typeof window === "undefined" ? null : createSupabaseBrowserClient();
-}
-
-function initialOnlineError(): string | null {
-  if (typeof window === "undefined") return null;
-  return createSupabaseBrowserClient() ? null : "Нет настроек Supabase";
-}
-
 export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
-  const [supabase] = useState<SupabaseClient | null>(initialSupabaseForClient);
-  const [error, setError] = useState<string | null>(initialOnlineError);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
+
+  useEffect(() => {
+    const c = createSupabaseBrowserClient();
+    setSupabase(c);
+    if (!c) setError("Нет настроек Supabase");
+  }, []);
   const [game, setGame] = useState<GameTable | null>(null);
   /** После первого не-null стола — реже опрашивать БД (не привязывать интервал к каждому ходу). */
   const [tableHydrated, setTableHydrated] = useState(false);

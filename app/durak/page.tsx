@@ -10,18 +10,18 @@ export const metadata: Metadata = {
 
 export default function DurakPage() {
   return (
-    <>
+    <div className="relative min-h-[100dvh] min-h-[100svh] w-full bg-[#14100c] text-white">
       {/*
-        Header и BottomNav с position:fixed не должны быть flex‑детьми вместе с колонкой игры:
-        в части WebView средний flex-1 схлопывается в ~0 → «чёрный экран».
+        Один корневой блок + колонка игры без лишних flex-соседей у fixed Header/BottomNav.
+        Ленивая инициализация Supabase только в useEffect (совпадение SSR/CSR), иначе гидратация ломается.
       */}
       <Header />
-      <div className="durak-page flex h-[100svh] min-h-0 w-full flex-col overflow-x-hidden bg-[#14100c]">
+      <div className="durak-page flex h-[100svh] min-h-0 w-full flex-col overflow-x-hidden">
         <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
           <DurakGame />
         </div>
       </div>
       <BottomNav />
-    </>
+    </div>
   );
 }
