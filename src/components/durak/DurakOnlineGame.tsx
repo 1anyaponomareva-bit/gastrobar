@@ -9,7 +9,7 @@ import {
   type ReactElement,
   type SetStateAction,
 } from "react";
-import type { GameTable } from "@/games/durak/types";
+import type { Card, GamePhase, GameTable, GameTableState, Player, PlayerType, TablePair } from "@/games/durak/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
@@ -88,35 +88,135 @@ function advanceLastAppliedRef(ref: { current: number }, serverTsMs: number): vo
   ref.current = serverTsMs > p ? serverTsMs : p + 1;
 }
 
-/** Из jsonb с сервера: неполные объекты иначе ломают рендер (чёрный экран). */
+const VALID_PHASE: ReadonlySet<string> = new Set<GamePhase>([
+  "attack_initial",
+  "defend",
+  "attack_toss",
+  "player_can_throw_more",
+  "drawing",
+  "game_over",
+]);
+
+function isCard(x: unknown): x is Card {
+  if (x == null || typeof x !== "object") return false;
+  const c = x as Record<string, unknown>;
+  return (
+    typeof c.id === "string" &&
+    typeof c.suit === "string" &&
+    typeof c.rank === "string" &&
+    c.id.length > 0
+  );
+}
+
+function normalizeDeck(raw: unknown): Card[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isCard);
+}
+
+function normalizeTablePairs(raw: unknown): TablePair[] {
+  if (!Array.isArray(raw)) return [];
+  const out: TablePair[] = [];
+  for (const item of raw) {
+    if (item == null || typeof item !== "object") continue;
+    const p = item as Record<string, unknown>;
+    if (!isCard(p.attack)) continue;
+    const d = p.defense;
+    const defense = d == null ? null : isCard(d) ? d : null;
+    out.push({ attack: p.attack, defense });
+  }
+  return out;
+}
+
+function normalizePlayerType(x: unknown): PlayerType {
+  if (x === "human" || x === "bot" || x === "remote") return x;
+  return "remote";
+}
+
+function normalizeState(raw: unknown): GameTableState {
+  if (raw === "waiting" || raw === "playing" || raw === "finished") return raw;
+  if (typeof raw === "string") {
+    const s = raw.toLowerCase();
+    if (s === "waiting" || s === "playing" || s === "finished") return s;
+  }
+  return "playing";
+}
+
+function normalizePhase(raw: unknown): GamePhase {
+  if (typeof raw === "string" && VALID_PHASE.has(raw)) return raw as GamePhase;
+  return "attack_initial";
+}
+
+function normalizePlayers(raw: unknown): Player[] | null {
+  if (!Array.isArray(raw) || raw.length < 2) return null;
+  const out: Player[] = [];
+  let i = 0;
+  for (const item of raw) {
+    if (item == null || typeof item !== "object") return null;
+    const p = item as Record<string, unknown>;
+    if (typeof p.id !== "string" || !p.id) return null;
+    const hand = Array.isArray(p.hand) ? p.hand.filter(isCard) : [];
+    const seatIndex = typeof p.seatIndex === "number" && p.seatIndex >= 0 ? p.seatIndex : i;
+    out.push({
+      id: p.id,
+      name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Игрок",
+      type: normalizePlayerType(p.type),
+      hand,
+      seatIndex,
+    });
+    i += 1;
+  }
+  return out;
+}
+
+function tableIdFallback(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `durak-${Date.now()}`;
+}
+
+/** Из jsonb с сервера: неполные / устаревшие поля после миграций не должны блокировать стол. */
 function coerceRemoteGame(raw: unknown): GameTable | null {
   if (raw == null || typeof raw !== "object") return null;
   const g = raw as Partial<GameTable>;
-  if (!Array.isArray(g.players) || g.players.length < 2) return null;
-  const n = g.players.length;
-  if (typeof g.attackerIndex !== "number" || typeof g.defenderIndex !== "number") return null;
-  if (g.attackerIndex < 0 || g.attackerIndex >= n || g.defenderIndex < 0 || g.defenderIndex >= n)
-    return null;
-  if (!Array.isArray(g.deck) || !Array.isArray(g.tablePairs)) return null;
-  if (g.state !== "playing" && g.state !== "finished" && g.state !== "waiting") return null;
-  if (typeof g.phase !== "string") return null;
-  if (!g.id || typeof g.id !== "string") return null;
+  const players = normalizePlayers(g.players);
+  if (!players) return null;
+  const n = players.length;
+  let attackerIndex =
+    typeof g.attackerIndex === "number" && g.attackerIndex >= 0 && g.attackerIndex < n
+      ? g.attackerIndex
+      : 0;
+  let defenderIndex =
+    typeof g.defenderIndex === "number" && g.defenderIndex >= 0 && g.defenderIndex < n
+      ? g.defenderIndex
+      : (attackerIndex + 1) % n;
+  if (defenderIndex === attackerIndex) defenderIndex = (attackerIndex + 1) % n;
+  const deck = normalizeDeck(g.deck);
+  const tablePairs = normalizeTablePairs(g.tablePairs);
+  const discardPile = normalizeDeck(g.discardPile);
+  const trumpCard = g.trumpCard != null && isCard(g.trumpCard) ? g.trumpCard : null;
+  const ts = g.trumpSuit;
+  const trumpSuit =
+    ts === "spades" || ts === "hearts" || ts === "diamonds" || ts === "clubs" ? ts : trumpCard?.suit ?? "spades";
+  const id = typeof g.id === "string" && g.id ? g.id : tableIdFallback();
   return {
-    ...g,
-    deck: g.deck,
-    tablePairs: g.tablePairs,
-    players: g.players,
-    discardPile: Array.isArray(g.discardPile) ? g.discardPile : [],
+    id,
+    mode: g.mode === "podkidnoy" ? "podkidnoy" : "podkidnoy",
+    players,
+    deck,
+    tablePairs,
+    discardPile,
+    trumpCard,
+    trumpSuit,
+    attackerIndex,
+    defenderIndex,
+    state: normalizeState(g.state),
+    phase: normalizePhase(g.phase),
+    winnerId: typeof g.winnerId === "string" ? g.winnerId : null,
+    loserId: typeof g.loserId === "string" ? g.loserId : null,
     roundDefenderInitialHand: Number.isFinite(g.roundDefenderInitialHand)
-      ? Number(g.roundDefenderInitialHand)
+      ? Math.max(0, Number(g.roundDefenderInitialHand))
       : 6,
-    message: g.message ?? null,
-    winnerId: g.winnerId ?? null,
-    loserId: g.loserId ?? null,
-    trumpCard: g.trumpCard ?? null,
-    trumpSuit: g.trumpSuit ?? "spades",
-    mode: g.mode ?? "podkidnoy",
-  } as GameTable;
+    message: typeof g.message === "string" ? g.message : null,
+  };
 }
 
 /**
@@ -177,14 +277,18 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       row: { state?: RoomStatePayload; updated_at?: string } | null,
       mode: "realtime" | "poll" = "realtime"
     ) => {
-      const g = row?.state?.game;
+      const rawGame = row?.state?.game;
+      if (rawGame == null) return;
+      const remote = coerceRemoteGame(rawGame);
+      if (!remote) return;
       const raw = row?.updated_at;
-      if (!g || !raw) return;
-      const ts = Date.parse(raw);
-      if (Number.isNaN(ts)) return;
+      let ts = raw != null ? Date.parse(String(raw)) : NaN;
+      if (Number.isNaN(ts)) {
+        ts = Math.max(lastAppliedServerTsRef.current + 1, Date.now());
+      }
       const last = lastAppliedServerTsRef.current;
       const cur = gameRef.current;
-      const remoteSig = durakGameMaterialSignature(g);
+      const remoteSig = durakGameMaterialSignature(remote);
       const localSig = cur ? durakGameMaterialSignature(cur) : "";
       if (remoteSig === localSig) return;
       /* poll: не откатывать локальный опережающий ход устаревшим ts с сервера. realtime: отличия уже отсеяны сверху. */
@@ -204,7 +308,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         cur &&
         ts <= last &&
         remoteSig !== localSig &&
-        localTableAheadOfRemotePoll(cur, g)
+        localTableAheadOfRemotePoll(cur, remote)
       ) {
         return;
       }
@@ -214,8 +318,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         persistTimer.current = null;
       }
       advanceLastAppliedRef(lastAppliedServerTsRef, ts);
-      gameRef.current = g;
-      setGame(g);
+      gameRef.current = remote;
+      setGame(remote);
     },
     []
   );
@@ -252,7 +356,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           tsS > last
         ) {
           applyRemoteRow(
-            { state: row?.state as RoomStatePayload, updated_at: raw },
+            { state: { game: sGame }, updated_at: raw },
             "realtime"
           );
           return;
@@ -380,6 +484,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
               {
                 room_id: roomId,
                 state: { game: initial },
+                updated_at: new Date().toISOString(),
               },
               { onConflict: "room_id" }
             )
@@ -483,8 +588,11 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
   if (!game || !embeddedProps) {
     return (
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center py-20 text-sm text-white/50">
-        Загрузка стола…
+      <div className="flex min-h-[min(50dvh,420px)] min-w-0 w-full flex-1 flex-col items-center justify-center gap-2 px-4 py-20 text-center text-sm text-white/55">
+        <span>Загрузка стола…</span>
+        <span className="max-w-[20rem] text-xs text-white/35">
+          Если экран пустой долго, обновите страницу или проверьте сеть.
+        </span>
       </div>
     );
   }

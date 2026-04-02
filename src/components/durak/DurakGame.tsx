@@ -905,7 +905,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   if (!nameHydrated) {
     return (
       <div
-        className={`flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100 ${HEADER_OFFSET_TOP}`}
+        className={cn(
+          "flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-2 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100",
+          !embedded && HEADER_OFFSET_TOP
+        )}
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50">Загрузка…</span>
