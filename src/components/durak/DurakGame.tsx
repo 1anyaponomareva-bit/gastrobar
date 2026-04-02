@@ -152,35 +152,47 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
   return out;
 }
 
-/** Классы позиционирования для 1–5 соперников вокруг овала (me = низ экрана). */
-function opponentSeatPositionClasses(count: number, index: number): string {
-  const layouts: Record<number, string[]> = {
-    1: ["left-1/2 top-0 z-30 -translate-x-1/2"],
-    2: [
-      "left-[2%] top-[1%] z-30 sm:left-[6%]",
-      "right-[2%] top-[1%] z-30 sm:right-[6%]",
-    ],
-    3: [
-      "left-[1%] top-0 z-30 sm:left-[5%]",
-      "left-1/2 top-0 z-30 -translate-x-1/2",
-      "right-[1%] top-0 z-30 sm:right-[5%]",
-    ],
-    4: [
-      "left-[3%] top-[3%] z-30 sm:left-[7%]",
-      "left-1/2 top-0 z-30 -translate-x-1/2 sm:top-[1%]",
-      "right-[3%] top-[3%] z-30 sm:right-[7%]",
-      "left-[2%] top-[38%] z-30 -translate-y-1/2 sm:left-[5%]",
-    ],
-    5: [
-      "left-[6%] top-[4%] z-30",
-      "left-[26%] top-0 z-30 -translate-x-1/2",
-      "left-1/2 top-0 z-30 -translate-x-1/2",
-      "right-[26%] top-0 z-30 translate-x-1/2",
-      "right-[6%] top-[4%] z-30",
-    ],
-  };
-  const row = layouts[Math.min(5, Math.max(1, count))] ?? layouts[1]!;
-  return row[Math.min(index, row.length - 1)]!;
+/**
+ * Рассадка вокруг круглого стола (вы внизу за экраном).
+ * `fanTowardCenterDeg` — поворот веера рубашек к центру, как в референсе.
+ */
+function opponentSeatOnCircle(
+  count: number,
+  index: number
+): { wrapClass: string; fanTowardCenterDeg: number } {
+  const n = Math.min(5, Math.max(1, count));
+  const i = Math.min(index, n - 1);
+  if (n === 1) {
+    return { wrapClass: "left-1/2 top-[-4%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
+  }
+  if (n === 2) {
+    return i === 0
+      ? { wrapClass: "left-[-1%] top-[5%] z-30 sm:left-[1%]", fanTowardCenterDeg: 24 }
+      : { wrapClass: "right-[-1%] top-[5%] z-30 sm:right-[1%]", fanTowardCenterDeg: -24 };
+  }
+  if (n === 3) {
+    if (i === 0) return { wrapClass: "left-[-2%] top-[7%] z-30 sm:left-[0%]", fanTowardCenterDeg: 32 };
+    if (i === 1)
+      return { wrapClass: "left-1/2 top-[-8%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 };
+    return { wrapClass: "right-[-2%] top-[7%] z-30 sm:right-[0%]", fanTowardCenterDeg: -32 };
+  }
+  if (n === 4) {
+    const seats: { wrapClass: string; fanTowardCenterDeg: number }[] = [
+      { wrapClass: "left-[0%] top-[10%] z-30 sm:left-[2%]", fanTowardCenterDeg: 38 },
+      { wrapClass: "left-[18%] top-[-4%] z-30", fanTowardCenterDeg: 14 },
+      { wrapClass: "right-[18%] top-[-4%] z-30", fanTowardCenterDeg: -14 },
+      { wrapClass: "right-[0%] top-[10%] z-30 sm:right-[2%]", fanTowardCenterDeg: -38 },
+    ];
+    return seats[i]!;
+  }
+  const seats5: { wrapClass: string; fanTowardCenterDeg: number }[] = [
+    { wrapClass: "left-[4%] top-[12%] z-30", fanTowardCenterDeg: 42 },
+    { wrapClass: "left-[20%] top-[0%] z-30", fanTowardCenterDeg: 18 },
+    { wrapClass: "left-1/2 top-[-9%] z-30 -translate-x-1/2", fanTowardCenterDeg: 0 },
+    { wrapClass: "right-[20%] top-[0%] z-30", fanTowardCenterDeg: -18 },
+    { wrapClass: "right-[4%] top-[12%] z-30", fanTowardCenterDeg: -42 },
+  ];
+  return seats5[i]!;
 }
 
 /** Компактный веер рубашек у соперника. */
@@ -955,67 +967,79 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </p>
       </div>
 
-      <div className="relative mx-auto min-h-0 w-full max-w-[min(100%,520px)] flex-1 px-0.5">
-        {opponents.map((opp, oi) => {
-          const bh = opp.hand;
-          return (
-            <div
-              key={opp.id}
-              className={cn(
-                "absolute flex max-w-[40%] flex-col items-center sm:max-w-[38%]",
-                opponentSeatPositionClasses(opponents.length, oi)
-              )}
-            >
-              <div className="mb-0.5 max-w-full px-0.5 text-center">
-                <p className="truncate text-[10px] font-semibold leading-tight text-white/90 sm:text-[11px]">
-                  {opp.name}
-                </p>
-                <p className="text-[9px] text-emerald-100/50">{bh.length} карт</p>
-              </div>
-              <div className="relative flex h-[2.75rem] w-[4.5rem] items-end justify-center overflow-visible sm:h-[3.1rem] sm:w-[5rem]">
-                {bh.map((c, i) => (
-                  <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
-                    <motion.div
-                      initial={{ opacity: 0, y: -20, scale: 0.88 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{
-                        delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                        duration: DEAL_MOVE_SEC,
-                        ease: [0.22, 1, 0.36, 1],
-                      }}
-                    >
-                      <CardSprite faceDown size="opponent" />
-                    </motion.div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="relative mx-auto flex min-h-0 w-full max-w-[min(100%,520px)] flex-1 items-center justify-center px-0.5 py-0.5">
+        <div className="relative aspect-square w-[min(92vw,54dvh,24rem)] max-w-full shrink-0">
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
 
-        {/* Овальный зелёный стол */}
-        <div
-          className="pointer-events-none absolute inset-x-[3%] inset-y-[8%] rounded-[50%] border-[5px] border-[#3d2612] shadow-[0_10px_28px_rgba(0,0,0,0.4)] sm:inset-x-[5%] sm:border-[6px] sm:border-[#4a3218]"
-          style={{
-            background:
-              "radial-gradient(ellipse 74% 70% at 50% 40%, #23a06a 0%, #158050 35%, #0d5c3a 68%, #083a24 100%)",
-            boxShadow:
-              "inset 0 0 55px rgba(0,0,0,0.45), inset 0 -25px 45px rgba(0,0,0,0.2), 0 10px 28px rgba(0,0,0,0.4)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-x-[5%] inset-y-[10%] rounded-[50%] sm:inset-x-[7%] sm:inset-y-[9%]"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 65% at 50% 38%, rgba(255,255,255,0.07) 0%, transparent 52%)",
-          }}
-        />
+          <div
+            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#8e8e96] sm:border-[3px] sm:border-[#9a9aa3]"
+            style={{
+              background:
+                "radial-gradient(circle at 48% 40%, #4f4f58 0%, #3d3d45 38%, #2f2f36 72%, #232328 100%)",
+              boxShadow:
+                "inset 0 0 48px rgba(0,0,0,0.55), inset 0 2px 2px rgba(255,255,255,0.1)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-[5%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at 42% 36%, rgba(255,255,255,0.1) 0%, transparent 58%)",
+            }}
+          />
 
-        <div className="absolute inset-x-0 top-[10%] z-10 flex min-h-0 flex-col pb-[2%] pt-[6%] sm:top-[9%] sm:pt-[5%]">
-          <div className="relative flex min-h-0 flex-1 items-center justify-center px-1">
-            <div className="flex max-h-[min(38dvh,15rem)] min-h-0 max-w-[min(94%,24rem)] flex-wrap content-center items-center justify-center gap-x-1.5 gap-y-2 overflow-hidden sm:max-h-[min(40dvh,17rem)] sm:gap-x-2 sm:gap-y-2.5">
+          {opponents.map((opp, oi) => {
+            const bh = opp.hand;
+            const seat = opponentSeatOnCircle(opponents.length, oi);
+            return (
+              <div
+                key={opp.id}
+                className={cn(
+                  "absolute flex max-w-[46%] flex-col items-center sm:max-w-[42%]",
+                  seat.wrapClass
+                )}
+              >
+                <div className="mb-0.5 max-w-full px-0.5 text-center">
+                  <p className="truncate text-[10px] font-semibold leading-tight text-white sm:text-[11px]">
+                    {opp.name}
+                  </p>
+                  <p className="text-[9px] text-white/45">{bh.length} карт</p>
+                </div>
+                <div
+                  className="relative flex h-[2.75rem] w-[4.5rem] items-end justify-center overflow-visible sm:h-[3.1rem] sm:w-[5rem]"
+                  style={{
+                    transform: `rotate(${seat.fanTowardCenterDeg}deg)`,
+                    transformOrigin: "center bottom",
+                  }}
+                >
+                  {bh.map((c, i) => (
+                    <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
+                      <motion.div
+                        initial={{ opacity: 0, y: -20, scale: 0.88 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                          duration: DEAL_MOVE_SEC,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        <CardSprite faceDown size="opponent" />
+                      </motion.div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="absolute inset-[11%] z-10 min-h-0 overflow-hidden rounded-full">
+            <div className="relative flex h-full min-h-0 w-full items-center justify-center">
+              <div className="pointer-events-auto absolute left-[1%] top-1/2 z-20 -translate-y-1/2 sm:left-[3%]">
+                <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
+              </div>
+              <div className="flex max-h-full min-h-0 max-w-[62%] flex-wrap content-center items-center justify-center gap-x-1 gap-y-1.5 overflow-hidden pl-[22%] pr-[4%] sm:max-w-[58%] sm:gap-x-1.5 sm:gap-y-2 sm:pl-[24%]">
               {game.tablePairs.length === 0 ? (
-                <span className="text-center text-[11px] text-emerald-100/40 sm:text-sm">
+                <span className="text-center text-[10px] text-white/35 sm:text-[11px]">
                   {dealing ? "Карты раздаются…" : "Ждите ход"}
                 </span>
               ) : (
@@ -1070,22 +1094,19 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           </motion.div>
                         ) : null}
                       </div>
-                      <span
-                        className={cn(
-                          "text-[7px] font-semibold uppercase tracking-wide sm:text-[8px]",
-                          tp.defense ? "text-emerald-200/55" : "text-amber-200/85"
-                        )}
-                      >
-                        {tp.defense ? "Отбито" : "Атака"}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="pointer-events-auto absolute right-[1%] top-1/2 z-20 -translate-y-1/2 sm:right-[3%]">
-              <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
+                        <span
+                          className={cn(
+                            "text-[7px] font-semibold uppercase tracking-wide sm:text-[8px]",
+                            tp.defense ? "text-white/40" : "text-amber-200/75"
+                          )}
+                        >
+                          {tp.defense ? "Отбито" : "Атака"}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>
