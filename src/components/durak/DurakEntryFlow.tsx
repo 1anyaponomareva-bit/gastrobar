@@ -486,7 +486,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
           onClick={onBackToMenu}
           className="mx-auto text-sm text-white/40 underline decoration-white/20 underline-offset-4 hover:text-white/65"
         >
-          На главную меню
+          На главное меню
         </button>
       </div>
     </div>

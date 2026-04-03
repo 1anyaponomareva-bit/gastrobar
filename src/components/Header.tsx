@@ -48,7 +48,8 @@ export function Header() {
   useTheme();
   const { requestBarHome } = useBarHome();
   const pathname = usePathname();
-  const isDurak = pathname === "/durak";
+  const path = pathname ?? "";
+  const isGameRoute = path === "/games" || path === "/durak" || path.startsWith("/durak/");
 
   useEffect(() => {
     const onScroll = () => {
@@ -102,7 +103,7 @@ export function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-center bg-transparent">
-          {isDurak ? (
+          {isGameRoute ? (
             <Link
               href="/"
               className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"

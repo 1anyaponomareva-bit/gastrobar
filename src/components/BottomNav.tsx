@@ -17,11 +17,12 @@ export function BottomNav() {
   const { period, setPeriod } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
-  const onDurak = pathname === "/durak";
+  const path = pathname ?? "";
+  const onGames = path === "/games" || path === "/durak" || path.startsWith("/durak/");
 
   const goPeriod = (id: MenuPeriod) => {
     setPeriod(id);
-    if (pathname !== "/") router.push("/");
+    if (path !== "/") router.push("/");
   };
 
   return (
@@ -29,18 +30,18 @@ export function BottomNav() {
       initial={{ opacity: 1, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom"
+      className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom px-3 sm:px-4"
     >
-      <div className="pointer-events-auto mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-0 gap-y-1 rounded-full bg-white/10 px-2 py-2.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:flex-nowrap sm:justify-between sm:gap-0">
+      <div className="pointer-events-auto mx-auto flex w-[min(100%,36rem)] max-w-xl flex-wrap items-center justify-center gap-x-0 gap-y-1 rounded-full bg-white/10 px-3 py-2.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(100%,36rem)] sm:max-w-xl sm:flex-nowrap sm:justify-between sm:gap-0 sm:px-4">
         {TABS.map((tab) => {
-          const active = !onDurak && tab.id === period;
+          const active = !onGames && tab.id === period;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => goPeriod(tab.id)}
               className={cn(
-                "relative mx-1 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[13px] font-medium transition-all sm:px-3 sm:py-2",
+                "relative mx-0.5 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 text-[13px] font-medium transition-all sm:mx-1 sm:px-3 sm:py-2",
                 active
                   ? "bg-white text-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -85,10 +86,10 @@ export function BottomNav() {
           );
         })}
         <Link
-          href="/durak"
+          href="/games"
           className={cn(
-            "relative mx-0.5 flex min-w-[3rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[12px] font-medium transition-all sm:mx-1 sm:min-w-[3.25rem] sm:px-2.5 sm:py-2 sm:text-[13px]",
-            onDurak
+            "relative mx-0.5 flex min-w-[3.35rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[12px] font-medium transition-all sm:mx-1 sm:min-w-[3.5rem] sm:px-2.5 sm:py-2 sm:text-[13px]",
+            onGames
               ? "bg-white text-black shadow-sm"
               : "text-white/70 hover:text-white"
           )}
@@ -96,8 +97,8 @@ export function BottomNav() {
           <span className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]" aria-hidden>
             🎯
           </span>
-          <span className="max-w-[3.25rem] truncate text-center text-[10px] leading-tight sm:max-w-none sm:text-[11px]">
-            Игра
+          <span className="max-w-[4rem] truncate text-center text-[10px] leading-tight sm:max-w-none sm:text-[11px]">
+            Игры
           </span>
         </Link>
       </div>

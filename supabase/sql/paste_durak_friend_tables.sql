@@ -1,3 +1,6 @@
+-- Выполнить целиком в Supabase → SQL Editor (или supabase db push).
+-- Копия миграции 20260403120000_durak_friend_tables.sql.
+
 -- Друзья: пользовательские столы, отдельно от быстрой очереди (matchmaking_pool).
 -- Быстрая игра только в комнатах с matchmaking_pool = true.
 
