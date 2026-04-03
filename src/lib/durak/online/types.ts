@@ -8,6 +8,21 @@ export type RoomRow = {
   search_deadline: string;
   started_with_bot: boolean;
   created_at?: string;
+  /** true — быстрая очередь; false — стол с друзьями */
+  matchmaking_pool?: boolean;
+  table_name?: string | null;
+  owner_player_id?: string | null;
+  is_public?: boolean;
+  join_code?: string | null;
+};
+
+/** Стол в списке «кто играет» */
+export type PublicFriendTableRow = {
+  id: string;
+  table_name: string | null;
+  max_players: number;
+  join_code: string | null;
+  player_count: number;
 };
 
 export type RoomPlayerRow = {

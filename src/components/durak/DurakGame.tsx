@@ -25,7 +25,7 @@ import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { DurakOnlineMatchmaking } from "@/components/durak/DurakOnlineMatchmaking";
+import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
 import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
 
 const HUMAN_ID = "human";
@@ -52,6 +52,8 @@ export type DurakGameEmbeddedProps = {
 
 type DurakGameRootProps = {
   embedded?: DurakGameEmbeddedProps;
+  /** Код из ссылки `?stol=` — присоединение к столу с друзьями. */
+  friendInviteCodeFromUrl?: string | null;
 };
 
 function WinConfetti() {
@@ -193,16 +195,21 @@ function opponentSeatPolarMeta(
   return seats5[i]!;
 }
 
-/** Половина высоты компактной карты (px): центр рубашки соперника на линии сукна, низ веера чуть наружу. */
-const OPP_CARD_HALF_HEIGHT_PX = 34;
+/** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
+const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
+/** Имя чуть выше окружности сукна, к центру рукава — наружу по радиусу. */
+const OPP_NAME_OUTWARD_EXTRA_PX = 40;
 
-function opponentSeatWrapperOffset(
+/** Направление и смещение в px на окружности радиуса `orbitPx` (сукно ≈ 0.48 × ширина круга). */
+function opponentSeatOffsets(
   angleDeg: number,
-  orbitRadiusPx: number
-): { x: number; y: number } {
-  const r = orbitRadiusPx <= 0 ? 0 : orbitRadiusPx + OPP_CARD_HALF_HEIGHT_PX;
+  orbitPx: number
+): { ox: number; oy: number; nx: number; ny: number } {
+  const r = Math.max(1, orbitPx);
   const rad = (angleDeg * Math.PI) / 180;
-  return { x: Math.cos(rad) * r, y: Math.sin(rad) * r };
+  const nx = Math.cos(rad);
+  const ny = Math.sin(rad);
+  return { ox: nx * r, oy: ny * r, nx, ny };
 }
 
 /** Веер рубашек у соперника: плотнее, но каждая карта частично видна (счёт по краям). */
@@ -596,6 +603,7 @@ function DurakNameGate({
 export function DurakGame(props: DurakGameRootProps = {}) {
   const router = useRouter();
   const embedded = props.embedded;
+  const friendInviteCodeFromUrl = props.friendInviteCodeFromUrl ?? null;
   const localPlayerId = embedded?.localPlayerId ?? HUMAN_ID;
 
   const [nameHydrated, setNameHydrated] = useState(false);
@@ -678,6 +686,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     }
     return rows;
   }, [humanHand]);
+  /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
+  const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -987,10 +997,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   if (!embedded) {
     if (!onlineRoomId) {
       return (
-        <DurakOnlineMatchmaking
-          playerName={playerName}
-          onRoomPlaying={onRoomPlayingStable}
-          onCancel={onMatchmakingCancelStable}
+        <DurakEntryFlow
+          displayName={displayName}
+          inviteCodeFromUrl={friendInviteCodeFromUrl}
+          onGameStarted={onRoomPlayingStable}
+          onBackToMenu={onMatchmakingCancelStable}
         />
       );
     }
@@ -1083,17 +1094,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
             const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
-            const { x: ox, y: oy } = opponentSeatWrapperOffset(seatMeta.angleDeg, tableOrbitPx);
+            const { ox, oy, nx, ny } = opponentSeatOffsets(seatMeta.angleDeg, orbitPxEff);
+            const nameOx = nx * (orbitPxEff + OPP_NAME_OUTWARD_EXTRA_PX);
+            const nameOy = ny * (orbitPxEff + OPP_NAME_OUTWARD_EXTRA_PX);
             return (
-              <div
-                key={opp.id}
-                className="absolute left-1/2 top-1/2 z-30 flex max-w-[46%] flex-col items-center gap-1 sm:max-w-[42%]"
-                style={{
-                  transform: `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`,
-                }}
-              >
-                <div className="flex max-w-full items-center justify-center gap-1 px-0.5 leading-tight">
-                  <p className="truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
+              <div key={opp.id} className="pointer-events-none absolute inset-0 z-30 overflow-visible">
+                <div
+                  className="pointer-events-auto absolute flex max-w-[min(46%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[42%]"
+                  style={{
+                    left: `calc(50% + ${nameOx}px)`,
+                    top: `calc(50% + ${nameOy}px)`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <p className="max-w-[6.5rem] truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:max-w-[7.5rem] sm:text-[11px]">
                     {opp.name}
                   </p>
                   <span
@@ -1104,12 +1118,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   </span>
                 </div>
                 <div
-                  className="relative flex min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] items-end justify-center overflow-visible sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
+                  className="pointer-events-none absolute min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
                   style={{
-                    transform: `rotate(${seatMeta.fanTowardCenterDeg}deg)`,
-                    transformOrigin: "center bottom",
+                    left: `calc(50% + ${ox}px)`,
+                    top: `calc(50% + ${oy}px)`,
+                    transform: "translate(-50%, -50%)",
                   }}
                 >
+                  <div
+                    className="relative flex min-h-[4.85rem] w-full items-end justify-center overflow-visible sm:min-h-[5.85rem]"
+                    style={{
+                      transform: `rotate(${seatMeta.fanTowardCenterDeg}deg)`,
+                      transformOrigin: "center bottom",
+                    }}
+                  >
                   {bh.map((c, i) => (
                     <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
                       <motion.div
@@ -1125,6 +1147,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       </motion.div>
                     </div>
                   ))}
+                  </div>
                 </div>
               </div>
             );
@@ -1143,7 +1166,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 </div>
               ) : (
                 game.tablePairs.map((tp, i) => {
-                  const { x, y } = tablePairOrbitOffset(i, game.tablePairs.length, tableOrbitPx);
+                  const { x, y } = tablePairOrbitOffset(i, game.tablePairs.length, orbitPxEff);
                   const uncovered = tp.defense === null;
                   const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
                   const attackSelectedForDefense =

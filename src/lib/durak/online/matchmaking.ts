@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { RoomPlayerRow, RoomRow } from "./types";
+import type { PublicFriendTableRow, RoomPlayerRow, RoomRow } from "./types";
 
 const EMPTY_ERROR_HINT =
   "Ошибка без текста от сервера. В Supabase проверьте RLS на rooms, room_players, room_state и права на RPC durak_join_queue / durak_finalize_room_if_ready (SQL + Logs).";
@@ -255,4 +255,106 @@ export async function fetchRoomPlayers(
     .order("seat_index", { ascending: true });
   if (error) throw new Error(formatPostgrestError(error));
   return (data ?? []) as RoomPlayerRow[];
+}
+
+function parseSingleRoomId(data: unknown): string {
+  const row =
+    data == null
+      ? null
+      : Array.isArray(data)
+        ? (data[0] as Record<string, unknown> | undefined)
+        : (data as Record<string, unknown>);
+  const id = String(row?.out_room_id ?? row?.outRoomId ?? "").trim();
+  if (!id) throw new Error("Пустой ответ: нет номера стола");
+  return id;
+}
+
+/** Стол с друзьями: создатель получает ссылку с кодом. */
+export async function durakCreateFriendRoom(
+  client: SupabaseClient,
+  playerId: string,
+  displayName: string,
+  tableName: string,
+  maxPlayers: number
+): Promise<{ roomId: string; joinCode: string }> {
+  const out = await rpcPost(client, "durak_create_friend_room", {
+    payload: {
+      player_id: playerId,
+      display_name: displayName,
+      table_name: tableName,
+      max_players: maxPlayers,
+    },
+  });
+  if ("error" in out) throw new Error(out.error);
+  const row = Array.isArray(out.data) ? (out.data[0] as Record<string, unknown>) : (out.data as Record<string, unknown>);
+  const roomId = String(row?.out_room_id ?? "").trim();
+  const joinCode = String(row?.out_join_code ?? "").trim();
+  if (!roomId || !joinCode) throw new Error("Сервер не вернул код стола");
+  return { roomId, joinCode };
+}
+
+export async function durakJoinFriendRoom(
+  client: SupabaseClient,
+  playerId: string,
+  displayName: string,
+  opts: { joinCode?: string; roomId?: string }
+): Promise<{ roomId: string }> {
+  const payload: Record<string, string> = {
+    player_id: playerId,
+    display_name: displayName,
+  };
+  if (opts.joinCode?.trim()) payload.join_code = opts.joinCode.trim().toUpperCase();
+  else if (opts.roomId?.trim()) payload.room_id = opts.roomId.trim();
+  else throw new Error("Нужен код или номер стола");
+
+  const out = await rpcPost(client, "durak_join_friend_room", { payload });
+  if ("error" in out) throw new Error(out.error);
+  return { roomId: parseSingleRoomId(out.data) };
+}
+
+export async function durakStartFriendRoom(
+  client: SupabaseClient,
+  playerId: string,
+  roomId: string
+): Promise<void> {
+  const out = await rpcPost(client, "durak_start_friend_room", {
+    payload: { player_id: playerId, room_id: roomId },
+  });
+  if ("error" in out) throw new Error(out.error);
+}
+
+/** Активные столы (ожидают игроков), только «с друзьями», публичные. */
+export async function fetchPublicFriendTables(client: SupabaseClient): Promise<PublicFriendTableRow[]> {
+  const { data: rooms, error: rErr } = await client
+    .from("rooms")
+    .select("id, table_name, max_players, join_code")
+    .eq("status", "waiting")
+    .eq("is_public", true)
+    .eq("matchmaking_pool", false)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (rErr) throw new Error(formatPostgrestError(rErr));
+  const list = (rooms ?? []) as Pick<RoomRow, "id" | "table_name" | "max_players" | "join_code">[];
+  if (list.length === 0) return [];
+
+  const ids = list.map((r) => r.id);
+  const { data: rp, error: pErr } = await client.from("room_players").select("room_id").in("room_id", ids);
+  if (pErr) throw new Error(formatPostgrestError(pErr));
+
+  const countBy = new Map<string, number>();
+  for (const row of rp ?? []) {
+    const rid = String((row as { room_id: string }).room_id);
+    countBy.set(rid, (countBy.get(rid) ?? 0) + 1);
+  }
+
+  return list
+    .map((r) => ({
+      id: r.id,
+      table_name: r.table_name ?? null,
+      max_players: r.max_players,
+      join_code: r.join_code ?? null,
+      player_count: countBy.get(r.id) ?? 0,
+    }))
+    .filter((r) => r.player_count < r.max_players);
 }

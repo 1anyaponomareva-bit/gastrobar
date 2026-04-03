@@ -1,6 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { DurakGame } from "@/components/durak/DurakGame";
 
 const wrapStyle: CSSProperties = {
@@ -18,14 +19,46 @@ const wrapStyle: CSSProperties = {
   color: "#f1f5f9",
 };
 
-/** Единый flex-поток с `durak-page`: всегда занимаем оставшуюся высоту под шапкой. */
-export default function DurakPageClient() {
+function DurakPageShell({ children }: { children: ReactNode }) {
   return (
     <div
       className="relative z-[1] mx-auto flex min-h-[min(85dvh,820px)] w-full max-w-lg flex-1 flex-col bg-[#14100c]"
       style={wrapStyle}
     >
-      <DurakGame />
+      {children}
     </div>
+  );
+}
+
+function DurakPageClientInner() {
+  const sp = useSearchParams();
+  const raw = sp?.get("stol") ?? null;
+  const invite = raw?.trim() ? raw.trim() : null;
+
+  return (
+    <DurakPageShell>
+      <DurakGame friendInviteCodeFromUrl={invite} />
+    </DurakPageShell>
+  );
+}
+
+function DurakPageSuspenseFallback() {
+  return (
+    <DurakPageShell>
+      <div className="flex flex-1 items-center justify-center py-20">
+        <span className="text-sm text-white/50" style={{ color: "rgba(248,250,252,0.55)", fontSize: 14 }}>
+          Загрузка…
+        </span>
+      </div>
+    </DurakPageShell>
+  );
+}
+
+/** Единый flex-поток с `durak-page`: всегда занимаем оставшуюся высоту под шапкой. */
+export default function DurakPageClient() {
+  return (
+    <Suspense fallback={<DurakPageSuspenseFallback />}>
+      <DurakPageClientInner />
+    </Suspense>
   );
 }
