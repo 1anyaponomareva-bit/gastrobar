@@ -9,7 +9,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { CARD_BACK_PNG_PATH } from "@/lib/durak/cardPng";
+import { CARD_BACK_PNG_PATH, CARD_PNG_ASPECT_CLASS } from "@/lib/durak/cardPng";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Card, GameTable, Player, Rank } from "@/games/durak/types";
 import {
@@ -153,13 +153,14 @@ function randomBotThinkDelayMs(): number {
 }
 
 const CARD_W_CLASS = "w-[3.65rem] sm:w-[4.05rem]";
-const CARD_H_CLASS = "h-[5.15rem] sm:h-[5.7rem]";
 /** Компактные карты: центр стола, колода и рубашки соперника — один размер. */
 const CARD_TABLE_COMPACT_W = "w-[3rem] sm:w-[3.85rem]";
-const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
 /** Рука: крупнее прежнего; зона веера растягивается между статусом и нижним баром. */
 const HAND_CARD_W_CLASS = "w-[8.95rem] sm:w-[9.55rem]";
-const HAND_CARD_H_CLASS = "h-[12.2rem] sm:h-[13.1rem]";
+/** Габариты карты = ширина + пропорции PNG 242×340 (без фиксированной высоты — искажений нет). */
+const CARD_BOX_CLASS = cn(CARD_W_CLASS, CARD_PNG_ASPECT_CLASS);
+const CARD_TABLE_COMPACT_BOX = cn(CARD_TABLE_COMPACT_W, CARD_PNG_ASPECT_CLASS);
+const HAND_CARD_BOX = cn(HAND_CARD_W_CLASS, CARD_PNG_ASPECT_CLASS);
 /** Не больше 6 карт в ряду — следующие вторым рядом, без вылета за края экрана. */
 const HAND_ROW_MAX = 6;
 const HAND_ROW_GAP_PX = 56;
@@ -358,7 +359,7 @@ function BrandedCardBack({
         src={src}
         alt=""
         draggable={false}
-        className="h-full w-full object-cover"
+        className="block h-full w-full object-contain object-center"
         loading="lazy"
         decoding="async"
         onError={() => setSrc(CARD_BACK_URL)}
@@ -393,18 +394,12 @@ function CardSprite({
   size?: "table" | "hand" | "tableCompact";
 }) {
   const isBack = faceDown || !card;
-  const dimW =
+  const dimBox =
     size === "hand"
-      ? HAND_CARD_W_CLASS
+      ? HAND_CARD_BOX
       : size === "tableCompact"
-        ? CARD_TABLE_COMPACT_W
-        : CARD_W_CLASS;
-  const dimH =
-    size === "hand"
-      ? HAND_CARD_H_CLASS
-      : size === "tableCompact"
-        ? CARD_TABLE_COMPACT_H
-        : CARD_H_CLASS;
+        ? CARD_TABLE_COMPACT_BOX
+        : CARD_BOX_CLASS;
 
   /** Одинаковое лицо карты и обрезка скругления — в руке и на столе. */
   const tableLike = size === "tableCompact" || size === "table" || size === "hand";
@@ -412,8 +407,7 @@ function CardSprite({
     "relative shrink-0 rounded-[10px]",
     isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
     !isBack ? "bg-white" : "bg-transparent ring-2 ring-white/75 ring-offset-0 shadow-[0_2px_8px_rgba(0,0,0,0.35)]",
-    dimW,
-    dimH,
+    dimBox,
     playableHighlight &&
       !isBack &&
       !selected &&
@@ -472,8 +466,7 @@ function DeckPile({
   compact?: boolean;
 }) {
   const stackLayers = count > 0 ? Math.min(8, Math.max(2, Math.ceil(count / 5))) : 0;
-  const cw = compact ? CARD_TABLE_COMPACT_W : CARD_W_CLASS;
-  const ch = compact ? CARD_TABLE_COMPACT_H : CARD_H_CLASS;
+  const deckBox = compact ? CARD_TABLE_COMPACT_BOX : CARD_BOX_CLASS;
   const size = compact ? ("tableCompact" as const) : ("table" as const);
 
   const stackBlock = (
@@ -502,8 +495,7 @@ function DeckPile({
           <div
             className={cn(
               "flex items-center justify-center rounded-[10px] border border-dashed border-emerald-700/45 bg-black/30 text-[8px] text-emerald-200/55 sm:text-[10px]",
-              cw,
-              ch
+              deckBox
             )}
           >
             —
@@ -522,7 +514,7 @@ function DeckPile({
       <div
         className={cn(
           "relative shrink-0",
-          cw,
+          deckBox,
           compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
         )}
       >
@@ -537,8 +529,7 @@ function DeckPile({
           className={cn(
             "absolute left-1/2 z-[25] -translate-x-1/2",
             stackLift,
-            cw,
-            ch
+            deckBox
           )}
         >
           {stackBlock}
@@ -547,7 +538,7 @@ function DeckPile({
     );
   }
 
-  return <div className={cn("relative shrink-0", cw, ch)}>{stackBlock}</div>;
+  return <div className={cn("relative shrink-0", deckBox)}>{stackBlock}</div>;
 }
 
 function toggleAttackSelection(hand: Card[], selected: string[], id: string): string[] {

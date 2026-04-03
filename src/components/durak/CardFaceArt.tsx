@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Card } from "@/games/durak/types";
 import { rankLabel, suitLabel } from "@/games/durak/cards";
 import { getCardImagePath } from "@/lib/durak/cardPng";
@@ -124,6 +124,10 @@ export function CardFaceArt({
   const [useFallback, setUseFallback] = useState(false);
   const src = getCardImagePath(card.rank, card.suit);
 
+  useEffect(() => {
+    setUseFallback(false);
+  }, [card.id, card.rank, card.suit, src]);
+
   if (useFallback) {
     return <CardFaceArtFallback card={card} className={className} compact={compact} />;
   }
@@ -131,8 +135,8 @@ export function CardFaceArt({
   return (
     <div
       className={cn(
-        "pointer-events-none relative h-full w-full overflow-hidden rounded-[10px]",
-        "border border-neutral-500/40 bg-neutral-900/10",
+        "pointer-events-none relative flex h-full w-full items-center justify-center overflow-hidden rounded-[10px]",
+        "border border-neutral-500/40 bg-white",
         compact && "rounded-[8px]",
         className
       )}
@@ -141,7 +145,7 @@ export function CardFaceArt({
         src={src}
         alt=""
         draggable={false}
-        className="h-full w-full object-cover"
+        className="block h-full w-full object-contain object-center"
         loading="lazy"
         decoding="async"
         onError={() => setUseFallback(true)}
