@@ -132,10 +132,11 @@ function normalizeTablePairs(raw: unknown): TablePair[] {
   for (const item of raw) {
     if (item == null || typeof item !== "object") continue;
     const p = item as Record<string, unknown>;
-    if (!isCard(p.attack)) continue;
-    const d = p.defense;
-    const defense = d == null ? null : isCard(d) ? d : null;
-    out.push({ attack: p.attack, defense });
+    const atk = p.attack ?? p.attack_card;
+    if (!isCard(atk)) continue;
+    const defRaw = p.defense ?? p.defense_card;
+    const defense = defRaw == null ? null : isCard(defRaw) ? defRaw : null;
+    out.push({ attack: atk, defense });
   }
   return out;
 }
@@ -211,10 +212,12 @@ function coerceRemoteGame(raw: unknown): GameTable | null {
       : (attackerIndex + 1) % n;
   if (defenderIndex === attackerIndex) defenderIndex = (attackerIndex + 1) % n;
   const deck = normalizeDeck(g.deck);
-  const tablePairs = normalizeTablePairs(g.tablePairs);
+  const tablePairsRaw = (g as { table_pairs?: unknown }).table_pairs ?? g.tablePairs;
+  const tablePairs = normalizeTablePairs(tablePairsRaw);
   const discardPile = normalizeDeck(g.discardPile);
-  const trumpCard = g.trumpCard != null && isCard(g.trumpCard) ? g.trumpCard : null;
-  const ts = g.trumpSuit;
+  const trumpRaw = g.trumpCard ?? (g as { trump_card?: unknown }).trump_card;
+  const trumpCard = trumpRaw != null && isCard(trumpRaw) ? trumpRaw : null;
+  const ts = g.trumpSuit ?? (g as { trump_suit?: unknown }).trump_suit;
   const trumpSuit =
     ts === "spades" || ts === "hearts" || ts === "diamonds" || ts === "clubs" ? ts : trumpCard?.suit ?? "spades";
   const id = typeof g.id === "string" && g.id ? g.id : tableIdFallback();

@@ -527,7 +527,7 @@ function DeckPile({
           ))
         : null}
       {count === 0 && !trumpCard ? (
-        <div className="flex h-full w-full items-center justify-center">
+        <div className="flex h-full min-h-[3.25rem] w-full items-center justify-center sm:min-h-[3.5rem]">
           <div
             className={cn(
               "flex items-center justify-center border border-dashed border-emerald-700/45 bg-black/30 text-[8px] text-emerald-200/55 sm:text-[10px]",
@@ -542,7 +542,6 @@ function DeckPile({
     </>
   );
 
-  /* Козырь под стопкой (z ниже), без поворота; низ карты выступает вниз из-под колоды */
   const trumpVisual =
     trumpCard != null ? (
       <CardSprite
@@ -573,45 +572,45 @@ function DeckPile({
       </div>
     );
 
+  /* Колода сверху, козырь снизу в потоке — без перекрытия, иначе козырь часто не виден под стопкой */
+  const stackWrap =
+    count > 0 ? (
+      <div
+        className={cn(
+          "relative mx-auto shrink-0",
+          deckBox,
+          compact ? "min-h-[4.35rem] sm:min-h-[4.85rem]" : "min-h-[5.5rem] sm:min-h-[6rem]"
+        )}
+      >
+        {stackBlock}
+      </div>
+    ) : count === 0 && !trumpCard ? (
+      <div className={cn("relative mx-auto shrink-0", deckBox)}>{stackBlock}</div>
+    ) : null;
+
   if (trumpCard != null || count > 0) {
-    /* Козырь сильнее выглядывает из-под стопки: стопка чуть выше, козырь ниже + больший min-height */
-    const trumpShift = compact ? "translate-y-5 sm:translate-y-7" : "translate-y-6 sm:translate-y-8";
-    const stackLift = compact ? "-top-1" : "-top-0.5";
     return (
       <div
         className={cn(
-          "relative shrink-0",
-          deckBox,
-          compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
+          "flex shrink-0 flex-col items-center gap-2",
+          compact ? "min-h-0 w-full" : "min-h-0"
         )}
       >
-        <div className={cn("absolute bottom-0 left-1/2 z-[1] -translate-x-1/2", trumpShift)}>
-          {trumpVisual}
-        </div>
-        <div
-          className={cn(
-            "absolute left-1/2 z-[25] -translate-x-1/2",
-            stackLift,
-            deckBox
-          )}
-        >
-          {stackBlock}
-        </div>
+        {stackWrap}
+        <div className="shrink-0">{trumpVisual}</div>
       </div>
     );
   }
 
-  /* Колода пуста: козырь только маркер масти (нижняя карта уже не в JSON). */
-  const trumpShiftSolo = compact ? "translate-y-5 sm:translate-y-7" : "translate-y-6 sm:translate-y-8";
   return (
     <div
       className={cn(
-        "relative shrink-0",
+        "flex shrink-0 flex-col items-center",
         deckBox,
         compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
       )}
     >
-      <div className={cn("relative z-[25] flex justify-center", trumpShiftSolo)}>{trumpVisual}</div>
+      {trumpVisual}
     </div>
   );
 }
@@ -1505,12 +1504,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       <div
         className={cn(
-          "relative z-20 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
+          "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
           embedded && opponents.length > 0 && "pt-2 sm:pt-3",
-          /* translateY на овале не меняет поток — низ сукна уезжал под следующий блок с непрозрачным фоном */
+          /* margin вместо transform: translateY + border-radius давал обрезку карт/козыря в WebKit/Chromium */
           opponents.length > 0
-            ? "mb-[min(2.35rem,7vmin)]"
-            : "mb-[min(1.25rem,3.5vmin)]"
+            ? "mt-[min(2.35rem,7vmin)]"
+            : "mt-[min(1.25rem,3.5vmin)]"
         )}
       >
         <div
@@ -1519,11 +1518,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
-            /* Ниже хедера: веер и имя соперника не заходят в fixed Header */
-            transform:
-              opponents.length > 0
-                ? "translateY(min(2.35rem, 7vmin))"
-                : "translateY(min(1.25rem, 3.5vmin))",
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1625,10 +1619,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           <div
             ref={boardPlayAreaRef}
-            className="pointer-events-none absolute inset-0 z-[28] isolate min-h-0 overflow-visible"
+            className="pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
-              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[2] -translate-y-1/2 sm:left-[2%]">
+              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[8] -translate-y-1/2 sm:left-[2%]">
                 <DeckPile
                   count={deckCount}
                   trumpCard={trumpShow ?? null}
