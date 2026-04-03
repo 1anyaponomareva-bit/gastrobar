@@ -22,6 +22,7 @@ import {
 } from "@/games/durak/engine";
 import { applyBotMove } from "@/games/durak/bot";
 import {
+  getOnlineHumanTimeoutExecutorId,
   getOnlineMandatoryHumanActorId,
   localPlayerMustActOnline,
   tryAutoMove,
@@ -1078,14 +1079,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       return;
     }
     const turnDeadline = Date.now() + ONLINE_TURN_MS;
-    const isClockDriver = onlineBotDriverId != null && localPlayerId === onlineBotDriverId;
+    const timeoutExecutorId = getOnlineHumanTimeoutExecutorId(game, actorId);
+    const isTimeoutExecutor =
+      timeoutExecutorId != null && localPlayerId === timeoutExecutorId;
     console.info("[durak online turn] timer start", {
       currentTurnPlayerId: actorId,
       localPlayerId,
       turnDeadline,
       secondsLeft: Math.ceil(ONLINE_TURN_MS / 1000),
       timerStarted: true,
-      isClockDriver,
+      timeoutExecutorId,
+      isTimeoutExecutor,
     });
     const tick = () => {
       const left = Math.max(0, turnDeadline - Date.now());
@@ -1104,15 +1108,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           localPlayerId,
           turnDeadline,
           secondsLeft: sec,
-          isClockDriver,
+          isTimeoutExecutor,
         });
       }
       if (left <= 0) {
         window.clearInterval(id);
-        if (!isClockDriver) {
-          console.info("[durak online turn] timeout (non-driver, skip auto-move)", {
+        if (!isTimeoutExecutor) {
+          console.info("[durak online turn] timeout (non-executor, skip auto-move)", {
             currentTurnPlayerId: actorId,
             localPlayerId,
+            timeoutExecutorId,
           });
           setTurnProgress(1);
           return;
@@ -1159,7 +1164,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       }
     }, 100);
     return () => window.clearInterval(id);
-  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame, onlineBotDriverId]);
+  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame]);
 
   const setErr = (msg: string) => setGame((g) => (g ? { ...g, message: msg } : g));
 

@@ -175,6 +175,22 @@ export function getOnlineMandatoryHumanActorId(table: GameTable): string | null 
   return null;
 }
 
+/**
+ * Какой клиент обязан вызвать `tryAutoMove(mandatoryActorId)` по тайм-ауту.
+ * В дуэли двух людей исполнитель — всегда соперник (ожидающий), чтобы AFK у обязанного ходить не блокировал стол.
+ * Один человек в партии (остальные боты) — исполнитель сам обязанный. При 3+ людях — один детерминированный прокси (мин. id среди ожидающих).
+ */
+export function getOnlineHumanTimeoutExecutorId(
+  table: GameTable,
+  mandatoryActorId: string
+): string | null {
+  const humans = table.players.filter((p) => p.type !== "bot").map((p) => p.id);
+  if (humans.length === 0 || !humans.includes(mandatoryActorId)) return null;
+  const waiting = humans.filter((id) => id !== mandatoryActorId);
+  if (waiting.length === 0) return mandatoryActorId;
+  return [...waiting].sort((a, b) => a.localeCompare(b))[0]!;
+}
+
 /** Показывать таймер хода только если локальному игроку нужно действие (не «только ждать»). */
 export function localPlayerMustActOnline(table: GameTable, localId: string): boolean {
   if (table.state !== "playing") return false;
