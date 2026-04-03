@@ -125,7 +125,7 @@ function getClientKeys(client: SupabaseClient): ClientKeys {
 }
 
 /** Смени число при следующем изменении текста ошибок — по нему видно, что задеплоена свежая сборка. */
-const DURAK_NET_HINT_REV = 3;
+const DURAK_NET_HINT_REV = 4;
 
 /** Прямой POST к PostgREST RPC — в ошибке всегда есть HTTP status и сырое тело (client.rpc часто даёт { message: "" }). */
 function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
@@ -228,6 +228,23 @@ export async function durakFinalizeRoomIfReady(
   });
   if ("error" in out) {
     throw new Error(out.error);
+  }
+}
+
+/**
+ * Если в быстрой очереди уже ≥2 живых игрока, а комната ещё waiting — дожать статус playing.
+ * Страховка при старом/битом finalize на сервере. Если RPC ещё не залит — 404 игнорируем.
+ */
+export async function durakForceStartIfTwoHumans(client: SupabaseClient, roomId: string): Promise<void> {
+  const out = await rpcPost(client, "durak_force_start_if_two_humans", {
+    p_room_id: roomId,
+  });
+  if ("error" in out) {
+    const msg = out.error;
+    if (/HTTP 404\b|not find|could not find|does not exist|42883/i.test(msg)) {
+      return;
+    }
+    throw new Error(msg);
   }
 }
 

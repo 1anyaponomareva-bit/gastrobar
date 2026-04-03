@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
   durakFinalizeRoomIfReady,
+  durakForceStartIfTwoHumans,
   durakJoinQueue,
   fetchRoom,
   fetchRoomPlayers,
@@ -41,6 +42,10 @@ const WAITING_HINTS: string[] = [
  * Онлайн-очередь: поиск комнаты + realtime.
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
  */
+function isPlayingStatus(r: RoomRow | null | undefined): boolean {
+  return String(r?.status ?? "").toLowerCase() === "playing";
+}
+
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +54,8 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const [playerCount, setPlayerCount] = useState(0);
   const [statusIdx, setStatusIdx] = useState(0);
   const [hintIdx, setHintIdx] = useState(0);
+  const onRoomPlayingRef = useRef(onRoomPlaying);
+  onRoomPlayingRef.current = onRoomPlaying;
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -77,20 +84,26 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const tick = useCallback(async () => {
     if (!supabase || !roomId) return;
     try {
+      const players = await fetchRoomPlayers(supabase, roomId);
+      const humans = players.filter((p) => !p.is_bot).length;
+      setPlayerCount(humans);
+
       await durakFinalizeRoomIfReady(supabase, roomId);
+      if (humans >= 2) {
+        await durakForceStartIfTwoHumans(supabase, roomId);
+      }
+
       const r = await fetchRoom(supabase, roomId);
       setRoom(r);
-      if (r?.status === "playing") {
-        onRoomPlaying(roomId);
+      if (isPlayingStatus(r)) {
+        onRoomPlayingRef.current(roomId);
         return;
       }
-      const players = await fetchRoomPlayers(supabase, roomId);
-      setPlayerCount(players.filter((p) => !p.is_bot).length);
     } catch (e) {
       console.error(e);
       setError(formatPostgrestError(e));
     }
-  }, [supabase, roomId, onRoomPlaying]);
+  }, [supabase, roomId]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -102,15 +115,21 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         if (cancelled) return;
         setRoomId(j.roomId);
         await durakFinalizeRoomIfReady(supabase, j.roomId);
+        let players = await fetchRoomPlayers(supabase, j.roomId);
+        let humans = players.filter((p) => !p.is_bot).length;
+        if (humans >= 2) {
+          await durakForceStartIfTwoHumans(supabase, j.roomId);
+        }
         const r = await fetchRoom(supabase, j.roomId);
         if (cancelled) return;
         setRoom(r);
-        if (r?.status === "playing") {
-          onRoomPlaying(j.roomId);
+        if (isPlayingStatus(r)) {
+          onRoomPlayingRef.current(j.roomId);
           return;
         }
-        const players = await fetchRoomPlayers(supabase, j.roomId);
-        setPlayerCount(players.filter((p) => !p.is_bot).length);
+        players = await fetchRoomPlayers(supabase, j.roomId);
+        humans = players.filter((p) => !p.is_bot).length;
+        setPlayerCount(humans);
       } catch (e) {
         if (!cancelled) setError(formatPostgrestError(e));
       }
@@ -118,7 +137,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     return () => {
       cancelled = true;
     };
-  }, [supabase, playerName, onRoomPlaying]);
+  }, [supabase, playerName]);
 
   useEffect(() => {
     if (!supabase || !roomId) return;
@@ -138,10 +157,10 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   }, [supabase, roomId, tick]);
 
   useEffect(() => {
-    if (room?.status === "playing" && roomId) {
-      onRoomPlaying(roomId);
+    if (isPlayingStatus(room) && roomId) {
+      onRoomPlayingRef.current(roomId);
     }
-  }, [room?.status, roomId, onRoomPlaying]);
+  }, [room, roomId]);
 
   const line = WAITING_STATUS_LINES[statusIdx]!;
   const hint = WAITING_HINTS[hintIdx]!;
