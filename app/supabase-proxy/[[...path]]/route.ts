@@ -46,6 +46,8 @@ function buildUpstreamRequestHeaders(incoming: Headers, serverAnonKey: string): 
   });
   out.delete("accept-encoding");
   out.set("Accept-Encoding", "identity");
+  out.delete("content-length");
+  out.delete("transfer-encoding");
   out.set("apikey", serverAnonKey);
   out.set("Authorization", `Bearer ${serverAnonKey}`);
   return out;
@@ -69,7 +71,13 @@ function forwardResponseHeaders(upstream: Headers): Headers {
 }
 
 async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
+  const pubUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const backend = getSupabaseBackendUrl();
+  if (!pubUrl?.trim()) {
+    console.warn(
+      "[supabase-proxy] NEXT_PUBLIC_SUPABASE_URL is undefined (браузерный клиент без неё не создаётся; для прокси на сервере можно задать только SUPABASE_URL)",
+    );
+  }
   if (!backend) {
     return NextResponse.json(
       { error: "Supabase URL not configured (SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL)" },
@@ -114,10 +122,34 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
     );
   }
 
-  const tail = pathSegments?.length ? pathSegments.join("/") : "";
-  const href = tail ? `${backend}/${tail}` : `${backend}/`;
-  const target = new URL(href);
+  const tail = pathSegments?.length ? pathSegments.join("/").replace(/^\/+/, "") : "";
+  const base = backend.replace(/\/+$/, "");
+  const href = tail ? `${base}/${tail}` : `${base}/`;
+  let target: URL;
+  try {
+    target = new URL(href);
+  } catch {
+    console.warn("[supabase-proxy] invalid target URL", { href: href.slice(0, 256), tail });
+    return NextResponse.json(
+      { error: "Invalid upstream URL", code: "PROXY_BAD_TARGET" },
+      { status: 500 },
+    );
+  }
   target.search = req.nextUrl.search;
+
+  const proxyDebug = process.env.SUPABASE_PROXY_DEBUG === "1";
+  if (proxyDebug) {
+    const pub = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+    console.warn("[supabase-proxy] debug", {
+      method: req.method,
+      pathSegments,
+      pathnameTail: tail,
+      targetHref: target.href,
+      NEXT_PUBLIC_SUPABASE_URL_set: Boolean(pub),
+      NEXT_PUBLIC_SUPABASE_URL_host: pub ? (() => { try { return new URL(pub).host; } catch { return "parse_err"; } })() : null,
+      backendHost: target.host,
+    });
+  }
 
   const hasBody = !["GET", "HEAD"].includes(req.method);
   let body: ArrayBuffer | undefined;
@@ -135,6 +167,9 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
 
   let upstream: Response;
   try {
+    console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log("TARGET URL:", target?.href);
+
     upstream = await fetch(target, {
       method: req.method,
       headers: buildUpstreamRequestHeaders(req.headers, serverKey),
@@ -143,6 +178,13 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[supabase-proxy] fetch threw", {
+      method: req.method,
+      target: target.href,
+      pathTail: tail,
+      error: msg,
+      cause: e instanceof Error && "cause" in e ? String((e as Error & { cause?: unknown }).cause) : undefined,
+    });
     return NextResponse.json(
       {
         message: `Proxy fetch failed: ${msg}`,

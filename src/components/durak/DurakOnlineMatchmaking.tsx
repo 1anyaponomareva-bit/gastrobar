@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
@@ -61,6 +61,11 @@ function isPlayingStatus(r: RoomRow | null | undefined): boolean {
   return String(r?.status ?? "").toLowerCase() === "playing";
 }
 
+/** Явные логи для «висим на Ищем пару…» — смотри [durak-mm-ui] в консоли. */
+function logMmUi(payload: Record<string, unknown>) {
+  console.log("[durak-mm-ui]", payload);
+}
+
 function isProxyRateLimitError(message: string): boolean {
   return /429|PROXY_RATE_LIMIT|Too Many Requests/i.test(message);
 }
@@ -85,6 +90,31 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const lastMatchmakingRpcAtRef = useRef(0);
   /** Клиентский ориентир (~15 с окна + запас), если search_deadline с API не парсится или зона времени багает. */
   const matchmakingSinceRef = useRef<number | null>(null);
+
+  const screenState = useMemo<"connecting" | "error" | "searching">(() => {
+    if (!supabase) return "connecting";
+    if (error) return "error";
+    return "searching";
+  }, [supabase, error]);
+
+  useEffect(() => {
+    logMmUi({
+      where: "state/render snapshot",
+      currentRoomId: roomId,
+      roomStatusFromState: room?.status ?? null,
+      playersCount: playerCount,
+      humansCount: playerCount,
+      botsCountNote:
+        "в state только число людей; bots = room_players − humans см. tick where=tick end",
+      screenState,
+      transitionSearchingToGameRule:
+        "UI уходит в игру только когда вызывается onRoomPlaying(roomId): (1) tick после fetchRoom и isPlayingStatus(row), (2) useEffect([room,roomId]) если room в state уже playing",
+      wouldFireTransitionEffect: Boolean(
+        roomId && room && isPlayingStatus(room),
+      ),
+      rawStatusInState: room?.status,
+    });
+  }, [roomId, room, playerCount, screenState]);
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -122,6 +152,14 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         search_deadline: rFirst?.search_deadline,
       });
       if (isPlayingStatus(rFirst)) {
+        logMmUi({
+          where: "tick: first fetchRoom → playing, вызываем onRoomPlaying",
+          currentRoomId: roomId,
+          roomStatus: rFirst?.status,
+          roomRowWasNull: rFirst == null,
+          screenState,
+          conditionMet: "isPlayingStatus(rFirst) === true",
+        });
         mmDebug("→ game ready (status playing после первого fetchRoom)", { roomId });
         onRoomPlayingRef.current(roomId);
         return;
@@ -173,10 +211,53 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       const r = await fetchRoom(supabase, roomId);
       setRoom(r);
       mmDebug("tick fetchRoom#2", { roomId, rawStatus: r?.status });
+      const botsCount = players.length - humans;
+      const playingAfterSecond = isPlayingStatus(r);
+      logMmUi({
+        where: "tick end (интервал ~1с): что видит клиент для перехода в игру",
+        currentRoomId: roomId,
+        roomStatusAfterFirstFetch: rFirst?.status ?? null,
+        roomStatusAfterSecondFetch: r?.status ?? null,
+        roomRowMissingFirst: rFirst == null,
+        roomRowMissingSecond: r == null,
+        /** В UI «Уже за столом» — только люди (не боты). */
+        playersCountHumans: humans,
+        humansCount: humans,
+        botsCount,
+        rowsInRoomPlayers: players.length,
+        screenState,
+        transitionSearchingToGame:
+          "вызов onRoomPlaying(roomId) только если isPlayingStatus(room row)==true после fetch; НЕ по humans>=2 и НЕ по только room_players",
+        conditionMetThisTick:
+          isPlayingStatus(rFirst) || playingAfterSecond
+            ? "ДА — должны were вызвать onRoomPlaying выше или ниже"
+            : "НЕТ — экран остаётся «Ищем пару…» пока сервер не выставит rooms.status=playing",
+        isPlayingAfterFirstPoll: isPlayingStatus(rFirst),
+        isPlayingAfterSecondPoll: playingAfterSecond,
+        humansButNotPlaying: humans >= 2 && !playingAfterSecond && !isPlayingStatus(rFirst),
+      });
       if (isPlayingStatus(r)) {
+        logMmUi({
+          where: "tick: second fetchRoom → playing, вызываем onRoomPlaying",
+          currentRoomId: roomId,
+          roomStatus: r?.status,
+          screenState,
+          conditionMet: "isPlayingStatus(r) === true",
+        });
         mmDebug("→ game ready (status playing после finalize)", { roomId });
         onRoomPlayingRef.current(roomId);
       } else if (humans >= 2) {
+        logMmUi({
+          where: "ЗАСТРЕВАНИЕ: humans>=2 но status не playing — UI остаётся на поиске (ожидаем БД/SQL)",
+          currentRoomId: roomId,
+          roomStatusAfterSecondFetch: r?.status ?? null,
+          humansCount: humans,
+          botsCount,
+          hintIfRoomRowNull:
+            r == null
+              ? "fetchRoom вернул null — часто RLS: room_players видны, rooms — нет; тогда transition никогда"
+              : "строка rooms есть, статус ещё waiting/finalize не отработал",
+        });
         mmDebug("второй игрок есть, но rooms.status ещё не playing — ждём SQL finalize / force_start", {
           roomId,
           humans,
@@ -192,7 +273,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       console.error(e);
       setError(msg);
     }
-  }, [supabase, roomId]);
+  }, [supabase, roomId, screenState]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -204,6 +285,11 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         const j = await durakJoinQueue(supabase, pid, playerName);
         if (cancelled) return;
         mmDebug("join_queue ok → roomId", j.roomId, "затем finalize (после join всегда)");
+        logMmUi({
+          where: "join_queue success → setRoomId, дальше finalize / fetchRoom",
+          currentRoomId: j.roomId,
+          screenState: error ? "error" : "searching",
+        });
         setRoomId(j.roomId);
         matchmakingSinceRef.current = Date.now();
         lastMatchmakingRpcAtRef.current = Date.now();
@@ -220,14 +306,27 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         if (cancelled) return;
         setRoom(r);
         mmDebug("после join fetchRoom", { status: r?.status });
+        players = await fetchRoomPlayers(supabase, j.roomId);
+        humans = players.filter((p) => !p.is_bot).length;
+        setPlayerCount(humans);
+        logMmUi({
+          where: "после join fetchRoom + room_players",
+          currentRoomId: j.roomId,
+          roomStatus: r?.status ?? null,
+          roomRowMissing: r == null,
+          playersCountHumans: humans,
+          humansCount: humans,
+          botsCount: players.length - humans,
+          rowsInRoomPlayers: players.length,
+          screenState: "searching",
+          wouldTransition: isPlayingStatus(r),
+          transitionIfPlaying: "onRoomPlaying(j.roomId) если isPlayingStatus(r)",
+        });
         if (isPlayingStatus(r)) {
           mmDebug("→ game ready (сразу после join)", j.roomId);
           onRoomPlayingRef.current(j.roomId);
           return;
         }
-        players = await fetchRoomPlayers(supabase, j.roomId);
-        humans = players.filter((p) => !p.is_bot).length;
-        setPlayerCount(humans);
       } catch (e) {
         if (!cancelled) setError(formatPostgrestError(e));
       }
@@ -256,10 +355,19 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
   useEffect(() => {
     if (isPlayingStatus(room) && roomId) {
+      logMmUi({
+        where: "useEffect [room,roomId]: room в state уже playing → onRoomPlaying",
+        currentRoomId: roomId,
+        roomStatus: room?.status,
+        playersCountHumans: playerCount,
+        humansCount: playerCount,
+        screenState,
+        conditionMet: "isPlayingStatus(room) && roomId",
+      });
       mmDebug("→ game ready (effect по state room)", { roomId, status: room?.status });
       onRoomPlayingRef.current(roomId);
     }
-  }, [room, roomId]);
+  }, [room, roomId, playerCount, screenState]);
 
   const line = WAITING_STATUS_LINES[statusIdx]!;
   const hint = WAITING_HINTS[hintIdx]!;

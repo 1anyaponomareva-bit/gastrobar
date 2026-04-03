@@ -21,7 +21,8 @@ const memoryAuthStorage = {
 
 /**
  * Один экземпляр Supabase JS на вкладку (через globalThis — на случай дублирования модуля в разных чанках).
- * Клиент в браузере: запросы на тот же origin → `/supabase-proxy` → Route Handler → Supabase.
+ * По умолчанию: запросы на `/supabase-proxy` → Route Handler → Supabase.
+ * Диагностика 502: `NEXT_PUBLIC_SUPABASE_BYPASS_PROXY=1` — прямой PostgREST URL (тот же, что в Dashboard).
  */
 export function createSupabaseBrowserClient(): SupabaseClient | null {
   if (typeof window === "undefined") return null;
@@ -31,11 +32,17 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
 
   b.done = true;
   const key = getSupabasePublicApiKey();
-  if (!key || !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!key || !rawUrl) {
     b.client = null;
     return null;
   }
-  const url = `${window.location.origin}/supabase-proxy`;
+  const bypass =
+    typeof process !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_BYPASS_PROXY === "1";
+  const url = bypass ? rawUrl.replace(/\/+$/, "") : `${window.location.origin}/supabase-proxy`;
+  if (bypass && typeof window !== "undefined") {
+    console.log("[gastrobar] Supabase client: DIRECT URL (proxy bypass)", url);
+  }
 
   const fetchNoStore: typeof fetch = (input, init) =>
     fetch(input, { ...init, cache: "no-store" });
