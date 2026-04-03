@@ -32,7 +32,7 @@ export function BottomNav() {
       transition={{ duration: 0.2 }}
       className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom px-3"
     >
-      <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-2 py-2 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:max-w-md sm:px-2.5 sm:py-2.5">
+      <div className="pointer-events-auto mx-auto flex w-[min(23.5rem,calc(100vw-1.5rem))] max-w-none flex-nowrap items-center justify-between gap-0.5 rounded-full bg-white/10 px-2 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(24rem,calc(100vw-2rem))] sm:px-2.5 sm:py-2">
         {TABS.map((tab) => {
           const active = !onGames && tab.id === period;
           return (
@@ -41,7 +41,7 @@ export function BottomNav() {
               type="button"
               onClick={() => goPeriod(tab.id)}
               className={cn(
-                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:px-2 sm:py-2",
+                "relative flex min-w-[3.2rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:min-w-0 sm:px-1.5 sm:py-2",
                 active
                   ? "bg-white text-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -79,7 +79,7 @@ export function BottomNav() {
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
-              <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
+              <span className="max-w-[4.25rem] text-center text-[9px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]">
                 {tab.label}
               </span>
             </button>
@@ -97,7 +97,7 @@ export function BottomNav() {
           <span className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]" aria-hidden>
             🎯
           </span>
-          <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
+          <span className="text-center text-[9px] leading-tight sm:text-[10px] sm:whitespace-nowrap">
             Игры
           </span>
         </Link>

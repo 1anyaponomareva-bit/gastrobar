@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_rooms_friend_waiting_public
 COMMENT ON COLUMN public.rooms.matchmaking_pool IS 'true = быстрая очередь; false = стол с друзьями';
 COMMENT ON COLUMN public.rooms.join_code IS 'Короткий код приглашения (столы с друзьями)';
 
--- Финализация: очередь — как раньше + срок 40 с; стол с друзьями — только набор max_players или ручной старт (отдельный RPC).
+-- Финализация: быстрая очередь — при 2 игроках старт сразу; один — бот после дедлайна; стол с друзьями — только max_players.
 CREATE OR REPLACE FUNCTION public.durak_finalize_room_if_ready(p_room_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -67,6 +67,11 @@ BEGIN
     RETURN;
   END IF;
 
+  IF cnt >= 2 THEN
+    UPDATE public.rooms SET status = 'playing' WHERE id = p_room_id;
+    RETURN;
+  END IF;
+
   IF r.search_deadline >= now() THEN
     RETURN;
   END IF;
@@ -85,11 +90,6 @@ BEGIN
     UPDATE public.rooms
     SET status = 'playing', started_with_bot = true
     WHERE id = p_room_id;
-    RETURN;
-  END IF;
-
-  IF cnt = 2 THEN
-    UPDATE public.rooms SET status = 'playing' WHERE id = p_room_id;
     RETURN;
   END IF;
 END;

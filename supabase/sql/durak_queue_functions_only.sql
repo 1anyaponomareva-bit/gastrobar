@@ -99,6 +99,11 @@ BEGIN
     RETURN;
   END IF;
 
+  IF cnt >= 2 THEN
+    UPDATE public.rooms SET status = 'playing' WHERE id = p_room_id;
+    RETURN;
+  END IF;
+
   IF r.search_deadline >= now() THEN
     RETURN;
   END IF;
@@ -117,11 +122,6 @@ BEGIN
     UPDATE public.rooms
     SET status = 'playing', started_with_bot = true
     WHERE id = p_room_id;
-    RETURN;
-  END IF;
-
-  IF cnt = 2 THEN
-    UPDATE public.rooms SET status = 'playing' WHERE id = p_room_id;
     RETURN;
   END IF;
 END;
