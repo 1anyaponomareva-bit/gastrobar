@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import type { Card } from "@/games/durak/types";
 import { rankLabel, suitLabel } from "@/games/durak/cards";
+import { getCardImagePath } from "@/lib/durak/cardPng";
 import { cn } from "@/lib/utils";
 
-/** Единый классический стиль: светлое поле, масти ♠♥♦♣, ранг как в колоде. */
-export function CardFaceArt({
+/** Fallback: прежняя текстовая карта, если PNG не загрузился. */
+function CardFaceArtFallback({
   card,
   className,
   compact,
@@ -106,6 +108,44 @@ export function CardFaceArt({
           {suit}
         </span>
       </div>
+    </div>
+  );
+}
+
+export function CardFaceArt({
+  card,
+  className,
+  compact,
+}: {
+  card: Card;
+  className?: string;
+  compact?: boolean;
+}) {
+  const [useFallback, setUseFallback] = useState(false);
+  const src = getCardImagePath(card.rank, card.suit);
+
+  if (useFallback) {
+    return <CardFaceArtFallback card={card} className={className} compact={compact} />;
+  }
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none relative h-full w-full overflow-hidden rounded-[10px]",
+        "border border-neutral-500/40 bg-neutral-900/10",
+        compact && "rounded-[8px]",
+        className
+      )}
+    >
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        className="h-full w-full object-cover"
+        loading="lazy"
+        decoding="async"
+        onError={() => setUseFallback(true)}
+      />
     </div>
   );
 }
