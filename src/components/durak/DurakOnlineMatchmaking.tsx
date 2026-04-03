@@ -42,7 +42,21 @@ const WAITING_HINTS: string[] = [
 /**
  * Онлайн-очередь: поиск комнаты + realtime.
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
+ *
+ * Переход в игру только когда в `public.rooms` у этой комнаты `status === 'playing'`
+ * (не по числу игроков и не по `room_state` — стол создаётся уже в DurakOnlineGame).
+ *
+ * Отладка в консоли: localStorage.setItem('durak_matchmaking_debug','1'); location.reload()
  */
+function mmDebug(...args: unknown[]) {
+  if (typeof window === "undefined") return;
+  const on =
+    process.env.NODE_ENV === "development" ||
+    window.localStorage?.getItem("durak_matchmaking_debug") === "1";
+  if (!on) return;
+  console.log("[durak-mm]", ...args);
+}
+
 function isPlayingStatus(r: RoomRow | null | undefined): boolean {
   return String(r?.status ?? "").toLowerCase() === "playing";
 }
@@ -101,14 +115,23 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     try {
       const rFirst = await fetchRoom(supabase, roomId);
       setRoom(rFirst);
+      mmDebug("tick fetchRoom#1", {
+        roomId,
+        rawStatus: rFirst?.status,
+        row: rFirst ? "ok" : "null",
+        search_deadline: rFirst?.search_deadline,
+      });
       if (isPlayingStatus(rFirst)) {
+        mmDebug("→ game ready (status playing после первого fetchRoom)", { roomId });
         onRoomPlayingRef.current(roomId);
         return;
       }
 
       const players = await fetchRoomPlayers(supabase, roomId);
       const humans = players.filter((p) => !p.is_bot).length;
+      const rows = players.length;
       setPlayerCount(humans);
+      mmDebug("tick room_players", { roomId, humans, rows, playerIds: players.map((p) => p.player_id) });
 
       let deadlineMs = NaN;
       const rawDl = rFirst?.search_deadline;
@@ -129,18 +152,36 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
       const now = Date.now();
       if (humans >= 2) {
+        mmDebug("RPC finalize + force_start_if_two_humans (humans>=2, каждый тик)", { roomId, humans });
         await durakFinalizeRoomIfReady(supabase, roomId);
         await durakForceStartIfTwoHumans(supabase, roomId);
         lastMatchmakingRpcAtRef.current = Date.now();
       } else if (now - lastMatchmakingRpcAtRef.current >= rpcMinMs) {
+        mmDebug("RPC durak_finalize_room_if_ready", {
+          roomId,
+          humans,
+          pastSearchDeadline,
+          rpcMinMs,
+          msSinceJoin: since != null ? Date.now() - since : null,
+        });
         await durakFinalizeRoomIfReady(supabase, roomId);
         lastMatchmakingRpcAtRef.current = Date.now();
+      } else {
+        mmDebug("skip finalize (throttle)", { roomId, humans, rpcMinMs, waitMs: rpcMinMs - (now - lastMatchmakingRpcAtRef.current) });
       }
 
       const r = await fetchRoom(supabase, roomId);
       setRoom(r);
+      mmDebug("tick fetchRoom#2", { roomId, rawStatus: r?.status });
       if (isPlayingStatus(r)) {
+        mmDebug("→ game ready (status playing после finalize)", { roomId });
         onRoomPlayingRef.current(roomId);
+      } else if (humans >= 2) {
+        mmDebug("второй игрок есть, но rooms.status ещё не playing — ждём SQL finalize / force_start", {
+          roomId,
+          humans,
+          status: r?.status,
+        });
       }
     } catch (e) {
       const msg = formatPostgrestError(e);
@@ -159,20 +200,28 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     (async () => {
       try {
         const pid = getOrCreateDurakPlayerId();
+        mmDebug("join_queue start", { playerId: pid.slice(0, 12) + "…", playerName });
         const j = await durakJoinQueue(supabase, pid, playerName);
         if (cancelled) return;
+        mmDebug("join_queue ok → roomId", j.roomId, "затем finalize (после join всегда)");
         setRoomId(j.roomId);
+        matchmakingSinceRef.current = Date.now();
         lastMatchmakingRpcAtRef.current = Date.now();
         await durakFinalizeRoomIfReady(supabase, j.roomId);
+        mmDebug("finalize после join выполнен");
         let players = await fetchRoomPlayers(supabase, j.roomId);
         let humans = players.filter((p) => !p.is_bot).length;
+        mmDebug("после join: room_players", { humans, rows: players.length });
         if (humans >= 2) {
+          mmDebug("join path: force_start_if_two_humans");
           await durakForceStartIfTwoHumans(supabase, j.roomId);
         }
         const r = await fetchRoom(supabase, j.roomId);
         if (cancelled) return;
         setRoom(r);
+        mmDebug("после join fetchRoom", { status: r?.status });
         if (isPlayingStatus(r)) {
+          mmDebug("→ game ready (сразу после join)", j.roomId);
           onRoomPlayingRef.current(j.roomId);
           return;
         }
@@ -207,6 +256,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
   useEffect(() => {
     if (isPlayingStatus(room) && roomId) {
+      mmDebug("→ game ready (effect по state room)", { roomId, status: room?.status });
       onRoomPlayingRef.current(roomId);
     }
   }, [room, roomId]);

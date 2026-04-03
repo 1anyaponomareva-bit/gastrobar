@@ -218,7 +218,11 @@ export async function durakJoinQueue(
   return parseJoinQueueResult(out.data);
 }
 
-/** Таймаут очереди: вызывать периодически, пока комната в `waiting`. */
+/**
+ * Финализация комнаты на сервере (бот после дедлайна, старт при 2+ людях и т.д.).
+ * Вызывается из: DurakOnlineMatchmaking (после join + в tick), DurakEntryFlow (лobby),
+ * триггер `room_players` на INSERT. UI выходит из матчмейкинга только когда `rooms.status` станет `playing`.
+ */
 export async function durakFinalizeRoomIfReady(
   client: SupabaseClient,
   roomId: string
