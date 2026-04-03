@@ -1506,7 +1506,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       <div
         className={cn(
           "relative z-20 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
-          embedded && opponents.length > 0 && "pt-2 sm:pt-3"
+          embedded && opponents.length > 0 && "pt-2 sm:pt-3",
+          /* translateY на овале не меняет поток — низ сукна уезжал под следующий блок с непрозрачным фоном */
+          opponents.length > 0
+            ? "mb-[min(2.35rem,7vmin)]"
+            : "mb-[min(1.25rem,3.5vmin)]"
         )}
       >
         <div
@@ -1712,7 +1716,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="relative z-40 mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-10px_32px_rgba(0,0,0,0.35)] sm:mt-4 sm:px-2 sm:pt-2.5">
+      <div className="relative z-40 mt-3 shrink-0 space-y-0 bg-transparent px-1 pt-1.5 sm:mt-4 sm:px-2 sm:pt-2.5">
         <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1810,7 +1814,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           /* Зазор над нижним баром: нав + safe-area + запас, чтобы веер карточек не заходил под табы */
           embedded
             ? "pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] sm:pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+6rem))]"
-            : "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))]"
+            : "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))]",
+          embedded && "shadow-none"
         )}
       >
         <div className="mb-0 flex items-center justify-between px-1">
