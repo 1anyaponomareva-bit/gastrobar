@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -113,6 +114,8 @@ const CARD_TABLE_COMPACT_H = "h-[4.2rem] sm:h-[5.35rem]";
 /** Рука: крупнее прежнего; зона веера растягивается между статусом и нижним баром. */
 const HAND_CARD_W_CLASS = "w-[8.95rem] sm:w-[9.55rem]";
 const HAND_CARD_H_CLASS = "h-[12.2rem] sm:h-[13.1rem]";
+/** Не больше карт в одном ряду руки — второй ряд веером ниже. */
+const HAND_ROW_MAX = 7;
 
 function handFanStyle(
   n: number,
@@ -232,6 +235,32 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
     transform: `translate(calc(-50% + ${tx}px), ${curve}px) rotate(${rot}deg)`,
     transformOrigin: "bottom center",
     zIndex: 10 + i,
+  };
+}
+
+/**
+ * Смещение пары атака/защита так, чтобы центр стопки был на окружности сукна:
+ * зелёное поле с `inset-[2%]` → радиус ≈ 0.48 от ширины круга стола.
+ * Дуга у верхней части стола (колода слева).
+ */
+function tablePairOrbitOffset(
+  index: number,
+  total: number,
+  radiusPx: number
+): { x: number; y: number } {
+  if (radiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
+  const n = Math.max(1, total);
+  const midDeg = -90;
+  const minSpan = 52;
+  const maxSpan = 118;
+  const spanDeg = Math.min(maxSpan, minSpan + (n - 1) * 12);
+  const startDeg = midDeg - spanDeg / 2;
+  const endDeg = midDeg + spanDeg / 2;
+  const t = n <= 1 ? 0.5 : index / (n - 1);
+  const rad = ((startDeg + t * (endDeg - startDeg)) * Math.PI) / 180;
+  return {
+    x: Math.cos(rad) * radiusPx,
+    y: Math.sin(rad) * radiusPx,
   };
 }
 
@@ -620,6 +649,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const [nameDraft, setNameDraft] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
   const skipNameBlurCommitRef = useRef(false);
+  const tableRoundRef = useRef<HTMLDivElement>(null);
+  const [tableOrbitPx, setTableOrbitPx] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = tableRoundRef.current;
+    if (!el) return;
+    const upd = () => setTableOrbitPx(el.clientWidth * 0.48);
+    upd();
+    const ro = new ResizeObserver(upd);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [game?.id]);
 
   useEffect(() => {
     try {
@@ -644,6 +685,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     [game, localPlayerId]
   );
   const humanHand = selfPlayer?.hand ?? [];
+  const humanHandRows = useMemo(() => {
+    const rows: Card[][] = [];
+    for (let i = 0; i < humanHand.length; i += HAND_ROW_MAX) {
+      rows.push(humanHand.slice(i, i + HAND_ROW_MAX));
+    }
+    return rows;
+  }, [humanHand]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1019,9 +1067,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-2 sm:pt-3">
         <div
+          ref={tableRoundRef}
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
-            width: "min(94vw, 30rem, 88vmin)",
+            width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
             transform: "translateY(min(1.5rem, 4vmin))",
           }}
@@ -1094,18 +1143,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             );
           })}
 
-          <div className="absolute inset-[8%] z-10 min-h-0 overflow-visible">
-            <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-visible">
+          <div className="absolute inset-0 z-10 min-h-0 overflow-visible">
+            <div className="relative h-full min-h-0 w-full overflow-visible">
               <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-20 -translate-y-1/2 sm:left-[2%]">
                 <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
               </div>
-              <div className="mx-auto flex max-h-none min-h-0 w-[min(100%,18rem)] max-w-[78%] flex-wrap content-center items-center justify-center gap-x-1.5 gap-y-2 overflow-visible px-[2%] py-1 sm:w-[min(100%,20rem)] sm:max-w-[75%] sm:gap-x-2 sm:gap-y-2.5 sm:px-[3%]">
               {game.tablePairs.length === 0 ? (
-                <span className="text-center text-[10px] text-white/35 sm:text-[11px]">
-                  {dealing ? "Карты раздаются…" : "Ждите ход"}
-                </span>
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 px-2">
+                  <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
+                    {dealing ? "Карты раздаются…" : "Ждите ход"}
+                  </span>
+                </div>
               ) : (
-                game.tablePairs.map((tp) => {
+                game.tablePairs.map((tp, i) => {
+                  const { x, y } = tablePairOrbitOffset(i, game.tablePairs.length, tableOrbitPx);
                   const uncovered = tp.defense === null;
                   const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
                   const attackSelectedForDefense =
@@ -1114,7 +1165,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
 
                   return (
-                    <div key={tp.attack.id} className="relative flex flex-col items-center">
+                    <div
+                      key={tp.attack.id}
+                      className="pointer-events-auto absolute left-1/2 top-1/2 z-10"
+                      style={{
+                        transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                      }}
+                    >
                       <div className="relative h-[4.75rem] w-[3.1rem] overflow-visible sm:h-[5.85rem] sm:w-[4.05rem]">
                         <motion.div
                           className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2"
@@ -1160,7 +1217,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   );
                 })
               )}
-              </div>
             </div>
           </div>
         </div>
@@ -1288,86 +1344,120 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {game.message}
           </motion.div>
         ) : null}
-        <div className="relative z-0 mx-auto mt-3 flex min-h-[11rem] w-full max-w-full flex-1 items-end justify-center overflow-visible pb-1 pt-1 sm:min-h-[12rem] sm:mt-4 sm:pt-2">
-          {humanHand.map((c, i) => {
-            const selAttack =
-              game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
-            const selToss = selfCanToss && tossPick.includes(c.id);
-
-            const attackPlayable =
-              selfIsAttacker && game.phase === "attack_initial" && game.state === "playing";
-
-            const tossPlayable = selfCanToss && game.state === "playing" && ranksOnTable.has(c.rank);
-
-            const defendPlayable = defendPlayableFor(c);
-
-            let playable = false;
-            if (game.state === "playing" && !dealing) {
-              if (selfIsAttacker && game.phase === "attack_initial") playable = attackPlayable;
-              else if (selfCanToss) playable = tossPlayable;
-              else if (selfIsDefender && game.phase === "defend") playable = defendPlayable;
-            }
-
-            const selected = selAttack || selToss;
-
-            const onPress =
-              selfIsAttacker && game.phase === "attack_initial"
-                ? () => {
-                    if (!attackPlayable) return;
-                    setAttackPick((p) => toggleAttackSelection(humanHand, p, c.id));
-                    setGame((g) => (g ? { ...g, message: null } : g));
-                  }
-                : selfCanToss
-                  ? () => {
-                      if (!tossPlayable) return;
-                      setTossPick((p) => toggleTossSelection(humanHand, p, c.id, ranksOnTable));
-                      setGame((g) => (g ? { ...g, message: null } : g));
+        <div
+          className={cn(
+            "relative z-0 mx-auto mt-3 w-full max-w-full overflow-visible pb-1 pt-1 sm:mt-4 sm:pt-2",
+            humanHandRows.length > 1
+              ? "min-h-[14rem] sm:min-h-[15.5rem]"
+              : "flex min-h-[11rem] flex-1 items-end justify-center sm:min-h-[12rem]"
+          )}
+        >
+          {humanHandRows.map((row, rowIdx) => (
+            <div
+              key={row[0]?.id ?? `hand-row-${rowIdx}`}
+              className={cn(
+                "pointer-events-none absolute inset-x-0 flex justify-center overflow-visible",
+                humanHandRows.length > 1
+                  ? undefined
+                  : "bottom-0 h-[min(13.5rem,52vw)] sm:h-[min(14rem,48vw)]"
+              )}
+              style={
+                humanHandRows.length > 1
+                  ? {
+                      bottom: (humanHandRows.length - 1 - rowIdx) * 50,
+                      height: "min(12.5rem, 50vw)",
+                      zIndex: 10 + rowIdx,
                     }
-                  : selfIsDefender && game.phase === "defend"
-                    ? () => {
-                        if (!defendPlayable) return;
-                        onDefendCard(c.id);
-                      }
-                    : undefined;
+                  : undefined
+              }
+            >
+              <div className="pointer-events-auto relative h-full w-full max-w-[100vw] overflow-visible">
+                {row.map((c, i) => {
+                  const globalIndex = rowIdx * HAND_ROW_MAX + i;
+                  const selAttack =
+                    game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
+                  const selToss = selfCanToss && tossPick.includes(c.id);
 
-            const fan = handFanStyle(humanHand.length, i, "player");
+                  const attackPlayable =
+                    selfIsAttacker && game.phase === "attack_initial" && game.state === "playing";
 
-            return (
-              <div key={c.id} className="absolute" style={fan}>
-                <motion.div
-                  initial={{ opacity: 0, y: 88, scale: 0.82, rotate: 5 }}
-                  animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                  transition={{
-                    delay: 2 * i * DEAL_STAGGER_SEC,
-                    duration: DEAL_MOVE_SEC,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  <motion.div
-                    animate={{ y: selected ? -52 : 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 26 }}
-                  >
-                    <CardSprite
-                      card={c}
-                      size="hand"
-                      selected={selected}
-                      disabled={false}
-                      playableHighlight={
-                        game.state === "playing" &&
-                        !dealing &&
-                        playable &&
-                        (game.phase === "defend" ||
-                          game.phase === "attack_initial" ||
-                          game.phase === "attack_toss" ||
-                          game.phase === "player_can_throw_more")
-                      }
-                      onPress={onPress}
-                    />
-                  </motion.div>
-                </motion.div>
+                  const tossPlayable =
+                    selfCanToss && game.state === "playing" && ranksOnTable.has(c.rank);
+
+                  const defendPlayable = defendPlayableFor(c);
+
+                  let playable = false;
+                  if (game.state === "playing" && !dealing) {
+                    if (selfIsAttacker && game.phase === "attack_initial") playable = attackPlayable;
+                    else if (selfCanToss) playable = tossPlayable;
+                    else if (selfIsDefender && game.phase === "defend") playable = defendPlayable;
+                  }
+
+                  const selected = selAttack || selToss;
+
+                  const onPress =
+                    selfIsAttacker && game.phase === "attack_initial"
+                      ? () => {
+                          if (!attackPlayable) return;
+                          setAttackPick((p) => toggleAttackSelection(humanHand, p, c.id));
+                          setGame((g) => (g ? { ...g, message: null } : g));
+                        }
+                      : selfCanToss
+                        ? () => {
+                            if (!tossPlayable) return;
+                            setTossPick((p) =>
+                              toggleTossSelection(humanHand, p, c.id, ranksOnTable)
+                            );
+                            setGame((g) => (g ? { ...g, message: null } : g));
+                          }
+                        : selfIsDefender && game.phase === "defend"
+                          ? () => {
+                              if (!defendPlayable) return;
+                              onDefendCard(c.id);
+                            }
+                          : undefined;
+
+                  const fan = handFanStyle(row.length, i, "player");
+
+                  return (
+                    <div key={c.id} className="absolute" style={fan}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 88, scale: 0.82, rotate: 5 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                        transition={{
+                          delay: 2 * globalIndex * DEAL_STAGGER_SEC,
+                          duration: DEAL_MOVE_SEC,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        <motion.div
+                          animate={{ y: selected ? -52 : 0 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 26 }}
+                        >
+                          <CardSprite
+                            card={c}
+                            size="hand"
+                            selected={selected}
+                            disabled={false}
+                            playableHighlight={
+                              game.state === "playing" &&
+                              !dealing &&
+                              playable &&
+                              (game.phase === "defend" ||
+                                game.phase === "attack_initial" ||
+                                game.phase === "attack_toss" ||
+                                game.phase === "player_can_throw_more")
+                            }
+                            onPress={onPress}
+                          />
+                        </motion.div>
+                      </motion.div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
