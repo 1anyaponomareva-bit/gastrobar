@@ -211,9 +211,9 @@ function opponentSeatPolarMeta(
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 /** Имя чуть выше окружности сукна, к центру рукава — наружу по радиусу. */
 const OPP_NAME_OUTWARD_EXTRA_PX = 40;
-/** Онлайн (/ Друзья): руку ближе к сукну — веер не заезжает на метку с именем. */
-const OPP_HAND_EMBEDDED_INWARD_PX = 36;
-/** Доп. вынесение имени наружу в онлайне (имя всё ещё ближе к краю стола, чем карты). */
+/** Онлайн: рука на внешнем «ободке» стола (не на сукне), ближе к фону. */
+const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 52;
+/** Доп. вынесение имени наружу (офлайн); в онлайне имя дублируется полосой над столом. */
 const OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX = 22;
 
 /** Направление и смещение в px на окружности радиуса `orbitPx` (сукно ≈ 0.48 × ширина круга). */
@@ -1084,7 +1084,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-auto pb-0"
+          ? "flex-1 basis-0 min-h-0 overflow-y-auto overflow-x-visible pb-0"
           : "min-h-0 flex-1 overflow-hidden",
         /* Снизу: для офлайна — общий отступ; для встроенного онлайн нижний зазор только у секции руки (иначе двойной pb). */
         !embedded &&
@@ -1104,6 +1104,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </motion.div>
         ) : null}
       </div>
+
+      {embedded && game && opponents.length > 0 ? (
+        <div className="mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-end gap-1 px-2 pb-1 pt-0.5">
+          {opponents.map((opp) => (
+            <div key={opp.id} className="min-w-0 max-w-full text-right">
+              <p className="truncate text-[13px] font-medium text-white/90">{opp.name}</p>
+              <p className="text-[10px] text-white/45">{opp.hand.length} карт</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
         <div
@@ -1139,16 +1150,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
             const { nx, ny } = opponentSeatOffsets(seatMeta.angleDeg, opponentOrbitPx);
             const handRadius =
-              opponentOrbitPx - (embedded ? OPP_HAND_EMBEDDED_INWARD_PX : 0);
+              opponentOrbitPx + (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: handOx, oy: handOy } = opponentSeatOffsets(seatMeta.angleDeg, handRadius);
+            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.28 : seatMeta.fanTowardCenterDeg;
             const nameArmLen =
               opponentOrbitPx +
               OPP_NAME_OUTWARD_EXTRA_PX +
               (embedded ? OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX : 0);
             const nameOx = nx * nameArmLen;
             const nameOy = ny * nameArmLen;
+            const showOrbitName = !embedded;
             return (
-              <div key={opp.id} className="pointer-events-none absolute inset-0 z-[8] overflow-visible">
+              <div
+                key={opp.id}
+                className={cn(
+                  "pointer-events-none absolute inset-0 overflow-visible",
+                  embedded ? "z-[5] opacity-[0.92]" : "z-[8]"
+                )}
+              >
                 <div
                   className="pointer-events-none absolute min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
                   style={{
@@ -1160,7 +1179,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   <div
                     className="relative flex min-h-[4.85rem] w-full items-end justify-center overflow-visible sm:min-h-[5.85rem]"
                     style={{
-                      transform: `rotate(${seatMeta.fanTowardCenterDeg}deg)`,
+                      transform: `rotate(${fanDeg}deg)`,
                       transformOrigin: "center bottom",
                     }}
                   >
@@ -1181,24 +1200,26 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   ))}
                   </div>
                 </div>
-                <div
-                  className="pointer-events-auto absolute z-[24] flex max-w-[min(46%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[42%]"
-                  style={{
-                    left: `calc(50% + ${nameOx}px)`,
-                    top: `calc(50% + ${nameOy}px)`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <p className="max-w-[6.5rem] truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:max-w-[7.5rem] sm:text-[11px]">
-                    {opp.name}
-                  </p>
-                  <span
-                    className="shrink-0 rounded-full border border-white/20 bg-black/45 px-1.5 py-px text-[9px] font-bold tabular-nums text-emerald-100/95 sm:text-[10px]"
-                    title={`Карт: ${bh.length}`}
+                {showOrbitName ? (
+                  <div
+                    className="pointer-events-auto absolute z-[24] flex max-w-[min(46%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[42%]"
+                    style={{
+                      left: `calc(50% + ${nameOx}px)`,
+                      top: `calc(50% + ${nameOy}px)`,
+                      transform: "translate(-50%, -50%)",
+                    }}
                   >
-                    {bh.length}
-                  </span>
-                </div>
+                    <p className="max-w-[6.5rem] truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:max-w-[7.5rem] sm:text-[11px]">
+                      {opp.name}
+                    </p>
+                    <span
+                      className="shrink-0 rounded-full border border-white/20 bg-black/45 px-1.5 py-px text-[9px] font-bold tabular-nums text-emerald-100/95 sm:text-[10px]"
+                      title={`Карт: ${bh.length}`}
+                    >
+                      {bh.length}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             );
           })}
@@ -1237,7 +1258,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         zIndex: stackZ,
                       }}
                     >
-                      {/* Атака и отбой по одной оси — кроющая лежит ровно поверх (без поворота). */}
+                      {/* Отбой: смещение вверх/вправо — ранг атаки (нижний край) остаётся виден, без наклона. */}
                       <div className="relative h-[5.35rem] w-[4.65rem] overflow-visible sm:h-[6.35rem] sm:w-[5.35rem]">
                         <motion.div
                           className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2"
@@ -1270,9 +1291,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                         {tp.defense ? (
                           <motion.div
-                            className="absolute bottom-0 left-1/2 z-[22] -translate-x-1/2"
+                            className="absolute bottom-[0.4rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[0.45rem]"
                             initial={false}
-                            animate={{ opacity: 1, y: 0, x: 0, scale: 1, rotate: 0 }}
+                            animate={{ opacity: 1, y: 0, x: 14, scale: 1, rotate: 0 }}
                             transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
                           >
                             <CardSprite card={tp.defense} size="tableCompact" />

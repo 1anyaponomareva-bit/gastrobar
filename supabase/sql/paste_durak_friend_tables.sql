@@ -131,6 +131,8 @@ BEGIN
     RETURN;
   END IF;
 
+  PERFORM pg_advisory_xact_lock(94837201);
+
   SELECT rm.* INTO room_rec
   FROM public.rooms rm
   WHERE rm.status = 'waiting'
@@ -156,7 +158,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot, matchmaking_pool)
-  VALUES ('waiting', 3, now() + interval '40 seconds', false, true)
+  VALUES ('waiting', 3, now() + interval '55 seconds', false, true)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)

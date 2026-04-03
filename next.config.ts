@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
       { pathname: "/fab-wheel-won.png" },
       { pathname: "/images/**" },
       { pathname: "/menu/**" },
+      { pathname: "/durak.png" },
+      { pathname: "/poker.png" },
     ],
   },
   /**
