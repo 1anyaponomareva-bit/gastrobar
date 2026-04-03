@@ -280,12 +280,8 @@ function opponentSeatPolarMeta(
 
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
-/** Имя чуть выше окружности сукна, к центру рукава — наружу по радиусу. */
-const OPP_NAME_OUTWARD_EXTRA_PX = 34;
 /** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
-const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 26;
-/** Доп. вынесение имени наружу (офлайн); в онлайне имя дублируется полосой над столом. */
-const OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX = 22;
+const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
 /** Направление и смещение в px на окружности радиуса `orbitPx` (сукно ≈ 0.48 × ширина круга). */
 function opponentSeatOffsets(
@@ -300,7 +296,7 @@ function opponentSeatOffsets(
 }
 
 /**
- * Веер рубашек соперника: симметрия от центра, маленький угол, лёгкая арка (центр — опорная карта).
+ * Веер рубашек соперника: центр ниже, симметричный разворот, без «забора» из почти вертикальных карт.
  */
 function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
   if (n <= 0) return {};
@@ -316,18 +312,16 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
     };
   }
   const denom = Math.max(mid, 1e-6);
-  const edgeMaxDeg =
-    n <= 3 ? 3.2 : n <= 5 ? 3.8 : n <= 7 ? 4.2 : 4.6;
+  const edgeMaxDeg = Math.min(26, 10 + n * 2);
   const rot = (rel / denom) * edgeMaxDeg;
-  const gapPx =
-    n <= 4 ? 6.75 : n <= 6 ? 6.25 : n <= 8 ? 5.75 : 5.25;
-  const tx = rel * gapPx;
-  const ty = -(rel * rel) * 0.32;
-  const zFromCenter = Math.round(3 * (mid - Math.abs(rel)));
+  const stepPx = Math.min(19, Math.max(11, 118 / Math.max(n - 1, 1)));
+  const tx = rel * stepPx;
+  const arc = Math.abs(rel) * 0.55;
+  const zFromCenter = Math.round(4 * (mid - Math.abs(rel)));
   return {
     left: "50%",
     bottom: 0,
-    transform: `translate(calc(-50% + ${tx}px), ${ty}px) rotate(${rot}deg)`,
+    transform: `translate(calc(-50% + ${tx}px), ${-arc}px) rotate(${rot}deg)`,
     transformOrigin: "bottom center",
     zIndex: 16 + zFromCenter + i,
   };
@@ -358,7 +352,7 @@ function tablePairOrbitOffset(
   return { x, y };
 }
 
-/** Рубашка: PNG из `/public/cards/PNG-cards-1.3/`, при ошибке — логотип бара. */
+/** Рубашка: PNG как есть, без подложки и фильтров (иначе «чернота» и искажения). */
 function BrandedCardBack({
   selected,
   disabled,
@@ -375,11 +369,10 @@ function BrandedCardBack({
       className={cn(
         "relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden",
         CARD_RADIUS_CLASS,
-        "border border-black/35 bg-[#0c0c0d]",
-        "shadow-[0_4px_10px_rgba(0,0,0,0.32)]",
+        "border border-white/15 bg-transparent shadow-[0_3px_10px_rgba(0,0,0,0.22)]",
         selected &&
-          "shadow-[0_0_0_2px_rgba(255,255,255,0.85),0_10px_24px_rgba(0,0,0,0.35)] ring-2 ring-emerald-400/75",
-        disabled && "opacity-[0.38] saturate-[0.65]",
+          "shadow-[0_0_0_2px_rgba(255,255,255,0.75),0_8px_20px_rgba(0,0,0,0.3)] ring-2 ring-emerald-400/70",
+        disabled && "opacity-[0.42]",
         className
       )}
     >
@@ -390,6 +383,7 @@ function BrandedCardBack({
         className="block h-full w-full object-contain object-center"
         loading="lazy"
         decoding="async"
+        style={{ filter: "none", mixBlendMode: "normal" }}
         onError={() => setSrc(CARD_BACK_URL)}
       />
     </div>
@@ -435,7 +429,7 @@ function CardSprite({
     "relative shrink-0",
     CARD_RADIUS_CLASS,
     isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
-    !isBack ? "bg-white" : "bg-transparent ring-1 ring-black/25 shadow-[0_2px_7px_rgba(0,0,0,0.38)]",
+    !isBack ? "bg-white" : "bg-transparent",
     dimBox,
     playableHighlight &&
       !isBack &&
@@ -847,6 +841,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           }
           const humans = players.filter((p) => !p.is_bot).length;
           if (humans < 2) {
+            if (room.status === "playing" && room.matchmaking_pool !== false && hasDurakTabOnlineResume()) {
+              try {
+                const { data: rs } = await client
+                  .from("room_state")
+                  .select("state")
+                  .eq("room_id", rid)
+                  .maybeSingle();
+                const plist = (rs?.state as { game?: { players?: { type?: string }[] } } | undefined)?.game
+                  ?.players;
+                const humanCount = Array.isArray(plist) ? plist.filter((p) => p?.type !== "bot").length : 0;
+                if (humanCount >= 2) void durakForfeitStaleOpponent(client, rid, pid).catch(() => {});
+              } catch {
+                /* ignore */
+              }
+            }
             abandonDurakStoredRoom();
             return;
           }
@@ -1385,7 +1394,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
-            transform: "translateY(min(1.25rem, 3.5vmin))",
+            /* Ниже фиксированного header + safe-area: верхняя рука не лезет в шапку */
+            transform:
+              opponents.length > 0
+                ? "translateY(min(1.85rem, 5.5vmin))"
+                : "translateY(min(1.25rem, 3.5vmin))",
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1433,7 +1446,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const handRadius =
               opponentOrbitPx + (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: handOx, oy: handOy } = opponentSeatOffsets(seatMeta.angleDeg, handRadius);
-            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.34 : seatMeta.fanTowardCenterDeg;
+            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.28 : seatMeta.fanTowardCenterDeg * 0.92;
             return (
               <div
                 key={opp.id}
@@ -1443,34 +1456,40 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 )}
               >
                 <div
-                  className="pointer-events-none absolute min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
+                  className="pointer-events-none absolute flex w-[min(94vw,15.5rem)] max-w-[94%] flex-col items-center gap-1 sm:w-[min(92vw,16rem)]"
                   style={{
                     left: `calc(50% + ${handOx}px)`,
                     top: `calc(50% + ${handOy}px)`,
                     transform: "translate(-50%, -50%)",
                   }}
                 >
+                  <div className="flex w-full min-w-0 flex-col items-center px-1 text-center">
+                    <p className="max-w-full truncate text-[13px] font-medium leading-tight text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]">
+                      {opp.name}
+                    </p>
+                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
+                  </div>
                   <div
-                    className="relative flex min-h-[4.85rem] w-full items-end justify-center overflow-visible sm:min-h-[5.85rem]"
+                    className="relative flex h-[min(5.25rem,27vw)] w-full items-end justify-center overflow-visible sm:h-[min(5.85rem,24vw)]"
                     style={{
                       transform: `rotate(${fanDeg}deg)`,
                       transformOrigin: "center bottom",
                     }}
                   >
-                  {bh.map((c, i) => (
-                    <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
-                      <motion.div
-                        initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
-                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        transition={{
-                          ...SPRING_SOFT,
-                          delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                        }}
-                      >
-                        <CardSprite faceDown size="tableCompact" />
-                      </motion.div>
-                    </div>
-                  ))}
+                    {bh.map((c, i) => (
+                      <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
+                        <motion.div
+                          initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                          transition={{
+                            ...SPRING_SOFT,
+                            delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                          }}
+                        >
+                          <CardSprite faceDown size="tableCompact" />
+                        </motion.div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1562,39 +1581,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           </div>
 
-          <div className="pointer-events-none absolute inset-0 z-[35] overflow-visible">
-            {opponents.map((opp, oi) => {
-              const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
-              const { nx, ny } = opponentSeatOffsets(seatMeta.angleDeg, opponentOrbitPx);
-              const nameArmLen =
-                opponentOrbitPx +
-                OPP_NAME_OUTWARD_EXTRA_PX +
-                (embedded ? OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX : 0);
-              const nameOx = nx * nameArmLen;
-              const nameOy = ny * nameArmLen;
-              return (
-                <div
-                  key={`opp-name-${opp.id}`}
-                  className="absolute flex max-w-[min(92vw,18rem)] justify-center px-2"
-                  style={{
-                    left: `calc(50% + ${nameOx}px)`,
-                    top: `calc(50% + ${nameOy}px)`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <p
-                    className="max-w-full truncate text-center text-[11px] font-semibold text-white sm:text-[12px]"
-                    style={{
-                      textShadow:
-                        "0 1px 3px rgba(0,0,0,1), 0 0 14px rgba(0,0,0,0.85)",
-                    }}
-                  >
-                    {opp.name}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
 

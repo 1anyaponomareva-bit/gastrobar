@@ -340,10 +340,10 @@ export async function fetchRoomPlayers(
   return (data ?? []) as RoomPlayerRow[];
 }
 
-/** Синхронно с `durak_forfeit_stale_opponent`: соперник «жив», если пинговал за последние 15 с. */
-const STALE_LAST_SEEN_MS = 15_000;
+/** Синхронно с `durak_forfeit_stale_opponent`: соперник «жив», если пинговал за последние 20 с. */
+const STALE_LAST_SEEN_MS = 20_000;
 /** Запас, если в строке нет last_seen (редко); колонка в БД обычно NOT NULL. */
-const STALE_IF_NEVER_SEEN_AFTER_JOIN_MS = 18_000;
+const STALE_IF_NEVER_SEEN_AFTER_JOIN_MS = 24_000;
 
 /** Порог перед RPC `durak_forfeit_stale_opponent` — должен совпадать с интервалом в SQL. */
 export function isRoomPlayerLikelyGone(row: RoomPlayerRow, nowMs: number): boolean {

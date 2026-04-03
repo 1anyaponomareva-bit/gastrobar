@@ -1,6 +1,5 @@
--- Выполнить в Supabase SQL Editor, если миграции ещё не катались.
--- Соперник считается «вышел», если last_seen старше 20 с или строки в room_players нет, но в JSON два человека.
--- См. миграцию 20260429120000_durak_forfeit_when_opponent_missing_from_room_players.sql
+-- Форфейт: если соперник исчез из room_players, но в room_state.game.players ещё два человека,
+-- берём id проигравшего из JSON. Порог «соперник жив»: last_seen за последние 20 с (как в оригинале 251).
 
 CREATE OR REPLACE FUNCTION public.durak_forfeit_stale_opponent(p_room_id uuid, p_player_id text)
 RETURNS TABLE (out_updated_at timestamptz)

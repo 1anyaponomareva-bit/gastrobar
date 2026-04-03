@@ -362,7 +362,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   );
 
   /**
-   * Техническая победа: соперник-человек не пинговал ≥15 с (сервер: `durak_forfeit_stale_opponent`).
+   * Техническая победа: соперник не пинговал ≥20 с или пропал из room_players (сервер: `durak_forfeit_stale_opponent`).
    * Не привязываем к visibility: иначе вкладка в фоне — форфейт никогда не вызывается.
    * Свой пинг по-прежнему только при видимой вкладке (сервер требует «caller not active» если сам не пинговал ~30 с).
    */
@@ -376,10 +376,15 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         try {
           const rows = await fetchRoomPlayers(supabase, roomId);
           const others = rows.filter((r) => !r.is_bot && r.player_id !== playerId);
-          if (others.length === 0) return;
           const now = Date.now();
-          const allStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
-          if (!allStale) return;
+          const humansInGame = g.players.filter((p) => p.type !== "bot").length;
+          let shouldForfeit = false;
+          if (others.length === 0) {
+            if (humansInGame >= 2) shouldForfeit = true;
+          } else {
+            shouldForfeit = others.every((r) => isRoomPlayerLikelyGone(r, now));
+          }
+          if (!shouldForfeit) return;
           const raw = await durakForfeitStaleOpponent(supabase, roomId, playerId);
           advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
           setOpponentForfeitWin(true);
