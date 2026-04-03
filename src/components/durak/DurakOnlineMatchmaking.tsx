@@ -30,6 +30,7 @@ const WAITING_STATUS_LINES: { text: string; emoji: string }[] = [
 ];
 
 const WAITING_HINTS: string[] = [
+  "Вдвоём с одного устройства? Второй заход — в режиме инкогнито: в обычной вкладке тот же игрок.",
   "Можешь пока выпить что-нибудь бархатное 🍺",
   "Закажи джерки к напитку — хватит до первого хода 🥩",
   "Глянь меню бара у бармена — мы пока мешаем колоду 😉",
@@ -54,6 +55,8 @@ function isProxyRateLimitError(message: string): boolean {
 const MATCHMAKING_RPC_MIN_INTERVAL_MS = 2200;
 /** После server search_deadline чаще дергаем finalize — партия с ботом должна стартовать сразу. */
 const MATCHMAKING_RPC_AFTER_DEADLINE_MS = 700;
+/** Два живых за столом — чаще finalize/force, чтобы сразу уйти в playing. */
+const MATCHMAKING_RPC_TWO_HUMANS_MS = 450;
 
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
