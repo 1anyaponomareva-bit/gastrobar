@@ -140,7 +140,8 @@ function handFanStyle(
   const rel = i - mid;
   const spread = n <= 1 ? 0 : Math.min(50 / (n - 1), 9);
   const rot = rel * spread;
-  const tx = rel * (n > 8 ? 20.5 : 25.5);
+  const step = n >= 6 ? 30 : n >= 4 ? 27 : 25;
+  const tx = rel * step;
   const curve = Math.abs(rel) * 3.2;
   const ty = mode === "opponent" ? curve : -curve;
   return {
@@ -230,7 +231,7 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
   const rel = i - mid;
   const spread = n <= 1 ? 0 : Math.min(12 / Math.max(1, n - 1), 3.8);
   const rot = rel * spread;
-  const step = n > 8 ? 5.5 : n >= 5 ? 6.5 : 7;
+  const step = n > 8 ? 7 : n >= 5 ? 7.5 : 8.5;
   const tx = rel * step;
   const curve = Math.abs(rel) * 1.1;
   return {
@@ -243,9 +244,8 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
 }
 
 /**
- * Смещение пары атака/защита: **центр сукна** (не дуга у верхнего соперника).
- * Короткая горизонтальная дуга вокруг 0° + малая доля по Y — визуально «полёт» в середину стола,
- * карты не группируются под рукой сверху и не уезжают к боковым соперникам.
+ * Позиции колонок «атака + отбой» на столе: ряд по горизонтали в центре сукна.
+ * Шаг между центрами колонок не меньше ширины карты — пары не сливаются в одну стопку.
  */
 function tablePairOrbitOffset(
   index: number,
@@ -254,16 +254,17 @@ function tablePairOrbitOffset(
 ): { x: number; y: number } {
   if (orbitRadiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
   const n = Math.max(1, total);
-  const playR = Math.max(44, orbitRadiusPx * 0.27);
-  const minSpan = 42;
-  const maxSpan = 102;
-  const spanDeg = Math.min(maxSpan, minSpan + (n - 1) * 11);
-  const startDeg = -spanDeg / 2;
-  const endDeg = spanDeg / 2;
-  const t = n <= 1 ? 0.5 : index / (n - 1);
-  const rad = ((startDeg + t * (endDeg - startDeg)) * Math.PI) / 180;
-  const x = Math.cos(rad) * playR;
-  const y = Math.sin(rad) * playR * 0.2;
+  if (n === 1) return { x: 0, y: 0 };
+
+  const minGapPx = 52;
+  const maxGapPx = 78;
+  const maxHalfRowPx = Math.max(orbitRadiusPx * 0.72, (minGapPx * (n - 1)) / 2 + 24);
+  const idealGap = (2 * maxHalfRowPx) / (n - 1);
+  const gap = Math.max(minGapPx, Math.min(maxGapPx, idealGap));
+  const totalWidth = (n - 1) * gap;
+  const startX = -totalWidth / 2;
+  const x = startX + index * gap;
+  const y = 0;
   return { x, y };
 }
 
@@ -1079,10 +1080,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-auto"
+          ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-auto pb-0"
           : "min-h-0 flex-1 overflow-hidden",
-        /* Один отступ под BottomNav + safe-area (без дублирования с секцией руки) */
-        "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+5.85rem))]"
+        /* Снизу: для офлайна — общий отступ; для встроенного онлайн нижний зазор только у секции руки (иначе двойной pb). */
+        !embedded &&
+          "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+5.85rem))]"
       )}
     >
       <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
@@ -1099,14 +1101,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-2 sm:pt-3">
+      <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
         <div
           ref={tableRoundRef}
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
-            transform: "translateY(min(1.1rem, 3.2vmin))",
+            transform: "translateY(min(1.25rem, 3.5vmin))",
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1224,7 +1226,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         zIndex: stackZ,
                       }}
                     >
-                      <div className="relative h-[4.75rem] w-[3.1rem] overflow-visible sm:h-[5.85rem] sm:w-[4.05rem]">
+                      {/* Слот шире одной карты: атака снизу по центру, отбой — выше и правее, обе читаются */}
+                      <div className="relative h-[5.35rem] w-[4.65rem] overflow-visible sm:h-[6.35rem] sm:w-[5.35rem]">
                         <motion.div
                           className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2"
                           initial={false}
@@ -1256,9 +1259,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                         {tp.defense ? (
                           <motion.div
-                            className="absolute bottom-0.5 left-1/2 z-[22] -translate-x-[42%]"
+                            className="absolute bottom-[1.1rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[1.3rem]"
                             initial={false}
-                            animate={{ opacity: 1, y: -10, x: 4, scale: 1, rotate: 2 }}
+                            animate={{ opacity: 1, y: 0, x: 22, scale: 1, rotate: 8 }}
                             transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
                           >
                             <CardSprite card={tp.defense} size="tableCompact" />
@@ -1274,7 +1277,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="mt-4 shrink-0 space-y-0 bg-[#14100c] px-1 pt-2 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-5 sm:px-2 sm:pt-3">
+      <div className="mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-4 sm:px-2 sm:pt-2.5">
         <div className="relative z-30 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1344,7 +1347,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </p>
       ) : null}
 
-      <section className="relative z-0 shrink-0 bg-[#14100c] px-1 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))] pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2.5">
+      <section
+        className={cn(
+          "relative z-0 shrink-0 bg-[#14100c] px-1 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2",
+          /* Зазор над нижним баром: нав + safe-area + запас, чтобы веер карточек не заходил под табы */
+          embedded
+            ? "pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] sm:pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+6rem))]"
+            : "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))]"
+        )}
+      >
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (

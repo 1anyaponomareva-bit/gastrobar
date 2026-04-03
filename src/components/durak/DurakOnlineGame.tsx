@@ -18,6 +18,7 @@ import {
   roomStateMatchesRoomPlayers,
 } from "@/lib/durak/online/buildRoomGame";
 import {
+  durakSaveRoomState,
   fetchRoomPlayers,
   formatPostgrestError,
 } from "@/lib/durak/online/matchmaking";
@@ -231,9 +232,9 @@ function coerceRemoteGame(raw: unknown): GameTable | null {
  * Старт игры: после `rooms.status === 'playing'` + запись в `room_state`.
  * Добавление бота: RPC `durak_finalize_room_if_ready` (см. SQL) при 1 игроке после дедлайна.
  *
- * Синхронизация ходов: upsert в `room_state` + опрос по HTTP (без Supabase Realtime/WebSocket:
+ * Синхронизация ходов: RPC `durak_save_room_state` + опрос по HTTP (без Supabase Realtime/WebSocket:
  * в Safari / встроенных браузерах и при блокировке wss часто «TypeError: Load failed»).
- * Persist не должен захватывать `game` в замыкание debounce — иначе поздний upsert затирает отбой соперника.
+ * Persist не должен захватывать `game` в замыкание debounce — иначе поздняя запись затирает отбой соперника.
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
 export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
@@ -256,8 +257,10 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   const lastAppliedServerTsRef = useRef(0);
   /** Локальный ход ещё не записан в БД — не подменять стол устаревшим poll / pre-upsert select с тем же `updated_at`. */
   const pendingRoomSaveRef = useRef(false);
-  /** Увеличивается на каждый материальный ход; upsert снимает pending только если совпал с актуальным (параллельные async после debounce). */
+  /** Увеличивается на каждый материальный ход; RPC save снимает pending только если совпал с актуальным (параллельные async после debounce). */
   const roomSaveGenRef = useRef(0);
+  /** Анти-спам: не больше ~18 сохранений за 10 с с одного клиента. */
+  const saveThrottleTimestampsRef = useRef<number[]>([]);
 
   useEffect(() => {
     gameRef.current = game;
@@ -345,7 +348,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .eq("room_id", roomId)
           .maybeSingle();
         if (selErr) {
-          console.warn("[durak] room_state pre-upsert select:", selErr.message);
+          console.warn("[durak] room_state pre-save select:", selErr.message);
         }
         g = gameRef.current;
         if (!g) return;
@@ -371,6 +374,21 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         g = gameRef.current;
         if (!g) return;
 
+        const nowTs = Date.now();
+        saveThrottleTimestampsRef.current = saveThrottleTimestampsRef.current.filter(
+          (t) => nowTs - t < 10_000
+        );
+        if (saveThrottleTimestampsRef.current.length >= 18) {
+          console.warn("[durak] room_state save throttled (client)");
+          if (saveGenAtRun === roomSaveGenRef.current) {
+            pendingRoomSaveRef.current = true;
+            persistTimer.current = setTimeout(() => {
+              persistGame();
+            }, 2200);
+          }
+          return;
+        }
+
         const delaysMs = [0, 120, 300, 700];
         let upRaw: string | undefined;
         for (let attempt = 0; attempt < delaysMs.length; attempt++) {
@@ -380,29 +398,21 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
             if (!g) return;
             if (saveGenAtRun !== roomSaveGenRef.current) return;
           }
-          const { data: upData, error: upErr } = await supabase
-            .from("room_state")
-            .upsert(
-              {
-                room_id: roomId,
-                state: { game: g } satisfies RoomStatePayload,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "room_id" }
-            )
-            .select("updated_at")
-            .maybeSingle();
-          if (!upErr && upData?.updated_at) {
-            upRaw = String(upData.updated_at);
+          try {
+            upRaw = await durakSaveRoomState(supabase, roomId, playerId, { game: g });
+            saveThrottleTimestampsRef.current.push(Date.now());
             break;
-          }
-          if (upErr) {
-            console.warn("[durak] room_state upsert:", upErr.message, `(attempt ${attempt + 1})`);
+          } catch (err) {
+            console.warn(
+              "[durak] durak_save_room_state:",
+              err instanceof Error ? err.message : err,
+              `(attempt ${attempt + 1})`
+            );
           }
         }
 
         if (!upRaw) {
-          console.warn("[durak] room_state upsert: all retries failed; will retry save");
+          console.warn("[durak] durak_save_room_state: all retries failed; will retry save");
           if (saveGenAtRun === roomSaveGenRef.current) {
             pendingRoomSaveRef.current = true;
             persistTimer.current = setTimeout(() => {
@@ -415,8 +425,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         if (saveGenAtRun === roomSaveGenRef.current) pendingRoomSaveRef.current = false;
         advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(upRaw));
       })();
-    }, 80);
-  }, [supabase, roomId, applyRemoteRow]);
+    }, 160);
+  }, [supabase, roomId, playerId, applyRemoteRow]);
 
   const onRemoteGameChange = useCallback(
     (update: SetStateAction<GameTable>) => {
@@ -485,24 +495,11 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         const initial = buildGameFromRoomPlayers(rows, playerId);
 
         if (leaderId === playerId) {
-          const { data: upData, error: upErr } = await supabase
-            .from("room_state")
-            .upsert(
-              {
-                room_id: roomId,
-                state: { game: initial },
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "room_id" }
-            )
-            .select("updated_at")
-            .single();
-          if (upErr && !String(upErr.message).includes("duplicate")) {
-            console.warn(upErr);
-          }
-          const raw = upData?.updated_at;
-          if (raw) {
-            advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(String(raw)));
+          try {
+            const raw = await durakSaveRoomState(supabase, roomId, playerId, { game: initial });
+            advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
+          } catch (e) {
+            console.warn("[durak] durak_save_room_state (seed):", e instanceof Error ? e.message : e);
           }
         }
 

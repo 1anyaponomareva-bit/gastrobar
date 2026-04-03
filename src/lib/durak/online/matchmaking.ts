@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { PublicFriendTableRow, RoomPlayerRow, RoomRow } from "./types";
+import type { PublicFriendTableRow, RoomPlayerRow, RoomRow, RoomStatePayload } from "./types";
 
 const EMPTY_ERROR_HINT =
   "Ошибка без текста от сервера. В Supabase проверьте RLS на rooms, room_players, room_state и права на RPC durak_join_queue / durak_finalize_room_if_ready (SQL + Logs).";
@@ -229,6 +229,33 @@ export async function durakFinalizeRoomIfReady(
   if ("error" in out) {
     throw new Error(out.error);
   }
+}
+
+/**
+ * Запись `room_state` только через RPC: проверка membership и статуса комнаты на сервере.
+ * Прямой upsert с клиента после миграции RLS недоступен.
+ */
+export async function durakSaveRoomState(
+  client: SupabaseClient,
+  roomId: string,
+  playerId: string,
+  state: RoomStatePayload
+): Promise<string> {
+  const out = await rpcPost(client, "durak_save_room_state", {
+    payload: {
+      room_id: roomId,
+      player_id: playerId,
+      state,
+    },
+  });
+  if ("error" in out) throw new Error(out.error);
+  const row = Array.isArray(out.data)
+    ? (out.data[0] as Record<string, unknown> | undefined)
+    : (out.data as Record<string, unknown> | null);
+  const raw = row?.out_updated_at ?? row?.outUpdatedAt;
+  const ts = raw != null ? String(raw).trim() : "";
+  if (!ts) throw new Error("Сервер не вернул время сохранения стола");
+  return ts;
 }
 
 export async function fetchRoom(

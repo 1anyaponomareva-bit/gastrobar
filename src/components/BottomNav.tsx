@@ -30,9 +30,9 @@ export function BottomNav() {
       initial={{ opacity: 1, y: 0 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom px-3 sm:px-4"
+      className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom px-3"
     >
-      <div className="pointer-events-auto mx-auto flex w-[min(100%,36rem)] max-w-xl flex-wrap items-center justify-center gap-x-0 gap-y-1 rounded-full bg-white/10 px-3 py-2.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(100%,36rem)] sm:max-w-xl sm:flex-nowrap sm:justify-between sm:gap-0 sm:px-4">
+      <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-2 py-2 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:max-w-md sm:px-2.5 sm:py-2.5">
         {TABS.map((tab) => {
           const active = !onGames && tab.id === period;
           return (
@@ -41,7 +41,7 @@ export function BottomNav() {
               type="button"
               onClick={() => goPeriod(tab.id)}
               className={cn(
-                "relative mx-0.5 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 text-[13px] font-medium transition-all sm:mx-1 sm:px-3 sm:py-2",
+                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:px-2 sm:py-2",
                 active
                   ? "bg-white text-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -79,7 +79,7 @@ export function BottomNav() {
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
-              <span className="max-w-full truncate text-center text-[10px] leading-tight sm:text-[11px]">
+              <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
                 {tab.label}
               </span>
             </button>
@@ -88,7 +88,7 @@ export function BottomNav() {
         <Link
           href="/games"
           className={cn(
-            "relative mx-0.5 flex min-w-[3.35rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[12px] font-medium transition-all sm:mx-1 sm:min-w-[3.5rem] sm:px-2.5 sm:py-2 sm:text-[13px]",
+            "relative flex min-w-[3.1rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 text-[12px] font-medium transition-all sm:min-w-[3.25rem] sm:px-2 sm:py-2",
             onGames
               ? "bg-white text-black shadow-sm"
               : "text-white/70 hover:text-white"
@@ -97,7 +97,7 @@ export function BottomNav() {
           <span className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]" aria-hidden>
             🎯
           </span>
-          <span className="max-w-[4rem] truncate text-center text-[10px] leading-tight sm:max-w-none sm:text-[11px]">
+          <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
             Игры
           </span>
         </Link>

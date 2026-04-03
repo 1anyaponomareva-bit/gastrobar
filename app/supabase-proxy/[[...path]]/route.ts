@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
+import {
+  assertBodySizeAllowed,
+  getClientIp,
+  isSupabaseProxyPathAllowed,
+  PROXY_MAX_BODY_BYTES,
+  rateLimitOrPass,
+} from "@/lib/supabase/proxy-guards";
+import { getSupabaseServerAnonKey } from "@/lib/supabase/server-anon-key";
 
 export const runtime = "nodejs";
 
@@ -21,11 +29,25 @@ function forwardRequestHeaders(incoming: Headers): Headers {
   return out;
 }
 
+const STRIP_FROM_CLIENT_TO_UPSTREAM = new Set([
+  "authorization",
+  "apikey",
+  "x-client-enc-api-key",
+]);
+
 /** К Supabase: не форвардить gzip/br от браузера — иначе Node распаковывает, а цепочка до клиента ломается (ERR_CONTENT_DECODING_FAILED). */
-function buildUpstreamRequestHeaders(incoming: Headers): Headers {
-  const out = forwardRequestHeaders(incoming);
+function buildUpstreamRequestHeaders(incoming: Headers, serverAnonKey: string): Headers {
+  const out = new Headers();
+  incoming.forEach((value, key) => {
+    const low = key.toLowerCase();
+    if (HOP_BY_HOP.has(low) || low === "host") return;
+    if (STRIP_FROM_CLIENT_TO_UPSTREAM.has(low)) return;
+    out.set(key, value);
+  });
   out.delete("accept-encoding");
   out.set("Accept-Encoding", "identity");
+  out.set("apikey", serverAnonKey);
+  out.set("Authorization", `Bearer ${serverAnonKey}`);
   return out;
 }
 
@@ -55,19 +77,67 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
     );
   }
 
+  const serverKey = getSupabaseServerAnonKey();
+  if (!serverKey) {
+    return NextResponse.json(
+      { error: "Supabase anon key missing (SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY)" },
+      { status: 503 },
+    );
+  }
+
+  if (!isSupabaseProxyPathAllowed(pathSegments)) {
+    console.warn("[supabase-proxy] blocked path", pathSegments?.join("/") ?? "");
+    return NextResponse.json(
+      { error: "Forbidden", code: "PROXY_PATH_NOT_ALLOWED" },
+      { status: 403 },
+    );
+  }
+
+  const ip = getClientIp(req);
+  if (!rateLimitOrPass(req.method, ip)) {
+    console.warn("[supabase-proxy] rate limit", ip, req.method);
+    return NextResponse.json(
+      { error: "Too Many Requests", code: "PROXY_RATE_LIMIT" },
+      { status: 429 },
+    );
+  }
+
+  const sizeCheck = assertBodySizeAllowed(req.headers.get("content-length"));
+  if (!sizeCheck.ok) {
+    console.warn("[supabase-proxy] body too large", ip);
+    return NextResponse.json(
+      {
+        error: `Body too large (max ${sizeCheck.max} bytes)`,
+        code: "PROXY_BODY_TOO_LARGE",
+      },
+      { status: 413 },
+    );
+  }
+
   const tail = pathSegments?.length ? pathSegments.join("/") : "";
   const href = tail ? `${backend}/${tail}` : `${backend}/`;
   const target = new URL(href);
   target.search = req.nextUrl.search;
 
   const hasBody = !["GET", "HEAD"].includes(req.method);
-  const body = hasBody ? await req.arrayBuffer() : undefined;
+  let body: ArrayBuffer | undefined;
+  if (hasBody) {
+    const raw = await req.arrayBuffer();
+    if (raw.byteLength > PROXY_MAX_BODY_BYTES) {
+      console.warn("[supabase-proxy] body exceeds cap after read", ip);
+      return NextResponse.json(
+        { error: "Payload Too Large", code: "PROXY_BODY_TOO_LARGE" },
+        { status: 413 },
+      );
+    }
+    body = raw;
+  }
 
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       method: req.method,
-      headers: buildUpstreamRequestHeaders(req.headers),
+      headers: buildUpstreamRequestHeaders(req.headers, serverKey),
       body: hasBody ? body : undefined,
       redirect: "manual",
     });
