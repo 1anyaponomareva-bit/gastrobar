@@ -20,6 +20,7 @@ import {
 import { markDurakTabOnlineResume } from "@/lib/durak/activeRoomStorage";
 import {
   durakForfeitStaleOpponent,
+  durakPlayerLeftMatch,
   durakPlayerPing,
   durakSaveRoomState,
   fetchRoom,
@@ -300,6 +301,21 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     markDurakTabOnlineResume();
   }, [roomId]);
 
+  const leaveMatchAndParent = useCallback(() => {
+    if (supabase) {
+      void durakPlayerLeftMatch(supabase, roomId, playerId).catch(() => {});
+    }
+    onLeave();
+  }, [supabase, roomId, playerId, onLeave]);
+
+  useEffect(() => {
+    return () => {
+      if (supabase) {
+        void durakPlayerLeftMatch(supabase, roomId, playerId).catch(() => {});
+      }
+    };
+  }, [supabase, roomId, playerId]);
+
   /** Пинг активности: нужен и в фоне — иначе сервер «caller not active» и форфейт соперника не проходит. */
   useEffect(() => {
     if (!supabase) return;
@@ -397,6 +413,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
             shouldForfeit = others.every((r) => isRoomPlayerLikelyGone(r, now));
           }
           if (!shouldForfeit) return;
+          await durakPlayerPing(supabase, roomId, playerId);
           const raw = await durakForfeitStaleOpponent(supabase, roomId, playerId);
           advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
           setOpponentForfeitWin(true);
@@ -659,10 +676,10 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       playerName,
       game,
       onGameChange: onRemoteGameChange,
-      onLeave,
+      onLeave: leaveMatchAndParent,
       opponentForfeitWin,
     };
-  }, [roomId, playerId, playerName, game, onRemoteGameChange, onLeave, opponentForfeitWin]);
+  }, [roomId, playerId, playerName, game, onRemoteGameChange, leaveMatchAndParent, opponentForfeitWin]);
 
   if (error) {
     return (
@@ -686,7 +703,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         </p>
         <button
           type="button"
-          onClick={onLeave}
+          onClick={leaveMatchAndParent}
           className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90"
           style={{ color: "#f8fafc", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9999, padding: "0.5rem 1rem" }}
         >
@@ -742,7 +759,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         </span>
         <button
           type="button"
-          onClick={onLeave}
+          onClick={leaveMatchAndParent}
           className="mt-4 rounded-full border border-white/25 px-4 py-2 text-[13px] font-medium text-white/90"
         >
           Выйти из стола

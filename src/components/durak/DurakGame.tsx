@@ -45,6 +45,7 @@ import {
 import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
 import {
   durakForfeitStaleOpponent,
+  durakPlayerPing,
   fetchRoom,
   fetchRoomPlayers,
   isRoomPlayerLikelyGone,
@@ -902,7 +903,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 const plist = (rs?.state as { game?: { players?: { type?: string }[] } } | undefined)?.game
                   ?.players;
                 const humanCount = Array.isArray(plist) ? plist.filter((p) => p?.type !== "bot").length : 0;
-                if (humanCount >= 2) void durakForfeitStaleOpponent(client, rid, pid).catch(() => {});
+                if (humanCount >= 2) {
+                  try {
+                    await durakPlayerPing(client, rid, pid);
+                    await durakForfeitStaleOpponent(client, rid, pid);
+                  } catch {
+                    /* ignore */
+                  }
+                }
               } catch {
                 /* ignore */
               }
@@ -915,8 +923,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const now = Date.now();
             const allOthersStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
             if (allOthersStale) {
+              try {
+                await durakPlayerPing(client, rid, pid);
+                await durakForfeitStaleOpponent(client, rid, pid);
+              } catch {
+                /* ignore */
+              }
               abandonDurakStoredRoom();
-              void durakForfeitStaleOpponent(client, rid, pid).catch(() => {});
               return;
             }
           }

@@ -301,6 +301,19 @@ export async function durakPlayerPing(
   if ("error" in out) throw new Error(out.error);
 }
 
+/** Явный выход из партии: last_seen в прошлое — соперник может сразу зачесть форфейт. */
+export async function durakPlayerLeftMatch(
+  client: SupabaseClient,
+  roomId: string,
+  playerId: string
+): Promise<void> {
+  const out = await rpcPost(client, "durak_player_left_match", {
+    p_room_id: roomId,
+    p_player_id: playerId,
+  });
+  if ("error" in out) throw new Error(out.error);
+}
+
 /**
  * Серверная победа, если все прочие люди не пинговали дольше порога (см. SQL).
  * Вызывать только после мягкой клиентской проверки и при видимой вкладке.
@@ -355,7 +368,10 @@ const STALE_LAST_SEEN_MS = 20_000;
 /** Запас, если в строке нет last_seen (редко); колонка в БД обычно NOT NULL. */
 const STALE_IF_NEVER_SEEN_AFTER_JOIN_MS = 24_000;
 
-/** Порог перед RPC `durak_forfeit_stale_opponent` — должен совпадать с интервалом в SQL. */
+/**
+ * Клиент «соперник не на связи» перед RPC форфейта (20 с без пинга).
+ * На сервере «caller not active» — см. миграцию (обычно ~45 с без пинга вызывающего).
+ */
 export function isRoomPlayerLikelyGone(row: RoomPlayerRow, nowMs: number): boolean {
   if (row.is_bot) return false;
   const lastRaw = row.last_seen_at;
