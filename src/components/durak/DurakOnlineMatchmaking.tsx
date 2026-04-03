@@ -69,6 +69,8 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const onRoomPlayingRef = useRef(onRoomPlaying);
   onRoomPlayingRef.current = onRoomPlaying;
   const lastMatchmakingRpcAtRef = useRef(0);
+  /** Клиентский ориентир (~15 с окна + запас), если search_deadline с API не парсится или зона времени багает. */
+  const matchmakingSinceRef = useRef<number | null>(null);
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -111,19 +113,27 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       let deadlineMs = NaN;
       const rawDl = rFirst?.search_deadline;
       if (rawDl != null) deadlineMs = Date.parse(String(rawDl));
+      const since = matchmakingSinceRef.current;
+      const clientAssumeDeadlinePassed =
+        since != null && Date.now() - since > 17_500;
       const pastSearchDeadline =
-        Number.isFinite(deadlineMs) && Date.now() > deadlineMs + 750;
+        (Number.isFinite(deadlineMs) && Date.now() > deadlineMs + 750) ||
+        clientAssumeDeadlinePassed;
 
-      const rpcMinMs = pastSearchDeadline
-        ? MATCHMAKING_RPC_AFTER_DEADLINE_MS
-        : MATCHMAKING_RPC_MIN_INTERVAL_MS;
+      const rpcMinMs =
+        humans >= 2
+          ? MATCHMAKING_RPC_TWO_HUMANS_MS
+          : pastSearchDeadline
+            ? MATCHMAKING_RPC_AFTER_DEADLINE_MS
+            : MATCHMAKING_RPC_MIN_INTERVAL_MS;
 
       const now = Date.now();
-      if (now - lastMatchmakingRpcAtRef.current >= rpcMinMs) {
+      if (humans >= 2) {
         await durakFinalizeRoomIfReady(supabase, roomId);
-        if (humans >= 2) {
-          await durakForceStartIfTwoHumans(supabase, roomId);
-        }
+        await durakForceStartIfTwoHumans(supabase, roomId);
+        lastMatchmakingRpcAtRef.current = Date.now();
+      } else if (now - lastMatchmakingRpcAtRef.current >= rpcMinMs) {
+        await durakFinalizeRoomIfReady(supabase, roomId);
         lastMatchmakingRpcAtRef.current = Date.now();
       }
 
@@ -240,7 +250,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">
-        <p className="text-lg font-medium text-white/95">Ищем пару за столом в баре…</p>
+        <p className="text-lg font-medium text-white/95">Ищем пару…</p>
         <div className="rounded-2xl border border-amber-400/35 bg-amber-950/40 px-6 py-8 sm:px-10">
           <p className="text-4xl leading-none" aria-hidden>
             {line.emoji}
