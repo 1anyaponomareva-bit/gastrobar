@@ -35,6 +35,8 @@ export type RoomPlayerRow = {
   is_bot: boolean;
   seat_index: number;
   joined_at?: string;
+  /** Активность клиента (RPC `durak_player_ping`), для порога «соперник вышел». */
+  last_seen_at?: string;
 };
 
 /** `room_state.state` — обёртка над JSON партии. */

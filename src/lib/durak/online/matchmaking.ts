@@ -279,6 +279,41 @@ export async function durakSaveRoomState(
   return ts;
 }
 
+export async function durakPlayerPing(
+  client: SupabaseClient,
+  roomId: string,
+  playerId: string
+): Promise<void> {
+  const out = await rpcPost(client, "durak_player_ping", {
+    p_room_id: roomId,
+    p_player_id: playerId,
+  });
+  if ("error" in out) throw new Error(out.error);
+}
+
+/**
+ * Серверная победа, если все прочие люди не пинговали дольше порога (см. SQL).
+ * Вызывать только после мягкой клиентской проверки и при видимой вкладке.
+ */
+export async function durakForfeitStaleOpponent(
+  client: SupabaseClient,
+  roomId: string,
+  playerId: string
+): Promise<string> {
+  const out = await rpcPost(client, "durak_forfeit_stale_opponent", {
+    p_room_id: roomId,
+    p_player_id: playerId,
+  });
+  if ("error" in out) throw new Error(out.error);
+  const row = Array.isArray(out.data)
+    ? (out.data[0] as Record<string, unknown> | undefined)
+    : (out.data as Record<string, unknown> | null);
+  const raw = row?.out_updated_at ?? row?.outUpdatedAt;
+  const ts = raw != null ? String(raw).trim() : "";
+  if (!ts) throw new Error("Сервер не вернул время обновления стола");
+  return ts;
+}
+
 export async function fetchRoom(
   client: SupabaseClient,
   roomId: string

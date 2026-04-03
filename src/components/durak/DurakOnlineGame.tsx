@@ -18,6 +18,8 @@ import {
   roomStateMatchesRoomPlayers,
 } from "@/lib/durak/online/buildRoomGame";
 import {
+  durakForfeitStaleOpponent,
+  durakPlayerPing,
   durakSaveRoomState,
   fetchRoomPlayers,
   formatPostgrestError,
@@ -248,6 +250,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     if (!c) setError("Нет настроек Supabase");
   }, []);
   const [game, setGame] = useState<GameTable | null>(null);
+  /** Победа по отсутствию соперника (отдельный текст оверлея). */
+  const [opponentForfeitWin, setOpponentForfeitWin] = useState(false);
   /** После первого не-null стола — реже опрашивать БД (не привязывать интервал к каждому ходу). */
   const [tableHydrated, setTableHydrated] = useState(false);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,8 +277,25 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     pendingRoomSaveRef.current = false;
     roomSaveGenRef.current = 0;
     gameRef.current = null;
+    setOpponentForfeitWin(false);
     setGame(null);
   }, [roomId]);
+
+  /** Пинг активности: сервер обновляет `last_seen_at` (порог для форфейта соперника). */
+  useEffect(() => {
+    if (!supabase) return;
+    const ping = () => {
+      if (document.visibilityState !== "visible") return;
+      void durakPlayerPing(supabase, roomId, playerId).catch(() => {});
+    };
+    ping();
+    const id = window.setInterval(ping, 4000);
+    document.addEventListener("visibilitychange", ping);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", ping);
+    };
+  }, [supabase, roomId, playerId]);
 
   /**
    * @param mode
@@ -333,6 +354,45 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     },
     []
   );
+
+  /**
+   * Техническая победа: соперник-человек не пинговал ≥20 с (проверка и на сервере).
+   * Состояние партии читаем из `gameRef`, чтобы не пересоздавать интервал на каждый poll.
+   */
+  useEffect(() => {
+    if (!supabase) return;
+    const id = window.setInterval(() => {
+      const g = gameRef.current;
+      if (!g || g.state !== "playing") return;
+      if (g.players.filter((p) => p.type !== "bot").length < 2) return;
+      if (document.visibilityState !== "visible") return;
+      void (async () => {
+        try {
+          const rows = await fetchRoomPlayers(supabase, roomId);
+          const others = rows.filter((r) => !r.is_bot && r.player_id !== playerId);
+          if (others.length === 0) return;
+          const allStale = others.every((r) => {
+            if (!r.last_seen_at) return false;
+            const dt = Date.now() - Date.parse(r.last_seen_at);
+            return Number.isFinite(dt) && dt >= 20_000;
+          });
+          if (!allStale) return;
+          const raw = await durakForfeitStaleOpponent(supabase, roomId, playerId);
+          advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
+          setOpponentForfeitWin(true);
+          const { data, error } = await supabase
+            .from("room_state")
+            .select("state, updated_at")
+            .eq("room_id", roomId)
+            .maybeSingle();
+          if (!error) applyRemoteRow(data, "realtime");
+        } catch {
+          /* соперник оживёт / гонка / старая схема без RPC */
+        }
+      })();
+    }, 2600);
+    return () => window.clearInterval(id);
+  }, [supabase, roomId, playerId, applyRemoteRow]);
 
   const persistGame = useCallback(() => {
     if (!supabase) return;
@@ -568,8 +628,9 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       game,
       onGameChange: onRemoteGameChange,
       onLeave,
+      opponentForfeitWin,
     };
-  }, [roomId, playerId, playerName, game, onRemoteGameChange, onLeave]);
+  }, [roomId, playerId, playerName, game, onRemoteGameChange, onLeave, opponentForfeitWin]);
 
   if (error) {
     return (

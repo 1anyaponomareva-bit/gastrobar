@@ -433,10 +433,15 @@ export function attackToss(
   if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") {
     return { error: "Сейчас не фаза подкидывания" };
   }
-  const attacker = table.players[table.attackerIndex];
-  if (attacker.id !== attackerId) {
-    return { error: "Подкидывает атакующий" };
+  const actorIndex = table.players.findIndex((p) => p.id === attackerId);
+  if (actorIndex < 0) {
+    return { error: "Игрок не найден" };
   }
+  if (actorIndex === table.defenderIndex) {
+    return { error: "Защитник не подкидывает" };
+  }
+
+  const actor = table.players[actorIndex]!;
 
   const ranksOnTable = new Set<Rank>();
   for (const tp of table.tablePairs) {

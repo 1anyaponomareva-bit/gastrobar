@@ -20,6 +20,7 @@ import {
   defenderTake,
 } from "@/games/durak/engine";
 import { applyBotMove } from "@/games/durak/bot";
+import { localPlayerMustActOnline, tryAutoMove } from "@/games/durak/autoMove";
 import { canBeat } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
@@ -27,10 +28,17 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
 import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
+import { fetchRoom, fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
 
 const HUMAN_ID = "human";
 
 const PLAYER_NAME_LS = "player_name";
+/** Восстановление онлайн-партии после refresh (см. эффект rejoin). */
+const DURAK_ACTIVE_ROOM_LS = "durak_active_online_room_id";
+const ONLINE_TURN_MS = 12_000;
+const ONLINE_TURN_WARN_SEC = 3;
 /** Имя при нажатии «Пропустить» (сохраняется в localStorage, как обычное имя). */
 const GUEST_PLAYER_NAME = "Гость";
 
@@ -48,6 +56,8 @@ export type DurakGameEmbeddedProps = {
   /** Как setState: функция получает актуальный стол родителя, а не снимок `embedded.game` с прошлого рендера. */
   onGameChange: (update: SetStateAction<GameTable>) => void;
   onLeave: () => void;
+  /** Победа: соперник не вернулся (сервер `durak_forfeit_stale_opponent`). */
+  opponentForfeitWin?: boolean;
 };
 
 type DurakGameRootProps = {
@@ -55,6 +65,37 @@ type DurakGameRootProps = {
   /** Код из ссылки `?stol=` — присоединение к столу с друзьями. */
   friendInviteCodeFromUrl?: string | null;
 };
+
+function TurnDeadlineRing({ progress }: { progress: number }) {
+  const warn = progress <= ONLINE_TURN_WARN_SEC / (ONLINE_TURN_MS / 1000);
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - progress);
+  return (
+    <svg width={44} height={44} viewBox="0 0 44 44" className="shrink-0" aria-hidden>
+      <circle cx="22" cy="22" r={r} fill="none" className="stroke-white/12" strokeWidth="3" />
+      <circle
+        cx="22"
+        cy="22"
+        r={r}
+        fill="none"
+        strokeWidth="3"
+        strokeLinecap="round"
+        className={
+          warn
+            ? "stroke-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.45)]"
+            : "stroke-[#f8d66d]"
+        }
+        style={{
+          strokeDasharray: c,
+          strokeDashoffset: offset,
+          transform: "rotate(-90deg)",
+          transformOrigin: "22px 22px",
+        }}
+      />
+    </svg>
+  );
+}
 
 function WinConfetti() {
   const pieces = useMemo(
@@ -90,8 +131,31 @@ function WinConfetti() {
 
 /** Пауза между картами при раздаче (как по кругу: вы → бот × 6). */
 const DEAL_STAGGER_SEC = 0.07;
-const DEAL_MOVE_SEC = 0.36;
-const DEAL_BUFFER_MS = 380;
+const DEAL_BUFFER_MS = 400;
+
+const SPRING_SNAPPY = { type: "spring" as const, stiffness: 520, damping: 32, mass: 0.72 };
+const SPRING_SOFT = { type: "spring" as const, stiffness: 380, damping: 28, mass: 0.85 };
+
+function opponentSeatActive(
+  opp: Player,
+  game: GameTable
+): "attack" | "defend" | null {
+  const attId = game.players[game.attackerIndex]?.id;
+  const defId = game.players[game.defenderIndex]?.id;
+  const isAtt =
+    opp.id === attId &&
+    (game.phase === "attack_initial" ||
+      game.phase === "attack_toss" ||
+      game.phase === "player_can_throw_more");
+  const isDef =
+    opp.id === defId &&
+    (game.phase === "defend" ||
+      game.phase === "attack_toss" ||
+      game.phase === "player_can_throw_more");
+  if (isAtt) return "attack";
+  if (isDef) return "defend";
+  return null;
+}
 
 /**
  * Задержка перед ходом бота: не фиксированная, чтобы не было ощущения «машины».
@@ -372,8 +436,8 @@ function CardSprite({
   ) : (
     <div className="h-full w-full overflow-hidden rounded-[10px]">
       <CardFaceArt
-        card={card}
-        compact
+        card={card!}
+        compact={size !== "hand"}
         className={cn("h-full w-full", imgClassName)}
       />
     </div>
@@ -632,6 +696,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     setOnlineRoomId(id);
   }, []);
   const onLeaveOnlineRoomStable = useCallback(() => {
+    try {
+      localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
+    } catch {
+      /* ignore */
+    }
     setOnlineRoomId(null);
   }, []);
   const onMatchmakingCancelStable = useCallback(() => {
@@ -657,6 +726,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const [dealing, setDealing] = useState(false);
   const [nameEditing, setNameEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [turnProgress, setTurnProgress] = useState(1);
+  const [autoMoveBanner, setAutoMoveBanner] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const skipNameBlurCommitRef = useRef(false);
   const tableRoundRef = useRef<HTMLDivElement>(null);
@@ -706,6 +777,60 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       setNameHydrated(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (embedded || !nameHydrated || !playerName || onlineRoomId) return;
+    let cancelled = false;
+    let rid: string | null = null;
+    try {
+      rid = localStorage.getItem(DURAK_ACTIVE_ROOM_LS);
+    } catch {
+      rid = null;
+    }
+    if (!rid) return;
+    void (async () => {
+      const client = createSupabaseBrowserClient();
+      if (!client || cancelled) return;
+      try {
+        const pid = getOrCreateDurakPlayerId();
+        const room = await fetchRoom(client, rid);
+        if (cancelled || !room) return;
+        if (room.status === "finished") {
+          try {
+            localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        const players = await fetchRoomPlayers(client, rid);
+        if (cancelled) return;
+        if (!players.some((p) => p.player_id === pid)) {
+          try {
+            localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        setOnlineRoomId(rid);
+      } catch {
+        /* сеть / миграции */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [embedded, nameHydrated, playerName, onlineRoomId]);
+
+  useEffect(() => {
+    if (embedded || !onlineRoomId) return;
+    try {
+      localStorage.setItem(DURAK_ACTIVE_ROOM_LS, onlineRoomId);
+    } catch {
+      /* ignore */
+    }
+  }, [embedded, onlineRoomId]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -861,6 +986,53 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     }, randomBotThinkDelayMs());
     return () => window.clearTimeout(t);
   }, [game, dealing, embedded, localPlayerId, onlineBotDriverId]);
+
+  const onlineTurnKey = useMemo(() => {
+    if (!embedded || !game || game.state !== "playing") return "";
+    return [
+      game.phase,
+      game.attackerIndex,
+      game.defenderIndex,
+      game.tablePairs.length,
+      ...game.tablePairs.map((p) => `${p.attack.id}:${p.defense?.id ?? "-"}`),
+      localPlayerMustActOnline(game, localPlayerId) ? "1" : "0",
+    ].join("|");
+  }, [embedded, game, localPlayerId]);
+
+  useEffect(() => {
+    if (!embedded || !game || game.state !== "playing" || dealing) {
+      setTurnProgress(1);
+      return;
+    }
+    if (!localPlayerMustActOnline(game, localPlayerId)) {
+      setTurnProgress(1);
+      return;
+    }
+    const deadline = Date.now() + ONLINE_TURN_MS;
+    const tick = () => {
+      const left = Math.max(0, deadline - Date.now());
+      setTurnProgress(left / ONLINE_TURN_MS);
+      return left;
+    };
+    tick();
+    const id = window.setInterval(() => {
+      const left = tick();
+      if (left <= 0) {
+        window.clearInterval(id);
+        setGame((g) => {
+          if (!g || g.state !== "playing") return g;
+          if (!localPlayerMustActOnline(g, localPlayerId)) return g;
+          const next = tryAutoMove(g, localPlayerId);
+          if (!next) return g;
+          return { ...next, message: null };
+        });
+        setAutoMoveBanner("Ход выполнен автоматически");
+        window.setTimeout(() => setAutoMoveBanner(null), 2200);
+        setTurnProgress(1);
+      }
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame]);
 
   const setErr = (msg: string) => setGame((g) => (g ? { ...g, message: msg } : g));
 
@@ -1026,6 +1198,41 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ((game.phase === "attack_toss" && selfIsAttacker) ||
       (game.phase === "player_can_throw_more" && !selfIsDefender));
 
+  const selfSeatActive =
+    !!game &&
+    game.state === "playing" &&
+    ((selfIsAttacker &&
+      (game.phase === "attack_initial" ||
+        game.phase === "attack_toss" ||
+        game.phase === "player_can_throw_more")) ||
+      (selfIsDefender && (game.phase === "defend" || game.phase === "player_can_throw_more")));
+
+  const microFlavour = useMemo(() => {
+    if (!game || dealing || game.state !== "playing") return null;
+    let pool: string[] | null = null;
+    if (game.phase === "attack_initial" && selfIsAttacker) {
+      pool = ["Сукно ждёт твоего первого хода.", "Задай темп партии — без спешки."];
+    } else if (game.phase === "defend" && selfIsDefender) {
+      pool = ["Отбейся аккуратно или заберёшь стол — твой выбор.", "Козырь и старшинство — твои друзья."];
+    } else if (
+      (game.phase === "attack_toss" || game.phase === "player_can_throw_more") &&
+      selfCanTossCards
+    ) {
+      pool = ["Подкинуть можно только по достоинствам на столе.", "Когда закончите — «Бито»."];
+    } else if (game.phase === "attack_initial" && !selfIsAttacker) {
+      pool = ["Пока соперник думает — можно выдохнуть.", "Смотри на стол — скоро твой ход."];
+    }
+    if (!pool?.length) return null;
+    const i = (game.id.length + game.phase.length + game.tablePairs.length) % pool.length;
+    return pool[i] ?? null;
+  }, [game, dealing, selfIsAttacker, selfIsDefender, selfCanTossCards]);
+
+  const wonByForfeit =
+    !!game &&
+    game.state === "finished" &&
+    Boolean(props.embedded?.opponentForfeitWin) &&
+    game.winnerId === localPlayerId;
+
   if (!nameHydrated) {
     return (
       <div
@@ -1119,6 +1326,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {tableGreeting}
           </motion.div>
         ) : null}
+        {autoMoveBanner ? (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
+            role="status"
+          >
+            {autoMoveBanner}
+          </motion.div>
+        ) : null}
       </div>
 
       <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
@@ -1164,12 +1382,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               (embedded ? OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX : 0);
             const nameOx = nx * nameArmLen;
             const nameOy = ny * nameArmLen;
+            const seatHi = game ? opponentSeatActive(opp, game) : null;
             return (
               <div
                 key={opp.id}
                 className={cn(
-                  "pointer-events-none absolute inset-0 overflow-visible",
-                  embedded ? "z-[5] opacity-[0.92]" : "z-[8]"
+                  "pointer-events-none absolute inset-0 overflow-visible transition-[filter,opacity] duration-500",
+                  embedded ? "z-[5] opacity-[0.92]" : "z-[8]",
+                  seatHi === "attack" &&
+                    "drop-shadow-[0_0_22px_rgba(251,191,36,0.55)] [filter:drop-shadow(0_0_12px_rgba(251,191,36,0.4))]",
+                  seatHi === "defend" &&
+                    "drop-shadow-[0_0_22px_rgba(52,211,153,0.45)] [filter:drop-shadow(0_0_12px_rgba(52,211,153,0.35))]"
                 )}
               >
                 <div
@@ -1190,12 +1413,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   {bh.map((c, i) => (
                     <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
                       <motion.div
-                        initial={{ opacity: 0, y: -20, scale: 0.88 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        initial={{ opacity: 0, y: -24, scale: 0.86, rotate: -3 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                         transition={{
+                          ...SPRING_SOFT,
                           delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                          duration: DEAL_MOVE_SEC,
-                          ease: [0.22, 1, 0.36, 1],
                         }}
                       >
                         <CardSprite faceDown size="tableCompact" />
@@ -1205,7 +1427,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   </div>
                 </div>
                 <div
-                  className="pointer-events-auto absolute z-[24] flex max-w-[min(52%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[46%]"
+                  className={cn(
+                    "pointer-events-auto absolute z-[24] flex max-w-[min(52%,92vw)] items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 leading-tight sm:max-w-[46%]",
+                    seatHi === "attack" && "ring-2 ring-amber-300/50 ring-offset-2 ring-offset-transparent",
+                    seatHi === "defend" && "ring-2 ring-emerald-400/45 ring-offset-2 ring-offset-transparent"
+                  )}
                   style={{
                     left: `calc(50% + ${nameOx}px)`,
                     top: `calc(50% + ${nameOy}px)`,
@@ -1293,10 +1519,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                         {tp.defense ? (
                           <motion.div
+                            key={`def-${tp.defense.id}`}
                             className="absolute bottom-[0.4rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[0.45rem]"
-                            initial={false}
+                            initial={{ opacity: 0, x: -16, y: 12, scale: 0.88, rotate: 4 }}
                             animate={{ opacity: 1, y: 0, x: 14, scale: 1, rotate: 0 }}
-                            transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                            transition={{ ...SPRING_SNAPPY, delay: 0.05 }}
                           >
                             <CardSprite card={tp.defense} size="tableCompact" />
                           </motion.div>
@@ -1311,15 +1538,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-6px_20px_rgba(0,0,0,0.2)] sm:mt-4 sm:px-2 sm:pt-2.5">
+      <div className="mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-10px_32px_rgba(0,0,0,0.35)] sm:mt-4 sm:px-2 sm:pt-2.5">
         <div className="relative z-30 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
               onClick={restart}
-              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-md backdrop-blur-sm hover:bg-white/15 sm:px-3 sm:py-2 sm:text-[11px]"
+              className="shrink-0 rounded-full border border-white/[0.14] bg-white/[0.06] px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-sm transition hover:border-amber-300/25 hover:bg-white/[0.1] sm:px-3 sm:py-2 sm:text-[11px]"
             >
-              Новая игра
+              {embedded ? "Стол" : "Меню"}
             </button>
           </div>
           <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-x-0.5 sm:gap-x-2">
@@ -1330,7 +1557,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   type="button"
                   onClick={onAttackSubmit}
                   disabled={!attackInitialValid || game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-2 py-1.5 text-[10px] font-medium text-amber-50 shadow-md hover:bg-amber-800/45 disabled:opacity-40 sm:px-3 sm:text-[11px]"
+                  className="shrink-0 rounded-full border border-[#f8d66d]/40 bg-gradient-to-b from-amber-500/25 to-amber-900/35 px-2 py-1.5 text-[10px] font-semibold text-amber-50 shadow-[0_6px_20px_rgba(248,214,109,0.18)] hover:brightness-110 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
                   Атаковать
                 </button>
@@ -1340,17 +1567,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   type="button"
                   onClick={onTossSubmit}
                   disabled={!tossValid || game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-amber-400/55 bg-amber-900/45 px-1.5 py-1 text-[9px] font-medium text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-2.5 sm:text-[10px]"
+                  className="shrink-0 rounded-full border border-[#f8d66d]/35 bg-amber-900/40 px-1.5 py-1 text-[9px] font-semibold text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-2.5 sm:text-[10px]"
                 >
                   Подкинуть
                 </button>
               ) : null}
-              {selfCanToss ? (
+              {selfShowBitoForToss ? (
                 <button
                   type="button"
                   onClick={onBeat}
                   disabled={game.state !== "playing"}
-                  className="shrink-0 rounded-full border border-emerald-400/45 bg-emerald-900/50 px-2 py-1.5 text-[10px] font-medium text-emerald-50 shadow-md hover:bg-emerald-800/50 disabled:opacity-40 sm:px-3 sm:text-[11px]"
+                  className="shrink-0 rounded-full border border-emerald-400/50 bg-gradient-to-b from-emerald-600/35 to-emerald-900/45 px-2 py-1.5 text-[10px] font-semibold text-emerald-50 shadow-[0_6px_20px_rgba(16,185,129,0.15)] hover:brightness-110 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
                   Бито
                 </button>
@@ -1373,17 +1600,41 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       </div>
 
       {phaseLine ? (
-        <p
-          className="relative z-20 mx-auto mt-2 max-w-[min(100%,580px)] shrink-0 line-clamp-3 px-2 text-center text-[10px] font-medium leading-snug text-emerald-100/95 sm:mt-2.5 sm:text-[11px]"
+        <div
+          className="relative z-20 mx-auto mt-2 flex max-w-[min(100%,580px)] shrink-0 flex-col items-center gap-1 px-2 sm:mt-2.5"
           role="status"
         >
-          {phaseLine}
-        </p>
+          <div className="flex w-full max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
+            {embedded &&
+            game.state === "playing" &&
+            !dealing &&
+            localPlayerMustActOnline(game, localPlayerId) ? (
+              <TurnDeadlineRing progress={turnProgress} />
+            ) : null}
+            <motion.p
+              key={phaseLine}
+              layout
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className="line-clamp-3 min-w-0 flex-1 rounded-full border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-4 py-1.5 text-center text-[10px] font-medium leading-snug text-emerald-50/95 shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm sm:text-[11px]"
+            >
+              {phaseLine}
+            </motion.p>
+          </div>
+          {microFlavour ? (
+            <p className="max-w-[20rem] text-center text-[9px] font-normal italic leading-snug text-white/38 sm:text-[10px]">
+              {microFlavour}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <section
         className={cn(
           "relative z-0 shrink-0 bg-[#14100c] px-1 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2",
+          selfSeatActive &&
+            "before:pointer-events-none before:absolute before:inset-x-1 before:top-0 before:h-24 before:rounded-[2rem] before:bg-[radial-gradient(ellipse_90%_100%_at_50%_0%,rgba(248,214,109,0.14),transparent_65%)] before:opacity-100",
           /* Зазор над нижним баром: нав + safe-area + запас, чтобы веер карточек не заходил под табы */
           embedded
             ? "pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] sm:pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+6rem))]"
@@ -1517,7 +1768,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                   return (
                     <div key={c.id} className="absolute" style={fan}>
-                      <div className={cn(selected && "-translate-y-[3.25rem]")}>
+                      <motion.div
+                        className={cn(selected && "-translate-y-[3.25rem]")}
+                        initial={dealing ? { opacity: 0, y: 48, scale: 0.92, rotate: -2 } : false}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                        transition={{
+                          ...SPRING_SOFT,
+                          delay: dealing ? rowIdx * 0.06 + i * DEAL_STAGGER_SEC : 0,
+                        }}
+                      >
                         <CardSprite
                           card={c}
                           size="hand"
@@ -1534,7 +1793,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           }
                           onPress={onPress}
                         />
-                      </div>
+                      </motion.div>
                     </div>
                   );
                 })}
@@ -1551,40 +1810,69 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="durak-result-title"
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-[4px]"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.28 }}
           >
             {game.winnerId === localPlayerId ? <WinConfetti /> : null}
             <motion.div
               id="durak-result-panel"
-              initial={{ opacity: 0, scale: 0.88, y: 12 }}
+              initial={{ opacity: 0, scale: 0.9, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={{ type: "spring", stiffness: 320, damping: 26 }}
-              className="relative z-10 w-full max-w-sm rounded-2xl border border-white/20 bg-[#14100c] px-7 py-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ type: "spring", stiffness: 340, damping: 28 }}
+              className="relative z-10 w-full max-w-sm overflow-hidden rounded-[1.35rem] border border-[#f8d66d]/25 bg-gradient-to-b from-[#1c1612] via-[#14100c] to-[#0c0a08] px-8 py-9 text-center shadow-[0_28px_90px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.06)]"
             >
-              <p id="durak-result-title" className="text-xl font-bold leading-tight text-white sm:text-2xl">
+              <div
+                className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#f8d66d]/45 to-transparent"
+                aria-hidden
+              />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8d66d]/80">
                 {game.winnerId === localPlayerId
-                  ? `🔥 ${selfPlayer?.name ?? playerName}, с победой!`
-                  : `${selfPlayer?.name ?? playerName}, в пролёте`}
+                  ? wonByForfeit
+                    ? "Техническая победа"
+                    : "Партия за тобой"
+                  : "Партия сыграна"}
               </p>
-              <p className="mt-3 text-sm leading-relaxed text-white/65">
-                {game.loserId === localPlayerId
-                  ? `Дурак — карты остались у тебя. Ничего, бывает — ты молодец, что дошли до конца раздачи.`
-                  : game.winnerId === localPlayerId
-                    ? `Ты умничка: у соперника ещё карты, у тебя пусто — с победой, так держать!`
-                    : ""}
-              </p>
-              <button
-                type="button"
-                onClick={restart}
-                className="mt-7 rounded-full bg-white px-8 py-3 text-sm font-semibold text-black shadow-lg transition hover:bg-emerald-50"
+              <p
+                id="durak-result-title"
+                className="mt-3 text-2xl font-bold leading-tight tracking-tight text-white sm:text-[1.65rem]"
               >
-                Сыграть ещё
-              </button>
+                {wonByForfeit
+                  ? "Соперник вышел из игры — ты победил! 🥇"
+                  : game.winnerId === localPlayerId
+                    ? `${selfPlayer?.name ?? playerName}, блеск!`
+                    : `${selfPlayer?.name ?? playerName}, в этот раз дурак`}
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-white/55">
+                {wonByForfeit
+                  ? "Соперник не выходил на связь больше отведённого времени — стол закрыт."
+                  : game.loserId === localPlayerId
+                    ? "Карты остались у тебя — зато следующая раздача уже ближе к победе."
+                    : game.winnerId === localPlayerId
+                      ? "Ты первым освободил руку — идеальный финиш для бара."
+                      : ""}
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  onClick={restart}
+                  className="w-full rounded-full bg-[#f8d66d] px-6 py-3.5 text-sm font-semibold text-[#1a1612] shadow-[0_10px_36px_rgba(248,214,109,0.25)] transition hover:brightness-105 sm:w-auto sm:min-w-[10.5rem]"
+                >
+                  {embedded ? "Новая партия" : "Реванш"}
+                </button>
+                {!embedded ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/")}
+                    className="w-full rounded-full border border-white/18 bg-white/[0.05] px-6 py-3.5 text-sm font-medium text-white/85 transition hover:border-white/28 hover:bg-white/[0.08] sm:w-auto"
+                  >
+                    На главную
+                  </button>
+                ) : null}
+              </div>
             </motion.div>
           </motion.div>
         ) : null}

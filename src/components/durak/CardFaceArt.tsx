@@ -3,6 +3,7 @@
 import type { Card } from "@/games/durak/types";
 import { rankLabel, suitLabel } from "@/games/durak/cards";
 import { cn } from "@/lib/utils";
+import { CardCourtPremium, isCourtRank } from "@/components/durak/CardCourtPremium";
 
 /** Классическая колода: белый непрозрачный фон, угловые индексы, крупный центр. */
 export function CardFaceArt({
@@ -20,11 +21,15 @@ export function CardFaceArt({
   const suit = suitLabel(card.suit);
   const color = red ? "text-red-600" : "text-slate-900";
 
+  const court = isCourtRank(card.rank);
+
   return (
     <div
       className={cn(
         "pointer-events-none relative flex h-full w-full flex-col overflow-hidden rounded-[10px] border border-slate-300/90 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_8px_rgba(0,0,0,0.14)]",
         compact && "rounded-[8px] border-slate-300",
+        court &&
+          "border-[#c9b896]/80 bg-gradient-to-b from-white via-[#faf8f5] to-[#f0ebe3] shadow-[inset_0_1px_0_rgba(255,255,255,0.98),0_3px_12px_rgba(0,0,0,0.12)]",
         className
       )}
     >
@@ -80,34 +85,49 @@ export function CardFaceArt({
         </span>
       </div>
 
-      <div
-        className={cn(
-          "flex flex-1 flex-col items-center justify-center",
-          compact ? "px-1 pb-3 pt-2 sm:px-1.5 sm:pb-3.5 sm:pt-2.5" : "px-2 pb-5 pt-5"
-        )}
-      >
-        <span
+      {court ? (
+        <div
           className={cn(
-            "select-none font-black tabular-nums leading-none tracking-tight",
-            compact
-              ? "text-[0.82rem] sm:text-[0.95rem]"
-              : "text-[1.28rem] sm:text-[1.48rem]",
-            color
+            "flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden",
+            compact ? "px-0.5 pb-2 pt-1 sm:px-1" : "px-1.5 pb-4 pt-3"
           )}
         >
-          {rank}
-        </span>
-        <span
+          <CardCourtPremium
+            rank={card.rank as "J" | "Q" | "K" | "A"}
+            suit={card.suit}
+            compact={Boolean(compact)}
+          />
+        </div>
+      ) : (
+        <div
           className={cn(
-            "mt-0.5 select-none font-bold leading-none",
-            compact ? "text-[1.15rem] sm:text-[1.32rem]" : "text-[1.95rem] sm:text-[2.2rem]",
-            color
+            "flex flex-1 flex-col items-center justify-center",
+            compact ? "px-1 pb-3 pt-2 sm:px-1.5 sm:pb-3.5 sm:pt-2.5" : "px-2 pb-5 pt-5"
           )}
-          aria-hidden
         >
-          {suit}
-        </span>
-      </div>
+          <span
+            className={cn(
+              "select-none font-black tabular-nums leading-none tracking-tight",
+              compact
+                ? "text-[0.82rem] sm:text-[0.95rem]"
+                : "text-[1.28rem] sm:text-[1.48rem]",
+              color
+            )}
+          >
+            {rank}
+          </span>
+          <span
+            className={cn(
+              "mt-0.5 select-none font-bold leading-none",
+              compact ? "text-[1.15rem] sm:text-[1.32rem]" : "text-[1.95rem] sm:text-[2.2rem]",
+              color
+            )}
+            aria-hidden
+          >
+            {suit}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
