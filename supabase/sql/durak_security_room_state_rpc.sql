@@ -18,7 +18,6 @@ DECLARE
   pid text;
   st jsonb;
   room_st text;
-  has_state boolean;
   sz int;
 BEGIN
   BEGIN
@@ -61,13 +60,8 @@ BEGIN
     RAISE EXCEPTION 'room finished';
   END IF;
 
-  SELECT EXISTS (SELECT 1 FROM public.room_state rs WHERE rs.room_id = rid) INTO has_state;
-
-  IF room_st = 'waiting' THEN
-    IF has_state THEN
-      RAISE EXCEPTION 'room_state already exists';
-    END IF;
-  END IF;
+  -- waiting или playing: один upsert (первый сид + последующие ходы). Быстрый матч может
+  -- показывать стол при status=waiting до finalize — блок «already exists» ломал синхронизацию.
 
   INSERT INTO public.room_state (room_id, state)
   VALUES (rid, st)

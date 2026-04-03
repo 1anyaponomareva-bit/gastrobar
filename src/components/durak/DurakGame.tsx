@@ -120,10 +120,9 @@ const HAND_CARD_H_CLASS = "h-[12.2rem] sm:h-[13.1rem]";
 const HAND_ROW_MAX = 7;
 
 /**
- * Руки соперников дальше от центра сукна, чем карты боя — зазор между веером и зоной стола.
- * (Радиус окружности рассадки = orbitEff × множитель.)
+ * Руки на ободке сукна (~тот же радиус, что и зона боя): визуально «сидят» по контуру круга, не в стороне.
  */
-const OPPONENT_ORBIT_RADIUS_MULT = 1.16;
+const OPPONENT_ORBIT_RADIUS_MULT = 1.02;
 
 /**
  * `true` → в консоль пишутся rect игровой зоны и стола (временная отладка геометрии).
@@ -165,54 +164,56 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
   return out;
 }
 
+function normalizeAngleDeg180(a: number): number {
+  let x = a;
+  while (x > 180) x -= 360;
+  while (x < -180) x += 360;
+  return x;
+}
+
 /**
- * Рассадка вокруг круглого стола: угол на окружности сукна (как в tablePairOrbit: -90° = верх).
- * `fanTowardCenterDeg` — поворот веера к центру стола.
+ * Рассадка по окружности сукна: равные промежутки на доступной дуге, центр дуги — верх стола (-90°).
+ * Снизу вырез под локального игрока (рука внизу экрана). Угол: nx=cos, ny=sin, -90° = 12ч.
+ * `fanTowardCenterDeg` — поворот веера к центру сукна.
  */
 function opponentSeatPolarMeta(
   count: number,
   index: number
 ): { angleDeg: number; fanTowardCenterDeg: number } {
-  const n = Math.min(5, Math.max(1, count));
-  const i = Math.min(index, n - 1);
-  if (n === 1) {
-    return { angleDeg: -90, fanTowardCenterDeg: 0 };
+  const k = Math.min(5, Math.max(1, count));
+  const i = Math.min(index, k - 1);
+
+  const bottomDeg = 90;
+  const gapHalfDeg = 40;
+  const gapStart = bottomDeg - gapHalfDeg;
+  const gapEnd = bottomDeg + gapHalfDeg;
+  const available = 360 - (gapEnd - gapStart);
+  const step = available / k;
+  const halfSpan = available / 2;
+  const topDeg = -90;
+  let angleDeg = topDeg - halfSpan + step * (i + 0.5);
+  angleDeg = normalizeAngleDeg180(angleDeg);
+  /* «Запретная» дуга у низа (редкий край при большом k) — сдвиг на полшага */
+  if (angleDeg >= gapStart && angleDeg <= gapEnd) {
+    angleDeg = normalizeAngleDeg180(angleDeg + (i % 2 === 0 ? 1 : -1) * (step * 0.5 + 2));
   }
-  if (n === 2) {
-    return i === 0
-      ? { angleDeg: -128, fanTowardCenterDeg: 32 }
-      : { angleDeg: -52, fanTowardCenterDeg: -32 };
-  }
-  if (n === 3) {
-    if (i === 0) return { angleDeg: -142, fanTowardCenterDeg: 34 };
-    if (i === 1) return { angleDeg: -90, fanTowardCenterDeg: 0 };
-    return { angleDeg: -38, fanTowardCenterDeg: -34 };
-  }
-  if (n === 4) {
-    const seats: { angleDeg: number; fanTowardCenterDeg: number }[] = [
-      { angleDeg: -152, fanTowardCenterDeg: 40 },
-      { angleDeg: -118, fanTowardCenterDeg: 12 },
-      { angleDeg: -62, fanTowardCenterDeg: -12 },
-      { angleDeg: -28, fanTowardCenterDeg: -40 },
-    ];
-    return seats[i]!;
-  }
-  const seats5: { angleDeg: number; fanTowardCenterDeg: number }[] = [
-    { angleDeg: -158, fanTowardCenterDeg: 44 },
-    { angleDeg: -124, fanTowardCenterDeg: 16 },
-    { angleDeg: -90, fanTowardCenterDeg: 0 },
-    { angleDeg: -56, fanTowardCenterDeg: -16 },
-    { angleDeg: -22, fanTowardCenterDeg: -44 },
-  ];
-  return seats5[i]!;
+
+  const rad = (angleDeg * Math.PI) / 180;
+  const nx = Math.cos(rad);
+  const ny = Math.sin(rad);
+  const toCenterDeg = (Math.atan2(-ny, -nx) * 180) / Math.PI;
+  let fanTowardCenterDeg = toCenterDeg - 90;
+  fanTowardCenterDeg = normalizeAngleDeg180(fanTowardCenterDeg);
+
+  return { angleDeg, fanTowardCenterDeg };
 }
 
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 /** Имя чуть выше окружности сукна, к центру рукава — наружу по радиусу. */
-const OPP_NAME_OUTWARD_EXTRA_PX = 40;
-/** Онлайн: рука на внешнем «ободке» стола (не на сукне), ближе к фону. */
-const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 52;
+const OPP_NAME_OUTWARD_EXTRA_PX = 34;
+/** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
+const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 26;
 /** Доп. вынесение имени наружу (офлайн); в онлайне имя дублируется полосой над столом. */
 const OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX = 22;
 
@@ -842,11 +843,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     const attacker = game.players[game.attackerIndex];
     const defender = game.players[game.defenderIndex];
     if (!attacker || !defender) return;
+    const tossPhases =
+      game.phase === "attack_toss" || game.phase === "player_can_throw_more";
     const botActs =
       (game.phase === "attack_initial" && attacker.type === "bot") ||
       (game.phase === "defend" && defender.type === "bot") ||
-      (game.phase === "attack_toss" && attacker.type === "bot") ||
-      (game.phase === "player_can_throw_more" && attacker.type === "bot");
+      (tossPhases &&
+        game.players.some((p, i) => p.type === "bot" && i !== game.defenderIndex));
     if (!botActs) return;
 
     const t = window.setTimeout(() => {
@@ -996,19 +999,32 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       return selfIsAttacker ? `${selfName}, ваш ход: атака` : `${attackerName} атакует`;
     if (game.phase === "defend")
       return selfIsDefender ? `${selfName}, ваш ход: отбой или «Взять»` : `${defenderName} отбивается`;
-    if (game.phase === "attack_toss")
-      return selfIsAttacker ? "Подкините или «Бито»" : `${attackerName} подкидывает`;
-    if (game.phase === "player_can_throw_more")
+    if (game.phase === "attack_toss") {
+      if (selfIsDefender) return `${defenderName} ждёт подкидывания или «Бито»`;
       return selfIsAttacker
-        ? `${defenderName} не бьётся — подкиньте или «Бито»`
-        : `${attackerName} подкидывает…`;
+        ? "Подкините или «Бито»"
+        : `${selfName}, можете подкинуть сопернику или ждите`;
+    }
+    if (game.phase === "player_can_throw_more") {
+      if (selfIsDefender) return `${defenderName} — стол заберёте после «Бито»`;
+      return selfIsAttacker
+        ? `${defenderName} не бьётся — подкиньте или нажмите «Бито»`
+        : `${selfName}, можете подкинуть или ждите «Бито»`;
+    }
     return "";
   })();
 
-  const selfCanToss =
+  /** Подкидывать могут все, кроме защитника (3+ игроков). */
+  const selfCanTossCards =
     !!game &&
-    selfIsAttacker &&
+    !selfIsDefender &&
     (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
+
+  /** «Бито» после полного отбоя — только ведущий атакующий; иначе завершение подкидывания — любой не-защитник. */
+  const selfShowBitoForToss =
+    !!game &&
+    ((game.phase === "attack_toss" && selfIsAttacker) ||
+      (game.phase === "player_can_throw_more" && !selfIsDefender));
 
   if (!nameHydrated) {
     return (
@@ -1105,17 +1121,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      {embedded && game && opponents.length > 0 ? (
-        <div className="mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-end gap-1 px-2 pb-1 pt-0.5">
-          {opponents.map((opp) => (
-            <div key={opp.id} className="min-w-0 max-w-full text-right">
-              <p className="truncate text-[13px] font-medium text-white/90">{opp.name}</p>
-              <p className="text-[10px] text-white/45">{opp.hand.length} карт</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
         <div
           ref={tableRoundRef}
@@ -1152,14 +1157,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const handRadius =
               opponentOrbitPx + (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: handOx, oy: handOy } = opponentSeatOffsets(seatMeta.angleDeg, handRadius);
-            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.28 : seatMeta.fanTowardCenterDeg;
+            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.52 : seatMeta.fanTowardCenterDeg;
             const nameArmLen =
               opponentOrbitPx +
               OPP_NAME_OUTWARD_EXTRA_PX +
               (embedded ? OPP_NAME_EMBEDDED_OUTWARD_EXTRA_PX : 0);
             const nameOx = nx * nameArmLen;
             const nameOy = ny * nameArmLen;
-            const showOrbitName = !embedded;
             return (
               <div
                 key={opp.id}
@@ -1200,26 +1204,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   ))}
                   </div>
                 </div>
-                {showOrbitName ? (
-                  <div
-                    className="pointer-events-auto absolute z-[24] flex max-w-[min(46%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[42%]"
-                    style={{
-                      left: `calc(50% + ${nameOx}px)`,
-                      top: `calc(50% + ${nameOy}px)`,
-                      transform: "translate(-50%, -50%)",
-                    }}
+                <div
+                  className="pointer-events-auto absolute z-[24] flex max-w-[min(52%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[46%]"
+                  style={{
+                    left: `calc(50% + ${nameOx}px)`,
+                    top: `calc(50% + ${nameOy}px)`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <p className="max-w-[7rem] truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] sm:max-w-[8rem] sm:text-[11px]">
+                    {opp.name}
+                  </p>
+                  <span
+                    className="shrink-0 rounded-full border border-white/20 bg-black/50 px-1.5 py-px text-[9px] font-bold tabular-nums text-emerald-100/95 sm:text-[10px]"
+                    title={`Карт: ${bh.length}`}
                   >
-                    <p className="max-w-[6.5rem] truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:max-w-[7.5rem] sm:text-[11px]">
-                      {opp.name}
-                    </p>
-                    <span
-                      className="shrink-0 rounded-full border border-white/20 bg-black/45 px-1.5 py-px text-[9px] font-bold tabular-nums text-emerald-100/95 sm:text-[10px]"
-                      title={`Карт: ${bh.length}`}
-                    >
-                      {bh.length}
-                    </span>
-                  </div>
-                ) : null}
+                    {bh.length}
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -1333,7 +1335,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   Атаковать
                 </button>
               ) : null}
-              {selfCanToss && tossPick.length > 0 ? (
+              {selfCanTossCards && tossPick.length > 0 ? (
                 <button
                   type="button"
                   onClick={onTossSubmit}
@@ -1470,20 +1472,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 {row.map((c, i) => {
                   const selAttack =
                     game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
-                  const selToss = selfCanToss && tossPick.includes(c.id);
+                  const selToss = selfCanTossCards && tossPick.includes(c.id);
 
                   const attackPlayable =
                     selfIsAttacker && game.phase === "attack_initial" && game.state === "playing";
 
                   const tossPlayable =
-                    selfCanToss && game.state === "playing" && ranksOnTable.has(c.rank);
+                    selfCanTossCards && game.state === "playing" && ranksOnTable.has(c.rank);
 
                   const defendPlayable = defendPlayableFor(c);
 
                   let playable = false;
                   if (game.state === "playing" && !dealing) {
                     if (selfIsAttacker && game.phase === "attack_initial") playable = attackPlayable;
-                    else if (selfCanToss) playable = tossPlayable;
+                    else if (selfCanTossCards) playable = tossPlayable;
                     else if (selfIsDefender && game.phase === "defend") playable = defendPlayable;
                   }
 
@@ -1496,7 +1498,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           setAttackPick((p) => toggleAttackSelection(humanHand, p, c.id));
                           setGame((g) => (g ? { ...g, message: null } : g));
                         }
-                      : selfCanToss
+                      : selfCanTossCards
                         ? () => {
                             if (!tossPlayable) return;
                             setTossPick((p) =>

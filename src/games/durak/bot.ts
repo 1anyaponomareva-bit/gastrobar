@@ -49,9 +49,13 @@ export function botChooseDefend(
   return { attackId: pair.attack.id, defenseId: candidates[0]!.id };
 }
 
-export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: string[] } | { type: "beat" } {
-  const attacker = table.players[table.attackerIndex];
-  if (attacker.type !== "bot") return { type: "beat" };
+/** Одна карта для подкидывания игроком с индексом `playerIndex` (не защитник). */
+export function botChooseTossForPlayer(
+  table: GameTable,
+  playerIndex: number
+): { type: "toss"; ids: string[] } | { type: "pass" } {
+  const p = table.players[playerIndex];
+  if (!p || p.type !== "bot" || playerIndex === table.defenderIndex) return { type: "pass" };
 
   const ranksOnTable = new Set<Rank>();
   for (const tp of table.tablePairs) {
@@ -59,7 +63,7 @@ export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: stri
     if (tp.defense) ranksOnTable.add(tp.defense.rank);
   }
 
-  const tossable = attacker.hand.filter((c) => ranksOnTable.has(c.rank));
+  const tossable = p.hand.filter((c) => ranksOnTable.has(c.rank));
   const sorted = sortAttackPreference(tossable, table.trumpSuit);
 
   for (const c of sorted) {
@@ -67,6 +71,12 @@ export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: stri
       return { type: "toss", ids: [c.id] };
     }
   }
+  return { type: "pass" };
+}
+
+export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: string[] } | { type: "beat" } {
+  const r = botChooseTossForPlayer(table, table.attackerIndex);
+  if (r.type === "toss") return r;
   return { type: "beat" };
 }
 
@@ -95,32 +105,44 @@ export function applyBotMove(table: GameTable): GameTable | null {
   }
 
   const tossPhases = table.phase === "attack_toss" || table.phase === "player_can_throw_more";
-  if (tossPhases && table.players[table.attackerIndex]!.type === "bot") {
-    const choice = botChooseTossOrBeat(table);
-    if (choice.type === "beat") {
-      if (table.phase === "player_can_throw_more") {
-        const def = table.players[table.defenderIndex];
-        if (!def) return null;
-        const r = engine.defenderTake(table, def.id);
+  if (tossPhases) {
+    const order = engine.attackingSeatOrder(table);
+    for (const idx of order) {
+      const pl = table.players[idx];
+      if (!pl || pl.type !== "bot") continue;
+      const sub = botChooseTossForPlayer(table, idx);
+      if (sub.type !== "toss") continue;
+      const r = engine.attackToss(table, pl.id, sub.ids);
+      if (!("error" in r)) return r.table;
+    }
+
+    const att = table.players[table.attackerIndex];
+    if (att?.type === "bot") {
+      const choice = botChooseTossOrBeat(table);
+      if (choice.type === "beat") {
+        if (table.phase === "player_can_throw_more") {
+          const def = table.players[table.defenderIndex];
+          if (!def) return null;
+          const r = engine.defenderTake(table, def.id);
+          return "error" in r ? null : r.table;
+        }
+        const r = engine.attackerBeat(table, att.id);
         return "error" in r ? null : r.table;
       }
-      const r = engine.attackerBeat(table, bid);
-      return "error" in r ? null : r.table;
-    }
-    const r = engine.attackToss(table, bid, choice.ids);
-    if ("error" in r) {
-      /* Рассинхрон/краевой случай — не оставляем стол зависшим: сдать партию в легальный финал хода. */
-      if (table.phase === "player_can_throw_more") {
-        const def = table.players[table.defenderIndex];
-        if (def) {
-          const take = engine.defenderTake(table, def.id);
-          if (!("error" in take)) return take.table;
+      const r = engine.attackToss(table, att.id, choice.ids);
+      if ("error" in r) {
+        if (table.phase === "player_can_throw_more") {
+          const def = table.players[table.defenderIndex];
+          if (def) {
+            const take = engine.defenderTake(table, def.id);
+            if (!("error" in take)) return take.table;
+          }
         }
+        const beat = engine.attackerBeat(table, att.id);
+        return "error" in beat ? null : beat.table;
       }
-      const beat = engine.attackerBeat(table, bid);
-      return "error" in beat ? null : beat.table;
+      return r.table;
     }
-    return r.table;
   }
 
   return null;

@@ -44,6 +44,17 @@ export function nextDefenderIndex(attackerIndex: number, playerCount: number): n
   return (attackerIndex + 1) % playerCount;
 }
 
+/** Индексы всех подкидывающих по часовой стрелке от текущего атакующего, без защитника. */
+export function attackingSeatOrder(table: GameTable): number[] {
+  const n = table.players.length;
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const j = (table.attackerIndex + i) % n;
+    if (j !== table.defenderIndex) out.push(j);
+  }
+  return out;
+}
+
 export function drawCardsFromDeck(table: GameTable, firstIndex: number): GameTable {
   const players = table.players.map((p) => ({ ...p, hand: [...p.hand] }));
   const deck = [...table.deck];
@@ -354,15 +365,23 @@ export function defenderTake(table: GameTable, defenderId: string): { table: Gam
     return { ...p, hand: sortHand([...p.hand, ...taken]) };
   });
 
+  const n = table.players.length;
+  const takerIndex = table.defenderIndex;
+  /** После взятия карт следующий атакующий — игрок слева от взявшего (не тот же «первый» атакующий снова на взявшего). */
+  const newAttacker = nextDefenderIndex(takerIndex, n);
+  const newDefender = nextDefenderIndex(newAttacker, n);
+
   let next: GameTable = {
     ...table,
     players: newPlayers,
     tablePairs: [],
+    attackerIndex: newAttacker,
+    defenderIndex: newDefender,
     phase: "attack_initial",
     message: null,
   };
 
-  next = drawCardsFromDeck(next, table.defenderIndex);
+  next = drawCardsFromDeck(next, takerIndex);
   next = checkGameEnd(next);
   return { table: next };
 }
@@ -426,7 +445,7 @@ export function attackToss(
   }
 
   const cards = cardIds
-    .map((id) => attacker.hand.find((c) => c.id === id))
+    .map((id) => actor.hand.find((c) => c.id === id))
     .filter((c): c is Card => c != null);
   if (cards.length !== cardIds.length) {
     return { error: "Карты не найдены" };
@@ -440,7 +459,7 @@ export function attackToss(
   }
 
   const newPlayers = table.players.map((p, i) => {
-    if (i !== table.attackerIndex) return { ...p, hand: [...p.hand] };
+    if (i !== actorIndex) return { ...p, hand: [...p.hand] };
     return { ...p, hand: p.hand.filter((c) => !cardIds.includes(c.id)) };
   });
 
