@@ -321,7 +321,7 @@ export function GamesSelectionScreen() {
 
       <div className="flex w-full flex-col gap-6 sm:gap-7">
         <GameTableCardActive
-          href="/durak"
+          href="/durak?new=1"
           illustration={<DurakTableIllustration className="h-[100px] w-full sm:h-[118px]" />}
           title="ДУРАК"
           tagline="Уже играют. Можешь присоединиться"

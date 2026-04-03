@@ -32,12 +32,18 @@ import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
-  clearDurakActiveRoomFromStorage,
+  abandonDurakStoredRoom,
   DURAK_ACTIVE_ROOM_LS_KEY,
+  hasDurakTabOnlineResume,
   readDurakActiveRoomFromStorage,
 } from "@/lib/durak/activeRoomStorage";
 import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
-import { fetchRoom, fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
+import {
+  durakForfeitStaleOpponent,
+  fetchRoom,
+  fetchRoomPlayers,
+  isRoomPlayerLikelyGone,
+} from "@/lib/durak/online/matchmaking";
 
 const HUMAN_ID = "human";
 
@@ -69,6 +75,8 @@ type DurakGameRootProps = {
   embedded?: DurakGameEmbeddedProps;
   /** Код из ссылки `?stol=` — присоединение к столу с друзьями. */
   friendInviteCodeFromUrl?: string | null;
+  /** `?new=1` с хаба игр: не поднимать последнюю комнату из localStorage. */
+  skipOnlineResume?: boolean;
 };
 
 function TurnDeadlineRing({ progress }: { progress: number }) {
@@ -690,6 +698,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const router = useRouter();
   const embedded = props.embedded;
   const friendInviteCodeFromUrl = props.friendInviteCodeFromUrl ?? null;
+  const skipOnlineResume = props.skipOnlineResume === true;
   const localPlayerId = embedded?.localPlayerId ?? HUMAN_ID;
 
   const [nameHydrated, setNameHydrated] = useState(false);
@@ -702,7 +711,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     setOnlineRoomId(id);
   }, []);
   const onLeaveOnlineRoomStable = useCallback(() => {
-    clearDurakActiveRoomFromStorage();
+    abandonDurakStoredRoom();
     setOnlineRoomId(null);
   }, []);
   const onMatchmakingCancelStable = useCallback(() => {
@@ -780,8 +789,33 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     }
   }, []);
 
+  /**
+   * `?new=1` и сброс стола — до useEffect rejoin: читаем window.location, иначе гонка с useSearchParams.
+   */
+  useLayoutEffect(() => {
+    if (embedded) return;
+    let skip =
+      skipOnlineResume ||
+      (typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("new") === "1");
+    if (!skip) return;
+    abandonDurakStoredRoom();
+    setOnlineRoomId(null);
+    try {
+      const u = new URL(window.location.href);
+      if (u.searchParams.get("new") === "1") {
+        u.searchParams.delete("new");
+        const q = u.searchParams.toString();
+        window.history.replaceState(null, "", `${u.pathname}${q ? `?${q}` : ""}${u.hash}`);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [embedded, skipOnlineResume]);
+
   useEffect(() => {
     if (embedded || !nameHydrated || !playerName || onlineRoomId) return;
+    if (skipOnlineResume) return;
     let cancelled = false;
     const rid = readDurakActiveRoomFromStorage();
     if (!rid) return;
@@ -792,25 +826,39 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         const pid = getOrCreateDurakPlayerId();
         const room = await fetchRoom(client, rid);
         if (cancelled || !room) {
-          if (!room) clearDurakActiveRoomFromStorage();
+          if (!room) abandonDurakStoredRoom();
           return;
         }
         if (room.status === "finished") {
-          clearDurakActiveRoomFromStorage();
+          abandonDurakStoredRoom();
           return;
         }
         const players = await fetchRoomPlayers(client, rid);
         if (cancelled) return;
         if (!players.some((p) => p.player_id === pid)) {
-          clearDurakActiveRoomFromStorage();
+          abandonDurakStoredRoom();
           return;
         }
-        /* Стол с друзьями: matchmaking_pool = false; быстрая очередь / legacy: true или null */
+        /* Быстрая игра в playing: только если эта вкладка уже была в матче (F5). Иначе — новая вкладка / старый LS. */
         if (room.status === "playing" && room.matchmaking_pool !== false) {
+          if (!hasDurakTabOnlineResume()) {
+            abandonDurakStoredRoom();
+            return;
+          }
           const humans = players.filter((p) => !p.is_bot).length;
           if (humans < 2) {
-            clearDurakActiveRoomFromStorage();
+            abandonDurakStoredRoom();
             return;
+          }
+          const others = players.filter((p) => !p.is_bot && p.player_id !== pid);
+          if (others.length > 0) {
+            const now = Date.now();
+            const allOthersStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
+            if (allOthersStale) {
+              abandonDurakStoredRoom();
+              void durakForfeitStaleOpponent(client, rid, pid).catch(() => {});
+              return;
+            }
           }
         }
         setOnlineRoomId(rid);
@@ -821,7 +869,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     return () => {
       cancelled = true;
     };
-  }, [embedded, nameHydrated, playerName, onlineRoomId]);
+  }, [embedded, nameHydrated, playerName, onlineRoomId, skipOnlineResume]);
 
   useEffect(() => {
     if (embedded || !onlineRoomId) return;

@@ -17,6 +17,7 @@ import {
   buildGameFromRoomPlayers,
   roomStateMatchesRoomPlayers,
 } from "@/lib/durak/online/buildRoomGame";
+import { markDurakTabOnlineResume } from "@/lib/durak/activeRoomStorage";
 import {
   durakForfeitStaleOpponent,
   durakPlayerPing,
@@ -280,6 +281,11 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     gameRef.current = null;
     setOpponentForfeitWin(false);
     setGame(null);
+  }, [roomId]);
+
+  /** Вкладка «в матче» — иначе после F5 не поднимем playing из LS; в новой вкладке LS не тянет чужой стол. */
+  useEffect(() => {
+    markDurakTabOnlineResume();
   }, [roomId]);
 
   /** Пинг активности: нужен и в фоне — иначе сервер «caller not active» и форфейт соперника не проходит. */

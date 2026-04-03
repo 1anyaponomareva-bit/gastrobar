@@ -34,10 +34,11 @@ function DurakPageClientInner() {
   const sp = useSearchParams();
   const raw = sp?.get("stol") ?? null;
   const invite = raw?.trim() ? raw.trim() : null;
+  const skipOnlineResume = sp?.get("new") === "1";
 
   return (
     <DurakPageShell>
-      <DurakGame friendInviteCodeFromUrl={invite} />
+      <DurakGame friendInviteCodeFromUrl={invite} skipOnlineResume={skipOnlineResume} />
     </DurakPageShell>
   );
 }

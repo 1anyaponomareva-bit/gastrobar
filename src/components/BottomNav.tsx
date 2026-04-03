@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
-import { clearDurakActiveRoomFromStorage } from "@/lib/durak/activeRoomStorage";
+import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ export function BottomNav() {
   const onGames = path === "/games" || path === "/durak" || path.startsWith("/durak/");
 
   const goPeriod = (id: MenuPeriod) => {
-    if (onGames) clearDurakActiveRoomFromStorage();
+    if (onGames) abandonDurakStoredRoom();
     setPeriod(id);
     if (path !== "/") router.push("/");
   };
