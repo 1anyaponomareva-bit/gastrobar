@@ -5,10 +5,45 @@ import { BottomNav } from "@/components/BottomNav";
 import { HEADER_OFFSET_TOP } from "@/components/durak/durakLayoutConstants";
 import { DurakShell } from "./DurakShell";
 
-export const metadata: Metadata = {
-  title: "Дурак — GASTROBAR",
-  description: "Подкидной дурак: игра против бота.",
-};
+function pickStol(searchParams: Record<string, string | string[] | undefined>): string | undefined {
+  const raw = searchParams.stol;
+  if (typeof raw === "string") return raw.trim() || undefined;
+  if (Array.isArray(raw)) {
+    const t = raw[0]?.trim();
+    return t || undefined;
+  }
+  return undefined;
+}
+
+/** Ссылка с ?stol= — приглашение за стол; превью не про «бота», а про приглашение. */
+export async function generateMetadata(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const searchParams = await props.searchParams;
+  const stol = pickStol(searchParams);
+
+  if (stol) {
+    return {
+      title: "Вас приглашают в игру — GASTROBAR",
+      description:
+        "Вас зовут за стол в подкидного дурака в GASTROBAR. Откройте ссылку, чтобы присоединиться к партии.",
+      openGraph: {
+        title: "Вас приглашают в игру",
+        description:
+          "Вас зовут за стол в подкидного дурака. Нажмите, чтобы зайти в партию.",
+      },
+    };
+  }
+
+  return {
+    title: "Дурак — GASTROBAR",
+    description: "Подкидной дурак онлайн: за столом с друзьями или быстрый подбор игроков.",
+    openGraph: {
+      title: "Подкидной дурак — GASTROBAR",
+      description: "Играйте онлайн в GASTROBAR: стол с друзьями или быстрая партия.",
+    },
+  };
+}
 
 const durakPageShellStyle: React.CSSProperties = {
   position: "relative",

@@ -119,6 +119,17 @@ const HAND_CARD_H_CLASS = "h-[12.2rem] sm:h-[13.1rem]";
 /** Не больше карт в одном ряду руки — второй ряд веером ниже. */
 const HAND_ROW_MAX = 7;
 
+/**
+ * Руки соперников дальше от центра сукна, чем карты боя — зазор между веером и зоной стола.
+ * (Радиус окружности рассадки = orbitEff × множитель.)
+ */
+const OPPONENT_ORBIT_RADIUS_MULT = 1.16;
+
+/**
+ * `true` → в консоль пишутся rect игровой зоны и стола (временная отладка геометрии).
+ */
+const DURAK_TABLE_LAYOUT_DEBUG = false;
+
 function handFanStyle(
   n: number,
   i: number,
@@ -232,29 +243,28 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
 }
 
 /**
- * Смещение пары атака/защита так, чтобы центр стопки был на окружности сукна:
- * зелёное поле с `inset-[2%]` → радиус ≈ 0.48 от ширины круга стола.
- * Дуга у верхней части стола (колода слева).
+ * Смещение пары атака/защита: **центр сукна** (не дуга у верхнего соперника).
+ * Короткая горизонтальная дуга вокруг 0° + малая доля по Y — визуально «полёт» в середину стола,
+ * карты не группируются под рукой сверху и не уезжают к боковым соперникам.
  */
 function tablePairOrbitOffset(
   index: number,
   total: number,
-  radiusPx: number
+  orbitRadiusPx: number
 ): { x: number; y: number } {
-  if (radiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
+  if (orbitRadiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
   const n = Math.max(1, total);
-  const midDeg = -90;
-  const minSpan = 52;
-  const maxSpan = 118;
-  const spanDeg = Math.min(maxSpan, minSpan + (n - 1) * 12);
-  const startDeg = midDeg - spanDeg / 2;
-  const endDeg = midDeg + spanDeg / 2;
+  const playR = Math.max(44, orbitRadiusPx * 0.27);
+  const minSpan = 42;
+  const maxSpan = 102;
+  const spanDeg = Math.min(maxSpan, minSpan + (n - 1) * 11);
+  const startDeg = -spanDeg / 2;
+  const endDeg = spanDeg / 2;
   const t = n <= 1 ? 0.5 : index / (n - 1);
   const rad = ((startDeg + t * (endDeg - startDeg)) * Math.PI) / 180;
-  return {
-    x: Math.cos(rad) * radiusPx,
-    y: Math.sin(rad) * radiusPx,
-  };
+  const x = Math.cos(rad) * playR;
+  const y = Math.sin(rad) * playR * 0.2;
+  return { x, y };
 }
 
 /** Рубашка: светлый фон, чёткая обводка, логотип внутри внутренней «поля» карты. */
@@ -644,6 +654,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const skipNameBlurCommitRef = useRef(false);
   const tableRoundRef = useRef<HTMLDivElement>(null);
+  const boardPlayAreaRef = useRef<HTMLDivElement>(null);
   const [tableOrbitPx, setTableOrbitPx] = useState(0);
 
   useLayoutEffect(() => {
@@ -655,6 +666,31 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ro.observe(el);
     return () => ro.disconnect();
   }, [game?.id]);
+
+  useLayoutEffect(() => {
+    if (!DURAK_TABLE_LAYOUT_DEBUG) return;
+    const tableEl = tableRoundRef.current;
+    const boardEl = boardPlayAreaRef.current;
+    if (!tableEl || !boardEl) return;
+    const tableR = tableEl.getBoundingClientRect();
+    const boardR = boardEl.getBoundingClientRect();
+    const pairCount = game?.tablePairs.length ?? 0;
+    console.log("[durak-table-layout]", {
+      boardTargetRect: boardR,
+      tableRoundRect: tableR,
+      animationTargetCenter: {
+        x: boardR.left + boardR.width / 2,
+        y: boardR.top + boardR.height / 2,
+      },
+      orbitPxEff: tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX,
+      pairCount,
+      note: "Карты боя позиционируются от центра boardPlayArea; рука — отдельный слой ниже (z-8).",
+    });
+  }, [
+    game?.tablePairs.length,
+    game?.id,
+    tableOrbitPx,
+  ]);
 
   useEffect(() => {
     try {
@@ -688,6 +724,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [humanHand]);
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
+  const opponentOrbitPx = orbitPxEff * OPPONENT_ORBIT_RADIUS_MULT;
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1069,13 +1106,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
-            transform: "translateY(min(1.5rem, 4vmin))",
+            transform: "translateY(min(1.1rem, 3.2vmin))",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
+          <div className="pointer-events-none absolute inset-0 z-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
 
           <div
-            className="pointer-events-none absolute inset-[2%] rounded-full border-[2px] border-[#5a9a6a]/90 sm:border-[3px] sm:border-[#6dae7e]"
+            className="pointer-events-none absolute inset-[2%] z-[1] rounded-full border-[2px] border-[#5a9a6a]/90 sm:border-[3px] sm:border-[#6dae7e]"
             style={{
               background:
                 "radial-gradient(ellipse 92% 88% at 50% 42%, #2d6b45 0%, #245538 22%, #1a3d28 52%, #0f2418 78%, #081810 100%)",
@@ -1084,7 +1121,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             }}
           />
           <div
-            className="pointer-events-none absolute inset-[5%] rounded-full"
+            className="pointer-events-none absolute inset-[5%] z-[1] rounded-full"
             style={{
               background:
                 "radial-gradient(circle at 40% 34%, rgba(180,220,160,0.16) 0%, transparent 55%)",
@@ -1094,11 +1131,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
             const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
-            const { ox, oy, nx, ny } = opponentSeatOffsets(seatMeta.angleDeg, orbitPxEff);
-            const nameOx = nx * (orbitPxEff + OPP_NAME_OUTWARD_EXTRA_PX);
-            const nameOy = ny * (orbitPxEff + OPP_NAME_OUTWARD_EXTRA_PX);
+            const { ox, oy, nx, ny } = opponentSeatOffsets(seatMeta.angleDeg, opponentOrbitPx);
+            const nameOx = nx * (opponentOrbitPx + OPP_NAME_OUTWARD_EXTRA_PX);
+            const nameOy = ny * (opponentOrbitPx + OPP_NAME_OUTWARD_EXTRA_PX);
             return (
-              <div key={opp.id} className="pointer-events-none absolute inset-0 z-30 overflow-visible">
+              <div key={opp.id} className="pointer-events-none absolute inset-0 z-[8] overflow-visible">
                 <div
                   className="pointer-events-auto absolute flex max-w-[min(46%,92vw)] items-center justify-center gap-1 whitespace-nowrap px-0.5 leading-tight sm:max-w-[42%]"
                   style={{
@@ -1153,13 +1190,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             );
           })}
 
-          <div className="absolute inset-0 z-10 min-h-0 overflow-visible">
-            <div className="relative h-full min-h-0 w-full overflow-visible">
-              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-20 -translate-y-1/2 sm:left-[2%]">
+          <div
+            ref={boardPlayAreaRef}
+            className="absolute inset-0 z-[28] isolate min-h-0 overflow-visible"
+          >
+            <div className="relative z-[1] h-full min-h-0 w-full overflow-visible">
+              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[2] -translate-y-1/2 sm:left-[2%]">
                 <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
               </div>
               {game.tablePairs.length === 0 ? (
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 px-2">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 px-2">
                   <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
                     {dealing ? "Карты раздаются…" : "Ждите ход"}
                   </span>
@@ -1173,18 +1213,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     humanMustDefend && defenseTargetAttackId === tp.attack.id;
                   const highlightUnbeaten =
                     uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
+                  const stackZ = 10 + i;
 
                   return (
                     <div
                       key={tp.attack.id}
-                      className="pointer-events-auto absolute left-1/2 top-1/2 z-10"
+                      className="pointer-events-auto absolute left-1/2 top-1/2"
                       style={{
                         transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                        zIndex: stackZ,
                       }}
                     >
                       <div className="relative h-[4.75rem] w-[3.1rem] overflow-visible sm:h-[5.85rem] sm:w-[4.05rem]">
                         <motion.div
-                          className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2"
+                          className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2"
                           initial={false}
                           animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                           transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
@@ -1214,7 +1256,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                         {tp.defense ? (
                           <motion.div
-                            className="absolute bottom-0.5 left-1/2 z-20 -translate-x-[42%]"
+                            className="absolute bottom-0.5 left-1/2 z-[22] -translate-x-[42%]"
                             initial={false}
                             animate={{ opacity: 1, y: -10, x: 4, scale: 1, rotate: 2 }}
                             transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
