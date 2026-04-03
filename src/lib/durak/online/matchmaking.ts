@@ -340,11 +340,12 @@ export async function fetchRoomPlayers(
   return (data ?? []) as RoomPlayerRow[];
 }
 
-const STALE_LAST_SEEN_MS = 20_000;
-/** Вкладку закрыли до первого ping — `last_seen_at` пустой; не блокируем форфейт навсегда. */
-const STALE_IF_NEVER_SEEN_AFTER_JOIN_MS = 45_000;
+/** Синхронно с `durak_forfeit_stale_opponent`: соперник «жив», если пинговал за последние 15 с. */
+const STALE_LAST_SEEN_MS = 15_000;
+/** Запас, если в строке нет last_seen (редко); колонка в БД обычно NOT NULL. */
+const STALE_IF_NEVER_SEEN_AFTER_JOIN_MS = 18_000;
 
-/** Порог для клиента перед RPC `durak_forfeit_stale_opponent` (на сервере своя проверка). */
+/** Порог перед RPC `durak_forfeit_stale_opponent` — должен совпадать с интервалом в SQL. */
 export function isRoomPlayerLikelyGone(row: RoomPlayerRow, nowMs: number): boolean {
   if (row.is_bot) return false;
   const lastRaw = row.last_seen_at;

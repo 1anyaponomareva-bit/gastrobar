@@ -282,15 +282,14 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     setGame(null);
   }, [roomId]);
 
-  /** Пинг активности: сервер обновляет `last_seen_at` (порог для форфейта соперника). */
+  /** Пинг активности: нужен и в фоне — иначе сервер «caller not active» и форфейт соперника не проходит. */
   useEffect(() => {
     if (!supabase) return;
     const ping = () => {
-      if (document.visibilityState !== "visible") return;
       void durakPlayerPing(supabase, roomId, playerId).catch(() => {});
     };
     ping();
-    const id = window.setInterval(ping, 4000);
+    const id = window.setInterval(ping, 5000);
     document.addEventListener("visibilitychange", ping);
     return () => {
       window.clearInterval(id);
@@ -357,8 +356,9 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   );
 
   /**
-   * Техническая победа: соперник-человек не пинговал ≥20 с (проверка и на сервере).
-   * Состояние партии читаем из `gameRef`, чтобы не пересоздавать интервал на каждый poll.
+   * Техническая победа: соперник-человек не пинговал ≥15 с (сервер: `durak_forfeit_stale_opponent`).
+   * Не привязываем к visibility: иначе вкладка в фоне — форфейт никогда не вызывается.
+   * Свой пинг по-прежнему только при видимой вкладке (сервер требует «caller not active» если сам не пинговал ~30 с).
    */
   useEffect(() => {
     if (!supabase) return;
@@ -366,7 +366,6 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       const g = gameRef.current;
       if (!g || g.state !== "playing") return;
       if (g.players.filter((p) => p.type !== "bot").length < 2) return;
-      if (document.visibilityState !== "visible") return;
       void (async () => {
         try {
           const rows = await fetchRoomPlayers(supabase, roomId);
@@ -384,11 +383,14 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
             .eq("room_id", roomId)
             .maybeSingle();
           if (!error) applyRemoteRow(data, "realtime");
-        } catch {
-          /* соперник оживёт / гонка / старая схема без RPC */
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!/opponent still active|caller not active/i.test(msg)) {
+            console.warn("[durak] durak_forfeit_stale_opponent:", msg);
+          }
         }
       })();
-    }, 2600);
+    }, 1200);
     return () => window.clearInterval(id);
   }, [supabase, roomId, playerId, applyRemoteRow]);
 

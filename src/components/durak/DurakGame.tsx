@@ -36,6 +36,7 @@ import {
   DURAK_ACTIVE_ROOM_LS_KEY,
   readDurakActiveRoomFromStorage,
 } from "@/lib/durak/activeRoomStorage";
+import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
 import { fetchRoom, fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
 
 const HUMAN_ID = "human";
@@ -290,22 +291,37 @@ function opponentSeatOffsets(
   return { ox: nx * r, oy: ny * r, nx, ny };
 }
 
-/** Веер рубашек у соперника: плотнее, но каждая карта частично видна (счёт по краям). */
+/**
+ * Веер рубашек соперника: симметрия от центра, маленький угол, лёгкая арка (центр — опорная карта).
+ */
 function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
   const rel = i - mid;
-  const spread = n <= 1 ? 0 : Math.min(12 / Math.max(1, n - 1), 3.8);
-  const rot = rel * spread;
-  const step = n > 8 ? 7 : n >= 5 ? 7.5 : 8.5;
-  const tx = rel * step;
-  const curve = Math.abs(rel) * 1.1;
+  if (n <= 1) {
+    return {
+      left: "50%",
+      bottom: 0,
+      transform: "translate(-50%, 0)",
+      transformOrigin: "bottom center",
+      zIndex: 20,
+    };
+  }
+  const denom = Math.max(mid, 1e-6);
+  const edgeMaxDeg =
+    n <= 3 ? 3.2 : n <= 5 ? 3.8 : n <= 7 ? 4.2 : 4.6;
+  const rot = (rel / denom) * edgeMaxDeg;
+  const gapPx =
+    n <= 4 ? 6.75 : n <= 6 ? 6.25 : n <= 8 ? 5.75 : 5.25;
+  const tx = rel * gapPx;
+  const ty = -(rel * rel) * 0.32;
+  const zFromCenter = Math.round(3 * (mid - Math.abs(rel)));
   return {
     left: "50%",
     bottom: 0,
-    transform: `translate(calc(-50% + ${tx}px), ${curve}px) rotate(${rot}deg)`,
+    transform: `translate(calc(-50% + ${tx}px), ${ty}px) rotate(${rot}deg)`,
     transformOrigin: "bottom center",
-    zIndex: 10 + i,
+    zIndex: 16 + zFromCenter + i,
   };
 }
 
@@ -349,9 +365,10 @@ function BrandedCardBack({
   return (
     <div
       className={cn(
-        "relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden rounded-[10px]",
-        "border border-[#2a2a2a] bg-[#0c0c0d]",
-        "shadow-[0_4px_14px_rgba(0,0,0,0.35)]",
+        "relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden",
+        CARD_RADIUS_CLASS,
+        "border border-black/35 bg-[#0c0c0d]",
+        "shadow-[0_4px_10px_rgba(0,0,0,0.32)]",
         selected &&
           "shadow-[0_0_0_2px_rgba(255,255,255,0.85),0_10px_24px_rgba(0,0,0,0.35)] ring-2 ring-emerald-400/75",
         disabled && "opacity-[0.38] saturate-[0.65]",
@@ -407,9 +424,10 @@ function CardSprite({
   /** Одинаковое лицо карты и обрезка скругления — в руке и на столе. */
   const tableLike = size === "tableCompact" || size === "table" || size === "hand";
   const wrap = cn(
-    "relative shrink-0 rounded-[10px]",
+    "relative shrink-0",
+    CARD_RADIUS_CLASS,
     isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
-    !isBack ? "bg-white" : "bg-transparent ring-2 ring-white/75 ring-offset-0 shadow-[0_2px_8px_rgba(0,0,0,0.35)]",
+    !isBack ? "bg-white" : "bg-transparent ring-1 ring-black/25 shadow-[0_2px_7px_rgba(0,0,0,0.38)]",
     dimBox,
     playableHighlight &&
       !isBack &&
@@ -424,7 +442,7 @@ function CardSprite({
   const inner = isBack ? (
     <BrandedCardBack selected={selected} disabled={disabled} className={imgClassName} />
   ) : (
-    <div className="h-full w-full overflow-hidden rounded-[10px]">
+    <div className={cn("h-full w-full overflow-hidden", CARD_RADIUS_CLASS)}>
       <CardFaceArt
         card={card!}
         compact={size !== "hand"}
@@ -497,7 +515,8 @@ function DeckPile({
         <div className="flex h-full w-full items-center justify-center">
           <div
             className={cn(
-              "flex items-center justify-center rounded-[10px] border border-dashed border-emerald-700/45 bg-black/30 text-[8px] text-emerald-200/55 sm:text-[10px]",
+              "flex items-center justify-center border border-dashed border-emerald-700/45 bg-black/30 text-[8px] text-emerald-200/55 sm:text-[10px]",
+              CARD_RADIUS_CLASS,
               deckBox
             )}
           >
@@ -525,7 +544,7 @@ function DeckPile({
           <CardSprite
             card={trumpCard}
             size={size}
-            className="shadow-[0_8px_18px_rgba(0,0,0,0.5)] ring-2 ring-white/50"
+            className="shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
           />
         </div>
         <div
@@ -1366,7 +1385,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const handRadius =
               opponentOrbitPx + (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: handOx, oy: handOy } = opponentSeatOffsets(seatMeta.angleDeg, handRadius);
-            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.52 : seatMeta.fanTowardCenterDeg;
+            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.34 : seatMeta.fanTowardCenterDeg;
             return (
               <div
                 key={opp.id}
@@ -1393,7 +1412,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   {bh.map((c, i) => (
                     <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
                       <motion.div
-                        initial={{ opacity: 0, y: -24, scale: 0.86, rotate: -3 }}
+                        initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                         transition={{
                           ...SPRING_SOFT,
@@ -1445,8 +1464,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         zIndex: stackZ,
                       }}
                     >
-                      {/* Отбой: смещение вверх/вправо — ранг атаки (нижний край) остаётся виден, без наклона. */}
-                      <div className="relative h-[5.35rem] w-[4.65rem] overflow-visible sm:h-[6.35rem] sm:w-[5.35rem]">
+                      {/* Габариты задаёт CardSprite (aspect-ratio колоды), без фиксированного «пухлого» блока. */}
+                      <div className="relative flex min-h-0 items-end justify-center overflow-visible">
                         <motion.div
                           className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2"
                           initial={false}
@@ -1480,7 +1499,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           <motion.div
                             key={`def-${tp.defense.id}`}
                             className="absolute bottom-[0.4rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[0.45rem]"
-                            initial={{ opacity: 0, x: -16, y: 12, scale: 0.88, rotate: 4 }}
+                            initial={{ opacity: 0, x: -12, y: 8, scale: 0.94, rotate: 1.5 }}
                             animate={{ opacity: 1, y: 0, x: 14, scale: 1, rotate: 0 }}
                             transition={{ ...SPRING_SNAPPY, delay: 0.05 }}
                           >
