@@ -24,10 +24,11 @@ export function roomStateMatchesRoomPlayers(
   return true;
 }
 
-/** Собрать стол из строк `room_players` (порядок по seat_index). */
+/** Собрать стол из строк `room_players` (порядок по seat_index). `roomId` даёт общую колоду для всех клиентов. */
 export function buildGameFromRoomPlayers(
   rows: RoomPlayerRow[],
-  localPlayerId: string
+  localPlayerId: string,
+  roomId: string
 ): GameTable {
   const sorted = [...rows].sort((a, b) => a.seat_index - b.seat_index);
   const slots = sorted.map((r) => {
@@ -41,5 +42,5 @@ export function buildGameFromRoomPlayers(
       type,
     };
   });
-  return newGameForPlayers(slots);
+  return newGameForPlayers(slots, { deckSeed: roomId, tableId: roomId });
 }

@@ -239,6 +239,16 @@ export async function durakFinalizeRoomIfReady(
  * Если в быстрой очереди уже ≥2 живых игрока, а комната ещё waiting — дожать статус playing.
  * Страховка при старом/битом finalize на сервере. Если RPC ещё не залит — 404 игнорируем.
  */
+/** Закрыть столы с друзьями без активности ≥20 мин (см. SQL `durak_close_inactive_friend_rooms`). */
+export async function durakCloseInactiveFriendRooms(client: SupabaseClient): Promise<void> {
+  const out = await rpcPost(client, "durak_close_inactive_friend_rooms", {});
+  if ("error" in out) {
+    const msg = out.error;
+    if (/HTTP 404\b|not find|could not find|does not exist|42883/i.test(msg)) return;
+    console.warn("[durak] durak_close_inactive_friend_rooms:", msg);
+  }
+}
+
 export async function durakForceStartIfTwoHumans(client: SupabaseClient, roomId: string): Promise<void> {
   const out = await rpcPost(client, "durak_force_start_if_two_humans", {
     p_room_id: roomId,
@@ -429,6 +439,7 @@ export async function durakStartFriendRoom(
 
 /** Активные столы (ожидают игроков), только «с друзьями», публичные. */
 export async function fetchPublicFriendTables(client: SupabaseClient): Promise<PublicFriendTableRow[]> {
+  await durakCloseInactiveFriendRooms(client);
   const { data: rooms, error: rErr } = await client
     .from("rooms")
     .select("id, table_name, max_players, join_code")

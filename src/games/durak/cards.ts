@@ -43,6 +43,37 @@ export function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/** Детерминированный shuffle для онлайна: одинаковый `roomId` → одна и та же колода у всех клиентов. */
+export function hashStringToSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function shuffleSeeded<T>(arr: T[], seed: number): T[] {
+  const rng = mulberry32(seed);
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
 /** Бьётся ли a козырем или старшей в масти */
 export function canBeat(attack: Card, defense: Card, trumpSuit: Suit): boolean {
   if (defense.suit === attack.suit && rankValue(defense.rank) > rankValue(attack.rank)) {

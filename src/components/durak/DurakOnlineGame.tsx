@@ -165,11 +165,19 @@ function normalizePlayers(raw: unknown): Player[] | null {
   for (const item of raw) {
     if (item == null || typeof item !== "object") return null;
     const p = item as Record<string, unknown>;
-    if (typeof p.id !== "string" || !p.id) return null;
+    const pidRaw = p.id ?? p.player_id;
+    const id =
+      typeof pidRaw === "string" && pidRaw.trim()
+        ? pidRaw.trim()
+        : pidRaw != null && String(pidRaw).trim()
+          ? String(pidRaw).trim()
+          : "";
+    if (!id) return null;
     const hand = Array.isArray(p.hand) ? p.hand.filter(isCard) : [];
-    const seatIndex = typeof p.seatIndex === "number" && p.seatIndex >= 0 ? p.seatIndex : i;
+    const siRaw = p.seatIndex ?? p.seat_index;
+    const seatIndex = typeof siRaw === "number" && siRaw >= 0 ? siRaw : i;
     out.push({
-      id: p.id,
+      id,
       name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Игрок",
       type: normalizePlayerType(p.type),
       hand,
@@ -563,9 +571,19 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
         const sorted = [...rows].sort((a, b) => a.seat_index - b.seat_index);
         const leaderId = sorted.find((r) => !r.is_bot)?.player_id ?? sorted[0]?.player_id;
-        const initial = buildGameFromRoomPlayers(rows, playerId);
+        const initial =
+          sorted.length >= 2 ? buildGameFromRoomPlayers(rows, playerId, roomId) : null;
 
-        if (leaderId === playerId) {
+        /*
+         * Детерминированная колода по roomId: оба клиента собирают один и тот же стол сразу.
+         * Раньше не-лидер ждал room_state от лидера; при сбое RPC poll оставался с coerce=null → вечная «Загрузка стола».
+         */
+        if (initial) {
+          gameRef.current = initial;
+          setGame(initial);
+        }
+
+        if (leaderId === playerId && initial) {
           try {
             const raw = await durakSaveRoomState(supabase, roomId, playerId, { game: initial });
             advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
@@ -579,27 +597,17 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .select("state, updated_at")
           .eq("room_id", roomId)
           .maybeSingle();
+        if (cancelled) return;
+
         const g = coerceRemoteGame((after?.state as RoomStatePayload | undefined)?.game);
         const gOk = g != null && roomStateMatchesRoomPlayers(rows, g);
-        let next: GameTable | null;
-        if (gOk) {
-          next = g;
-        } else if (leaderId === playerId) {
-          next = initial;
-        } else {
-          next = null;
-        }
-        if (next) {
-          setGame(next);
+        if (gOk && g) {
+          gameRef.current = g;
+          setGame(g);
           const raw = after?.updated_at;
-          if (raw) {
+          if (raw && !Number.isNaN(Date.parse(String(raw)))) {
             advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(String(raw)));
-          } else {
-            lastAppliedServerTsRef.current = 0;
           }
-        } else if (!cancelled && !gameRef.current) {
-          /* Не затирать стол, если poll/realtime уже применили room_state, а init завершился позже (медленный fetch). */
-          setGame(null);
         }
       } catch (e) {
         if (!cancelled) setError(formatPostgrestError(e));

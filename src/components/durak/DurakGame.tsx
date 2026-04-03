@@ -312,11 +312,12 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
     };
   }
   const denom = Math.max(mid, 1e-6);
-  const edgeMaxDeg = Math.min(26, 10 + n * 2);
+  /* Компактный веер: центральная карта доминирует, краёв без «палок». */
+  const edgeMaxDeg = Math.min(20, 7 + n * 1.65);
   const rot = (rel / denom) * edgeMaxDeg;
-  const stepPx = Math.min(19, Math.max(11, 118 / Math.max(n - 1, 1)));
+  const stepPx = Math.min(16, Math.max(8, 92 / Math.max(n - 1, 1)));
   const tx = rel * stepPx;
-  const arc = Math.abs(rel) * 0.55;
+  const arc = Math.abs(rel) * 0.38;
   const zFromCenter = Math.round(4 * (mid - Math.abs(rel)));
   return {
     left: "50%",
@@ -352,7 +353,7 @@ function tablePairOrbitOffset(
   return { x, y };
 }
 
-/** Рубашка: PNG как есть, без подложки и фильтров (иначе «чернота» и искажения). */
+/** Рубашка: только PNG + скругление, без подложки/shadow на площади карты (иначе «чернота»). */
 function BrandedCardBack({
   selected,
   disabled,
@@ -362,16 +363,15 @@ function BrandedCardBack({
   disabled?: boolean;
   className?: string;
 }) {
-  const [src, setSrc] = useState(CARD_BACK_PNG_PATH);
+  const [src setSrc] = useState(CARD_BACK_PNG_PATH);
 
   return (
     <div
       className={cn(
-        "relative flex h-full w-full select-none flex-col items-center justify-center overflow-hidden",
+        "relative isolate h-full w-full select-none overflow-hidden",
         CARD_RADIUS_CLASS,
-        "border border-white/15 bg-transparent shadow-[0_3px_10px_rgba(0,0,0,0.22)]",
-        selected &&
-          "shadow-[0_0_0_2px_rgba(255,255,255,0.75),0_8px_20px_rgba(0,0,0,0.3)] ring-2 ring-emerald-400/70",
+        "bg-transparent",
+        selected && "ring-2 ring-emerald-400/75 ring-offset-0",
         disabled && "opacity-[0.42]",
         className
       )}
@@ -380,10 +380,15 @@ function BrandedCardBack({
         src={src}
         alt=""
         draggable={false}
-        className="block h-full w-full object-contain object-center"
+        className="pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent object-contain object-center"
         loading="lazy"
         decoding="async"
-        style={{ filter: "none", mixBlendMode: "normal" }}
+        style={{
+          filter: "none",
+          mixBlendMode: "normal",
+          WebkitBackfaceVisibility: "hidden",
+          backfaceVisibility: "hidden",
+        }}
         onError={() => setSrc(CARD_BACK_URL)}
       />
     </div>
@@ -1387,17 +1392,22 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      <div className="relative z-20 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
+      <div
+        className={cn(
+          "relative z-20 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
+          embedded && opponents.length > 0 && "pt-2 sm:pt-3"
+        )}
+      >
         <div
           ref={tableRoundRef}
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
-            /* Ниже фиксированного header + safe-area: верхняя рука не лезет в шапку */
+            /* Ниже хедера: веер и имя соперника не заходят в fixed Header */
             transform:
               opponents.length > 0
-                ? "translateY(min(1.85rem, 5.5vmin))"
+                ? "translateY(min(2.35rem, 7vmin))"
                 : "translateY(min(1.25rem, 3.5vmin))",
           }}
         >
@@ -1451,26 +1461,27 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               <div
                 key={opp.id}
                 className={cn(
-                  "pointer-events-none absolute inset-0 overflow-visible transition-[filter] duration-500",
+                  "pointer-events-none absolute inset-0 overflow-visible",
                   embedded ? "z-[5] opacity-100" : "z-[8] opacity-100"
                 )}
               >
                 <div
-                  className="pointer-events-none absolute flex w-[min(94vw,15.5rem)] max-w-[94%] flex-col items-center gap-1 sm:w-[min(92vw,16rem)]"
+                  className="pointer-events-none absolute flex w-[min(96vw,17.5rem)] max-w-[96%] flex-row items-end justify-center gap-2 sm:w-[min(94vw,18rem)]"
                   style={{
                     left: `calc(50% + ${handOx}px)`,
                     top: `calc(50% + ${handOy}px)`,
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  <div className="flex w-full min-w-0 flex-col items-center px-1 text-center">
-                    <p className="max-w-full truncate text-[13px] font-medium leading-tight text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.95)]">
+                  {/* Как у нижнего игрока: подпись слева, зона руки справа */}
+                  <div className="min-w-0 max-w-[42%] shrink-0 pb-1.5 text-left">
+                    <p className="max-w-full truncate text-[13px] font-medium leading-tight text-white/90">
                       {opp.name}
                     </p>
                     <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
                   </div>
                   <div
-                    className="relative flex h-[min(5.25rem,27vw)] w-full items-end justify-center overflow-visible sm:h-[min(5.85rem,24vw)]"
+                    className="relative flex h-[min(5.25rem,27vw)] min-w-0 flex-1 items-end justify-center overflow-visible sm:h-[min(5.85rem,24vw)]"
                     style={{
                       transform: `rotate(${fanDeg}deg)`,
                       transformOrigin: "center bottom",
@@ -1479,6 +1490,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     {bh.map((c, i) => (
                       <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
                         <motion.div
+                          className="[transform:translateZ(0)]"
                           initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
                           animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                           transition={{

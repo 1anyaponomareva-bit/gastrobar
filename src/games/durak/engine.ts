@@ -3,8 +3,10 @@ import {
   canBeat,
   createDeck36,
   findFirstAttackerIndex,
+  hashStringToSeed,
   rankValue,
   shuffle,
+  shuffleSeeded,
   sortHand,
   SUITS,
 } from "./cards";
@@ -157,13 +159,17 @@ export function newGame(names?: { human: string; bot: string }): GameTable {
 
 /** Онлайн / N игроков: раздача по кругу 6 карт каждому, затем как в `newGame`. */
 export function newGameForPlayers(
-  slots: { id: string; name: string; type: PlayerType }[]
+  slots: { id: string; name: string; type: PlayerType }[],
+  opts?: { deckSeed?: string; tableId?: string }
 ): GameTable {
   const n = slots.length;
   if (n < 2) {
     throw new Error("Нужно минимум 2 игрока");
   }
-  const deckShuffled = shuffle(createDeck36());
+  const deckShuffled =
+    opts?.deckSeed != null && opts.deckSeed.length > 0
+      ? shuffleSeeded(createDeck36(), hashStringToSeed(`${opts.deckSeed}:durak-deck-v1`))
+      : shuffle(createDeck36());
   const players = slots.map((s, seatIndex) => ({
     id: s.id,
     name: s.name,
@@ -191,7 +197,7 @@ export function newGameForPlayers(
   const defenderIndex = nextDefenderIndex(attackerIndex, players.length);
 
   let table: GameTable = {
-    id: tableId(),
+    id: opts?.tableId && opts.tableId.length > 0 ? opts.tableId : tableId(),
     mode: "podkidnoy",
     players,
     deck,
