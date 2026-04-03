@@ -351,3 +351,24 @@ GRANT EXECUTE ON FUNCTION public.durak_start_friend_room(jsonb) TO anon, authent
 
 ALTER FUNCTION public.durak_finalize_room_if_ready(uuid) SET row_security = off;
 GRANT EXECUTE ON FUNCTION public.durak_finalize_room_if_ready(uuid) TO anon, authenticated, service_role;
+
+-- Быстрая очередь: финализация при втором INSERT в room_players (не зависит от RPC/окна браузера).
+CREATE OR REPLACE FUNCTION public.durak_room_players_after_insert_finalize()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  PERFORM public.durak_finalize_room_if_ready(NEW.room_id);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_room_players_after_insert_finalize ON public.room_players;
+CREATE TRIGGER trg_room_players_after_insert_finalize
+  AFTER INSERT ON public.room_players
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.durak_room_players_after_insert_finalize();
+
+ALTER FUNCTION public.durak_room_players_after_insert_finalize() SET row_security = off;

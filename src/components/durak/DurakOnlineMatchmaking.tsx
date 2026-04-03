@@ -122,11 +122,19 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
 
   useEffect(() => {
     if (!supabase || !roomId) return;
+    /* В фоновой вкладке таймеры троттлятся — при возврате сразу дергаем сервер. */
+    const onVis = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
     /* Без Realtime/WebSocket: в части браузеров wss даёт TypeError: Load failed. */
     const interval = window.setInterval(() => {
       void tick();
-    }, 1000);
-    return () => window.clearInterval(interval);
+    }, 700);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.clearInterval(interval);
+    };
   }, [supabase, roomId, tick]);
 
   useEffect(() => {
