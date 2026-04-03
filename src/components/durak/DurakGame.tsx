@@ -363,7 +363,7 @@ function BrandedCardBack({
   disabled?: boolean;
   className?: string;
 }) {
-  const [src setSrc] = useState(CARD_BACK_PNG_PATH);
+  const [src, setSrc] = useState(CARD_BACK_PNG_PATH);
 
   return (
     <div
@@ -846,7 +846,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           }
           const humans = players.filter((p) => !p.is_bot).length;
           if (humans < 2) {
-            if (room.status === "playing" && room.matchmaking_pool !== false && hasDurakTabOnlineResume()) {
+            /* Уже внутри playing + быстрая очередь — повтор room.matchmaking_pool избыточен и ломает сужение типов. */
+            if (hasDurakTabOnlineResume()) {
               try {
                 const { data: rs } = await client
                   .from("room_state")
