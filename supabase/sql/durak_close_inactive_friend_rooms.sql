@@ -1,4 +1,4 @@
--- Ручной запуск в Supabase SQL Editor (эквивалент миграции 20260430120000).
+-- Ручной запуск в Supabase SQL Editor (миграции 20260430120000 + 20260430130000).
 
 CREATE INDEX IF NOT EXISTS idx_rooms_friend_waiting_playing
   ON public.rooms (id)
@@ -19,11 +19,20 @@ BEGIN
     FROM public.rooms r
     WHERE COALESCE(r.matchmaking_pool, true) = false
       AND r.status = ANY (ARRAY['waiting'::text, 'playing'::text])
-      AND GREATEST(
-        r.created_at,
-        COALESCE((SELECT MAX(rs.updated_at) FROM public.room_state rs WHERE rs.room_id = r.id), r.created_at),
-        COALESCE((SELECT MAX(rp.last_seen_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at),
-        COALESCE((SELECT MAX(rp.joined_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at)
+      AND (
+        CASE
+          WHEN r.status = 'waiting' THEN GREATEST(
+            r.created_at,
+            COALESCE((SELECT MAX(rp.last_seen_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at),
+            COALESCE((SELECT MAX(rp.joined_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at)
+          )
+          ELSE GREATEST(
+            r.created_at,
+            COALESCE((SELECT MAX(rs.updated_at) FROM public.room_state rs WHERE rs.room_id = r.id), r.created_at),
+            COALESCE((SELECT MAX(rp.last_seen_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at),
+            COALESCE((SELECT MAX(rp.joined_at) FROM public.room_players rp WHERE rp.room_id = r.id), r.created_at)
+          )
+        END
       ) < now() - interval '20 minutes'
   )
   UPDATE public.rooms u

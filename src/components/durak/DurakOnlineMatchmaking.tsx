@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import {
+  durakCloseInactiveFriendRooms,
   durakFinalizeRoomIfReady,
   durakForceStartIfTwoHumans,
   durakJoinQueue,
@@ -146,6 +147,8 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       setError(
         "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
       );
+    } else {
+      void durakCloseInactiveFriendRooms(c);
     }
   }, []);
 

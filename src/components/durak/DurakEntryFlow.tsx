@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
+  durakCloseInactiveFriendRooms,
   durakCreateFriendRoom,
   durakFinalizeRoomIfReady,
   durakJoinFriendRoom,
@@ -30,11 +31,11 @@ type Props = {
   displayName: string;
   /** Код из ссылки ?stol= */
   inviteCodeFromUrl: string | null;
-  onGameStarted: (roomId: string) => void;
+  onOnlineGameStarted: (roomId: string, kind: "quick" | "friend") => void;
   onBackToMenu: () => void;
 };
 
-export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, onBackToMenu }: Props) {
+export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameStarted, onBackToMenu }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [phase, setPhase] = useState<Phase>({ k: "choose" });
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,12 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
     }
   }, []);
 
+  /** Столы друзей без активности 20 мин — finished; без этого висят, пока кто-то не откроет список. */
+  useEffect(() => {
+    if (!supabase) return;
+    void durakCloseInactiveFriendRooms(supabase);
+  }, [supabase]);
+
   const loadTables = useCallback(async () => {
     if (!supabase) return;
     const rows = await fetchPublicFriendTables(supabase);
@@ -78,7 +85,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
         const r = await fetchRoom(supabase, phase.roomId);
         setLobbyRoom(r);
         if (r?.status === "playing") {
-          onGameStarted(phase.roomId);
+          onOnlineGameStarted(phase.roomId, "friend");
           return;
         }
         const pl = await fetchRoomPlayers(supabase, phase.roomId);
@@ -90,7 +97,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
     void tick();
     const id = window.setInterval(() => void tick(), 2200);
     return () => window.clearInterval(id);
-  }, [supabase, phase, onGameStarted]);
+  }, [supabase, phase, onOnlineGameStarted]);
 
   useEffect(() => {
     if (!supabase || !inviteCodeFromUrl || inviteDone) return;
@@ -190,7 +197,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
       await durakStartFriendRoom(supabase, getOrCreateDurakPlayerId(), phase.roomId);
       await durakFinalizeRoomIfReady(supabase, phase.roomId);
       const r = await fetchRoom(supabase, phase.roomId);
-      if (r?.status === "playing") onGameStarted(phase.roomId);
+      if (r?.status === "playing") onOnlineGameStarted(phase.roomId, "friend");
     } catch (e) {
       setError(formatPostgrestError(e));
     } finally {
@@ -230,7 +237,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
     return (
       <DurakOnlineMatchmaking
         playerName={displayName}
-        onRoomPlaying={onGameStarted}
+        onRoomPlaying={(roomId) => onOnlineGameStarted(roomId, "quick")}
         onCancel={() => setPhase({ k: "choose" })}
       />
     );

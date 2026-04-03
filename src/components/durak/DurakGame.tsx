@@ -38,9 +38,16 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
 import {
   abandonDurakStoredRoom,
+  clearDurakFriendRoomFromStorage,
+  clearDurakQuickRoomFromStorage,
+  clearDurakTabOnlineResume,
+  DURAK_ACTIVE_FRIEND_ROOM_LS_KEY,
+  DURAK_ACTIVE_QUICK_ROOM_LS_KEY,
   DURAK_ACTIVE_ROOM_LS_KEY,
   hasDurakTabOnlineResume,
-  readDurakActiveRoomFromStorage,
+  readDurakFriendRoomFromStorage,
+  readDurakLegacyRoomFromStorage,
+  readDurakQuickRoomFromStorage,
 } from "@/lib/durak/activeRoomStorage";
 import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
 import {
@@ -750,14 +757,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const [playerName, setPlayerName] = useState("");
   const displayName = embedded?.playerName ?? playerName;
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
+  const [activeOnlineKind, setActiveOnlineKind] = useState<"quick" | "friend" | null>(null);
   const [tableGreeting, setTableGreeting] = useState<string | null>(null);
 
-  const onRoomPlayingStable = useCallback((id: string) => {
+  const onOnlineGameStartedStable = useCallback((id: string, kind: "quick" | "friend") => {
+    setActiveOnlineKind(kind);
     setOnlineRoomId(id);
   }, []);
   const onLeaveOnlineRoomStable = useCallback(() => {
     abandonDurakStoredRoom();
     setOnlineRoomId(null);
+    setActiveOnlineKind(null);
   }, []);
   const onMatchmakingCancelStable = useCallback(() => {
     router.push("/");
@@ -768,14 +778,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   );
 
   const game = embedded?.game ?? null;
-  const setGame = useCallback(
-    (updater: SetStateAction<GameTable | null>) => {
-      const e = props.embedded;
-      if (!e) return;
-      e.onGameChange(updater as SetStateAction<GameTable>);
-    },
-    [props.embedded]
-  );
+  /** Без ref каждый новый объект `embedded` от родителя пересоздавал callback и сбрасывал таймер автохода. */
+  const embeddedOnGameChangeRef = useRef<DurakGameEmbeddedProps["onGameChange"] | null>(null);
+  embeddedOnGameChangeRef.current = embedded?.onGameChange ?? null;
+  const setGame = useCallback((updater: SetStateAction<GameTable | null>) => {
+    const fn = embeddedOnGameChangeRef.current;
+    if (!fn) return;
+    fn(updater as SetStateAction<GameTable>);
+  }, []);
   const [attackPick, setAttackPick] = useState<string[]>([]);
   const [tossPick, setTossPick] = useState<string[]>([]);
   const [defenseTargetAttackId, setDefenseTargetAttackId] = useState<string | null>(null);
@@ -846,6 +856,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (!skip) return;
     abandonDurakStoredRoom();
     setOnlineRoomId(null);
+    setActiveOnlineKind(null);
     try {
       const u = new URL(window.location.href);
       if (u.searchParams.get("new") === "1") {
@@ -862,79 +873,120 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (embedded || !nameHydrated || !playerName || onlineRoomId) return;
     if (skipOnlineResume) return;
     let cancelled = false;
-    const rid = readDurakActiveRoomFromStorage();
-    if (!rid) return;
+    let friendRid = readDurakFriendRoomFromStorage();
+    let quickRid = readDurakQuickRoomFromStorage();
     void (async () => {
       const client = createSupabaseBrowserClient();
       if (!client || cancelled) return;
       try {
+        if (!friendRid && !quickRid) {
+          const leg = readDurakLegacyRoomFromStorage();
+          if (!leg) return;
+          const probe = await fetchRoom(client, leg);
+          if (cancelled) return;
+          if (!probe) {
+            abandonDurakStoredRoom();
+            return;
+          }
+          if (probe.matchmaking_pool === false) friendRid = leg;
+          else quickRid = leg;
+        }
+        if (!friendRid && !quickRid) return;
+
         const pid = getOrCreateDurakPlayerId();
-        const room = await fetchRoom(client, rid);
-        if (cancelled || !room) {
-          if (!room) abandonDurakStoredRoom();
-          return;
-        }
-        if (room.status === "finished") {
-          abandonDurakStoredRoom();
-          return;
-        }
-        const players = await fetchRoomPlayers(client, rid);
-        if (cancelled) return;
-        if (!players.some((p) => p.player_id === pid)) {
-          abandonDurakStoredRoom();
-          return;
-        }
-        /* Быстрая игра в playing: только если эта вкладка уже была в матче (F5). Иначе — новая вкладка / старый LS. */
-        if (room.status === "playing" && room.matchmaking_pool !== false) {
-          if (!hasDurakTabOnlineResume()) {
-            abandonDurakStoredRoom();
-            return;
+
+        const attempt = async (kind: "quick" | "friend", rid: string): Promise<boolean> => {
+          const room = await fetchRoom(client, rid);
+          if (cancelled) return false;
+          if (!room) {
+            if (kind === "friend") clearDurakFriendRoomFromStorage();
+            else {
+              clearDurakQuickRoomFromStorage();
+              clearDurakTabOnlineResume();
+            }
+            return false;
           }
-          const humans = players.filter((p) => !p.is_bot).length;
-          if (humans < 2) {
-            /* Уже внутри playing + быстрая очередь — повтор room.matchmaking_pool избыточен и ломает сужение типов. */
-            if (hasDurakTabOnlineResume()) {
-              try {
-                const { data: rs } = await client
-                  .from("room_state")
-                  .select("state")
-                  .eq("room_id", rid)
-                  .maybeSingle();
-                const plist = (rs?.state as { game?: { players?: { type?: string }[] } } | undefined)?.game
-                  ?.players;
-                const humanCount = Array.isArray(plist) ? plist.filter((p) => p?.type !== "bot").length : 0;
-                if (humanCount >= 2) {
-                  try {
-                    await durakPlayerPing(client, rid, pid);
-                    await durakForfeitStaleOpponent(client, rid, pid);
-                  } catch {
-                    /* ignore */
+          if (room.status === "finished") {
+            if (kind === "friend") clearDurakFriendRoomFromStorage();
+            else {
+              clearDurakQuickRoomFromStorage();
+              clearDurakTabOnlineResume();
+            }
+            return false;
+          }
+          const players = await fetchRoomPlayers(client, rid);
+          if (cancelled) return false;
+          if (!players.some((p) => p.player_id === pid)) {
+            if (kind === "friend") clearDurakFriendRoomFromStorage();
+            else {
+              clearDurakQuickRoomFromStorage();
+              clearDurakTabOnlineResume();
+            }
+            return false;
+          }
+          /* Быстрая игра в playing: только если эта вкладка уже была в матче (F5). Иначе — новая вкладка / старый LS. */
+          if (kind === "quick" && room.status === "playing" && room.matchmaking_pool !== false) {
+            if (!hasDurakTabOnlineResume()) {
+              clearDurakQuickRoomFromStorage();
+              clearDurakTabOnlineResume();
+              return false;
+            }
+            const humans = players.filter((p) => !p.is_bot).length;
+            if (humans < 2) {
+              if (hasDurakTabOnlineResume()) {
+                try {
+                  const { data: rs } = await client
+                    .from("room_state")
+                    .select("state")
+                    .eq("room_id", rid)
+                    .maybeSingle();
+                  const plist = (rs?.state as { game?: { players?: { type?: string }[] } } | undefined)?.game
+                    ?.players;
+                  const humanCount = Array.isArray(plist) ? plist.filter((p) => p?.type !== "bot").length : 0;
+                  if (humanCount >= 2) {
+                    try {
+                      await durakPlayerPing(client, rid, pid);
+                      await durakForfeitStaleOpponent(client, rid, pid);
+                    } catch {
+                      /* ignore */
+                    }
                   }
+                } catch {
+                  /* ignore */
                 }
-              } catch {
-                /* ignore */
+              }
+              clearDurakQuickRoomFromStorage();
+              clearDurakTabOnlineResume();
+              return false;
+            }
+            const others = players.filter((p) => !p.is_bot && p.player_id !== pid);
+            if (others.length > 0) {
+              const now = Date.now();
+              const allOthersStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
+              if (allOthersStale) {
+                try {
+                  await durakPlayerPing(client, rid, pid);
+                  await durakForfeitStaleOpponent(client, rid, pid);
+                } catch {
+                  /* ignore */
+                }
+                clearDurakQuickRoomFromStorage();
+                clearDurakTabOnlineResume();
+                return false;
               }
             }
-            abandonDurakStoredRoom();
-            return;
           }
-          const others = players.filter((p) => !p.is_bot && p.player_id !== pid);
-          if (others.length > 0) {
-            const now = Date.now();
-            const allOthersStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
-            if (allOthersStale) {
-              try {
-                await durakPlayerPing(client, rid, pid);
-                await durakForfeitStaleOpponent(client, rid, pid);
-              } catch {
-                /* ignore */
-              }
-              abandonDurakStoredRoom();
-              return;
-            }
-          }
+          setActiveOnlineKind(kind);
+          setOnlineRoomId(rid);
+          return true;
+        };
+
+        if (friendRid) {
+          if (await attempt("friend", friendRid)) return;
         }
-        setOnlineRoomId(rid);
+        if (quickRid && !cancelled) {
+          await attempt("quick", quickRid);
+        }
       } catch {
         /* сеть / миграции */
       }
@@ -945,13 +997,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [embedded, nameHydrated, playerName, onlineRoomId, skipOnlineResume]);
 
   useEffect(() => {
-    if (embedded || !onlineRoomId) return;
+    if (embedded || !onlineRoomId || !activeOnlineKind) return;
     try {
-      localStorage.setItem(DURAK_ACTIVE_ROOM_LS_KEY, onlineRoomId);
+      if (activeOnlineKind === "quick") {
+        localStorage.setItem(DURAK_ACTIVE_QUICK_ROOM_LS_KEY, onlineRoomId);
+        localStorage.removeItem(DURAK_ACTIVE_FRIEND_ROOM_LS_KEY);
+        localStorage.removeItem(DURAK_ACTIVE_ROOM_LS_KEY);
+      } else {
+        localStorage.setItem(DURAK_ACTIVE_FRIEND_ROOM_LS_KEY, onlineRoomId);
+        localStorage.removeItem(DURAK_ACTIVE_QUICK_ROOM_LS_KEY);
+        localStorage.removeItem(DURAK_ACTIVE_ROOM_LS_KEY);
+      }
     } catch {
       /* ignore */
     }
-  }, [embedded, onlineRoomId]);
+  }, [embedded, onlineRoomId, activeOnlineKind]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -1217,7 +1277,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       }
     }, 100);
     return () => window.clearInterval(id);
-  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame]);
+  }, [embedded?.roomId, onlineTurnKey, dealing, localPlayerId]);
 
   const setErr = (msg: string) => setGame((g) => (g ? { ...g, message: msg } : g));
 
@@ -1441,7 +1501,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         <DurakEntryFlow
           displayName={displayName}
           inviteCodeFromUrl={friendInviteCodeFromUrl}
-          onGameStarted={onRoomPlayingStable}
+          onOnlineGameStarted={onOnlineGameStartedStable}
           onBackToMenu={onMatchmakingCancelStable}
         />
       );

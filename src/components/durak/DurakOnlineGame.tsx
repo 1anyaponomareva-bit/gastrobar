@@ -13,14 +13,14 @@ import type { Card, GamePhase, GameTable, GameTableState, Player, PlayerType, Ta
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
+import { sortHand } from "@/games/durak/engine";
 import {
   buildGameFromRoomPlayers,
   roomStateMatchesRoomPlayers,
 } from "@/lib/durak/online/buildRoomGame";
-import { markDurakTabOnlineResume } from "@/lib/durak/activeRoomStorage";
+import { abandonDurakStoredRoom, markDurakTabOnlineResume } from "@/lib/durak/activeRoomStorage";
 import {
   durakForfeitStaleOpponent,
-  durakPlayerLeftMatch,
   durakPlayerPing,
   durakSaveRoomState,
   fetchRoom,
@@ -222,10 +222,11 @@ function coerceRemoteGame(raw: unknown): GameTable | null {
   const trumpSuit =
     ts === "spades" || ts === "hearts" || ts === "diamonds" || ts === "clubs" ? ts : trumpCard?.suit ?? "spades";
   const id = typeof g.id === "string" && g.id ? g.id : tableIdFallback();
+  const playersSorted = players.map((p) => ({ ...p, hand: sortHand(p.hand) }));
   return {
     id,
     mode: g.mode === "podkidnoy" ? "podkidnoy" : "podkidnoy",
-    players,
+    players: playersSorted,
     deck,
     tablePairs,
     discardPile,
@@ -301,20 +302,16 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     markDurakTabOnlineResume();
   }, [roomId]);
 
+  /** Не дёргаем last_seen в прошлое при уходе: соперник зачитывает форфейт через ~20 с без пинга (см. isRoomPlayerLikelyGone + durak_forfeit_stale_opponent). */
   const leaveMatchAndParent = useCallback(() => {
-    if (supabase) {
-      void durakPlayerLeftMatch(supabase, roomId, playerId).catch(() => {});
-    }
     onLeave();
-  }, [supabase, roomId, playerId, onLeave]);
+  }, [onLeave]);
 
+  /** После партии убираем сохранённый room id — иначе «быстрая игра» тянет старый стол после игры у друзей. */
   useEffect(() => {
-    return () => {
-      if (supabase) {
-        void durakPlayerLeftMatch(supabase, roomId, playerId).catch(() => {});
-      }
-    };
-  }, [supabase, roomId, playerId]);
+    if (game?.state !== "finished") return;
+    abandonDurakStoredRoom();
+  }, [game?.state]);
 
   /** Пинг активности: нужен и в фоне — иначе сервер «caller not active» и форфейт соперника не проходит. */
   useEffect(() => {
