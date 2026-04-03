@@ -43,8 +43,8 @@ const WAITING_HINTS: string[] = [
  * Онлайн-очередь: поиск комнаты + realtime.
  * Matchmaking: этот компонент + `durakJoinQueue` / `durakFinalizeRoomIfReady`.
  *
- * Переход в игру только когда в `public.rooms` у этой комнаты `status === 'playing'`
- * (не по числу игроков и не по `room_state` — стол создаётся уже в DurakOnlineGame).
+ * Переход в игру (вызывается `onRoomPlaying`): как минимум **два человека** в `room_players`
+ * (не боты), или если сервер уже выставил у комнаты `status === 'playing'`.
  *
  * Отладка в консоли: localStorage.setItem('durak_matchmaking_debug','1'); location.reload()
  */
@@ -59,6 +59,14 @@ function mmDebug(...args: unknown[]) {
 
 function isPlayingStatus(r: RoomRow | null | undefined): boolean {
   return String(r?.status ?? "").toLowerCase() === "playing";
+}
+
+/** `playerCount` в UI = число людей (не ботов); переход также если комната уже `playing`. */
+function shouldTransitionToGame(
+  room: RoomRow | null | undefined,
+  humansCount: number,
+): boolean {
+  return humansCount >= 2 || isPlayingStatus(room);
 }
 
 /** Явные логи для «висим на Ищем пару…» — смотри [durak-mm-ui] в консоли. */
@@ -108,9 +116,9 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         "в state только число людей; bots = room_players − humans см. tick where=tick end",
       screenState,
       transitionSearchingToGameRule:
-        "UI уходит в игру только когда вызывается onRoomPlaying(roomId): (1) tick после fetchRoom и isPlayingStatus(row), (2) useEffect([room,roomId]) если room в state уже playing",
+        "onRoomPlaying(roomId): humans >= 2 или isPlayingStatus(room) — см. shouldTransitionToGame",
       wouldFireTransitionEffect: Boolean(
-        roomId && room && isPlayingStatus(room),
+        roomId && shouldTransitionToGame(room, playerCount),
       ),
       rawStatusInState: room?.status,
     });
@@ -151,25 +159,31 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         row: rFirst ? "ok" : "null",
         search_deadline: rFirst?.search_deadline,
       });
-      if (isPlayingStatus(rFirst)) {
-        logMmUi({
-          where: "tick: first fetchRoom → playing, вызываем onRoomPlaying",
-          currentRoomId: roomId,
-          roomStatus: rFirst?.status,
-          roomRowWasNull: rFirst == null,
-          screenState,
-          conditionMet: "isPlayingStatus(rFirst) === true",
-        });
-        mmDebug("→ game ready (status playing после первого fetchRoom)", { roomId });
-        onRoomPlayingRef.current(roomId);
-        return;
-      }
 
       const players = await fetchRoomPlayers(supabase, roomId);
       const humans = players.filter((p) => !p.is_bot).length;
-      const rows = players.length;
       setPlayerCount(humans);
-      mmDebug("tick room_players", { roomId, humans, rows, playerIds: players.map((p) => p.player_id) });
+      mmDebug("tick room_players", {
+        roomId,
+        humans,
+        rows: players.length,
+        playerIds: players.map((p) => p.player_id),
+      });
+
+      if (shouldTransitionToGame(rFirst, humans)) {
+        logMmUi({
+          where: "tick: после 1-го fetchRoom + room_players — готово к столу, onRoomPlaying",
+          currentRoomId: roomId,
+          roomStatus: rFirst?.status,
+          roomRowWasNull: rFirst == null,
+          humansCount: humans,
+          screenState,
+          conditionMet: "shouldTransitionToGame(rFirst, humans): humans>=2 || playing",
+        });
+        mmDebug("→ game ready (после первого опроса)", { roomId, humans, status: rFirst?.status });
+        onRoomPlayingRef.current(roomId);
+        return;
+      }
 
       let deadlineMs = NaN;
       const rawDl = rFirst?.search_deadline;
@@ -213,6 +227,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       mmDebug("tick fetchRoom#2", { roomId, rawStatus: r?.status });
       const botsCount = players.length - humans;
       const playingAfterSecond = isPlayingStatus(r);
+      const transitionAfterSecond = shouldTransitionToGame(r, humans);
       logMmUi({
         where: "tick end (интервал ~1с): что видит клиент для перехода в игру",
         currentRoomId: roomId,
@@ -227,42 +242,30 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         rowsInRoomPlayers: players.length,
         screenState,
         transitionSearchingToGame:
-          "вызов onRoomPlaying(roomId) только если isPlayingStatus(room row)==true после fetch; НЕ по humans>=2 и НЕ по только room_players",
-        conditionMetThisTick:
-          isPlayingStatus(rFirst) || playingAfterSecond
-            ? "ДА — должны were вызвать onRoomPlaying выше или ниже"
-            : "НЕТ — экран остаётся «Ищем пару…» пока сервер не выставит rooms.status=playing",
+          "onRoomPlaying если shouldTransitionToGame(roomRow, humans): humans>=2 || status===playing",
+        conditionMetThisTick: transitionAfterSecond
+          ? "ДА — вызываем onRoomPlaying ниже"
+          : "НЕТ — ждём второго человека или playing",
         isPlayingAfterFirstPoll: isPlayingStatus(rFirst),
         isPlayingAfterSecondPoll: playingAfterSecond,
-        humansButNotPlaying: humans >= 2 && !playingAfterSecond && !isPlayingStatus(rFirst),
+        wouldTransitionAfterFirst: shouldTransitionToGame(rFirst, humans),
+        wouldTransitionAfterSecond: transitionAfterSecond,
       });
-      if (isPlayingStatus(r)) {
+      if (transitionAfterSecond) {
         logMmUi({
-          where: "tick: second fetchRoom → playing, вызываем onRoomPlaying",
+          where: "tick: после 2-го fetchRoom + RPC — готово к столу, onRoomPlaying",
           currentRoomId: roomId,
           roomStatus: r?.status,
-          screenState,
-          conditionMet: "isPlayingStatus(r) === true",
-        });
-        mmDebug("→ game ready (status playing после finalize)", { roomId });
-        onRoomPlayingRef.current(roomId);
-      } else if (humans >= 2) {
-        logMmUi({
-          where: "ЗАСТРЕВАНИЕ: humans>=2 но status не playing — UI остаётся на поиске (ожидаем БД/SQL)",
-          currentRoomId: roomId,
-          roomStatusAfterSecondFetch: r?.status ?? null,
           humansCount: humans,
-          botsCount,
-          hintIfRoomRowNull:
-            r == null
-              ? "fetchRoom вернул null — часто RLS: room_players видны, rooms — нет; тогда transition никогда"
-              : "строка rooms есть, статус ещё waiting/finalize не отработал",
+          screenState,
+          conditionMet: "shouldTransitionToGame(r, humans)",
         });
-        mmDebug("второй игрок есть, но rooms.status ещё не playing — ждём SQL finalize / force_start", {
+        mmDebug("→ game ready (после второго опроса / finalize)", {
           roomId,
           humans,
           status: r?.status,
         });
+        onRoomPlayingRef.current(roomId);
       }
     } catch (e) {
       const msg = formatPostgrestError(e);
@@ -319,11 +322,11 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
           botsCount: players.length - humans,
           rowsInRoomPlayers: players.length,
           screenState: "searching",
-          wouldTransition: isPlayingStatus(r),
-          transitionIfPlaying: "onRoomPlaying(j.roomId) если isPlayingStatus(r)",
+          wouldTransition: shouldTransitionToGame(r, humans),
+          transitionRule: "humans >= 2 || isPlayingStatus(r)",
         });
-        if (isPlayingStatus(r)) {
-          mmDebug("→ game ready (сразу после join)", j.roomId);
+        if (shouldTransitionToGame(r, humans)) {
+          mmDebug("→ game ready (сразу после join)", j.roomId, { humans, status: r?.status });
           onRoomPlayingRef.current(j.roomId);
           return;
         }
@@ -354,17 +357,21 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   }, [supabase, roomId, tick]);
 
   useEffect(() => {
-    if (isPlayingStatus(room) && roomId) {
+    if (roomId && shouldTransitionToGame(room, playerCount)) {
       logMmUi({
-        where: "useEffect [room,roomId]: room в state уже playing → onRoomPlaying",
+        where: "useEffect [room,roomId,playerCount]: готово к столу → onRoomPlaying",
         currentRoomId: roomId,
         roomStatus: room?.status,
         playersCountHumans: playerCount,
         humansCount: playerCount,
         screenState,
-        conditionMet: "isPlayingStatus(room) && roomId",
+        conditionMet: "shouldTransitionToGame(room, playerCount)",
       });
-      mmDebug("→ game ready (effect по state room)", { roomId, status: room?.status });
+      mmDebug("→ game ready (effect по state)", {
+        roomId,
+        status: room?.status,
+        humans: playerCount,
+      });
       onRoomPlayingRef.current(roomId);
     }
   }, [room, roomId, playerCount, screenState]);
