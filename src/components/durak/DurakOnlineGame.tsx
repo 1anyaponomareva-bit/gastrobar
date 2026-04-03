@@ -23,6 +23,7 @@ import {
   durakSaveRoomState,
   fetchRoomPlayers,
   formatPostgrestError,
+  isRoomPlayerLikelyGone,
 } from "@/lib/durak/online/matchmaking";
 import type { RoomStatePayload } from "@/lib/durak/online/types";
 import type { DurakGameEmbeddedProps } from "./DurakGame";
@@ -371,11 +372,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           const rows = await fetchRoomPlayers(supabase, roomId);
           const others = rows.filter((r) => !r.is_bot && r.player_id !== playerId);
           if (others.length === 0) return;
-          const allStale = others.every((r) => {
-            if (!r.last_seen_at) return false;
-            const dt = Date.now() - Date.parse(r.last_seen_at);
-            return Number.isFinite(dt) && dt >= 20_000;
-          });
+          const now = Date.now();
+          const allStale = others.every((r) => isRoomPlayerLikelyGone(r, now));
           if (!allStale) return;
           const raw = await durakForfeitStaleOpponent(supabase, roomId, playerId);
           advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
@@ -708,6 +706,13 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
         <span className="max-w-[20rem] text-xs text-white/35" style={{ maxWidth: "20rem", fontSize: 12, color: "rgba(248,250,252,0.45)" }}>
           Если экран пустой долго, обновите страницу или проверьте сеть.
         </span>
+        <button
+          type="button"
+          onClick={onLeave}
+          className="mt-4 rounded-full border border-white/25 px-4 py-2 text-[13px] font-medium text-white/90"
+        >
+          Выйти из стола
+        </button>
       </div>
     );
   }

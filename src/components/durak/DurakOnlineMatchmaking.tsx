@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
+import { clearDurakActiveRoomFromStorage } from "@/lib/durak/activeRoomStorage";
 import {
   durakFinalizeRoomIfReady,
   durakForceStartIfTwoHumans,
@@ -283,6 +284,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     let cancelled = false;
     (async () => {
       try {
+        clearDurakActiveRoomFromStorage();
         const pid = getOrCreateDurakPlayerId();
         mmDebug("join_queue start", { playerId: pid.slice(0, 12) + "…", playerName });
         const j = await durakJoinQueue(supabase, pid, playerName);

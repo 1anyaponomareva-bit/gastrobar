@@ -31,13 +31,16 @@ import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
 import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getOrCreateDurakPlayerId } from "@/lib/durak/online/playerId";
+import {
+  clearDurakActiveRoomFromStorage,
+  DURAK_ACTIVE_ROOM_LS_KEY,
+  readDurakActiveRoomFromStorage,
+} from "@/lib/durak/activeRoomStorage";
 import { fetchRoom, fetchRoomPlayers } from "@/lib/durak/online/matchmaking";
 
 const HUMAN_ID = "human";
 
 const PLAYER_NAME_LS = "player_name";
-/** Восстановление онлайн-партии после refresh (см. эффект rejoin). */
-const DURAK_ACTIVE_ROOM_LS = "durak_active_online_room_id";
 const ONLINE_TURN_MS = 12_000;
 const ONLINE_TURN_WARN_SEC = 3;
 /** Имя при нажатии «Пропустить» (сохраняется в localStorage, как обычное имя). */
@@ -680,11 +683,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     setOnlineRoomId(id);
   }, []);
   const onLeaveOnlineRoomStable = useCallback(() => {
-    try {
-      localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
-    } catch {
-      /* ignore */
-    }
+    clearDurakActiveRoomFromStorage();
     setOnlineRoomId(null);
   }, []);
   const onMatchmakingCancelStable = useCallback(() => {
@@ -765,12 +764,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   useEffect(() => {
     if (embedded || !nameHydrated || !playerName || onlineRoomId) return;
     let cancelled = false;
-    let rid: string | null = null;
-    try {
-      rid = localStorage.getItem(DURAK_ACTIVE_ROOM_LS);
-    } catch {
-      rid = null;
-    }
+    const rid = readDurakActiveRoomFromStorage();
     if (!rid) return;
     void (async () => {
       const client = createSupabaseBrowserClient();
@@ -778,24 +772,27 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       try {
         const pid = getOrCreateDurakPlayerId();
         const room = await fetchRoom(client, rid);
-        if (cancelled || !room) return;
+        if (cancelled || !room) {
+          if (!room) clearDurakActiveRoomFromStorage();
+          return;
+        }
         if (room.status === "finished") {
-          try {
-            localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
-          } catch {
-            /* ignore */
-          }
+          clearDurakActiveRoomFromStorage();
           return;
         }
         const players = await fetchRoomPlayers(client, rid);
         if (cancelled) return;
         if (!players.some((p) => p.player_id === pid)) {
-          try {
-            localStorage.removeItem(DURAK_ACTIVE_ROOM_LS);
-          } catch {
-            /* ignore */
-          }
+          clearDurakActiveRoomFromStorage();
           return;
+        }
+        /* Стол с друзьями: matchmaking_pool = false; быстрая очередь / legacy: true или null */
+        if (room.status === "playing" && room.matchmaking_pool !== false) {
+          const humans = players.filter((p) => !p.is_bot).length;
+          if (humans < 2) {
+            clearDurakActiveRoomFromStorage();
+            return;
+          }
         }
         setOnlineRoomId(rid);
       } catch {
@@ -810,7 +807,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   useEffect(() => {
     if (embedded || !onlineRoomId) return;
     try {
-      localStorage.setItem(DURAK_ACTIVE_ROOM_LS, onlineRoomId);
+      localStorage.setItem(DURAK_ACTIVE_ROOM_LS_KEY, onlineRoomId);
     } catch {
       /* ignore */
     }

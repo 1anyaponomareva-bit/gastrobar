@@ -12,8 +12,8 @@ const SUIT_TO_FILE: Record<Suit, string> = {
   spades: "spades",
 };
 
-/** J, Q, K, A → `*_of_*2.png`; числовые ранги (в игре 6–10) → без суффикса `2`. */
-const RANK_USES_FILENAME_SUFFIX_2 = new Set<Rank>(["J", "Q", "K", "A"]);
+/** Только J, Q, K → `*_of_*2.png`. Тузы: `ace_of_{suit}.png` без `2`; 6–10 — без суффикса. */
+const RANK_USES_FILENAME_SUFFIX_2 = new Set<Rank>(["J", "Q", "K"]);
 
 function rankToFileStem(rank: Rank): string {
   switch (rank) {
@@ -31,8 +31,8 @@ function rankToFileStem(rank: Rank): string {
 }
 
 /**
- * Путь к лицу карты в `/public/cards/PNG-cards-1.3/` (набор PNG-cards-1.3).
- * Правило: `{rank}_of_{suit}.png` для 6–10; `{jack|queen|king|ace}_of_{suit}2.png` для J/Q/K/A.
+ * Путь к лицу карты в `/public/cards/PNG-cards-1.3/`.
+ * 6–10: `{n}_of_{suit}.png`; туз: `ace_of_{suit}.png`; валет/дама/король: `{jack|queen|king}_of_{suit}2.png`.
  */
 export function getCardImagePath(rank: Rank, suit: Suit): string {
   const s = SUIT_TO_FILE[suit];
@@ -41,8 +41,5 @@ export function getCardImagePath(rank: Rank, suit: Suit): string {
   return `${BASE}/${stem}_of_${s}${suffix2}.png`;
 }
 
-/**
- * Рубашка: в этой версии набора нет отдельного файла back — берём тёмный `black_joker.png`.
- * При добавлении настоящей рубашки замените константу.
- */
-export const CARD_BACK_PNG_PATH = `${BASE}/black_joker.png`;
+/** Задняя сторона колоды — `rubashka.png` в том же каталоге. */
+export const CARD_BACK_PNG_PATH = `${BASE}/rubashka.png`;

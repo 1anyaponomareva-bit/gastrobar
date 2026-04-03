@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useBarHome } from "@/components/BarHomeContext";
 import { CONFIG } from "@/lib/config";
+import { clearDurakActiveRoomFromStorage } from "@/lib/durak/activeRoomStorage";
 
 const ICON_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
@@ -106,6 +107,7 @@ export function Header() {
           {isGameRoute ? (
             <Link
               href="/"
+              onClick={() => clearDurakActiveRoomFromStorage()}
               className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
               aria-label="На главную — GASTROBAR"
             >
