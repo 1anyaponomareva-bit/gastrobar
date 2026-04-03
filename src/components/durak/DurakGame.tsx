@@ -11,7 +11,7 @@ import {
 } from "react";
 import { CARD_BACK_PNG_PATH, CARD_PNG_ASPECT_CLASS } from "@/lib/durak/cardPng";
 import { AnimatePresence, motion } from "framer-motion";
-import type { Card, GameTable, Player, Rank } from "@/games/durak/types";
+import type { Card, GameTable, Player, Rank, Suit } from "@/games/durak/types";
 import {
   attackInitial,
   attackToss,
@@ -27,7 +27,7 @@ import {
   localPlayerMustActOnline,
   tryAutoMove,
 } from "@/games/durak/autoMove";
-import { canBeat } from "@/games/durak/cards";
+import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
@@ -491,10 +491,13 @@ function CardSprite({
 function DeckPile({
   count,
   trumpCard,
+  trumpSuit,
   compact,
 }: {
   count: number;
   trumpCard: Card | null;
+  /** Нижняя карта колоды снята в `engine.drawCards` при пустой колоде — масть козыря остаётся здесь для UI. */
+  trumpSuit: Suit;
   /** Меньшая колода у края овального стола */
   compact?: boolean;
 }) {
@@ -540,7 +543,37 @@ function DeckPile({
   );
 
   /* Козырь под стопкой (z ниже), без поворота; низ карты выступает вниз из-под колоды */
-  if (trumpCard) {
+  const trumpVisual =
+    trumpCard != null ? (
+      <CardSprite
+        card={trumpCard}
+        size={size}
+        className="shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
+      />
+    ) : (
+      <div
+        title="Козырь (колода разобрана)"
+        className={cn(
+          "relative flex shrink-0 items-center justify-center overflow-hidden",
+          CARD_RADIUS_CLASS,
+          deckBox,
+          "bg-gradient-to-b from-white via-white to-neutral-100 shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
+        )}
+      >
+        <span
+          className={cn(
+            "select-none text-[2.05rem] leading-none sm:text-[2.4rem]",
+            trumpSuit === "hearts" || trumpSuit === "diamonds" ? "text-red-600" : "text-neutral-900"
+          )}
+          aria-hidden
+        >
+          {suitLabel(trumpSuit)}
+        </span>
+        <span className="sr-only">Козырь: {trumpSuit}</span>
+      </div>
+    );
+
+  if (trumpCard != null || count > 0) {
     /* Козырь сильнее выглядывает из-под стопки: стопка чуть выше, козырь ниже + больший min-height */
     const trumpShift = compact ? "translate-y-5 sm:translate-y-7" : "translate-y-6 sm:translate-y-8";
     const stackLift = compact ? "-top-1" : "-top-0.5";
@@ -553,11 +586,7 @@ function DeckPile({
         )}
       >
         <div className={cn("absolute bottom-0 left-1/2 z-[1] -translate-x-1/2", trumpShift)}>
-          <CardSprite
-            card={trumpCard}
-            size={size}
-            className="shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
-          />
+          {trumpVisual}
         </div>
         <div
           className={cn(
@@ -572,7 +601,19 @@ function DeckPile({
     );
   }
 
-  return <div className={cn("relative shrink-0", deckBox)}>{stackBlock}</div>;
+  /* Колода пуста: козырь только маркер масти (нижняя карта уже не в JSON). */
+  const trumpShiftSolo = compact ? "translate-y-5 sm:translate-y-7" : "translate-y-6 sm:translate-y-8";
+  return (
+    <div
+      className={cn(
+        "relative shrink-0",
+        deckBox,
+        compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
+      )}
+    >
+      <div className={cn("relative z-[25] flex justify-center", trumpShiftSolo)}>{trumpVisual}</div>
+    </div>
+  );
 }
 
 function toggleAttackSelection(hand: Card[], selected: string[], id: string): string[] {
@@ -1584,7 +1625,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
               <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[2] -translate-y-1/2 sm:left-[2%]">
-                <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
+                <DeckPile
+                  count={deckCount}
+                  trumpCard={trumpShow ?? null}
+                  trumpSuit={game.trumpSuit}
+                  compact
+                />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
                 <div className="pointer-events-none absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 px-2">
