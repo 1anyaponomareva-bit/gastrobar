@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_rooms_friend_waiting_public
 COMMENT ON COLUMN public.rooms.matchmaking_pool IS 'true = быстрая очередь; false = стол с друзьями';
 COMMENT ON COLUMN public.rooms.join_code IS 'Короткий код приглашения (столы с друзьями)';
 
--- Финализация: быстрая очередь — при 2 игроках старт сразу; один — бот после дедлайна; стол с друзьями — только max_players.
+-- Финализация: 2 живых — сразу в игру; бот только после search_deadline, если один живой.
 CREATE OR REPLACE FUNCTION public.durak_finalize_room_if_ready(p_room_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -40,6 +40,7 @@ AS $$
 DECLARE
   r public.rooms%ROWTYPE;
   cnt int;
+  humans int;
   bot_id text;
   bot_names text[] := ARRAY[
     'Алексей', 'Марина', 'Дмитрий', 'Ольга', 'Иван', 'Елена', 'Сергей', 'Анна',
@@ -54,6 +55,9 @@ BEGIN
   END IF;
 
   SELECT count(*)::int INTO cnt FROM public.room_players WHERE room_id = p_room_id;
+  SELECT count(*)::int INTO humans
+  FROM public.room_players
+  WHERE room_id = p_room_id AND NOT COALESCE(is_bot, false);
 
   IF NOT COALESCE(r.matchmaking_pool, true) THEN
     IF cnt >= r.max_players THEN
@@ -67,7 +71,7 @@ BEGIN
     RETURN;
   END IF;
 
-  IF cnt >= 2 THEN
+  IF humans >= 2 THEN
     UPDATE public.rooms SET status = 'playing' WHERE id = p_room_id;
     RETURN;
   END IF;
@@ -76,11 +80,11 @@ BEGIN
     RETURN;
   END IF;
 
-  IF cnt <= 0 THEN
+  IF cnt <= 0 OR humans <= 0 THEN
     RETURN;
   END IF;
 
-  IF cnt = 1 THEN
+  IF humans = 1 AND cnt = 1 THEN
     bot_id := 'bot-' || p_room_id::text;
     n := array_length(bot_names, 1);
     bot_label := bot_names[1 + floor(random() * n)::int];
@@ -137,7 +141,6 @@ BEGIN
   FROM public.rooms rm
   WHERE rm.status = 'waiting'
     AND COALESCE(rm.matchmaking_pool, true) = true
-    AND rm.search_deadline > now()
     AND (
       SELECT count(*)::int FROM public.room_players rp WHERE rp.room_id = rm.id
     ) < rm.max_players
@@ -158,7 +161,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot, matchmaking_pool)
-  VALUES ('waiting', 3, now() + interval '55 seconds', false, true)
+  VALUES ('waiting', 3, now() + interval '15 seconds', false, true)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)

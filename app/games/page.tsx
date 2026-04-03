@@ -15,19 +15,36 @@ export const metadata: Metadata = {
   },
 };
 
-const TILE_H = "h-[min(52vw,17.5rem)] sm:h-[min(42vw,19rem)] md:h-[20rem]";
+/** Ширина/высота — пропорции для layout; фактический кадр задаёт object-contain. */
+const IMG_W = 960;
+const IMG_H = 720;
 
-function TileChrome({ active }: { active: boolean }) {
+function TileFooter({ title, active }: { title: string; active: boolean }) {
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-inset",
-        active
-          ? "ring-[#c9a227]/25 shadow-[0_0_0_1px_rgba(201,162,39,0.12),0_22px_56px_-8px_rgba(201,120,40,0.22),0_10px_40px_rgba(0,0,0,0.55)]"
-          : "ring-white/[0.06] shadow-[0_16px_48px_-12px_rgba(0,0,0,0.65)]"
+        "border-t px-5 py-4 sm:px-6 sm:py-4",
+        active ? "border-white/[0.09] bg-[#0c0a08]/90" : "border-white/[0.06] bg-[#080706]/95"
       )}
-      aria-hidden
-    />
+    >
+      <h2
+        className={cn(
+          "text-left text-[1.125rem] font-semibold tracking-wide sm:text-[1.2rem]",
+          active ? "text-white/95" : "text-white/70"
+        )}
+      >
+        {title}
+      </h2>
+      <div
+        className={cn(
+          "mt-2.5 h-px w-16 sm:w-[4.5rem]",
+          active
+            ? "bg-gradient-to-r from-[#e8c87a] via-[#c9a227] to-transparent"
+            : "bg-gradient-to-r from-[#7a6b40]/80 to-transparent"
+        )}
+        aria-hidden
+      />
+    </div>
   );
 }
 
@@ -54,86 +71,69 @@ export default function GamesPage() {
             Игры
           </h1>
 
-          <div className="mx-auto mt-8 flex max-w-md flex-col gap-4 sm:mt-10 sm:gap-5">
-            {/* Дурак — активная */}
+          <div className="mx-auto mt-8 flex max-w-md flex-col gap-5 sm:mt-10 sm:gap-6">
+            {/* Дурак */}
             <Link
               href="/durak"
               className={cn(
-                "group relative block w-full overflow-hidden rounded-[22px] outline-none transition",
-                TILE_H,
-                "focus-visible:ring-2 focus-visible:ring-[#d4a84b]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060504]",
-                "active:scale-[0.985] sm:active:scale-[0.992]"
+                "group flex flex-col overflow-hidden rounded-[22px] outline-none ring-1 ring-inset ring-[#c9a227]/20",
+                "bg-[#0a0908] shadow-[0_0_0_1px_rgba(201,162,39,0.08),0_20px_50px_-12px_rgba(0,0,0,0.55),0_0_40px_-20px_rgba(201,120,40,0.18)]",
+                "transition focus-visible:ring-2 focus-visible:ring-[#d4a84b]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060504]",
+                "active:scale-[0.99] sm:active:scale-[0.995]"
               )}
             >
-              <Image
-                src="/durak.png"
-                alt="Дурак"
-                fill
-                priority
-                sizes="(max-width: 640px) 100vw, 448px"
-                className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              />
               <div
-                className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/35 to-black/45"
-                aria-hidden
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/92 via-black/55 to-transparent"
-                aria-hidden
-              />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_85%_70%_at_50%_120%,rgba(212,168,75,0.14),transparent_58%)] opacity-80 mix-blend-screen" aria-hidden />
-              <TileChrome active />
-
-              <div className="relative flex h-full flex-col justify-end p-5 pb-5 sm:p-6 sm:pb-6">
-                <h2 className="font-semibold tracking-wide text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-[1.35rem]">
-                  Дурак
-                </h2>
-                <div
-                  className="mt-2.5 h-px w-14 max-w-[40%] bg-gradient-to-r from-[#e8c87a] via-[#c9a227] to-transparent sm:w-16"
-                  aria-hidden
+                className={cn(
+                  "flex w-full items-center justify-center px-4 pb-2 pt-5 sm:px-5 sm:pb-3 sm:pt-6",
+                  "min-h-[min(48vw,220px)] sm:min-h-[min(40vw,260px)]"
+                )}
+              >
+                <Image
+                  src="/durak.png"
+                  alt="Дурак"
+                  width={IMG_W}
+                  height={IMG_H}
+                  priority
+                  sizes="(max-width: 640px) 100vw, 448px"
+                  className="h-auto w-full max-h-[min(42vh,300px)] object-contain object-center transition duration-300 group-hover:opacity-95 sm:max-h-[min(38vh,320px)]"
                 />
               </div>
+              <TileFooter title="Дурак" active />
             </Link>
 
             {/* Покер — скоро */}
             <div
-              className={cn("relative w-full overflow-hidden rounded-[22px]", TILE_H)}
+              className={cn(
+                "relative flex flex-col overflow-hidden rounded-[22px] ring-1 ring-inset ring-white/[0.08]",
+                "bg-[#0a0908] shadow-[0_18px_48px_-14px_rgba(0,0,0,0.65)]",
+                "pointer-events-none select-none opacity-[0.92]"
+              )}
               aria-disabled
             >
-              <Image
-                src="/poker.png"
-                alt="Покер"
-                fill
-                sizes="(max-width: 640px) 100vw, 448px"
-                className="object-cover scale-[1.02] blur-[1.5px] brightness-75 contrast-[0.92]"
-              />
-              <div className="absolute inset-0 bg-[#050403]/65" aria-hidden />
-              <div
-                className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/50 to-black/55"
-                aria-hidden
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/95 via-black/65 to-transparent"
-                aria-hidden
-              />
-              <TileChrome active={false} />
-
               <span
-                className="absolute right-4 top-4 z-[2] rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#e8d5a8]/90 backdrop-blur-md sm:right-5 sm:top-5 sm:px-3 sm:text-[11px]"
+                className="absolute right-3 top-3 z-10 rounded-full border border-white/12 bg-black/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#e8d5a8]/85 backdrop-blur-sm sm:right-4 sm:top-4 sm:px-3 sm:text-[11px]"
                 aria-label="Скоро"
               >
                 Скоро
               </span>
 
-              <div className="relative flex h-full flex-col justify-end p-5 pb-5 sm:p-6 sm:pb-6">
-                <h2 className="font-semibold tracking-wide text-white/78 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-[1.35rem]">
-                  Покер
-                </h2>
-                <div
-                  className="mt-2.5 h-px w-14 max-w-[40%] bg-gradient-to-r from-[#9a7d3c]/90 via-[#6b5a30]/80 to-transparent sm:w-16"
-                  aria-hidden
+              <div
+                className={cn(
+                  "flex w-full items-center justify-center px-4 pb-2 pt-5 sm:px-5 sm:pb-3 sm:pt-6",
+                  "min-h-[min(48vw,220px)] sm:min-h-[min(40vw,260px)]",
+                  "brightness-[0.82] saturate-[0.92]"
+                )}
+              >
+                <Image
+                  src="/poker.png"
+                  alt="Покер"
+                  width={IMG_W}
+                  height={IMG_H}
+                  sizes="(max-width: 640px) 100vw, 448px"
+                  className="h-auto w-full max-h-[min(42vh,300px)] object-contain object-center sm:max-h-[min(38vh,320px)]"
                 />
               </div>
+              <TileFooter title="Покер" active={false} />
             </div>
           </div>
         </div>

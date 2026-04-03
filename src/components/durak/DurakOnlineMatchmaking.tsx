@@ -21,20 +21,20 @@ type Props = {
 
 /** Статусы без секунд — таймер на сервере у всех разный, цифры только путают. */
 const WAITING_STATUS_LINES: { text: string; emoji: string }[] = [
-  { text: "Подбираем партию…", emoji: "🎴" },
-  { text: "Ищем достойного соперника…", emoji: "✨" },
-  { text: "Почти нашли стол…", emoji: "🔗" },
-  { text: "Собираем компанию…", emoji: "🃏" },
-  { text: "Подключаем следующего игрока…", emoji: "🪑" },
+  { text: "Подбираем партию у бара…", emoji: "🎴" },
+  { text: "Ищем соперника за стойкой…", emoji: "🥃" },
+  { text: "Стол почти свободен…", emoji: "✨" },
+  { text: "Собираем компанию у сукна…", emoji: "🃏" },
+  { text: "Скоро усадим за игру…", emoji: "🪑" },
 ];
 
 const WAITING_HINTS: string[] = [
-  "Можешь пока выпить что-нибудь бархатное ☕",
-  "Можешь пока расслабиться и просто подождать 🌿",
-  "Можешь пока сделать заказ с меню — мы подождём 😉",
-  "Можешь пока выбрать десерт — игра не убежит 🍰",
-  "Можешь пока открыть барную карту — время есть 🍸",
-  "Можешь пока потянуться — карты ещё тасуются 🤙",
+  "Можешь пока выпить что-нибудь бархатное 🍺",
+  "Закажи джерки к напитку — хватит до первого хода 🥩",
+  "Глянь меню бара у бармена — мы пока мешаем колоду 😉",
+  "Открой барную карту: найди свой вечерний дринк 🍸",
+  "Пока ждём — настройся на музыку и свет зала 🔊",
+  "Колода тасуется, стаканы звенят — остынь и расслабься ✨",
 ];
 
 /**
@@ -182,7 +182,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">
-        <p className="text-lg font-medium text-white/95">Ищем соперников…</p>
+        <p className="text-lg font-medium text-white/95">Ищем пару за столом в баре…</p>
         <div className="rounded-2xl border border-amber-400/35 bg-amber-950/40 px-6 py-8 sm:px-10">
           <p className="text-4xl leading-none" aria-hidden>
             {line.emoji}
@@ -191,8 +191,8 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
           <p className="mt-5 max-w-[22rem] text-sm leading-relaxed text-amber-100/75">{hint}</p>
         </div>
         <p className="max-w-[20rem] text-sm text-white/55">
-          Уже за столом: <span className="text-white/90">{playerCount}</span>. Соберём компанию и начнём — обычно это
-          занимает немного времени.
+          Уже за столом: <span className="text-white/90">{playerCount}</span>. Подключим к сопернику или начнём партию,
+          как только будет готово.
         </p>
         <button
           type="button"
