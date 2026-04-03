@@ -22,6 +22,7 @@ import {
   durakForfeitStaleOpponent,
   durakPlayerPing,
   durakSaveRoomState,
+  fetchRoom,
   fetchRoomPlayers,
   formatPostgrestError,
   isRoomPlayerLikelyGone,
@@ -511,7 +512,9 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     (update: SetStateAction<GameTable>) => {
       setGame((current) => {
         if (!current) {
-          return typeof update === "function" ? null : update;
+          /* Функциональный апдейт без загруженного стола затирал бы партию в null — см. инициализацию. */
+          if (typeof update === "function") return current;
+          return update;
         }
         const next =
           typeof update === "function"
@@ -571,19 +574,26 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
 
         const sorted = [...rows].sort((a, b) => a.seat_index - b.seat_index);
         const leaderId = sorted.find((r) => !r.is_bot)?.player_id ?? sorted[0]?.player_id;
-        const initial =
-          sorted.length >= 2 ? buildGameFromRoomPlayers(rows, playerId, roomId) : null;
+        let initial: GameTable;
+        try {
+          initial = buildGameFromRoomPlayers(rows, playerId, roomId);
+        } catch (err) {
+          if (!cancelled) {
+            setError(
+              formatPostgrestError(err instanceof Error ? err : new Error(String(err)))
+            );
+          }
+          return;
+        }
 
         /*
          * Детерминированная колода по roomId: оба клиента собирают один и тот же стол сразу.
-         * Раньше не-лидер ждал room_state от лидера; при сбое RPC poll оставался с coerce=null → вечная «Загрузка стола».
+         * Раньше не-лидер ждал room_state от лидера; при сбое RPC poll оставался с coerce=null — вечная «Загрузка стола».
          */
-        if (initial) {
-          gameRef.current = initial;
-          setGame(initial);
-        }
+        gameRef.current = initial;
+        setGame(initial);
 
-        if (leaderId === playerId && initial) {
+        if (leaderId === playerId) {
           try {
             const raw = await durakSaveRoomState(supabase, roomId, playerId, { game: initial });
             advanceLastAppliedRef(lastAppliedServerTsRef, Date.parse(raw));
