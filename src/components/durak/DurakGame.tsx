@@ -152,71 +152,57 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
 }
 
 /**
- * Рассадка вокруг круглого стола (вы внизу за экраном).
- * `fanTowardCenterDeg` — поворот веера рубашек к центру, как в референсе.
+ * Рассадка вокруг круглого стола: угол на окружности сукна (как в tablePairOrbit: -90° = верх).
+ * `fanTowardCenterDeg` — поворот веера к центру стола.
  */
-function opponentSeatOnCircle(
+function opponentSeatPolarMeta(
   count: number,
   index: number
-): { wrapClass: string; fanTowardCenterDeg: number } {
+): { angleDeg: number; fanTowardCenterDeg: number } {
   const n = Math.min(5, Math.max(1, count));
   const i = Math.min(index, n - 1);
-  /**
-   * Расположение «на ободке»: центр веера ближе к границе круга (как в референсе), не глубоко внутри сукна.
-   */
   if (n === 1) {
-    return {
-      wrapClass: "left-1/2 top-[8%] z-30 -translate-x-1/2 -translate-y-1/4 sm:top-[9%]",
-      fanTowardCenterDeg: 0,
-    };
+    return { angleDeg: -90, fanTowardCenterDeg: 0 };
   }
   if (n === 2) {
-    /** Два соперника (трое за столом) — по краям ободка, не по «поясу» в середине круга. */
     return i === 0
-      ? {
-          wrapClass:
-            "left-[0%] top-[14%] z-30 -translate-x-1 -translate-y-[38%] sm:left-[0.5%] sm:top-[15%]",
-          fanTowardCenterDeg: 32,
-        }
-      : {
-          wrapClass:
-            "right-[0%] top-[14%] z-30 translate-x-1 -translate-y-[38%] sm:right-[0.5%] sm:top-[15%]",
-          fanTowardCenterDeg: -32,
-        };
+      ? { angleDeg: -128, fanTowardCenterDeg: 32 }
+      : { angleDeg: -52, fanTowardCenterDeg: -32 };
   }
   if (n === 3) {
-    if (i === 0)
-      return {
-        wrapClass: "left-[2%] top-[36%] z-30 translate-y-[-48%] sm:left-[3%]",
-        fanTowardCenterDeg: 34,
-      };
-    if (i === 1)
-      return {
-        wrapClass: "left-1/2 top-[7%] z-30 -translate-x-1/2 -translate-y-[38%] sm:top-[8%]",
-        fanTowardCenterDeg: 0,
-      };
-    return {
-      wrapClass: "right-[2%] top-[36%] z-30 translate-y-[-48%] sm:right-[3%]",
-      fanTowardCenterDeg: -34,
-    };
+    if (i === 0) return { angleDeg: -142, fanTowardCenterDeg: 34 };
+    if (i === 1) return { angleDeg: -90, fanTowardCenterDeg: 0 };
+    return { angleDeg: -38, fanTowardCenterDeg: -34 };
   }
   if (n === 4) {
-    const seats: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-      { wrapClass: "left-[1%] top-[40%] z-30 translate-y-[-50%] sm:left-[2%]", fanTowardCenterDeg: 40 },
-      { wrapClass: "left-[16%] top-[11%] z-30 -translate-y-[32%]", fanTowardCenterDeg: 12 },
-      { wrapClass: "right-[16%] top-[11%] z-30 -translate-y-[32%]", fanTowardCenterDeg: -12 },
-      { wrapClass: "right-[1%] top-[40%] z-30 translate-y-[-50%] sm:right-[2%]", fanTowardCenterDeg: -40 },
+    const seats: { angleDeg: number; fanTowardCenterDeg: number }[] = [
+      { angleDeg: -152, fanTowardCenterDeg: 40 },
+      { angleDeg: -118, fanTowardCenterDeg: 12 },
+      { angleDeg: -62, fanTowardCenterDeg: -12 },
+      { angleDeg: -28, fanTowardCenterDeg: -40 },
     ];
     return seats[i]!;
   }
-  const seats5: { wrapClass: string; fanTowardCenterDeg: number }[] = [
-    { wrapClass: "left-[3%] top-[42%] z-30 translate-y-[-52%]", fanTowardCenterDeg: 44 },
-    { wrapClass: "left-[18%] top-[12%] z-30 -translate-y-[36%]", fanTowardCenterDeg: 16 },
-    { wrapClass: "left-1/2 top-[7%] z-30 -translate-x-1/2 -translate-y-[40%] sm:top-[8%]", fanTowardCenterDeg: 0 },
-    { wrapClass: "right-[18%] top-[12%] z-30 -translate-y-[36%]", fanTowardCenterDeg: -16 },
-    { wrapClass: "right-[3%] top-[42%] z-30 translate-y-[-52%]", fanTowardCenterDeg: -44 },
+  const seats5: { angleDeg: number; fanTowardCenterDeg: number }[] = [
+    { angleDeg: -158, fanTowardCenterDeg: 44 },
+    { angleDeg: -124, fanTowardCenterDeg: 16 },
+    { angleDeg: -90, fanTowardCenterDeg: 0 },
+    { angleDeg: -56, fanTowardCenterDeg: -16 },
+    { angleDeg: -22, fanTowardCenterDeg: -44 },
   ];
   return seats5[i]!;
+}
+
+/** Половина высоты компактной карты (px): центр рубашки соперника на линии сукна, низ веера чуть наружу. */
+const OPP_CARD_HALF_HEIGHT_PX = 34;
+
+function opponentSeatWrapperOffset(
+  angleDeg: number,
+  orbitRadiusPx: number
+): { x: number; y: number } {
+  const r = orbitRadiusPx <= 0 ? 0 : orbitRadiusPx + OPP_CARD_HALF_HEIGHT_PX;
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: Math.cos(rad) * r, y: Math.sin(rad) * r };
 }
 
 /** Веер рубашек у соперника: плотнее, но каждая карта частично видна (счёт по краям). */
@@ -1096,14 +1082,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
-            const seat = opponentSeatOnCircle(opponents.length, oi);
+            const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
+            const { x: ox, y: oy } = opponentSeatWrapperOffset(seatMeta.angleDeg, tableOrbitPx);
             return (
               <div
                 key={opp.id}
-                className={cn(
-                  "absolute flex max-w-[46%] flex-col items-center gap-1 sm:max-w-[42%]",
-                  seat.wrapClass
-                )}
+                className="absolute left-1/2 top-1/2 z-30 flex max-w-[46%] flex-col items-center gap-1 sm:max-w-[42%]"
+                style={{
+                  transform: `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`,
+                }}
               >
                 <div className="flex max-w-full items-center justify-center gap-1 px-0.5 leading-tight">
                   <p className="truncate text-[10px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] sm:text-[11px]">
@@ -1119,7 +1106,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 <div
                   className="relative flex min-h-[4.85rem] w-[min(92vw,12.25rem)] max-w-[92%] items-end justify-center overflow-visible sm:min-h-[5.85rem] sm:w-[min(90vw,14rem)]"
                   style={{
-                    transform: `rotate(${seat.fanTowardCenterDeg}deg)`,
+                    transform: `rotate(${seatMeta.fanTowardCenterDeg}deg)`,
                     transformOrigin: "center bottom",
                   }}
                 >
@@ -1373,7 +1360,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             >
               <div className="pointer-events-auto relative h-full w-full max-w-[100vw] overflow-visible">
                 {row.map((c, i) => {
-                  const globalIndex = rowIdx * HAND_ROW_MAX + i;
                   const selAttack =
                     game.phase === "attack_initial" && selfIsAttacker && attackPick.includes(c.id);
                   const selToss = selfCanToss && tossPick.includes(c.id);
@@ -1421,37 +1407,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                   return (
                     <div key={c.id} className="absolute" style={fan}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 88, scale: 0.82, rotate: 5 }}
-                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        transition={{
-                          delay: 2 * globalIndex * DEAL_STAGGER_SEC,
-                          duration: DEAL_MOVE_SEC,
-                          ease: [0.22, 1, 0.36, 1],
-                        }}
-                      >
-                        <motion.div
-                          animate={{ y: selected ? -52 : 0 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 26 }}
-                        >
-                          <CardSprite
-                            card={c}
-                            size="hand"
-                            selected={selected}
-                            disabled={false}
-                            playableHighlight={
-                              game.state === "playing" &&
-                              !dealing &&
-                              playable &&
-                              (game.phase === "defend" ||
-                                game.phase === "attack_initial" ||
-                                game.phase === "attack_toss" ||
-                                game.phase === "player_can_throw_more")
-                            }
-                            onPress={onPress}
-                          />
-                        </motion.div>
-                      </motion.div>
+                      <div className={cn(selected && "-translate-y-[3.25rem]")}>
+                        <CardSprite
+                          card={c}
+                          size="hand"
+                          selected={selected}
+                          disabled={false}
+                          playableHighlight={
+                            game.state === "playing" &&
+                            !dealing &&
+                            playable &&
+                            (game.phase === "defend" ||
+                              game.phase === "attack_initial" ||
+                              game.phase === "attack_toss" ||
+                              game.phase === "player_can_throw_more")
+                          }
+                          onPress={onPress}
+                        />
+                      </div>
                     </div>
                   );
                 })}

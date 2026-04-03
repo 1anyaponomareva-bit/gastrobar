@@ -63,19 +63,26 @@ function durakRoundTableProgress(gt: GameTable): readonly [number, number] {
   return [pairs, defenses];
 }
 
-function localRoundAheadOfRemote(loc: GameTable, rem: GameTable): boolean {
+/**
+ * Локальный стол «свежее» опроса: можно не подменять устаревшим poll при том же/старым ts.
+ * Нельзя считать себя впереди только по числу пар на столе: после «Бито» у сервера пар 0, у клиента ещё старый стол —
+ * иначе отбой соперника никогда не применится.
+ */
+function localTableAheadOfRemotePoll(loc: GameTable, rem: GameTable): boolean {
   const a = durakRoundTableProgress(loc);
   const b = durakRoundTableProgress(rem);
-  return a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]);
-}
-
-/** Карты на столе (атака+отбой) — доп. check, если кортеж пар совпал, а подпись всё же разошлась. */
-function tableCardsOnBoard(gt: GameTable): number {
-  return gt.tablePairs.reduce((n, p) => n + 1 + (p.defense ? 1 : 0), 0);
-}
-
-function localTableAheadOfRemotePoll(loc: GameTable, rem: GameTable): boolean {
-  return localRoundAheadOfRemote(loc, rem) || tableCardsOnBoard(loc) > tableCardsOnBoard(rem);
+  /** Те же атаки, но мы уже отбились чаще, чем в ответе poll. */
+  if (a[0] === b[0] && a[1] > b[1]) return true;
+  /** У нас стол уже пуст (новый раунд / взяли карты), на сервере ещё прошлая схватка. */
+  if (loc.tablePairs.length === 0 && rem.tablePairs.length > 0) return true;
+  /** Подкинули атаку: локально больше пар, чем в poll — но не случай «сервер отбил и сбросил стол». */
+  if (a[0] > b[0]) {
+    if (rem.tablePairs.length === 0 && rem.discardPile.length > loc.discardPile.length) {
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 /**
