@@ -1339,7 +1339,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
+      <div className="relative z-20 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2">
         <div
           ref={tableRoundRef}
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
@@ -1367,6 +1367,26 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 "radial-gradient(circle at 40% 34%, rgba(180,220,160,0.16) 0%, transparent 55%)",
             }}
           />
+
+          {/* Тиснение на сукне: под картами, почти незаметно */}
+          <div
+            className="pointer-events-none absolute inset-[12%] z-[2] flex items-center justify-center rounded-full"
+            aria-hidden
+          >
+            <span
+              className="select-none text-center font-semibold uppercase tracking-[0.42em] leading-none"
+              style={{
+                fontSize: "clamp(0.48rem, 2.5vmin, 0.7rem)",
+                color: "rgba(5, 28, 18, 0.085)",
+                textShadow:
+                  "0 0.5px 0 rgba(255,255,255,0.066), 0 -0.5px 1px rgba(0,0,0,0.12)",
+                filter: "blur(0.45px)",
+                opacity: 0.9,
+              }}
+            >
+              GASTROBAR
+            </span>
+          </div>
 
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
@@ -1428,7 +1448,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 </div>
                 <div
                   className={cn(
-                    "pointer-events-auto absolute z-[24] flex max-w-[min(52%,92vw)] items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 leading-tight sm:max-w-[46%]",
+                    "pointer-events-none absolute z-[24] flex max-w-[min(52%,92vw)] items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 leading-tight sm:max-w-[46%]",
                     seatHi === "attack" && "ring-2 ring-amber-300/50 ring-offset-2 ring-offset-transparent",
                     seatHi === "defend" && "ring-2 ring-emerald-400/45 ring-offset-2 ring-offset-transparent"
                   )}
@@ -1454,9 +1474,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           <div
             ref={boardPlayAreaRef}
-            className="absolute inset-0 z-[28] isolate min-h-0 overflow-visible"
+            className="pointer-events-none absolute inset-0 z-[28] isolate min-h-0 overflow-visible"
           >
-            <div className="relative z-[1] h-full min-h-0 w-full overflow-visible">
+            <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
               <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[2] -translate-y-1/2 sm:left-[2%]">
                 <DeckPile count={deckCount} trumpCard={trumpShow ?? null} compact />
               </div>
@@ -1538,8 +1558,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-10px_32px_rgba(0,0,0,0.35)] sm:mt-4 sm:px-2 sm:pt-2.5">
-        <div className="relative z-30 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
+      <div className="relative z-40 mt-3 shrink-0 space-y-0 bg-[#14100c] px-1 pt-1.5 shadow-[0_-10px_32px_rgba(0,0,0,0.35)] sm:mt-4 sm:px-2 sm:pt-2.5">
+        <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
@@ -1632,7 +1652,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       <section
         className={cn(
-          "relative z-0 shrink-0 bg-[#14100c] px-1 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2",
+          "relative z-0 isolate shrink-0 bg-[#14100c] px-1 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2",
           selfSeatActive &&
             "before:pointer-events-none before:absolute before:inset-x-1 before:top-0 before:h-24 before:rounded-[2rem] before:bg-[radial-gradient(ellipse_90%_100%_at_50%_0%,rgba(248,214,109,0.14),transparent_65%)] before:opacity-100",
           /* Зазор над нижним баром: нав + safe-area + запас, чтобы веер карточек не заходил под табы */
