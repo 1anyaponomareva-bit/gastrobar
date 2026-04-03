@@ -136,6 +136,45 @@ export function tryAutoMove(table: GameTable, playerId: string): GameTable | nul
   return null;
 }
 
+/**
+ * Игрок (human/remote), который сейчас обязан совершить действие в онлайн-партии.
+ * Боты сюда не попадают — ими занимается `applyBotMove` на «водителе» часов.
+ * В фазах подкидывания берётся первый по `attackingSeatOrder`, кому нужно действовать.
+ */
+export function getOnlineMandatoryHumanActorId(table: GameTable): string | null {
+  if (table.state !== "playing") return null;
+  if (table.phase === "drawing" || table.phase === "game_over") return null;
+
+  const isHumanSeat = (idx: number) => {
+    const p = table.players[idx];
+    return p != null && p.type !== "bot";
+  };
+
+  if (table.phase === "defend") {
+    const d = table.defenderIndex;
+    if (!isHumanSeat(d)) return null;
+    const id = table.players[d]!.id;
+    return localPlayerMustActOnline(table, id) ? id : null;
+  }
+
+  if (table.phase === "attack_initial") {
+    const a = table.attackerIndex;
+    if (!isHumanSeat(a)) return null;
+    const id = table.players[a]!.id;
+    return localPlayerMustActOnline(table, id) ? id : null;
+  }
+
+  const tossing = table.phase === "attack_toss" || table.phase === "player_can_throw_more";
+  if (!tossing) return null;
+
+  for (const idx of engine.attackingSeatOrder(table)) {
+    if (!isHumanSeat(idx)) continue;
+    const id = table.players[idx]!.id;
+    if (localPlayerMustActOnline(table, id)) return id;
+  }
+  return null;
+}
+
 /** Показывать таймер хода только если локальному игроку нужно действие (не «только ждать»). */
 export function localPlayerMustActOnline(table: GameTable, localId: string): boolean {
   if (table.state !== "playing") return false;

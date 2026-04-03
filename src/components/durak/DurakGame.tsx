@@ -21,7 +21,11 @@ import {
   defenderTake,
 } from "@/games/durak/engine";
 import { applyBotMove } from "@/games/durak/bot";
-import { localPlayerMustActOnline, tryAutoMove } from "@/games/durak/autoMove";
+import {
+  getOnlineMandatoryHumanActorId,
+  localPlayerMustActOnline,
+  tryAutoMove,
+} from "@/games/durak/autoMove";
 import { canBeat } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
@@ -1052,50 +1056,110 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   const onlineTurnKey = useMemo(() => {
     if (!embedded || !game || game.state !== "playing") return "";
+    const actor = getOnlineMandatoryHumanActorId(game);
     return [
+      actor ?? "none",
       game.phase,
       game.attackerIndex,
       game.defenderIndex,
       game.tablePairs.length,
       ...game.tablePairs.map((p) => `${p.attack.id}:${p.defense?.id ?? "-"}`),
-      localPlayerMustActOnline(game, localPlayerId) ? "1" : "0",
     ].join("|");
-  }, [embedded, game, localPlayerId]);
+  }, [embedded, game]);
 
   useEffect(() => {
     if (!embedded || !game || game.state !== "playing" || dealing) {
       setTurnProgress(1);
       return;
     }
-    if (!localPlayerMustActOnline(game, localPlayerId)) {
+    const actorId = getOnlineMandatoryHumanActorId(game);
+    if (!actorId) {
       setTurnProgress(1);
       return;
     }
-    const deadline = Date.now() + ONLINE_TURN_MS;
+    const turnDeadline = Date.now() + ONLINE_TURN_MS;
+    const isClockDriver = onlineBotDriverId != null && localPlayerId === onlineBotDriverId;
+    console.info("[durak online turn] timer start", {
+      currentTurnPlayerId: actorId,
+      localPlayerId,
+      turnDeadline,
+      secondsLeft: Math.ceil(ONLINE_TURN_MS / 1000),
+      timerStarted: true,
+      isClockDriver,
+    });
     const tick = () => {
-      const left = Math.max(0, deadline - Date.now());
+      const left = Math.max(0, turnDeadline - Date.now());
       setTurnProgress(left / ONLINE_TURN_MS);
       return left;
     };
     tick();
+    let lastLoggedSec = 999;
     const id = window.setInterval(() => {
       const left = tick();
+      const sec = Math.ceil(left / 1000);
+      if (sec !== lastLoggedSec && sec <= 3 && sec >= 0) {
+        lastLoggedSec = sec;
+        console.info("[durak online turn] tick", {
+          currentTurnPlayerId: actorId,
+          localPlayerId,
+          turnDeadline,
+          secondsLeft: sec,
+          isClockDriver,
+        });
+      }
       if (left <= 0) {
         window.clearInterval(id);
-        setGame((g) => {
-          if (!g || g.state !== "playing") return g;
-          if (!localPlayerMustActOnline(g, localPlayerId)) return g;
-          const next = tryAutoMove(g, localPlayerId);
-          if (!next) return g;
+        if (!isClockDriver) {
+          console.info("[durak online turn] timeout (non-driver, skip auto-move)", {
+            currentTurnPlayerId: actorId,
+            localPlayerId,
+          });
+          setTurnProgress(1);
+          return;
+        }
+        setGame((prev) => {
+          if (!prev || prev.state !== "playing") {
+            console.info("[durak online turn] autoMoveResult: skip_state (not playing)");
+            return prev;
+          }
+          const actor = getOnlineMandatoryHumanActorId(prev);
+          console.info("[durak online turn] timeout apply", {
+            currentTurnPlayerId: actor,
+            localPlayerId,
+            turnDeadline,
+            autoMoveTriggered: true,
+            expectedActor: actorId,
+          });
+          if (!actor) {
+            console.info("[durak online turn] autoMoveResult: noop (no actor)");
+            return prev;
+          }
+          const next = tryAutoMove(prev, actor);
+          if (!next) {
+            console.info("[durak online turn] autoMoveResult: noop (tryAutoMove)");
+            return prev;
+          }
+          console.info("[durak online turn] autoMoveResult: ok (persist via onGameChange)", {
+            phase: next.phase,
+            attackerIndex: next.attackerIndex,
+            defenderIndex: next.defenderIndex,
+            tablePairs: next.tablePairs.length,
+          });
+          const banner =
+            actor === localPlayerId
+              ? "Ход выполнен автоматически"
+              : "Соперник не сходил — ход по таймеру";
+          queueMicrotask(() => {
+            setAutoMoveBanner(banner);
+            window.setTimeout(() => setAutoMoveBanner(null), 2200);
+          });
           return { ...next, message: null };
         });
-        setAutoMoveBanner("Ход выполнен автоматически");
-        window.setTimeout(() => setAutoMoveBanner(null), 2200);
         setTurnProgress(1);
       }
     }, 100);
     return () => window.clearInterval(id);
-  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame]);
+  }, [embedded, onlineTurnKey, dealing, localPlayerId, setGame, onlineBotDriverId]);
 
   const setErr = (msg: string) => setGame((g) => (g ? { ...g, message: msg } : g));
 
@@ -1667,7 +1731,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {embedded &&
             game.state === "playing" &&
             !dealing &&
-            localPlayerMustActOnline(game, localPlayerId) ? (
+            getOnlineMandatoryHumanActorId(game) != null ? (
               <TurnDeadlineRing progress={turnProgress} />
             ) : null}
             <motion.p
