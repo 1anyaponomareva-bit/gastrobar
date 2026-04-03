@@ -14,47 +14,27 @@ export const metadata: Metadata = {
   },
 };
 
-function GameTileContent({
+/** ~140–160px по ТЗ; на узком экране чуть ниже, на sm — выше в пределах диапазона. */
+const TILE_CLASS = "h-[142px] sm:h-[154px]";
+
+function GameCardInner({
   emoji,
   title,
   subtitle,
-  muted,
 }: {
   emoji: string;
   title: string;
   subtitle: string;
-  muted?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 px-5 py-7 text-center sm:px-6 sm:py-8",
-        muted && "opacity-55 grayscale-[0.15]"
-      )}
-    >
-      <span
-        className={cn(
-          "text-[2.65rem] leading-none sm:text-[2.85rem]",
-          "select-none"
-        )}
-        aria-hidden
-      >
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-6 py-5 text-center">
+      <span className="text-[40px] leading-none select-none sm:text-[48px]" aria-hidden>
         {emoji}
       </span>
-      <h2
-        className={cn(
-          "mt-3 text-[1.2rem] font-semibold tracking-[0.02em] sm:text-[1.25rem]",
-          muted ? "text-white/65" : "text-white/[0.96]"
-        )}
-      >
+      <h2 className="mt-1 text-[1.0625rem] font-bold tracking-[0.02em] text-white/[0.96] sm:text-[1.1rem]">
         {title}
       </h2>
-      <p
-        className={cn(
-          "mt-1 max-w-[16rem] text-[0.8125rem] font-normal leading-snug sm:text-[0.84rem]",
-          muted ? "text-white/45" : "text-[#c9b89a]/90"
-        )}
-      >
+      <p className="mt-0.5 max-w-[18rem] text-[0.8125rem] font-normal leading-snug text-white/45 sm:text-[0.84rem]">
         {subtitle}
       </p>
     </div>
@@ -75,7 +55,7 @@ export default function GamesPage() {
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-10%,rgba(201,162,39,0.07),transparent_50%),radial-gradient(ellipse_70%_45%_at_100%_100%,rgba(58,92,72,0.12),transparent_42%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-10%,rgba(201,162,39,0.08),transparent_50%),radial-gradient(ellipse_70%_45%_at_100%_100%,rgba(58,92,72,0.1),transparent_42%)]"
           aria-hidden
         />
 
@@ -84,53 +64,57 @@ export default function GamesPage() {
             Игры
           </h1>
 
-          <div className="mx-auto mt-6 flex max-w-md flex-col gap-3.5 sm:mt-7 sm:gap-4">
+          <div className="mx-auto mt-6 flex w-full max-w-md flex-col gap-5 sm:mt-7">
             <Link
               href="/durak"
               className={cn(
-                "group relative flex flex-col overflow-hidden rounded-[26px] outline-none",
-                "bg-[linear-gradient(160deg,rgba(22,19,16,0.98)_0%,rgba(8,7,6,0.99)_100%)]",
-                "shadow-[0_0_0_1px_rgba(201,162,39,0.07),0_12px_40px_-8px_rgba(0,0,0,0.65),0_0_48px_-12px_rgba(212,145,60,0.22)]",
-                "before:pointer-events-none before:absolute before:inset-0 before:rounded-[26px] before:bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(232,200,122,0.14),transparent_62%)]",
-                "transition-[transform,box-shadow] duration-200",
-                "hover:shadow-[0_0_0_1px_rgba(201,162,39,0.12),0_16px_44px_-8px_rgba(0,0,0,0.7),0_0_56px_-10px_rgba(232,168,75,0.28)]",
+                "group relative block w-full shrink-0 outline-none",
+                TILE_CLASS,
+                "rounded-[24px] bg-[#151515]",
+                "shadow-[0_10px_36px_-12px_rgba(0,0,0,0.55),0_0_0_1px_rgba(201,162,39,0.09)]",
+                "transition-[transform,box-shadow,filter] duration-200",
+                "hover:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.58),0_0_40px_-10px_rgba(212,168,75,0.22)]",
                 "focus-visible:ring-2 focus-visible:ring-[#d4a84b]/65 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060504]",
-                "active:scale-[0.99] sm:active:scale-[0.995]"
+                "active:scale-[0.99]"
               )}
             >
-              <div className="relative z-[1]">
-                <GameTileContent
-                  emoji="🎴"
-                  title="Дурак"
-                  subtitle="Онлайн за столом"
-                />
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(ellipse_90%_75%_at_50%_-10%,rgba(232,200,122,0.14),transparent_55%)]"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[24px] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+                aria-hidden
+              />
+              <div className="relative z-[1] flex h-full w-full">
+                <GameCardInner emoji="🎴" title="Дурак" subtitle="Онлайн за столом" />
               </div>
             </Link>
 
-            <div
-              className={cn(
-                "relative flex flex-col overflow-hidden rounded-[26px]",
-                "bg-[linear-gradient(160deg,rgba(16,14,12,0.96)_0%,rgba(6,5,5,0.98)_100%)]",
-                "shadow-[0_10px_32px_-10px_rgba(0,0,0,0.72),0_0_0_1px_rgba(90,78,58,0.12)]",
-                "before:pointer-events-none before:absolute before:inset-0 before:rounded-[26px] before:bg-[radial-gradient(ellipse_75%_55%_at_50%_0%,rgba(110,98,80,0.06),transparent_58%)]",
-                "pointer-events-none select-none"
-              )}
-              aria-disabled
-            >
+            <div className="relative w-full shrink-0" aria-disabled>
+              <div
+                className={cn(
+                  "relative w-full overflow-hidden rounded-[24px] bg-[#151515]",
+                  TILE_CLASS,
+                  "opacity-[0.68]",
+                  "shadow-[0_8px_28px_-12px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)]",
+                  "pointer-events-none select-none"
+                )}
+              >
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(ellipse_88%_72%_at_50%_-8%,rgba(200,170,100,0.07),transparent_56%)]"
+                  aria-hidden
+                />
+                <div className="relative z-[1] flex h-full w-full">
+                  <GameCardInner emoji="♠️" title="Покер" subtitle="Скоро в Gastrobar" />
+                </div>
+              </div>
               <span
-                className="absolute right-3 top-3 z-10 rounded-full bg-[rgba(0,0,0,0.45)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#d4bc88]/80 backdrop-blur-[6px] sm:right-3.5 sm:top-3.5 sm:px-2.5 sm:text-[11px]"
+                className="pointer-events-none absolute right-4 top-4 z-10 rounded-full border border-[#c9a227]/28 bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#e8d5a8]/95 backdrop-blur-[6px] sm:right-5 sm:top-5 sm:text-[11px]"
                 aria-label="Скоро"
               >
                 Скоро
               </span>
-              <div className="relative z-[1]">
-                <GameTileContent
-                  emoji="♠️"
-                  title="Покер"
-                  subtitle="Скоро в Gastrobar"
-                  muted
-                />
-              </div>
             </div>
           </div>
         </div>

@@ -48,6 +48,7 @@ DECLARE
   ];
   bot_label text;
   n int;
+  has_bot boolean;
 BEGIN
   SELECT * INTO r FROM public.rooms WHERE id = p_room_id FOR UPDATE;
   IF NOT FOUND OR r.status <> 'waiting' THEN
@@ -84,16 +85,24 @@ BEGIN
     RETURN;
   END IF;
 
-  IF humans = 1 AND cnt = 1 THEN
-    bot_id := 'bot-' || p_room_id::text;
-    n := array_length(bot_names, 1);
-    bot_label := bot_names[1 + floor(random() * n)::int];
-    INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)
-    VALUES (p_room_id, bot_id, bot_label, true, 1)
-    ON CONFLICT (room_id, player_id) DO NOTHING;
+  IF humans = 1 THEN
+    SELECT EXISTS (
+      SELECT 1 FROM public.room_players
+      WHERE room_id = p_room_id AND COALESCE(is_bot, false)
+    ) INTO has_bot;
+
+    IF NOT has_bot THEN
+      bot_id := 'bot-' || p_room_id::text;
+      n := array_length(bot_names, 1);
+      bot_label := bot_names[1 + floor(random() * n)::int];
+      INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)
+      VALUES (p_room_id, bot_id, bot_label, true, 1)
+      ON CONFLICT (room_id, player_id) DO NOTHING;
+    END IF;
+
     UPDATE public.rooms
     SET status = 'playing', started_with_bot = true
-    WHERE id = p_room_id;
+    WHERE id = p_room_id AND status = 'waiting';
     RETURN;
   END IF;
 END;

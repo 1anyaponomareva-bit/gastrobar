@@ -52,6 +52,8 @@ function isProxyRateLimitError(message: string): boolean {
 
 /** Не чаще: иначе упираемся в POST-лимит /supabase-proxy на одного клиента. */
 const MATCHMAKING_RPC_MIN_INTERVAL_MS = 2200;
+/** После server search_deadline чаще дергаем finalize — партия с ботом должна стартовать сразу. */
+const MATCHMAKING_RPC_AFTER_DEADLINE_MS = 700;
 
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
@@ -92,24 +94,40 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const tick = useCallback(async () => {
     if (!supabase || !roomId) return;
     try {
+      const rFirst = await fetchRoom(supabase, roomId);
+      setRoom(rFirst);
+      if (isPlayingStatus(rFirst)) {
+        onRoomPlayingRef.current(roomId);
+        return;
+      }
+
       const players = await fetchRoomPlayers(supabase, roomId);
       const humans = players.filter((p) => !p.is_bot).length;
       setPlayerCount(humans);
 
+      let deadlineMs = NaN;
+      const rawDl = rFirst?.search_deadline;
+      if (rawDl != null) deadlineMs = Date.parse(String(rawDl));
+      const pastSearchDeadline =
+        Number.isFinite(deadlineMs) && Date.now() > deadlineMs + 750;
+
+      const rpcMinMs = pastSearchDeadline
+        ? MATCHMAKING_RPC_AFTER_DEADLINE_MS
+        : MATCHMAKING_RPC_MIN_INTERVAL_MS;
+
       const now = Date.now();
-      if (now - lastMatchmakingRpcAtRef.current >= MATCHMAKING_RPC_MIN_INTERVAL_MS) {
-        lastMatchmakingRpcAtRef.current = now;
+      if (now - lastMatchmakingRpcAtRef.current >= rpcMinMs) {
         await durakFinalizeRoomIfReady(supabase, roomId);
         if (humans >= 2) {
           await durakForceStartIfTwoHumans(supabase, roomId);
         }
+        lastMatchmakingRpcAtRef.current = Date.now();
       }
 
       const r = await fetchRoom(supabase, roomId);
       setRoom(r);
       if (isPlayingStatus(r)) {
         onRoomPlayingRef.current(roomId);
-        return;
       }
     } catch (e) {
       const msg = formatPostgrestError(e);
