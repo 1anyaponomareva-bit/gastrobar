@@ -88,7 +88,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onGameStarted, 
       }
     };
     void tick();
-    const id = window.setInterval(() => void tick(), 1000);
+    const id = window.setInterval(() => void tick(), 2200);
     return () => window.clearInterval(id);
   }, [supabase, phase, onGameStarted]);
 

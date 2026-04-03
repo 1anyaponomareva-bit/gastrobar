@@ -5,8 +5,9 @@
 
 const ALLOW_POST_BODY_BYTES = 512 * 1024;
 const WINDOW_MS = 60_000;
-const POST_MAX_PER_WINDOW = 180;
-const GET_MAX_PER_WINDOW = 400;
+/** Очередь Дурака + сохранение стола делают много POST к /rpc; 180/мин ломало матчмейкинг (2 RPC каждые ~700ms). */
+const POST_MAX_PER_WINDOW = 600;
+const GET_MAX_PER_WINDOW = 500;
 
 const postBuckets = new Map<string, number[]>();
 const getBuckets = new Map<string, number[]>();

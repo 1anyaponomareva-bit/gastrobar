@@ -46,6 +46,13 @@ function isPlayingStatus(r: RoomRow | null | undefined): boolean {
   return String(r?.status ?? "").toLowerCase() === "playing";
 }
 
+function isProxyRateLimitError(message: string): boolean {
+  return /429|PROXY_RATE_LIMIT|Too Many Requests/i.test(message);
+}
+
+/** Не чаще: иначе упираемся в POST-лимит /supabase-proxy на одного клиента. */
+const MATCHMAKING_RPC_MIN_INTERVAL_MS = 2200;
+
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +63,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const [hintIdx, setHintIdx] = useState(0);
   const onRoomPlayingRef = useRef(onRoomPlaying);
   onRoomPlayingRef.current = onRoomPlaying;
+  const lastMatchmakingRpcAtRef = useRef(0);
 
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -88,9 +96,13 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       const humans = players.filter((p) => !p.is_bot).length;
       setPlayerCount(humans);
 
-      await durakFinalizeRoomIfReady(supabase, roomId);
-      if (humans >= 2) {
-        await durakForceStartIfTwoHumans(supabase, roomId);
+      const now = Date.now();
+      if (now - lastMatchmakingRpcAtRef.current >= MATCHMAKING_RPC_MIN_INTERVAL_MS) {
+        lastMatchmakingRpcAtRef.current = now;
+        await durakFinalizeRoomIfReady(supabase, roomId);
+        if (humans >= 2) {
+          await durakForceStartIfTwoHumans(supabase, roomId);
+        }
       }
 
       const r = await fetchRoom(supabase, roomId);
@@ -100,8 +112,13 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         return;
       }
     } catch (e) {
+      const msg = formatPostgrestError(e);
+      if (isProxyRateLimitError(msg)) {
+        console.warn("[durak] matchmaking: proxy rate limit, retry later");
+        return;
+      }
       console.error(e);
-      setError(formatPostgrestError(e));
+      setError(msg);
     }
   }, [supabase, roomId]);
 
@@ -114,6 +131,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         const j = await durakJoinQueue(supabase, pid, playerName);
         if (cancelled) return;
         setRoomId(j.roomId);
+        lastMatchmakingRpcAtRef.current = Date.now();
         await durakFinalizeRoomIfReady(supabase, j.roomId);
         let players = await fetchRoomPlayers(supabase, j.roomId);
         let humans = players.filter((p) => !p.is_bot).length;
@@ -149,7 +167,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     /* Без Realtime/WebSocket: в части браузеров wss даёт TypeError: Load failed. */
     const interval = window.setInterval(() => {
       void tick();
-    }, 700);
+    }, 1000);
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.clearInterval(interval);
