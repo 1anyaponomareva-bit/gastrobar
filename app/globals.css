@@ -234,47 +234,49 @@ html[data-durak-route="1"] body {
 /* /games — выбор игры (не путать с .game-card = спрайт карты в дураке) */
 .games-pick-card {
   position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 160px;
   border-radius: 24px;
   overflow: hidden;
-  background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
-}
-
-.games-pick-card__content {
-  display: flex;
-  height: 100%;
-  min-height: 160px;
-}
-
-.games-pick-card__text {
-  width: 55%;
-  padding: 24px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  background: #111;
 }
 
 .games-pick-card__image {
   width: 45%;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 160px;
   background-size: cover;
   background-position: center;
   position: relative;
-  flex-shrink: 0;
   overflow: hidden;
   transition: transform 0.4s ease;
 }
 
+/* Плавный уход фото в текстовую зону (без «шва» между колонками) */
 .games-pick-card__image::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    to left,
+    to right,
     rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0.6) 60%,
+    rgba(0, 0, 0, 0.4) 50%,
     rgba(0, 0, 0, 0.9) 100%
   );
   pointer-events: none;
+}
+
+.games-pick-card__text {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+  background: #111;
 }
 
 .games-pick-card--durak .games-pick-card__image {
