@@ -17,6 +17,11 @@ import {
 } from "@/lib/durak/online/matchmaking";
 import type { PublicFriendTableRow, RoomPlayerRow, RoomRow } from "@/lib/durak/online/types";
 import { DurakOnlineMatchmaking } from "@/components/durak/DurakOnlineMatchmaking";
+import {
+  randomDrinkTableNameUnique,
+  tableNameKeysFromPublicRows,
+  uniqueFriendTableName,
+} from "@/lib/durak/friendTableNames";
 import { cn } from "@/lib/utils";
 
 type Phase =
@@ -42,7 +47,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   const [busy, setBusy] = useState(false);
   const [inviteDone, setInviteDone] = useState(false);
 
-  const [createName, setCreateName] = useState("Наш стол");
+  const [createName, setCreateName] = useState("");
   const [createMax, setCreateMax] = useState(4);
   const [tables, setTables] = useState<PublicFriendTableRow[]>([]);
   const [lobbyRoom, setLobbyRoom] = useState<RoomRow | null>(null);
@@ -76,6 +81,25 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     const id = window.setInterval(() => void loadTables(), 2000);
     return () => window.clearInterval(id);
   }, [supabase, phase.k, loadTables]);
+
+  /** Первый заход на экран создания: подставляем свободное «барное» имя, если поле пустое. */
+  useEffect(() => {
+    if (!supabase || phase.k !== "create") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchPublicFriendTables(supabase);
+        if (cancelled) return;
+        const taken = tableNameKeysFromPublicRows(rows);
+        setCreateName((prev) => (prev.trim() ? prev : randomDrinkTableNameUnique(taken)));
+      } catch {
+        if (!cancelled) setCreateName((prev) => (prev.trim() ? prev : randomDrinkTableNameUnique(new Set())));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, phase.k]);
 
   useEffect(() => {
     if (phase.k !== "lobby" || !supabase) return;
@@ -133,11 +157,18 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
 
   const onCreateTable = async () => {
     if (!supabase) return;
+    const raw = createName.trim();
+    if (!raw) {
+      setError("Придумайте название стола или нажмите «Другое название».");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const pid = getOrCreateDurakPlayerId();
-      const name = createName.trim() || "Стол";
+      const rows = await fetchPublicFriendTables(supabase);
+      const taken = tableNameKeysFromPublicRows(rows);
+      const name = uniqueFriendTableName(raw, taken);
       const { roomId, joinCode } = await durakCreateFriendRoom(
         supabase,
         pid,
@@ -145,6 +176,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
         name,
         createMax
       );
+      setCreateName(name);
       setPhase({
         k: "lobby",
         roomId,
@@ -156,6 +188,17 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
       setError(formatPostgrestError(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onSuggestTableName = async () => {
+    if (!supabase) return;
+    setError(null);
+    try {
+      const rows = await fetchPublicFriendTables(supabase);
+      setCreateName(randomDrinkTableNameUnique(tableNameKeysFromPublicRows(rows)));
+    } catch {
+      setCreateName(randomDrinkTableNameUnique(new Set()));
     }
   };
 
@@ -319,14 +362,25 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           </button>
           <h1 className="text-xl font-semibold text-white">Новый стол</h1>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-white/55">Название</span>
+            <span className="text-xs font-medium text-white/55">Название стола</span>
+            <p className="text-[11px] text-white/40">
+              Видно в списке лобби. Если такое имя уже есть, подставим другое (например с хвостиком).
+            </p>
             <input
               value={createName}
               onChange={(e) => setCreateName(e.target.value.slice(0, 40))}
               className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-[#f8d66d]/55"
-              placeholder="Например: Вечерний дурак"
+              placeholder="Например: По пиву · мохито"
+              autoComplete="off"
             />
           </label>
+          <button
+            type="button"
+            onClick={() => void onSuggestTableName()}
+            className="w-full rounded-xl border border-white/14 bg-white/[0.04] py-2.5 text-sm text-white/80 transition hover:border-white/25 hover:bg-white/[0.07]"
+          >
+            Другое название
+          </button>
           <div className="space-y-2">
             <span className="text-xs font-medium text-white/55">Сколько мест за столом</span>
             <p className="text-[11px] text-white/40">От 2 до 6 игроков</p>
@@ -350,7 +404,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           </div>
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || !createName.trim()}
             onClick={onCreateTable}
             className="mt-2 w-full rounded-full bg-[#f8d66d] py-3.5 text-sm font-semibold text-[#1a1612] shadow-lg hover:brightness-105 disabled:opacity-45"
           >
@@ -427,6 +481,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               type="button"
               onClick={() => {
                 setError(null);
+                setCreateName("");
                 setPhase({ k: "create" });
               }}
               className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09]"
