@@ -373,14 +373,15 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               placeholder="Например: По пиву · мохито"
               autoComplete="off"
             />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onSuggestTableName()}
+              className="mt-1 w-fit max-w-full py-0.5 text-left text-[12px] font-medium text-[#f8d66d]/75 transition hover:text-[#f8d66d] disabled:opacity-40"
+            >
+              Сгенерировать другое название
+            </button>
           </label>
-          <button
-            type="button"
-            onClick={() => void onSuggestTableName()}
-            className="w-full rounded-xl border border-white/14 bg-white/[0.04] py-2.5 text-sm text-white/80 transition hover:border-white/25 hover:bg-white/[0.07]"
-          >
-            Другое название
-          </button>
           <div className="space-y-2">
             <span className="text-xs font-medium text-white/55">Сколько мест за столом</span>
             <p className="text-[11px] text-white/40">От 2 до 6 игроков</p>

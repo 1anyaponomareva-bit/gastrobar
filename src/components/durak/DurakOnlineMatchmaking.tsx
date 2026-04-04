@@ -98,7 +98,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   const onRoomPlayingRef = useRef(onRoomPlaying);
   onRoomPlayingRef.current = onRoomPlaying;
   const lastMatchmakingRpcAtRef = useRef(0);
-  /** Клиентский ориентир (~15 с окна + запас), если search_deadline с API не парсится или зона времени багает. */
+  /** Клиентский ориентир (~10 с окна + запас), если search_deadline с API не парсится или зона времени багает. */
   const matchmakingSinceRef = useRef<number | null>(null);
 
   const screenState = useMemo<"connecting" | "error" | "searching">(() => {
@@ -194,7 +194,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       if (rawDl != null) deadlineMs = Date.parse(String(rawDl));
       const since = matchmakingSinceRef.current;
       const clientAssumeDeadlinePassed =
-        since != null && Date.now() - since > 17_500;
+        since != null && Date.now() - since > 12_500;
       const pastSearchDeadline =
         (Number.isFinite(deadlineMs) && Date.now() > deadlineMs + 750) ||
         clientAssumeDeadlinePassed;

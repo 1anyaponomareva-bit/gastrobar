@@ -187,7 +187,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot)
-  VALUES ('waiting', 2, now() + interval '15 seconds', false)
+  VALUES ('waiting', 2, now() + interval '10 seconds', false)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)
