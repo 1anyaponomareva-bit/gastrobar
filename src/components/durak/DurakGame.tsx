@@ -69,6 +69,13 @@ import {
   isRoomPlayerLikelyGone,
 } from "@/lib/durak/online/matchmaking";
 import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
+import {
+  fanContainerRotationDeg,
+  getOpponentSeatAnglesDeg,
+  opponentFanLayoutMults,
+  opponentTableFanStyle,
+  seatOffsetOnCircle,
+} from "@/lib/durak/tableSeatLayout";
 
 const HUMAN_ID = "human";
 
@@ -258,99 +265,10 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
   return out;
 }
 
-function normalizeAngleDeg180(a: number): number {
-  let x = a;
-  while (x > 180) x -= 360;
-  while (x < -180) x += 360;
-  return x;
-}
-
-/**
- * Рассадка по окружности сукна: равные промежутки на доступной дуге, центр дуги — верх стола (-90°).
- * Снизу вырез под локального игрока (рука внизу экрана). Угол: nx=cos, ny=sin, -90° = 12ч.
- * `fanTowardCenterDeg` — поворот веера к центру сукна.
- */
-function opponentSeatPolarMeta(
-  count: number,
-  index: number
-): { angleDeg: number; fanTowardCenterDeg: number } {
-  const k = Math.min(5, Math.max(1, count));
-  const i = Math.min(index, k - 1);
-
-  const bottomDeg = 90;
-  const gapHalfDeg = 40;
-  const gapStart = bottomDeg - gapHalfDeg;
-  const gapEnd = bottomDeg + gapHalfDeg;
-  const available = 360 - (gapEnd - gapStart);
-  const step = available / k;
-  const halfSpan = available / 2;
-  const topDeg = -90;
-  let angleDeg = topDeg - halfSpan + step * (i + 0.5);
-  angleDeg = normalizeAngleDeg180(angleDeg);
-  /* «Запретная» дуга у низа (редкий край при большом k) — сдвиг на полшага */
-  if (angleDeg >= gapStart && angleDeg <= gapEnd) {
-    angleDeg = normalizeAngleDeg180(angleDeg + (i % 2 === 0 ? 1 : -1) * (step * 0.5 + 2));
-  }
-
-  const rad = (angleDeg * Math.PI) / 180;
-  const nx = Math.cos(rad);
-  const ny = Math.sin(rad);
-  const toCenterDeg = (Math.atan2(-ny, -nx) * 180) / Math.PI;
-  let fanTowardCenterDeg = toCenterDeg - 90;
-  fanTowardCenterDeg = normalizeAngleDeg180(fanTowardCenterDeg);
-
-  return { angleDeg, fanTowardCenterDeg };
-}
-
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 /** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
-
-/** Направление и смещение в px на окружности радиуса `orbitPx` (сукно ≈ 0.48 × ширина круга). */
-function opponentSeatOffsets(
-  angleDeg: number,
-  orbitPx: number
-): { ox: number; oy: number; nx: number; ny: number } {
-  const r = Math.max(1, orbitPx);
-  const rad = (angleDeg * Math.PI) / 180;
-  const nx = Math.cos(rad);
-  const ny = Math.sin(rad);
-  return { ox: nx * r, oy: ny * r, nx, ny };
-}
-
-/**
- * Веер рубашек соперника: центр ниже, симметричный разворот, без «забора» из почти вертикальных карт.
- */
-function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
-  if (n <= 0) return {};
-  const mid = (n - 1) / 2;
-  const rel = i - mid;
-  if (n <= 1) {
-    return {
-      left: "50%",
-      bottom: 0,
-      transform: "translate(-50%, 0)",
-      transformOrigin: "bottom center",
-      zIndex: 20,
-    };
-  }
-  const denom = Math.max(mid, 1e-6);
-  /* Компактный веер: центральная карта доминирует, краёв без «палок». */
-  const edgeMaxDeg = Math.min(20, 7 + n * 1.65);
-  const rot = (rel / denom) * edgeMaxDeg;
-  const stepPx = Math.min(16, Math.max(8, 92 / Math.max(n - 1, 1)));
-  const tx = rel * stepPx;
-  const arc = Math.abs(rel) * 0.38;
-  const zFromCenter = Math.round(4 * (mid - Math.abs(rel)));
-  return {
-    left: "50%",
-    bottom: 0,
-    transform: `translate(calc(-50% + ${tx}px), ${-arc}px) rotate(${rot}deg)`,
-    transformOrigin: "bottom center",
-    zIndex: 16 + zFromCenter + i,
-  };
-}
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -1079,6 +997,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     () => (game ? opponentsClockwiseFromLocal(game, localPlayerId) : []),
     [game, localPlayerId]
   );
+  const opponentSeatAnglesDeg = useMemo(
+    () => getOpponentSeatAnglesDeg(opponents.length),
+    [opponents.length],
+  );
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1713,43 +1635,63 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
-            const seatMeta = opponentSeatPolarMeta(opponents.length, oi);
+            const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+            const mults = opponentFanLayoutMults(opponents.length);
             const handRadius =
-              opponentOrbitPx + (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
-            const { ox: handOx, oy: handOy } = opponentSeatOffsets(seatMeta.angleDeg, handRadius);
-            const fanDeg = embedded ? seatMeta.fanTowardCenterDeg * 0.28 : seatMeta.fanTowardCenterDeg * 0.92;
+              opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
+              (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
+            const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
+            const fanRot = fanContainerRotationDeg(angleDeg);
+            const labelRadialPx =
+              opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
+            const inwardPadPx = 8 + Math.min(6, opponents.length);
+            const fanAx = rimOx - nx * inwardPadPx;
+            const fanAy = rimOy - ny * inwardPadPx;
+            const lx = rimOx + nx * labelRadialPx;
+            const ly = rimOy + ny * labelRadialPx;
             return (
               <div
                 key={opp.id}
                 className={cn(
                   "pointer-events-none absolute inset-0 overflow-visible",
-                  embedded ? "z-[5] opacity-100" : "z-[8] opacity-100"
+                  embedded ? "z-[5] opacity-100" : "z-[8] opacity-100",
                 )}
               >
                 <div
-                  className="pointer-events-none absolute flex w-[min(96vw,17.5rem)] max-w-[96%] flex-row items-end justify-center gap-2 sm:w-[min(94vw,18rem)]"
+                  className="pointer-events-none absolute z-[12] max-w-[min(9.5rem,24vw)] text-center"
                   style={{
-                    left: `calc(50% + ${handOx}px)`,
-                    top: `calc(50% + ${handOy}px)`,
+                    left: `calc(50% + ${lx}px)`,
+                    top: `calc(50% + ${ly}px)`,
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  {/* Как у нижнего игрока: подпись слева, зона руки справа */}
-                  <div className="min-w-0 max-w-[42%] shrink-0 pb-1.5 text-left">
-                    <p className="max-w-full truncate text-[13px] font-medium leading-tight text-white/90">
-                      {opp.name}
-                    </p>
-                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
-                  </div>
+                  <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                    {opp.name}
+                  </p>
+                  <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
+                </div>
+                <div
+                  className="pointer-events-none absolute z-[11]"
+                  style={{
+                    left: `calc(50% + ${fanAx}px)`,
+                    top: `calc(50% + ${fanAy}px)`,
+                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale})`,
+                    transformOrigin: "center center",
+                  }}
+                >
                   <div
-                    className="relative flex h-[min(5.25rem,27vw)] min-w-0 flex-1 items-end justify-center overflow-visible sm:h-[min(5.85rem,24vw)]"
+                    className="relative flex items-end justify-center overflow-visible"
                     style={{
-                      transform: `rotate(${fanDeg}deg)`,
-                      transformOrigin: "center bottom",
+                      height: `min(${mults.handHeightRem}rem, 28vw)`,
+                      width: `min(${mults.handWidthRem}rem, 44vw)`,
                     }}
                   >
                     {bh.map((c, i) => (
-                      <div key={c.id} className="absolute" style={opponentTableFanStyle(bh.length, i)}>
+                      <div
+                        key={c.id}
+                        className="absolute"
+                        style={opponentTableFanStyle(bh.length, i, mults)}
+                      >
                         <motion.div
                           className="[transform:translateZ(0)]"
                           initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
@@ -1980,8 +1922,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           embedded
             ? "pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] sm:pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+6rem))]"
             : "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))]",
-          embedded && "shadow-none"
+          embedded && "shadow-none",
         )}
+        style={
+          opponents.length > 0 && orbitPxEff > 20
+            ? {
+                marginTop: `-${Math.min(32, Math.round(orbitPxEff * 0.088))}px`,
+              }
+            : undefined
+        }
       >
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
