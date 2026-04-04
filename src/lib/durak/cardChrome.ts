@@ -14,8 +14,8 @@ export const DURAK_CARD_SURFACE_CLASS: Record<DurakCardSurface, string> = {
   opponent: "enemy-card",
 };
 
-/** Клип растра (не подсветка); ::after на корне .game-card / .table-card и т.д. */
-export const DURAK_CARD_MEDIA_CLASS = "durak-card-media";
+/** Клип растра внутри CardSprite = «card-inner» в DOM: .game-card/.table-card → .durak-card-media → img */
+export const DURAK_CARD_MEDIA_CLASS = "durak-card-media durak-card-inner";
 
 /** Карты на сукне (рядом с .table-card с тем же surface) — отдельные хуки для радиуса в globals */
 export const DURAK_ATTACK_CARD_CLASS = "attack-card";

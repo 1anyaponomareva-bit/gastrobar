@@ -469,6 +469,7 @@ function CardSprite({
 
   const resolvedSurface: DurakCardSurface = surface ?? (size === "hand" ? "hand" : "table");
   const surfaceClass = DURAK_CARD_SURFACE_CLASS[resolvedSurface];
+  const isTableSurface = resolvedSurface === "table";
 
   const wrap = cn(
     surfaceClass,
@@ -502,7 +503,7 @@ function CardSprite({
           e.stopPropagation();
           if (!disabled) onPress();
         }}
-        whileTap={disabled ? undefined : { scale: 0.94 }}
+        whileTap={disabled || isTableSurface ? undefined : { scale: 0.98 }}
       >
         {shell}
       </motion.button>
@@ -1835,8 +1836,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             <motion.div
                               key={`def-${tp.defense.id}`}
                               className="origin-bottom"
-                              initial={{ opacity: 0, x: 4, y: 4, scale: 0.97 }}
-                              animate={{ opacity: 1, x: 10, y: 9, scale: 1 }}
+                              initial={{ opacity: 0, x: 4, y: 4 }}
+                              animate={{ opacity: 1, x: 10, y: 9 }}
                               transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
                             >
                               <CardSprite
