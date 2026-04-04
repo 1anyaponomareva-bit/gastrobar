@@ -74,7 +74,20 @@ export function botChooseTossForPlayer(
   return { type: "pass" };
 }
 
-export function botChooseTossOrBeat(table: GameTable): { type: "toss"; ids: string[] } | { type: "beat" } {
+export function botChooseTossOrBeat(
+  table: GameTable,
+): { type: "toss"; ids: string[] } | { type: "beat" } | { type: "noop" } {
+  if (table.players.length >= 3) {
+    for (const idx of engine.attackingSeatOrder(table)) {
+      if (idx === table.attackerIndex) continue;
+      const peer = botChooseTossForPlayer(table, idx);
+      if (peer.type === "toss") {
+        const selfToss = botChooseTossForPlayer(table, table.attackerIndex);
+        if (selfToss.type === "toss") return selfToss;
+        return { type: "noop" };
+      }
+    }
+  }
   const r = botChooseTossForPlayer(table, table.attackerIndex);
   if (r.type === "toss") return r;
   return { type: "beat" };
@@ -119,6 +132,7 @@ export function applyBotMove(table: GameTable): GameTable | null {
     const att = table.players[table.attackerIndex];
     if (att?.type === "bot") {
       const choice = botChooseTossOrBeat(table);
+      if (choice.type === "noop") return null;
       if (choice.type === "beat") {
         if (table.phase === "player_can_throw_more") {
           const def = table.players[table.defenderIndex];

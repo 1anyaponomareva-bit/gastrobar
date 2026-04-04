@@ -41,9 +41,34 @@ export function chooseTossForSeat(table: GameTable, playerIndex: number): { type
   return { type: "pass" };
 }
 
-function chooseTossOrBeatForAttacker(table: GameTable, attackerId: string): { type: "toss"; ids: string[] } | { type: "beat" } {
+/** Первое место в `attackingSeatOrder`, которое должно подкинуть (3+ игроков). При дуэли — null. */
+export function firstSeatThatMustThrow(table: GameTable): number | null {
+  if (table.players.length < 3) return null;
+  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return null;
+  const eligible = new Set(engine.eligibleThrowInSeatIndices(table));
+  if (eligible.size === 0) return null;
+  for (const idx of engine.attackingSeatOrder(table)) {
+    if (eligible.has(idx)) return idx;
+  }
+  return null;
+}
+
+function chooseTossOrBeatForAttacker(
+  table: GameTable,
+  attackerId: string,
+): { type: "toss"; ids: string[] } | { type: "beat" } | { type: "noop" } {
   const att = table.players[table.attackerIndex];
-  if (!att || att.id !== attackerId) return { type: "beat" };
+  if (!att || att.id !== attackerId) return { type: "noop" };
+  if (table.players.length >= 3) {
+    for (const idx of engine.attackingSeatOrder(table)) {
+      if (idx === table.defenderIndex || idx === table.attackerIndex) continue;
+      if (chooseTossForSeat(table, idx).type === "toss") {
+        const selfToss = chooseTossForSeat(table, table.attackerIndex);
+        if (selfToss.type === "toss") return selfToss;
+        return { type: "noop" };
+      }
+    }
+  }
   const r = chooseTossForSeat(table, table.attackerIndex);
   if (r.type === "toss") return r;
   return { type: "beat" };
@@ -100,6 +125,7 @@ export function tryAutoMove(table: GameTable, playerId: string): GameTable | nul
   const att = table.players[table.attackerIndex];
   if (att?.id === playerId) {
     const choice = chooseTossOrBeatForAttacker(table, playerId);
+    if (choice.type === "noop") return null;
     if (choice.type === "beat") {
       if (table.phase === "player_can_throw_more") {
         const def = table.players[table.defenderIndex];
@@ -223,11 +249,21 @@ export function localPlayerMustActOnline(table: GameTable, localId: string): boo
   if (table.phase === "defend") return selfIsDefender;
   if (table.phase === "attack_toss") {
     if (selfIsDefender) return false;
+    if (table.players.length >= 3) {
+      const tossFirst = firstSeatThatMustThrow(table);
+      if (tossFirst != null) return selfIdx === tossFirst;
+      return selfIsAttacker;
+    }
     if (selfIsAttacker) return true;
     return hasValidToss;
   }
   if (table.phase === "player_can_throw_more") {
     if (selfIsDefender) return false;
+    if (table.players.length >= 3) {
+      const tossFirst = firstSeatThatMustThrow(table);
+      if (tossFirst != null) return selfIdx === tossFirst;
+      return !selfIsDefender;
+    }
     return hasValidToss || selfShowBito;
   }
   return false;

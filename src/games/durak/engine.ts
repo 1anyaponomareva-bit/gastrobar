@@ -57,6 +57,28 @@ export function attackingSeatOrder(table: GameTable): number[] {
   return out;
 }
 
+/**
+ * Все сиденья (кроме защитника), у которых есть легальный подкид в фазе подкидывания.
+ * Не включает проверку очередности — только «есть карта под ранг на столе и лимит не превышен».
+ */
+export function eligibleThrowInSeatIndices(table: GameTable): number[] {
+  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return [];
+  const ranksOnTable = new Set<Rank>();
+  for (const tp of table.tablePairs) {
+    ranksOnTable.add(tp.attack.rank);
+    if (tp.defense) ranksOnTable.add(tp.defense.rank);
+  }
+  const remaining = table.roundDefenderInitialHand - table.tablePairs.length;
+  if (remaining <= 0) return [];
+  const out: number[] = [];
+  for (let i = 0; i < table.players.length; i++) {
+    if (i === table.defenderIndex) continue;
+    const hand = table.players[i]?.hand ?? [];
+    if (hand.some((c) => ranksOnTable.has(c.rank))) out.push(i);
+  }
+  return out;
+}
+
 export function drawCardsFromDeck(table: GameTable, firstIndex: number): GameTable {
   const players = table.players.map((p) => ({ ...p, hand: [...p.hand] }));
   const deck = [...table.deck];
