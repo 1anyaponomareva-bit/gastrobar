@@ -9,8 +9,8 @@
   --theme-muted: rgba(255, 255, 255, 0.08);
   --theme-text: #f5f5f5;
   --theme-text-muted: #a3a3a3;
-  /* Дурак: скругление всех карт (рука, стол, колода, козырь, соперник) */
-  --card-radius: 10px;
+  /* Дурак: единый радиус для всех карт (рука, стол, колода, соперник, козырь) */
+  --card-radius: 8px;
 }
 
 [data-period="lunch"] {
@@ -89,15 +89,34 @@ html[data-durak-route="1"] body {
   transform: scale(1.03);
 }
 
-/* Дурак: подсветка по контуру карты (inset: 0), тот же border-radius, что у карты */
+/* Дурак: подсветка только ::after на корне карты; inset — по контуру, без внешнего glow в веере */
 .game-card,
 .table-card,
 .deck-card,
 .trump-card,
 .enemy-card {
   position: relative;
+  isolation: isolate;
   border-radius: var(--card-radius);
   overflow: visible;
+  padding: 0;
+  margin: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.durak-card-media {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  background: transparent;
 }
 
 .game-card img,
@@ -105,6 +124,8 @@ html[data-durak-route="1"] body {
 .deck-card img,
 .trump-card img,
 .enemy-card img,
+.durak-card-media img,
+.durak-card-face-img,
 .game-card .game-card__face,
 .table-card .game-card__face,
 .deck-card .game-card__face,
@@ -128,49 +149,31 @@ html[data-durak-route="1"] body {
   border-radius: inherit;
   pointer-events: none;
   opacity: 0;
-  z-index: 3;
+  z-index: 2;
   transition:
-    opacity 0.2s ease,
-    box-shadow 0.2s ease;
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.game-card.is-playable::after {
+.game-card.is-playable:not(.is-selected)::after {
   opacity: 1;
-  box-shadow:
-    0 0 0 2px #43bfff,
-    0 0 10px rgba(67, 191, 255, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(67, 191, 255, 0.92);
 }
 
-.game-card.is-selected::after,
+.game-card.is-selected::after {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px rgba(255, 213, 74, 0.95);
+}
+
+.table-card.is-throwable:not(.is-selected)::after,
+.table-card.is-targetable:not(.is-selected)::after {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px rgba(183, 255, 215, 0.88);
+}
+
 .table-card.is-selected::after {
   opacity: 1;
-  box-shadow:
-    0 0 0 2px #ffd54a,
-    0 0 10px rgba(255, 213, 74, 0.35);
-}
-
-.game-card.is-playable.is-selected::after {
-  opacity: 1;
-  box-shadow:
-    0 0 0 2px #ffd54a,
-    0 0 10px rgba(255, 213, 74, 0.35);
-}
-
-.table-card.is-throwable::after,
-.table-card.is-targetable::after {
-  opacity: 1;
-  box-shadow:
-    0 0 0 2px #b7ffd7,
-    0 0 10px rgba(183, 255, 215, 0.3);
-}
-
-/* Приоритет: выбранная карта на столе */
-.table-card.is-selected.is-targetable::after,
-.table-card.is-selected.is-throwable::after {
-  opacity: 1;
-  box-shadow:
-    0 0 0 2px #ffd54a,
-    0 0 10px rgba(255, 213, 74, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(255, 213, 74, 0.95);
 }
 
 .game-card.is-playable,
@@ -178,7 +181,7 @@ html[data-durak-route="1"] body {
 .table-card.is-throwable,
 .table-card.is-targetable,
 .table-card.is-selected {
-  z-index: 20;
+  z-index: 25;
 }
 
 .player-hand,
@@ -188,10 +191,8 @@ html[data-durak-route="1"] body {
   overflow: visible;
 }
 
-.game-card-inner {
-  border-radius: var(--card-radius);
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
-  background: transparent;
+/* Веер: поднять слот с подсветкой над соседями (z-index у .game-card внутри не выходит из слота) */
+.player-hand .absolute:has(.game-card.is-playable),
+.player-hand .absolute:has(.game-card.is-selected) {
+  z-index: 36 !important;
 }

@@ -52,7 +52,7 @@ import {
 import {
   CARD_RADIUS_CLASS,
   DURAK_CARD_SURFACE_CLASS,
-  GAME_CARD_INNER_CLASS,
+  DURAK_CARD_MEDIA_CLASS,
   GAME_CARD_IS_PLAYABLE_CLASS,
   GAME_CARD_IS_SELECTED_CLASS,
   GAME_CARD_IS_THROWABLE_CLASS,
@@ -406,33 +406,26 @@ function BrandedCardBack({
   const [src, setSrc] = useState(CARD_BACK_PNG_PATH);
 
   return (
-    <div
+    <img
+      src={src}
+      alt=""
+      draggable={false}
       className={cn(
-        "relative h-full w-full select-none bg-transparent",
-        CARD_RADIUS_CLASS,
+        "durak-card-face-img pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent select-none",
+        "object-cover object-center",
         disabled && "opacity-[0.42]",
         className
       )}
-    >
-      <img
-        src={src}
-        alt=""
-        draggable={false}
-        className={cn(
-          "pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent",
-          "object-cover object-center [border-radius:inherit]"
-        )}
-        loading="eager"
-        decoding="async"
-        style={{
-          filter: "none",
-          mixBlendMode: "normal",
-          WebkitBackfaceVisibility: "hidden",
-          backfaceVisibility: "hidden",
-        }}
-        onError={() => setSrc(CARD_BACK_URL)}
-      />
-    </div>
+      loading="eager"
+      decoding="async"
+      style={{
+        filter: "none",
+        mixBlendMode: "normal",
+        WebkitBackfaceVisibility: "hidden",
+        backfaceVisibility: "hidden",
+      }}
+      onError={() => setSrc(CARD_BACK_URL)}
+    />
   );
 }
 
@@ -494,7 +487,7 @@ function CardSprite({
     />
   );
 
-  const shell = <div className={GAME_CARD_INNER_CLASS}>{inner}</div>;
+  const shell = <div className={DURAK_CARD_MEDIA_CLASS}>{inner}</div>;
 
   if (onPress) {
     return (
@@ -515,7 +508,11 @@ function CardSprite({
   }
 
   return (
-    <motion.div layout={false} style={wrapStyle} className={wrap}>
+    <motion.div
+      layout={false}
+      style={wrapStyle}
+      className={cn(wrap, "m-0 shadow-none ring-0 outline-none")}
+    >
       {shell}
     </motion.div>
   );
@@ -581,7 +578,7 @@ function DeckPile({
         card={trumpCard}
         size={size}
         surface="trump"
-        className="shadow-[0_6px_14px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.35)]"
+        className="shadow-[0_6px_14px_rgba(0,0,0,0.4)]"
       />
     ) : (
       <div
@@ -590,7 +587,7 @@ function DeckPile({
           "relative flex shrink-0 items-center justify-center overflow-hidden",
           CARD_RADIUS_CLASS,
           deckBox,
-          "bg-gradient-to-b from-white via-white to-neutral-100 shadow-[0_6px_14px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.35)]"
+          "bg-gradient-to-b from-white via-white to-neutral-100 shadow-[0_6px_14px_rgba(0,0,0,0.4)]"
         )}
       >
         <span
@@ -1607,7 +1604,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
           ? "flex-1 basis-0 min-h-0 overflow-y-auto overflow-x-visible pb-0"
-          : "min-h-0 flex-1 overflow-hidden",
+          : "min-h-0 flex-1 overflow-x-visible overflow-y-auto",
         /* Снизу: для офлайна — общий отступ; для встроенного онлайн нижний зазор только у секции руки (иначе двойной pb). */
         !embedded &&
           "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+5.85rem))]"

@@ -1,5 +1,5 @@
 /**
- * Скругление = var(--card-radius) из app/globals.css (:root 10px).
+ * Скругление только `var(--card-radius)` из app/globals.css (одинаково для руки, стола, колоды, козыря, соперника).
  * Подсветка: .game-card / .table-card ::after в globals.
  */
 export const CARD_RADIUS_CLASS = "rounded-[var(--card-radius)]";
@@ -14,8 +14,8 @@ export const DURAK_CARD_SURFACE_CLASS: Record<DurakCardSurface, string> = {
   opponent: "enemy-card",
 };
 
-/** Клип лица / рубашки */
-export const GAME_CARD_INNER_CLASS = "game-card-inner";
+/** Клип растра (не подсветка); ::after на корне .game-card / .table-card и т.д. */
+export const DURAK_CARD_MEDIA_CLASS = "durak-card-media";
 
 export const GAME_CARD_IS_PLAYABLE_CLASS = "is-playable";
 export const GAME_CARD_IS_SELECTED_CLASS = "is-selected";

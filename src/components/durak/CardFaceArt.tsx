@@ -102,8 +102,7 @@ function CardFaceArtFallback({
         <span
           className={cn(
             "select-none font-semibold leading-none",
-            compact ? "text-[1.02rem] sm:text-[1.12rem]" : "text-[1.65rem] sm:text-[1.9rem]",
-            color
+            compact ? "text-[1.02rem] sm:text-[1.12rem]" : "text-[1.65rem] sm:text-[1.9rem]"
           )}
           aria-hidden
         >
@@ -135,27 +134,19 @@ export function CardFaceArt({
   }
 
   return (
-    <div
+    <img
+      src={src}
+      alt=""
+      draggable={false}
       className={cn(
-        GAME_CARD_FACE_CLASS,
-        "pointer-events-none relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent",
-        CARD_RADIUS_CLASS,
+        "durak-card-face-img pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent",
+        "object-cover object-center",
         className
       )}
-    >
-      <img
-        src={src}
-        alt=""
-        draggable={false}
-        className={cn(
-          "block h-full w-full max-h-full max-w-full bg-transparent",
-          "object-cover object-center [border-radius:inherit]"
-        )}
-        loading="eager"
-        decoding="async"
-        fetchPriority="high"
-        onError={() => setUseFallback(true)}
-      />
-    </div>
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
+      onError={() => setUseFallback(true)}
+    />
   );
 }
