@@ -30,6 +30,7 @@ import {
 import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
+import { getDurakTableLayoutMode } from "@/components/durak/durakLayoutConstants";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
@@ -1001,6 +1002,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     () => getOpponentSeatAnglesDeg(opponents.length),
     [opponents.length],
   );
+  const tableLayoutMode = game
+    ? getDurakTableLayoutMode(game.players.length)
+    : "multi";
+  /** Дуэль (2 игрока): legacy-раскладка; правки для 3+ — только при `tableLayoutMode === "multi"`. */
+  const isDuelLayout = tableLayoutMode === "duel_legacy";
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1657,19 +1663,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   embedded ? "z-[5] opacity-100" : "z-[8] opacity-100",
                 )}
               >
-                <div
-                  className="pointer-events-none absolute z-[12] max-w-[min(9.5rem,24vw)] text-center"
-                  style={{
-                    left: `calc(50% + ${lx}px)`,
-                    top: `calc(50% + ${ly}px)`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                    {opp.name}
-                  </p>
-                  <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
-                </div>
+                {!isDuelLayout ? (
+                  <div
+                    className="pointer-events-none absolute z-[12] max-w-[min(9.5rem,24vw)] text-center"
+                    style={{
+                      left: `calc(50% + ${lx}px)`,
+                      top: `calc(50% + ${ly}px)`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  >
+                    <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                      {opp.name?.trim() || "Соперник"}
+                    </p>
+                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
+                  </div>
+                ) : null}
                 <div
                   className="pointer-events-none absolute z-[11]"
                   style={{
@@ -1814,6 +1822,41 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               ) : null}
             </div>
           </div>
+
+          {/* Дуэль: подпись соперника поверх зоны боя (z-35), иначе имя закрывают карты стола. 3+ — без изменений. */}
+          {isDuelLayout && opponents[0] ? (
+            <div className="pointer-events-none absolute inset-0 z-[40] overflow-visible">
+              {(() => {
+                const opp = opponents[0]!;
+                const bh = opp.hand;
+                const angleDeg = opponentSeatAnglesDeg[0] ?? -90;
+                const handRadius =
+                  opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
+                  (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
+                const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
+                const labelRadialPx =
+                  opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
+                const lx = rimOx + nx * labelRadialPx;
+                const ly = rimOy + ny * labelRadialPx;
+                const displayName = opp.name?.trim() || "Соперник";
+                return (
+                  <div
+                    className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
+                    style={{
+                      left: `calc(50% + ${lx}px)`,
+                      top: `calc(50% + ${ly}px)`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  >
+                    <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                      {displayName}
+                    </p>
+                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : null}
 
         </div>
       </div>
