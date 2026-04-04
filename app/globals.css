@@ -231,64 +231,67 @@ html[data-durak-route="1"] body {
   z-index: 36 !important;
 }
 
-/* /games — выбор игры (не путать с .game-card = спрайт карты в дураке) */
+/* /games — одна цельная карточка: фон + overlay + текст (не путать с .game-card дурака) */
 .games-pick-card {
   position: relative;
-  display: flex;
-  align-items: stretch;
-  min-height: 160px;
   border-radius: 24px;
   overflow: hidden;
   background: #111;
+  min-height: 170px;
 }
 
-.games-pick-card__image {
-  width: 45%;
-  flex-shrink: 0;
-  align-self: stretch;
-  min-height: 160px;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.4s ease;
-}
-
-/* Плавный уход фото в текстовую зону (без «шва» между колонками) */
-.games-pick-card__image::after {
-  content: "";
+.games-pick-card__bg {
   position: absolute;
   inset: 0;
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  transition: transform 0.4s ease;
+  z-index: 0;
+}
+
+.games-pick-card__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0.4) 50%,
-    rgba(0, 0, 0, 0.9) 100%
+    90deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.25) 28%,
+    rgba(0, 0, 0, 0.55) 45%,
+    rgba(10, 10, 10, 0.88) 62%,
+    rgba(10, 10, 10, 0.98) 78%,
+    rgba(10, 10, 10, 1) 100%
   );
   pointer-events: none;
 }
 
-.games-pick-card__text {
-  flex: 1;
-  min-width: 0;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.games-pick-card__content {
+  position: relative;
   z-index: 2;
-  background: #111;
+  min-height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
-.games-pick-card--durak .games-pick-card__image {
+.games-pick-card__text {
+  width: 52%;
+  min-width: 0;
+}
+
+.games-pick-card--durak .games-pick-card__bg {
   background-image: url("/durak.png");
 }
 
-.games-pick-card--poker .games-pick-card__image {
+.games-pick-card--poker .games-pick-card__bg {
   background-image: url("/poker.png");
 }
 
-a:hover .games-pick-card:not(.games-pick-card--soon) .games-pick-card__image,
-.games-pick-card--interactive:hover .games-pick-card__image {
+a:hover .games-pick-card:not(.games-pick-card--soon) .games-pick-card__bg,
+.games-pick-card--interactive:hover .games-pick-card__bg {
   transform: scale(1.05);
 }
 
