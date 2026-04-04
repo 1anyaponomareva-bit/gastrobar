@@ -1820,13 +1820,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             className="pointer-events-none absolute bottom-0 left-1/2 z-[22] -translate-x-1/2"
                           >
                             {/*
-                              По центру атаки; только сдвиг вверх (без горизонтального x), чтобы отбой перекрывал атаку, а не «улетал за угол».
+                              Смещение вниз и вправо от центра атаки (как «кладут» вторую карту на сукно), с заметным перекрытием, без «шапки» сверху.
                             */}
                             <motion.div
                               key={`def-${tp.defense.id}`}
                               className="origin-bottom"
-                              initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                              animate={{ opacity: 1, y: -34, scale: 1 }}
+                              initial={{ opacity: 0, x: 8, y: 4, scale: 0.97 }}
+                              animate={{ opacity: 1, x: 22, y: 10, scale: 1 }}
                               transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
                             >
                               <CardSprite card={tp.defense} size="tableCompact" />
