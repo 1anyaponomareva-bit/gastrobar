@@ -271,6 +271,18 @@ const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 /** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
+/**
+ * Только `players.length === 3`: колода/козырь — «резерв» ниже по левому краю, без пересечения с веером
+ * верхне-левого соперника (−135°). Дуэль и 4+ не трогаем.
+ */
+const THREE_PLAYER_DECK_ZONE_LEFT_PCT = 3;
+const THREE_PLAYER_DECK_ZONE_TOP_PCT = 57;
+/** Ближе к −90° (к верху), плюс веер чуть к центру — меньше заход на левую зону колоды. */
+const THREE_PLAYER_UPPER_LEFT_SEAT_ANGLE_DEG = -118;
+const THREE_PLAYER_UPPER_LEFT_INWARD_PAD_EXTRA_PX = 14;
+const THREE_PLAYER_UPPER_LEFT_FAN_SCALE_MULT = 0.92;
+const THREE_PLAYER_UPPER_LEFT_LABEL_RADIAL_EXTRA_PX = 10;
+
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
 const TABLE_PAIRS_ROW_GAP_PX = 56;
@@ -1008,6 +1020,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     : "multi";
   /** Дуэль (2 игрока): legacy-раскладка; правки для 3+ — только при `tableLayoutMode === "multi"`. */
   const isDuelLayout = tableLayoutMode === "duel_legacy";
+  const isThreePlayerTable = game != null && game.players.length === 3;
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1642,7 +1655,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
-            const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+            let angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+            let fanScaleExtra = 1;
+            let labelRadialExtra = 0;
+            let inwardPadExtra = 0;
+            if (isThreePlayerTable && opponents.length === 2 && oi === 0) {
+              angleDeg = THREE_PLAYER_UPPER_LEFT_SEAT_ANGLE_DEG;
+              inwardPadExtra = THREE_PLAYER_UPPER_LEFT_INWARD_PAD_EXTRA_PX;
+              fanScaleExtra = THREE_PLAYER_UPPER_LEFT_FAN_SCALE_MULT;
+              labelRadialExtra = THREE_PLAYER_UPPER_LEFT_LABEL_RADIAL_EXTRA_PX;
+            }
             const mults = opponentFanLayoutMults(opponents.length);
             const handRadius =
               opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
@@ -1650,8 +1672,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
             const fanRot = fanContainerRotationDeg(angleDeg);
             const labelRadialPx =
-              opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
-            const inwardPadPx = 8 + Math.min(6, opponents.length);
+              (opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50) + labelRadialExtra;
+            const inwardPadPx = 8 + Math.min(6, opponents.length) + inwardPadExtra;
             const fanAx = rimOx - nx * inwardPadPx;
             const fanAy = rimOy - ny * inwardPadPx;
             const lx = rimOx + nx * labelRadialPx;
@@ -1684,7 +1706,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   style={{
                     left: `calc(50% + ${fanAx}px)`,
                     top: `calc(50% + ${fanAy}px)`,
-                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale})`,
+                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale * fanScaleExtra})`,
                     transformOrigin: "center center",
                   }}
                 >
@@ -1725,7 +1747,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             className="table-area pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
-              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[8] -translate-y-1/2 overflow-visible sm:left-[2%]">
+              <div
+                className={cn(
+                  "pointer-events-auto absolute z-[8] -translate-y-1/2 overflow-visible",
+                  !isThreePlayerTable && "left-[0.5%] top-1/2 sm:left-[2%]",
+                )}
+                style={
+                  isThreePlayerTable
+                    ? {
+                        left: `${THREE_PLAYER_DECK_ZONE_LEFT_PCT}%`,
+                        top: `${THREE_PLAYER_DECK_ZONE_TOP_PCT}%`,
+                      }
+                    : undefined
+                }
+              >
                 <DeckPile
                   count={deckCount}
                   trumpCard={trumpShow ?? null}
