@@ -49,7 +49,12 @@ import {
   readDurakLegacyRoomFromStorage,
   readDurakQuickRoomFromStorage,
 } from "@/lib/durak/activeRoomStorage";
-import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
+import {
+  CARD_CHROME_PLAYABLE_CLASS,
+  CARD_CHROME_SELECTED_CLASS,
+  CARD_CHROME_TABLE_ATTACK_HINT_CLASS,
+  CARD_RADIUS_CLASS,
+} from "@/lib/durak/cardChrome";
 import {
   durakForfeitStaleOpponent,
   durakPlayerPing,
@@ -401,11 +406,9 @@ function BrandedCardBack({
   return (
     <div
       className={cn(
-        "relative isolate h-full w-full select-none overflow-hidden",
+        "relative isolate h-full w-full select-none overflow-hidden bg-transparent",
         CARD_RADIUS_CLASS,
-        "bg-transparent",
-        selected &&
-          "ring-[3px] ring-[#f8d66d] ring-offset-0 shadow-[0_0_12px_rgba(248,214,109,0.45)]",
+        selected && CARD_CHROME_SELECTED_CLASS,
         disabled && "opacity-[0.42]",
         className
       )}
@@ -414,7 +417,10 @@ function BrandedCardBack({
         src={src}
         alt=""
         draggable={false}
-        className="pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent object-contain object-center"
+        className={cn(
+          "pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent",
+          "object-cover object-center [border-radius:inherit]"
+        )}
         loading="eager"
         decoding="async"
         style={{
@@ -462,34 +468,23 @@ function CardSprite({
         ? CARD_TABLE_COMPACT_BOX
         : CARD_BOX_CLASS;
 
-  /** Одинаковое лицо карты и обрезка скругления — в руке и на столе. */
-  const tableLike = size === "tableCompact" || size === "table" || size === "hand";
   const wrap = cn(
-    "relative shrink-0",
+    "relative isolate shrink-0 overflow-hidden bg-transparent",
     CARD_RADIUS_CLASS,
-    isBack || (!isBack && tableLike) ? "overflow-hidden" : "overflow-visible",
-    !isBack ? "bg-white" : "bg-transparent",
     dimBox,
-    playableHighlight &&
-      !isBack &&
-      !selected &&
-      "z-[1] ring-[3px] ring-emerald-300/90 shadow-[0_0_18px_rgba(52,211,153,0.5)]",
-    selected &&
-      !isBack &&
-      "z-[2] ring-[3px] ring-[#f8d66d] ring-offset-0 shadow-[0_0_14px_rgba(248,214,109,0.55)]",
+    playableHighlight && !isBack && !selected && cn("z-[1]", CARD_CHROME_PLAYABLE_CLASS),
+    selected && !isBack && cn("z-[2]", CARD_CHROME_SELECTED_CLASS),
     className
   );
 
   const inner = isBack ? (
     <BrandedCardBack selected={selected} disabled={disabled} className={imgClassName} />
   ) : (
-    <div className={cn("h-full w-full overflow-hidden", CARD_RADIUS_CLASS)}>
-      <CardFaceArt
-        card={card!}
-        compact={size !== "hand"}
-        className={cn("h-full w-full", imgClassName)}
-      />
-    </div>
+    <CardFaceArt
+      card={card!}
+      compact={size !== "hand"}
+      className={cn("h-full min-h-0 w-full min-w-0", imgClassName)}
+    />
   );
 
   if (onPress) {
@@ -576,7 +571,7 @@ function DeckPile({
       <CardSprite
         card={trumpCard}
         size={size}
-        className="shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
+        className="shadow-[0_6px_14px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.35)]"
       />
     ) : (
       <div
@@ -585,7 +580,7 @@ function DeckPile({
           "relative flex shrink-0 items-center justify-center overflow-hidden",
           CARD_RADIUS_CLASS,
           deckBox,
-          "bg-gradient-to-b from-white via-white to-neutral-100 shadow-[0_6px_14px_rgba(0,0,0,0.45)] ring-1 ring-white/35"
+          "bg-gradient-to-b from-white via-white to-neutral-100 shadow-[0_6px_14px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.35)]"
         )}
       >
         <span
@@ -1796,11 +1791,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             size="tableCompact"
                             selected={!!attackSelectedForDefense}
                             disabled={false}
-                            className={
-                              highlightUnbeaten
-                                ? "ring-[2px] ring-emerald-200/90 ring-offset-0 drop-shadow-[0_0_8px_rgba(167,243,208,0.35)] sm:ring-[3px]"
-                                : undefined
-                            }
+                            className={highlightUnbeaten ? CARD_CHROME_TABLE_ATTACK_HINT_CLASS : undefined}
                             onPress={
                               humanMustDefend
                                 ? () => {

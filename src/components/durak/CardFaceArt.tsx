@@ -136,9 +136,8 @@ export function CardFaceArt({
   return (
     <div
       className={cn(
-        "pointer-events-none relative flex h-full w-full items-center justify-center overflow-hidden",
+        "pointer-events-none relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent",
         CARD_RADIUS_CLASS,
-        "border border-neutral-500/40 bg-white",
         className
       )}
     >
@@ -146,7 +145,10 @@ export function CardFaceArt({
         src={src}
         alt=""
         draggable={false}
-        className="block h-full w-full object-contain object-center"
+        className={cn(
+          "block h-full w-full max-h-full max-w-full bg-transparent",
+          "object-cover object-center [border-radius:inherit]"
+        )}
         loading="eager"
         decoding="async"
         fetchPriority="high"
