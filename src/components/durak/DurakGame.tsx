@@ -50,10 +50,12 @@ import {
   readDurakQuickRoomFromStorage,
 } from "@/lib/durak/activeRoomStorage";
 import {
-  CARD_CHROME_PLAYABLE_CLASS,
-  CARD_CHROME_SELECTED_CLASS,
-  CARD_CHROME_TABLE_ATTACK_HINT_CLASS,
   CARD_RADIUS_CLASS,
+  GAME_CARD_CLASS,
+  GAME_CARD_INNER_CLASS,
+  GAME_CARD_IS_ATTACK_HINT_CLASS,
+  GAME_CARD_IS_PLAYABLE_CLASS,
+  GAME_CARD_IS_SELECTED_CLASS,
 } from "@/lib/durak/cardChrome";
 import {
   durakForfeitStaleOpponent,
@@ -393,11 +395,9 @@ function tablePairOrbitOffset(
 
 /** Рубашка: только PNG + скругление, без подложки/shadow на площади карты (иначе «чернота»). */
 function BrandedCardBack({
-  selected,
   disabled,
   className,
 }: {
-  selected?: boolean;
   disabled?: boolean;
   className?: string;
 }) {
@@ -406,9 +406,8 @@ function BrandedCardBack({
   return (
     <div
       className={cn(
-        "relative isolate h-full w-full select-none overflow-hidden bg-transparent",
+        "relative h-full w-full select-none bg-transparent",
         CARD_RADIUS_CLASS,
-        selected && CARD_CHROME_SELECTED_CLASS,
         disabled && "opacity-[0.42]",
         className
       )}
@@ -469,16 +468,16 @@ function CardSprite({
         : CARD_BOX_CLASS;
 
   const wrap = cn(
-    "relative isolate shrink-0 overflow-hidden bg-transparent",
-    CARD_RADIUS_CLASS,
+    GAME_CARD_CLASS,
+    "relative shrink-0 bg-transparent",
     dimBox,
-    playableHighlight && !isBack && !selected && cn("z-[1]", CARD_CHROME_PLAYABLE_CLASS),
-    selected && !isBack && cn("z-[2]", CARD_CHROME_SELECTED_CLASS),
+    playableHighlight && !isBack && !selected && GAME_CARD_IS_PLAYABLE_CLASS,
+    selected && !isBack && GAME_CARD_IS_SELECTED_CLASS,
     className
   );
 
   const inner = isBack ? (
-    <BrandedCardBack selected={selected} disabled={disabled} className={imgClassName} />
+    <BrandedCardBack disabled={disabled} className={imgClassName} />
   ) : (
     <CardFaceArt
       card={card!}
@@ -487,27 +486,29 @@ function CardSprite({
     />
   );
 
+  const shell = <div className={GAME_CARD_INNER_CLASS}>{inner}</div>;
+
   if (onPress) {
     return (
       <motion.button
         type="button"
         disabled={disabled}
         style={wrapStyle}
-        className={cn(wrap, "border-0 bg-transparent p-0 touch-manipulation")}
+        className={cn(wrap, "border-0 p-0 touch-manipulation")}
         onClick={(e) => {
           e.stopPropagation();
           if (!disabled) onPress();
         }}
         whileTap={disabled ? undefined : { scale: 0.94 }}
       >
-        {inner}
+        {shell}
       </motion.button>
     );
   }
 
   return (
     <motion.div layout={false} style={wrapStyle} className={wrap}>
-      {inner}
+      {shell}
     </motion.div>
   );
 }
@@ -1791,7 +1792,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             size="tableCompact"
                             selected={!!attackSelectedForDefense}
                             disabled={false}
-                            className={highlightUnbeaten ? CARD_CHROME_TABLE_ATTACK_HINT_CLASS : undefined}
+                            className={highlightUnbeaten ? GAME_CARD_IS_ATTACK_HINT_CLASS : undefined}
                             onPress={
                               humanMustDefend
                                 ? () => {

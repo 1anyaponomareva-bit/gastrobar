@@ -1,17 +1,18 @@
 /**
- * Единые визуальные параметры карты: рука, стол, соперник, колода.
- * Один радиус для контейнера и арта — без «белых углов» и прямоугольных ring.
+ * Скругление и классы оболочки карты. Обводка выбора / «можно сыграть» — в app/globals.css (.game-card::after).
  */
 export const CARD_RADIUS_CLASS = "rounded-[14px]";
 
-/** Выбранная карта: только box-shadow (повторяет скругление), без outline/ring. */
-export const CARD_CHROME_SELECTED_CLASS =
-  "shadow-[0_0_0_2px_rgba(248,214,109,0.95),0_0_14px_rgba(248,214,109,0.5)]";
+/** Внешняя оболочка: overflow visible, подсветка псевдоэлементом. */
+export const GAME_CARD_CLASS = "game-card";
 
-/** Подсветка «можно сыграть». */
-export const CARD_CHROME_PLAYABLE_CLASS =
-  "shadow-[0_0_0_2px_rgba(52,211,153,0.9),0_0_18px_rgba(52,211,153,0.45)]";
+/** Клип контента карты (лицо / рубашка), без обрезки ::after. */
+export const GAME_CARD_INNER_CLASS = "game-card-inner";
 
-/** Атака на столе, которую нужно отбить — мягкая изумрудная обводка. */
-export const CARD_CHROME_TABLE_ATTACK_HINT_CLASS =
-  "shadow-[0_0_0_2px_rgba(167,243,208,0.92),0_0_12px_rgba(167,243,208,0.38)]";
+export const GAME_CARD_IS_PLAYABLE_CLASS = "is-playable";
+export const GAME_CARD_IS_SELECTED_CLASS = "is-selected";
+/** Подсветка неотбитой атаки на столе. */
+export const GAME_CARD_IS_ATTACK_HINT_CLASS = "is-attack-hint";
+
+/** Лицо PNG / fallback: скругление как у макета + селектор в globals. */
+export const GAME_CARD_FACE_CLASS = "game-card__face";

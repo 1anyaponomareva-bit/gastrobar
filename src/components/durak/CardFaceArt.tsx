@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Card } from "@/games/durak/types";
 import { rankLabel, suitLabel } from "@/games/durak/cards";
-import { CARD_RADIUS_CLASS } from "@/lib/durak/cardChrome";
+import { CARD_RADIUS_CLASS, GAME_CARD_FACE_CLASS } from "@/lib/durak/cardChrome";
 import { getCardImagePath } from "@/lib/durak/cardPng";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ function CardFaceArtFallback({
   return (
     <div
       className={cn(
+        GAME_CARD_FACE_CLASS,
         "pointer-events-none relative flex h-full w-full flex-col overflow-hidden",
         CARD_RADIUS_CLASS,
         "border border-neutral-400/85 bg-neutral-50",
@@ -136,6 +137,7 @@ export function CardFaceArt({
   return (
     <div
       className={cn(
+        GAME_CARD_FACE_CLASS,
         "pointer-events-none relative h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent",
         CARD_RADIUS_CLASS,
         className
