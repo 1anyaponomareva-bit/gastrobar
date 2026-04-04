@@ -272,16 +272,15 @@ const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
 /**
- * Только `players.length === 3`: колода/козырь — «резерв» ниже по левому краю, без пересечения с веером
- * верхне-левого соперника (−135°). Дуэль и 4+ не трогаем.
+ * Только `players.length === 3`: колода слева ниже центра; два верхних соперника — зеркально (−135° / −45°)
+ * с одинаковыми поправками веера. Дуэль и 4+ не трогаем.
  */
-const THREE_PLAYER_DECK_ZONE_LEFT_PCT = 3;
-const THREE_PLAYER_DECK_ZONE_TOP_PCT = 57;
-/** Ближе к −90° (к верху), плюс веер чуть к центру — меньше заход на левую зону колоды. */
-const THREE_PLAYER_UPPER_LEFT_SEAT_ANGLE_DEG = -118;
-const THREE_PLAYER_UPPER_LEFT_INWARD_PAD_EXTRA_PX = 14;
-const THREE_PLAYER_UPPER_LEFT_FAN_SCALE_MULT = 0.92;
-const THREE_PLAYER_UPPER_LEFT_LABEL_RADIAL_EXTRA_PX = 10;
+const THREE_PLAYER_DECK_ZONE_LEFT_PCT = 3.5;
+const THREE_PLAYER_DECK_ZONE_TOP_PCT = 58;
+/** Общие для левого и правого верхнего соперника (симметрия относительно вертикали стола). */
+const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 14;
+const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
+const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -1655,16 +1654,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
-            let angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
-            let fanScaleExtra = 1;
-            let labelRadialExtra = 0;
-            let inwardPadExtra = 0;
-            if (isThreePlayerTable && opponents.length === 2 && oi === 0) {
-              angleDeg = THREE_PLAYER_UPPER_LEFT_SEAT_ANGLE_DEG;
-              inwardPadExtra = THREE_PLAYER_UPPER_LEFT_INWARD_PAD_EXTRA_PX;
-              fanScaleExtra = THREE_PLAYER_UPPER_LEFT_FAN_SCALE_MULT;
-              labelRadialExtra = THREE_PLAYER_UPPER_LEFT_LABEL_RADIAL_EXTRA_PX;
-            }
+            const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+            const isThreeOpponentsRow = isThreePlayerTable && opponents.length === 2;
+            const fanScaleExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT : 1;
+            const labelRadialExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX : 0;
+            const inwardPadExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX : 0;
             const mults = opponentFanLayoutMults(opponents.length);
             const handRadius =
               opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
