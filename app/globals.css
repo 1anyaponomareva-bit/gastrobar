@@ -89,7 +89,13 @@ html[data-durak-route="1"] body {
   transform: scale(1.03);
 }
 
-/* Дурак: подсветка только ::after на корне карты; inset — по контуру, без внешнего glow в веере */
+/*
+ * Дурак — карта на сукне (центр стола): DOM
+ * motion.button | motion.div (корень: .table-card + .attack-card | .defend-card + состояния)
+ *   └ div.durak-card-media.durak-card-inner.card-inner
+ *        └ img.durak-card-face-img (лицо / рубашка)
+ * Подсветка: ::after на корне карты; inset по контуру, без внешнего glow в веере.
+ */
 .game-card,
 .table-card,
 .attack-card,
