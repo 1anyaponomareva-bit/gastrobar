@@ -1,5 +1,5 @@
 /**
- * Модель «игрового стола» под будущее расширение 2–5 игроков и онлайн.
+ * Модель «игрового стола» под 2–6 игроков и онлайн.
  * Сейчас MVP: 2 места, human vs bot.
  */
 
@@ -56,7 +56,7 @@ export interface GameTable {
   trumpSuit: Suit;
   tablePairs: TablePair[];
   discardPile: Card[];
-  /** Индексы в players[] — для 3–5 игроков: защитник = следующий по кругу от атакующего */
+  /** Индексы в players[] — для нескольких игроков: защитник = следующий по кругу от атакующего */
   attackerIndex: number;
   defenderIndex: number;
   state: GameTableState;

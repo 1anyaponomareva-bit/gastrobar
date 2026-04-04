@@ -197,7 +197,7 @@ function tableIdFallback(): string {
 }
 
 /** Из jsonb с сервера: неполные / устаревшие поля после миграций не должны блокировать стол. */
-function coerceRemoteGame(raw: unknown): GameTable | null {
+function coerceRemoteGame(raw: unknown, stableTableId?: string | null): GameTable | null {
   if (raw == null || typeof raw !== "object") return null;
   const g = raw as Partial<GameTable>;
   const players = normalizePlayers(g.players);
@@ -221,7 +221,10 @@ function coerceRemoteGame(raw: unknown): GameTable | null {
   const ts = g.trumpSuit ?? (g as { trump_suit?: unknown }).trump_suit;
   const trumpSuit =
     ts === "spades" || ts === "hearts" || ts === "diamonds" || ts === "clubs" ? ts : trumpCard?.suit ?? "spades";
-  const id = typeof g.id === "string" && g.id ? g.id : tableIdFallback();
+  const fromPayload = typeof g.id === "string" && g.id.trim() ? g.id.trim() : "";
+  const sid = stableTableId && String(stableTableId).trim() ? String(stableTableId).trim() : "";
+  /** Без стабильного id каждый poll с пропущенным `game.id` в JSON давал новый uuid → мигание и повторная «раздача» в DurakGame. */
+  const id = fromPayload || sid || tableIdFallback();
   const playersSorted = players.map((p) => ({ ...p, hand: sortHand(p.hand) }));
   return {
     id,
@@ -341,7 +344,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     ) => {
       const rawGame = row?.state?.game;
       if (rawGame == null) return;
-      const remote = coerceRemoteGame(rawGame);
+      const remote = coerceRemoteGame(rawGame, roomId);
       if (!remote) return;
       const raw = row?.updated_at;
       let ts = raw != null ? Date.parse(String(raw)) : NaN;
@@ -383,7 +386,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
       gameRef.current = remote;
       setGame(remote);
     },
-    []
+    [roomId]
   );
 
   /**
@@ -569,7 +572,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .maybeSingle();
 
         const existing = stateRow?.state as RoomStatePayload | undefined;
-        const existingGame = coerceRemoteGame(existing?.game);
+        const existingGame = coerceRemoteGame(existing?.game, roomId);
         const existingMatches =
           existingGame != null && roomStateMatchesRoomPlayers(rows, existingGame);
 
@@ -626,7 +629,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           .maybeSingle();
         if (cancelled) return;
 
-        const g = coerceRemoteGame((after?.state as RoomStatePayload | undefined)?.game);
+        const g = coerceRemoteGame((after?.state as RoomStatePayload | undefined)?.game, roomId);
         const gOk = g != null && roomStateMatchesRoomPlayers(rows, g);
         if (gOk && g) {
           gameRef.current = g;

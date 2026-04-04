@@ -14,7 +14,7 @@
 CREATE TABLE IF NOT EXISTS public.rooms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
-  max_players int NOT NULL DEFAULT 3 CHECK (max_players >= 2 AND max_players <= 5),
+  max_players int NOT NULL DEFAULT 2 CHECK (max_players >= 2 AND max_players <= 6),
   search_deadline timestamptz NOT NULL DEFAULT (now() + interval '1 hour'),
   started_with_bot boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -187,7 +187,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot)
-  VALUES ('waiting', 3, now() + interval '15 seconds', false)
+  VALUES ('waiting', 2, now() + interval '15 seconds', false)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)

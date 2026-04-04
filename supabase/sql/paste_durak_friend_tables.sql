@@ -27,6 +27,10 @@ CREATE INDEX IF NOT EXISTS idx_rooms_friend_waiting_public
   ON public.rooms (status, is_public, matchmaking_pool)
   WHERE status = 'waiting';
 
+ALTER TABLE public.rooms DROP CONSTRAINT IF EXISTS rooms_max_players_check;
+ALTER TABLE public.rooms
+  ADD CONSTRAINT rooms_max_players_check CHECK (max_players >= 2 AND max_players <= 6);
+
 COMMENT ON COLUMN public.rooms.matchmaking_pool IS 'true = быстрая очередь; false = стол с друзьями';
 COMMENT ON COLUMN public.rooms.join_code IS 'Короткий код приглашения (столы с друзьями)';
 
@@ -170,7 +174,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot, matchmaking_pool)
-  VALUES ('waiting', 3, now() + interval '15 seconds', false, true)
+  VALUES ('waiting', 2, now() + interval '15 seconds', false, true)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)
@@ -211,8 +215,8 @@ BEGIN
   IF v_player_id IS NULL OR length(v_player_id) = 0 THEN
     RAISE EXCEPTION 'player_id required';
   END IF;
-  IF v_max < 2 OR v_max > 5 THEN
-    RAISE EXCEPTION 'max_players must be 2..5';
+  IF v_max < 2 OR v_max > 6 THEN
+    RAISE EXCEPTION 'max_players must be 2..6';
   END IF;
 
   LOOP

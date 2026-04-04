@@ -41,7 +41,7 @@ export function createInitialPlayersMvp(names?: { human: string; bot: string }):
   ];
 }
 
-/** Следующий защитник по кругу от атакующего (масштабируется на 3–5 игроков). */
+/** Следующий защитник по кругу от атакующего (масштабируется на 2–6 игроков). */
 export function nextDefenderIndex(attackerIndex: number, playerCount: number): number {
   return (attackerIndex + 1) % playerCount;
 }

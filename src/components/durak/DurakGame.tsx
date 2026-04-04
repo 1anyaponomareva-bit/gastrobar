@@ -159,7 +159,6 @@ function WinConfetti() {
 const DEAL_STAGGER_SEC = 0.07;
 const DEAL_BUFFER_MS = 400;
 
-const SPRING_SNAPPY = { type: "spring" as const, stiffness: 520, damping: 32, mass: 0.72 };
 const SPRING_SOFT = { type: "spring" as const, stiffness: 380, damping: 28, mass: 0.85 };
 
 /**
@@ -341,9 +340,13 @@ function opponentTableFanStyle(n: number, i: number): React.CSSProperties {
   };
 }
 
+const TABLE_PAIRS_FIRST_ROW_MAX = 4;
+/** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
+const TABLE_PAIRS_ROW_GAP_PX = 56;
+
 /**
- * Позиции колонок «атака + отбой» на столе: ряд по горизонтали в центре сукна.
- * Шаг между центрами колонок не меньше ширины карты — пары не сливаются в одну стопку.
+ * Позиции колонок «атака + отбой» на столе: ряд(и) по горизонтали в центре сукна.
+ * Больше 4 пар — второй ряд ниже (5-я пара и далее).
  */
 function tablePairOrbitOffset(
   index: number,
@@ -351,18 +354,35 @@ function tablePairOrbitOffset(
   orbitRadiusPx: number
 ): { x: number; y: number } {
   if (orbitRadiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
-  const n = Math.max(1, total);
-  if (n === 1) return { x: 0, y: 0 };
+
+  let rowIndex = 0;
+  let indexInRow = index;
+  let countInRow = total;
+
+  if (total > TABLE_PAIRS_FIRST_ROW_MAX) {
+    if (index < TABLE_PAIRS_FIRST_ROW_MAX) {
+      rowIndex = 0;
+      indexInRow = index;
+      countInRow = TABLE_PAIRS_FIRST_ROW_MAX;
+    } else {
+      rowIndex = 1;
+      indexInRow = index - TABLE_PAIRS_FIRST_ROW_MAX;
+      countInRow = total - TABLE_PAIRS_FIRST_ROW_MAX;
+    }
+  }
+
+  const n = Math.max(1, countInRow);
+  if (n === 1 && rowIndex === 0 && total === 1) return { x: 0, y: 0 };
 
   const minGapPx = 52;
   const maxGapPx = 78;
   const maxHalfRowPx = Math.max(orbitRadiusPx * 0.72, (minGapPx * (n - 1)) / 2 + 24);
-  const idealGap = (2 * maxHalfRowPx) / (n - 1);
-  const gap = Math.max(minGapPx, Math.min(maxGapPx, idealGap));
+  const idealGap = n <= 1 ? 0 : (2 * maxHalfRowPx) / (n - 1);
+  const gap = n <= 1 ? 0 : Math.max(minGapPx, Math.min(maxGapPx, idealGap));
   const totalWidth = (n - 1) * gap;
   const startX = -totalWidth / 2;
-  const x = startX + index * gap;
-  const y = 0;
+  const x = startX + indexInRow * gap;
+  const y = rowIndex === 0 ? -TABLE_PAIRS_ROW_GAP_PX * 0.42 : TABLE_PAIRS_ROW_GAP_PX * 0.58;
   return { x, y };
 }
 
@@ -384,7 +404,8 @@ function BrandedCardBack({
         "relative isolate h-full w-full select-none overflow-hidden",
         CARD_RADIUS_CLASS,
         "bg-transparent",
-        selected && "ring-2 ring-emerald-400/75 ring-offset-0",
+        selected &&
+          "ring-[3px] ring-[#f8d66d] ring-offset-0 shadow-[0_0_12px_rgba(248,214,109,0.45)]",
         disabled && "opacity-[0.42]",
         className
       )}
@@ -394,7 +415,7 @@ function BrandedCardBack({
         alt=""
         draggable={false}
         className="pointer-events-none block h-full w-full max-h-full max-w-full bg-transparent object-contain object-center"
-        loading="lazy"
+        loading="eager"
         decoding="async"
         style={{
           filter: "none",
@@ -455,7 +476,7 @@ function CardSprite({
       "z-[1] ring-[3px] ring-emerald-300/90 shadow-[0_0_18px_rgba(52,211,153,0.5)]",
     selected &&
       !isBack &&
-      "drop-shadow-[0_0_12px_rgba(255,255,255,0.35)] shadow-[0_0_0_2px_rgba(255,255,255,0.55)]",
+      "z-[2] ring-[3px] ring-[#f8d66d] ring-offset-0 shadow-[0_0_14px_rgba(248,214,109,0.55)]",
     className
   );
 
@@ -1013,13 +1034,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     }
   }, [embedded, onlineRoomId, activeOnlineKind]);
 
+  /** Онлайн: без анимации раздачи — иначе при смене/починке `game.id` в JSON карты на ~1 с уходят в opacity 0. Офлайн: раздача при новой колоде. */
   useEffect(() => {
     if (!game?.id) return;
+    if (embedded) {
+      setDealing(false);
+      return;
+    }
     setDealing(true);
     const ms = Math.ceil(12 * DEAL_STAGGER_SEC * 1000) + DEAL_BUFFER_MS;
     const t = window.setTimeout(() => setDealing(false), ms);
     return () => window.clearTimeout(t);
-  }, [game?.id]);
+  }, [game?.id, embedded]);
 
   const selfPlayer = game?.players.find((p) => p.id === localPlayerId);
   const opponents = useMemo(
@@ -1417,16 +1443,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (game.phase === "defend")
       return selfIsDefender ? `${selfName}, ваш ход: отбой или «Взять»` : `${defenderName} отбивается`;
     if (game.phase === "attack_toss") {
-      if (selfIsDefender) return `${defenderName} ждёт подкидывания или «Бито»`;
+      if (selfIsDefender)
+        return "Соперник решает — подкинет ещё карты или нажмёт «Бито». Ожидайте.";
       return selfIsAttacker
-        ? "Подкините или «Бито»"
-        : `${selfName}, можете подкинуть сопернику или ждите`;
+        ? "Ваш ход — подкините по достоинствам на столе или нажмите «Бито»"
+        : `Ваш ход — можете подкинуть по столу или дождаться «Бито»`;
     }
     if (game.phase === "player_can_throw_more") {
-      if (selfIsDefender) return `${defenderName} — стол заберёте после «Бито»`;
+      if (selfIsDefender)
+        return "Вы не отбиваетесь — ждите: соперник подкинет карты или нажмёт «Бито».";
       return selfIsAttacker
-        ? `${defenderName} не бьётся — подкиньте или нажмите «Бито»`
-        : `${selfName}, можете подкинуть или ждите «Бито»`;
+        ? "Ваш ход — соперник не бьётся: подкините ещё или нажмите «Бито»"
+        : `Ваш ход — подкините по столу (пока не «Бито») или подождите`;
     }
     return "";
   })();
@@ -1443,6 +1471,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ((game.phase === "attack_toss" && selfIsAttacker) ||
       (game.phase === "player_can_throw_more" && !selfIsDefender));
 
+  /** Явный акцент в строке состояния: сторона атаки должна действовать (подкинуть / бито). */
+  const statusStripHighlightAttackerTurn =
+    !!game &&
+    !dealing &&
+    game.state === "playing" &&
+    selfCanTossCards &&
+    (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
+
   const microFlavour = useMemo(() => {
     if (!game || dealing || game.state !== "playing") return null;
     let pool: string[] | null = null;
@@ -1450,11 +1486,33 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       pool = ["Сукно ждёт твоего первого хода.", "Задай темп партии — без спешки."];
     } else if (game.phase === "defend" && selfIsDefender) {
       pool = ["Отбейся аккуратно или заберёшь стол — твой выбор.", "Козырь и старшинство — твои друзья."];
+    } else if (game.phase === "player_can_throw_more" && selfIsAttacker) {
+      pool = [
+        "Соперник ждёт: ты можешь ещё подкинуть по рангам на сукне или снять стол кнопкой «Бито».",
+        "Игра не стоит — это твой ход после «Взять» у защитника.",
+      ];
+    } else if (game.phase === "attack_toss" && selfIsAttacker) {
+      pool = [
+        "Отбой принят — реши, докинуть карты или завершить раунд «Бито».",
+        "Пока не нажали «Бито», можно подкидывать только по тем же достоинствам, что на столе.",
+      ];
     } else if (
       (game.phase === "attack_toss" || game.phase === "player_can_throw_more") &&
-      selfCanTossCards
+      selfCanTossCards &&
+      !selfIsAttacker
     ) {
-      pool = ["Подкинуть можно только по достоинствам на столе.", "Когда закончите — «Бито»."];
+      pool = [
+        "Тоже можешь подкинуть по столу — или жми «Бито», если ты ведущий после отбоя.",
+        "Подкинуть можно только по достоинствам, которые уже лежат на сукне.",
+      ];
+    } else if (
+      (game.phase === "attack_toss" || game.phase === "player_can_throw_more") &&
+      selfIsDefender
+    ) {
+      pool = [
+        "Сейчас ход у атакующих: тебе нужно только дождаться подкидывания или «Бито».",
+        "Ничего нажимать не нужно — соперник либо докинет карты, либо закроет стол.",
+      ];
     } else if (game.phase === "attack_initial" && !selfIsAttacker) {
       pool = ["Пока соперник думает — можно выдохнуть.", "Смотри на стол — скоро твой ход."];
     }
@@ -1732,12 +1790,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     >
                       {/* Габариты задаёт CardSprite (aspect-ratio колоды), без фиксированного «пухлого» блока. */}
                       <div className="relative flex min-h-0 items-end justify-center overflow-visible">
-                        <motion.div
-                          className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2"
-                          initial={false}
-                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                        >
+                        <div className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2">
                           <CardSprite
                             card={tp.attack}
                             size="tableCompact"
@@ -1759,15 +1812,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                                 : undefined
                             }
                           />
-                        </motion.div>
+                        </div>
 
                         {tp.defense ? (
                           <motion.div
                             key={`def-${tp.defense.id}`}
                             className="absolute bottom-[0.4rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[0.45rem]"
-                            initial={{ opacity: 0, x: -12, y: 8, scale: 0.94, rotate: 1.5 }}
-                            animate={{ opacity: 1, y: 0, x: 14, scale: 1, rotate: 0 }}
-                            transition={{ ...SPRING_SNAPPY, delay: 0.05 }}
+                            initial={{ opacity: 0, x: 10, y: 6 }}
+                            animate={{ opacity: 1, x: 14, y: 0 }}
+                            transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                           >
                             <CardSprite card={tp.defense} size="tableCompact" />
                           </motion.div>
@@ -1862,7 +1915,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22 }}
-              className="line-clamp-3 min-w-0 flex-1 rounded-full border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-4 py-1.5 text-center text-[10px] font-medium leading-snug text-emerald-50/95 shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm sm:text-[11px]"
+              className={cn(
+                "line-clamp-4 min-w-0 flex-1 rounded-full px-4 py-2 text-center text-[10px] font-medium leading-snug shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm sm:py-2 sm:text-[11px]",
+                statusStripHighlightAttackerTurn
+                  ? "border border-[#f8d66d]/55 bg-gradient-to-b from-[#f8d66d]/22 via-amber-950/25 to-[#1a1410] font-semibold text-[#fff8e8] shadow-[0_0_28px_rgba(248,214,109,0.18)]"
+                  : "border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] text-emerald-50/95",
+              )}
             >
               {phaseLine}
             </motion.p>
@@ -2010,34 +2068,50 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
                   const fan = handFanStyle(row.length, i, "player");
 
+                  const cardInner = (
+                    <CardSprite
+                      card={c}
+                      size="hand"
+                      selected={selected}
+                      disabled={false}
+                      playableHighlight={
+                        game.state === "playing" &&
+                        !dealing &&
+                        playable &&
+                        (game.phase === "defend" ||
+                          game.phase === "attack_initial" ||
+                          game.phase === "attack_toss" ||
+                          game.phase === "player_can_throw_more")
+                      }
+                      onPress={onPress}
+                    />
+                  );
+
                   return (
                     <div key={c.id} className="absolute" style={fan}>
-                      <motion.div
-                        className={cn(selected && "-translate-y-[3.25rem]")}
-                        initial={dealing ? { opacity: 0, y: 48, scale: 0.92, rotate: -2 } : false}
-                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        transition={{
-                          ...SPRING_SOFT,
-                          delay: dealing ? rowIdx * 0.06 + i * DEAL_STAGGER_SEC : 0,
-                        }}
-                      >
-                        <CardSprite
-                          card={c}
-                          size="hand"
-                          selected={selected}
-                          disabled={false}
-                          playableHighlight={
-                            game.state === "playing" &&
-                            !dealing &&
-                            playable &&
-                            (game.phase === "defend" ||
-                              game.phase === "attack_initial" ||
-                              game.phase === "attack_toss" ||
-                              game.phase === "player_can_throw_more")
+                      {dealing ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: 48, scale: 0.92, rotate: -2 }}
+                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                          transition={{
+                            ...SPRING_SOFT,
+                            delay: rowIdx * 0.06 + i * DEAL_STAGGER_SEC,
+                          }}
+                        >
+                          {cardInner}
+                        </motion.div>
+                      ) : (
+                        <div
+                          className="will-change-transform"
+                          style={
+                            selected
+                              ? { transform: "translateY(-3.25rem)" }
+                              : undefined
                           }
-                          onPress={onPress}
-                        />
-                      </motion.div>
+                        >
+                          {cardInner}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2088,15 +2162,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   ? "Соперник вышел из игры — ты победил! 🥇"
                   : game.winnerId === localPlayerId
                     ? `${selfPlayer?.name ?? playerName}, блеск!`
-                    : `${selfPlayer?.name ?? playerName}, в этот раз дурак`}
+                    : `${selfPlayer?.name ?? playerName}, в этот раз чуть не хватило`}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-white/55">
                 {wonByForfeit
                   ? "Соперник не выходил на связь больше отведённого времени — стол закрыт."
                   : game.loserId === localPlayerId
-                    ? "Карты остались у тебя — зато следующая раздача уже ближе к победе."
+                    ? "Такое бывает у каждого: партия могла сложиться иначе на один ход. Загляни к нам в бар — выбери напиток и что-нибудь поесть, отдохни за стойкой: следующий раунд всегда ждёт, когда ты будешь готов."
                     : game.winnerId === localPlayerId
-                      ? "Ты первым освободил руку — идеальный финиш для бара."
+                      ? "Ты первым освободил руку — отличный повод заглянуть в бар и праздновать не спеша."
                       : ""}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">

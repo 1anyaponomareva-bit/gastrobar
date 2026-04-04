@@ -329,8 +329,9 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           </label>
           <div className="space-y-2">
             <span className="text-xs font-medium text-white/55">Сколько мест за столом</span>
-            <div className="grid grid-cols-4 gap-2">
-              {([2, 3, 4, 5] as const).map((n) => (
+            <p className="text-[11px] text-white/40">От 2 до 6 игроков</p>
+            <div className="grid grid-cols-5 gap-2">
+              {([2, 3, 4, 5, 6] as const).map((n) => (
                 <button
                   key={n}
                   type="button"
@@ -431,7 +432,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09]"
             >
               <span className="text-lg">➕ Создать стол</span>
-              <span className="text-sm text-white/50">Ты хозяин — рассылаешь ссылку</span>
+              <span className="text-sm text-white/50">До 6 мест — ты хозяин, рассылаешь ссылку</span>
             </button>
             <button
               type="button"
@@ -474,7 +475,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             )}
           >
             <span className="text-lg font-semibold">🟢 Быстро найти игру</span>
-            <span className="text-sm font-normal text-[#1a1612]/75">Подберём соперников автоматически</span>
+            <span className="text-sm font-normal text-[#1a1612]/75">Дуэль: всегда ровно два человека за столом</span>
           </button>
           <button
             type="button"

@@ -111,8 +111,8 @@ BEGIN
   IF v_player_id IS NULL OR length(v_player_id) = 0 THEN
     RAISE EXCEPTION 'player_id required';
   END IF;
-  IF v_max < 2 OR v_max > 5 THEN
-    RAISE EXCEPTION 'max_players must be 2..5';
+  IF v_max < 2 OR v_max > 6 THEN
+    RAISE EXCEPTION 'max_players must be 2..6';
   END IF;
 
   LOOP

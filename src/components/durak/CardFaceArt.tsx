@@ -147,8 +147,9 @@ export function CardFaceArt({
         alt=""
         draggable={false}
         className="block h-full w-full object-contain object-center"
-        loading="lazy"
+        loading="eager"
         decoding="async"
+        fetchPriority="high"
         onError={() => setUseFallback(true)}
       />
     </div>

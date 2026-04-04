@@ -1,4 +1,5 @@
--- Скопируйте весь файл в Supabase → SQL Editor → Run (то же, что миграция 20260423120000).
+-- Скопируйте весь файл в Supabase → SQL Editor → Run.
+-- Быстрая очередь: новые комнаты с max_players = 2; CHECK на столах 2..6 (как миграция 20260430140000).
 
 -- Единый починенный комплект быстрой очереди (выполнить в Supabase, если матчмейкинг «вечно ищет»):
 -- 1) durak_join_queue БЕЗ «search_deadline > now()» в SELECT — иначе после дедлайна второй игрок
@@ -170,7 +171,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.rooms (status, max_players, search_deadline, started_with_bot, matchmaking_pool)
-  VALUES ('waiting', 3, now() + interval '15 seconds', false, true)
+  VALUES ('waiting', 2, now() + interval '15 seconds', false, true)
   RETURNING * INTO room_rec;
 
   INSERT INTO public.room_players (room_id, player_id, player_name, is_bot, seat_index)

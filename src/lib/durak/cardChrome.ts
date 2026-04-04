@@ -1,5 +1,5 @@
 /**
  * Единые визуальные параметры карты: рука, стол, соперник, колода.
- * Небольшое скругление — ближе к физической колоде, не к UI-карточке.
+ * Скругление ближе к PNG `PNG-cards-1.3` (визуально ~2–3% от ширины 242px).
  */
-export const CARD_RADIUS_CLASS = "rounded-[2.5px] sm:rounded-[3px]";
+export const CARD_RADIUS_CLASS = "rounded-[6px] sm:rounded-[7px]";
