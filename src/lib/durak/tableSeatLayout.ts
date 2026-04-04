@@ -25,40 +25,46 @@ export function seatOffsetOnCircle(
   return { ox: nx * r, oy: ny * r, nx, ny };
 }
 
-/** Половина дуги «занятой» локальным игроком внизу (90°): сиденья только вне [90−h, 90+h]. */
-const LOCAL_BOTTOM_GAP_HALF_DEG = 32;
-
 /**
- * Равномерная рассадка соперников по окружности стола: N точек на дуге,
- * оставшейся после выреза под локального игрока снизу. Порядок — по возрастанию
- * угла вдоль дуги от «правого края» выреза к левому (согласовано с обходом по часовой от места внизу).
- */
-function opponentAnglesOnCircleExcludingBottom(n: number): number[] {
-  if (n <= 0) return [];
-  const bottom = 90;
-  const h = LOCAL_BOTTOM_GAP_HALF_DEG;
-  const forbiddenLo = bottom - h;
-  const forbiddenHi = bottom + h;
-  const arcLen = 360 - (forbiddenHi - forbiddenLo);
-  const out: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const d = ((i + 0.5) / n) * arcLen;
-    let ang = forbiddenHi + d;
-    while (ang >= 360) ang -= 360;
-    out.push(normalizeAngleDeg180(ang));
-  }
-  return out;
-}
-
-/**
- * Углы сидений для каждого соперника (индекс 0..N-1), N = opponents.length.
- * Два соперника — симметрично вокруг «верха» (−90°), как за круглым столом (левый-верх / правый-верх).
+ * Углы сидений для каждого соперника (индекс 0..N-1), всего N = opponents.length.
  */
 export function getOpponentSeatAnglesDeg(opponentCount: number): number[] {
-  if (opponentCount <= 0) return [];
-  if (opponentCount === 1) return [-90];
-  if (opponentCount === 2) return [-135, -45];
-  return opponentAnglesOnCircleExcludingBottom(opponentCount);
+  switch (opponentCount) {
+    case 1:
+      return [-90];
+    case 2:
+      return [180, 0];
+    case 3:
+      return [180, -90, 0];
+    case 4:
+      return [150, 210, -45, 25];
+    case 5:
+      return [150, 210, -90, -30, 30];
+    default:
+      return fallbackArcSeatAngles(opponentCount);
+  }
+}
+
+function fallbackArcSeatAngles(n: number): number[] {
+  if (n <= 0) return [];
+  const bottomDeg = 90;
+  const gapHalfDeg = 48;
+  const gapStart = bottomDeg - gapHalfDeg;
+  const gapEnd = bottomDeg + gapHalfDeg;
+  const available = 360 - (gapEnd - gapStart);
+  const step = available / n;
+  const halfSpan = available / 2;
+  const topDeg = -90;
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    let angleDeg = topDeg - halfSpan + step * (i + 0.5);
+    angleDeg = normalizeAngleDeg180(angleDeg);
+    if (angleDeg >= gapStart && angleDeg <= gapEnd) {
+      angleDeg = normalizeAngleDeg180(angleDeg + ((i % 2) * 2 - 1) * (step * 0.5 + 2));
+    }
+    out.push(angleDeg);
+  }
+  return out;
 }
 
 /** Поворот контейнера руки: веер локально «вверх» смотрит к центру стола. */

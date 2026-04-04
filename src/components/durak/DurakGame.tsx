@@ -76,7 +76,6 @@ import {
   opponentTableFanStyle,
   seatOffsetOnCircle,
 } from "@/lib/durak/tableSeatLayout";
-import { DURAK_TABLE_Z } from "@/components/durak/durakLayoutConstants";
 
 const HUMAN_ID = "human";
 
@@ -268,10 +267,6 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
 
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
-/** Сектор колоды на ободке: ~правый верх (−45°…−48° в системе «90° = низ»). */
-const DECK_ON_TABLE_ANGLE_DEG = -48;
-/** Радиус колоды как доля измеренной окружности сукна (центр стола остаётся для боя). */
-const DECK_ORBIT_RADIUS_MULT = 0.44;
 /** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
@@ -472,7 +467,7 @@ function DeckPile({
               style={{
                 right: `${i * (compact ? 0.85 : 1.15)}px`,
                 top: `${i * (compact ? 0.85 : 1)}px`,
-                zIndex: 4 + i,
+                zIndex: 30 + i,
               }}
             >
               <CardSprite
@@ -1017,11 +1012,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
   const opponentOrbitPx = orbitPxEff * OPPONENT_ORBIT_RADIUS_MULT;
-  const { deckOx, deckOy } = useMemo(() => {
-    const r = Math.max(12, orbitPxEff * DECK_ORBIT_RADIUS_MULT);
-    const { ox, oy } = seatOffsetOnCircle(DECK_ON_TABLE_ANGLE_DEG, r);
-    return { deckOx: ox, deckOy: oy };
-  }, [orbitPxEff]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1643,33 +1633,97 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </span>
           </div>
 
-          <div
-            className="pointer-events-none absolute inset-0 overflow-visible"
-            style={{ zIndex: DURAK_TABLE_Z.deck }}
-          >
-            <div
-              className="pointer-events-auto absolute overflow-visible"
-              style={{
-                left: `calc(50% + ${deckOx}px)`,
-                top: `calc(50% + ${deckOy}px)`,
-                transform: "translate(-50%, -50%)",
-              }}
-            >
-              <DeckPile
-                count={deckCount}
-                trumpCard={trumpShow ?? null}
-                trumpSuit={game.trumpSuit}
-                compact
-              />
-            </div>
-          </div>
+          {opponents.map((opp, oi) => {
+            const bh = opp.hand;
+            const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+            const mults = opponentFanLayoutMults(opponents.length);
+            const handRadius =
+              opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
+              (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
+            const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
+            const fanRot = fanContainerRotationDeg(angleDeg);
+            const labelRadialPx =
+              opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
+            const inwardPadPx = 8 + Math.min(6, opponents.length);
+            const fanAx = rimOx - nx * inwardPadPx;
+            const fanAy = rimOy - ny * inwardPadPx;
+            const lx = rimOx + nx * labelRadialPx;
+            const ly = rimOy + ny * labelRadialPx;
+            return (
+              <div
+                key={opp.id}
+                className={cn(
+                  "pointer-events-none absolute inset-0 overflow-visible",
+                  embedded ? "z-[5] opacity-100" : "z-[8] opacity-100",
+                )}
+              >
+                <div
+                  className="pointer-events-none absolute z-[12] max-w-[min(9.5rem,24vw)] text-center"
+                  style={{
+                    left: `calc(50% + ${lx}px)`,
+                    top: `calc(50% + ${ly}px)`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                    {opp.name}
+                  </p>
+                  <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
+                </div>
+                <div
+                  className="pointer-events-none absolute z-[11]"
+                  style={{
+                    left: `calc(50% + ${fanAx}px)`,
+                    top: `calc(50% + ${fanAy}px)`,
+                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale})`,
+                    transformOrigin: "center center",
+                  }}
+                >
+                  <div
+                    className="relative flex items-end justify-center overflow-visible"
+                    style={{
+                      height: `min(${mults.handHeightRem}rem, 28vw)`,
+                      width: `min(${mults.handWidthRem}rem, 44vw)`,
+                    }}
+                  >
+                    {bh.map((c, i) => (
+                      <div
+                        key={c.id}
+                        className="absolute"
+                        style={opponentTableFanStyle(bh.length, i, mults)}
+                      >
+                        <motion.div
+                          className="[transform:translateZ(0)]"
+                          initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                          transition={{
+                            ...SPRING_SOFT,
+                            delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                          }}
+                        >
+                          <CardSprite faceDown size="tableCompact" surface="opponent" />
+                        </motion.div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
           <div
             ref={boardPlayAreaRef}
-            className="table-area pointer-events-none absolute inset-0 min-h-0 overflow-visible"
-            style={{ zIndex: DURAK_TABLE_Z.battle }}
+            className="table-area pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
+              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[8] -translate-y-1/2 overflow-visible sm:left-[2%]">
+                <DeckPile
+                  count={deckCount}
+                  trumpCard={trumpShow ?? null}
+                  trumpSuit={game.trumpSuit}
+                  compact
+                />
+              </div>
               {game.tablePairs.length === 0 && dealing ? (
                 <div className="pointer-events-none absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 px-2">
                   <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
@@ -1764,8 +1818,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
       </div>
 
-      <div className="relative z-[44] mt-3 shrink-0 space-y-0 bg-transparent px-1 pt-1.5 sm:mt-4 sm:px-2 sm:pt-2.5">
-        <div className="relative z-[44] grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
+      <div className="relative z-40 mt-3 shrink-0 space-y-0 bg-transparent px-1 pt-1.5 sm:mt-4 sm:px-2 sm:pt-2.5">
+        <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
@@ -1824,6 +1878,42 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </div>
         </div>
       </div>
+
+      {phaseLine ? (
+        <div
+          className="relative z-20 mx-auto mt-2 flex max-w-[min(100%,580px)] shrink-0 flex-col items-center gap-1 px-2 sm:mt-2.5"
+          role="status"
+        >
+          <div className="flex w-full max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
+            {embedded &&
+            game.state === "playing" &&
+            !dealing &&
+            getOnlineMandatoryHumanActorId(game) != null ? (
+              <TurnDeadlineRing progress={turnProgress} />
+            ) : null}
+            <motion.p
+              key={phaseLine}
+              layout
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              className={cn(
+                "line-clamp-4 min-w-0 flex-1 rounded-full px-4 py-2 text-center text-[10px] font-medium leading-snug shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm sm:py-2 sm:text-[11px]",
+                statusStripHighlightAttackerTurn
+                  ? "border border-[#f8d66d]/55 bg-gradient-to-b from-[#f8d66d]/22 via-amber-950/25 to-[#1a1410] font-semibold text-[#fff8e8] shadow-[0_0_28px_rgba(248,214,109,0.18)]"
+                  : "border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] text-emerald-50/95",
+              )}
+            >
+              {phaseLine}
+            </motion.p>
+          </div>
+          {microFlavour ? (
+            <p className="max-w-[20rem] text-center text-[9px] font-normal italic leading-snug text-white/38 sm:text-[10px]">
+              {microFlavour}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <section
         className={cn(
