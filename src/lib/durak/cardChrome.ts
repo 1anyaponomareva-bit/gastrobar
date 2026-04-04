@@ -1,18 +1,27 @@
 /**
- * Скругление и классы оболочки карты. Обводка выбора / «можно сыграть» — в app/globals.css (.game-card::after).
+ * Скругление = var(--card-radius) из app/globals.css (:root 10px).
+ * Подсветка: .game-card / .table-card ::after в globals.
  */
-export const CARD_RADIUS_CLASS = "rounded-[14px]";
+export const CARD_RADIUS_CLASS = "rounded-[var(--card-radius)]";
 
-/** Внешняя оболочка: overflow visible, подсветка псевдоэлементом. */
-export const GAME_CARD_CLASS = "game-card";
+export type DurakCardSurface = "hand" | "table" | "deck" | "trump" | "opponent";
 
-/** Клип контента карты (лицо / рубашка), без обрезки ::after. */
+export const DURAK_CARD_SURFACE_CLASS: Record<DurakCardSurface, string> = {
+  hand: "game-card",
+  table: "table-card",
+  deck: "deck-card",
+  trump: "trump-card",
+  opponent: "enemy-card",
+};
+
+/** Клип лица / рубашки */
 export const GAME_CARD_INNER_CLASS = "game-card-inner";
 
 export const GAME_CARD_IS_PLAYABLE_CLASS = "is-playable";
 export const GAME_CARD_IS_SELECTED_CLASS = "is-selected";
-/** Подсветка неотбитой атаки на столе. */
-export const GAME_CARD_IS_ATTACK_HINT_CLASS = "is-attack-hint";
+/** Неотбитая атака: фаза защиты — выбор цели отбоя */
+export const GAME_CARD_IS_TARGETABLE_CLASS = "is-targetable";
+/** Неотбитая атака: подкидывание / добивание */
+export const GAME_CARD_IS_THROWABLE_CLASS = "is-throwable";
 
-/** Лицо PNG / fallback: скругление как у макета + селектор в globals. */
-export const GAME_CARD_FACE_CLASS = "game-card__face";
+export const GAME_CARD_FACE_CLASS = "game-card__face card-face";

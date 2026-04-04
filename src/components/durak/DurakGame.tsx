@@ -51,11 +51,13 @@ import {
 } from "@/lib/durak/activeRoomStorage";
 import {
   CARD_RADIUS_CLASS,
-  GAME_CARD_CLASS,
+  DURAK_CARD_SURFACE_CLASS,
   GAME_CARD_INNER_CLASS,
-  GAME_CARD_IS_ATTACK_HINT_CLASS,
   GAME_CARD_IS_PLAYABLE_CLASS,
   GAME_CARD_IS_SELECTED_CLASS,
+  GAME_CARD_IS_THROWABLE_CLASS,
+  GAME_CARD_IS_TARGETABLE_CLASS,
+  type DurakCardSurface,
 } from "@/lib/durak/cardChrome";
 import {
   durakForfeitStaleOpponent,
@@ -445,6 +447,7 @@ function CardSprite({
   onPress,
   imgClassName,
   size = "table",
+  surface,
 }: {
   card?: Card;
   faceDown?: boolean;
@@ -458,6 +461,8 @@ function CardSprite({
   imgClassName?: string;
   /** `hand` — рука внизу; `tableCompact` — центр стола и рубашки соперников (те же габариты, что колода). */
   size?: "table" | "hand" | "tableCompact";
+  /** Рука / стол / колода / козырь / соперник — класс оболочки и ::after в globals.css */
+  surface?: DurakCardSurface;
 }) {
   const isBack = faceDown || !card;
   const dimBox =
@@ -467,8 +472,11 @@ function CardSprite({
         ? CARD_TABLE_COMPACT_BOX
         : CARD_BOX_CLASS;
 
+  const resolvedSurface: DurakCardSurface = surface ?? (size === "hand" ? "hand" : "table");
+  const surfaceClass = DURAK_CARD_SURFACE_CLASS[resolvedSurface];
+
   const wrap = cn(
-    GAME_CARD_CLASS,
+    surfaceClass,
     "relative shrink-0 bg-transparent",
     dimBox,
     playableHighlight && !isBack && !selected && GAME_CARD_IS_PLAYABLE_CLASS,
@@ -572,6 +580,7 @@ function DeckPile({
       <CardSprite
         card={trumpCard}
         size={size}
+        surface="trump"
         className="shadow-[0_6px_14px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.35)]"
       />
     ) : (
@@ -617,12 +626,12 @@ function DeckPile({
     return (
       <div
         className={cn(
-          "flex shrink-0 flex-col items-center gap-2",
+          "deck-area flex shrink-0 flex-col items-center gap-2 overflow-visible",
           compact ? "min-h-0 w-full" : "min-h-0"
         )}
       >
         {stackWrap}
-        <div className="shrink-0">{trumpVisual}</div>
+        <div className="trump-area shrink-0 overflow-visible">{trumpVisual}</div>
       </div>
     );
   }
@@ -630,7 +639,7 @@ function DeckPile({
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col items-center",
+        "trump-area flex shrink-0 flex-col items-center overflow-visible",
         deckBox,
         compact ? "min-h-[6.75rem] sm:min-h-[9.5rem]" : "min-h-[9.85rem] sm:min-h-[10.75rem]"
       )}
@@ -1734,7 +1743,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             delay: (2 * i + 1) * DEAL_STAGGER_SEC,
                           }}
                         >
-                          <CardSprite faceDown size="tableCompact" />
+                          <CardSprite faceDown size="tableCompact" surface="opponent" />
                         </motion.div>
                       </div>
                     ))}
@@ -1746,10 +1755,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           <div
             ref={boardPlayAreaRef}
-            className="pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
+            className="table-area pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
-              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[8] -translate-y-1/2 sm:left-[2%]">
+              <div className="pointer-events-auto absolute left-[0.5%] top-1/2 z-[8] -translate-y-1/2 overflow-visible sm:left-[2%]">
                 <DeckPile
                   count={deckCount}
                   trumpCard={trumpShow ?? null}
@@ -1773,6 +1782,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     humanMustDefend && defenseTargetAttackId === tp.attack.id;
                   const highlightUnbeaten =
                     uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
+                  const tableTargetable = Boolean(highlightUnbeaten && game.phase === "defend");
+                  const tableThrowable = Boolean(
+                    highlightUnbeaten &&
+                      (game.phase === "attack_toss" || game.phase === "player_can_throw_more"),
+                  );
                   const stackZ = 10 + i;
 
                   return (
@@ -1790,9 +1804,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           <CardSprite
                             card={tp.attack}
                             size="tableCompact"
+                            surface="table"
                             selected={!!attackSelectedForDefense}
                             disabled={false}
-                            className={highlightUnbeaten ? GAME_CARD_IS_ATTACK_HINT_CLASS : undefined}
+                            className={cn(
+                              tableTargetable && GAME_CARD_IS_TARGETABLE_CLASS,
+                              tableThrowable && GAME_CARD_IS_THROWABLE_CLASS,
+                            )}
                             onPress={
                               humanMustDefend
                                 ? () => {
@@ -1812,16 +1830,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             className="pointer-events-none absolute bottom-0 left-1/2 z-[22] -translate-x-1/2"
                           >
                             {/*
-                              Смещение вниз и вправо от центра атаки (как «кладут» вторую карту на сукно), с заметным перекрытием, без «шапки» сверху.
+                              Чуть левее и ниже центра атаки: заметнее перекрывает, угол нижней карты с достоинством читаем.
                             */}
                             <motion.div
                               key={`def-${tp.defense.id}`}
                               className="origin-bottom"
-                              initial={{ opacity: 0, x: 8, y: 4, scale: 0.97 }}
-                              animate={{ opacity: 1, x: 22, y: 10, scale: 1 }}
+                              initial={{ opacity: 0, x: 4, y: 4, scale: 0.97 }}
+                              animate={{ opacity: 1, x: 10, y: 9, scale: 1 }}
                               transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
                             >
-                              <CardSprite card={tp.defense} size="tableCompact" />
+                              <CardSprite card={tp.defense} size="tableCompact" surface="table" />
                             </motion.div>
                           </div>
                         ) : null}
@@ -1996,7 +2014,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
         <div
           className={cn(
-            "relative z-0 mx-auto mt-3 w-full max-w-full overflow-visible pb-1 pt-1 sm:mt-4 sm:pt-2",
+            "player-hand relative z-0 mx-auto mt-3 w-full max-w-full overflow-visible pb-1 pt-1 sm:mt-4 sm:pt-2",
             humanHandRows.length > 1
               ? "min-h-[15.5rem] sm:min-h-[17rem]"
               : "flex min-h-[11rem] flex-1 items-end justify-center sm:min-h-[12rem]"
