@@ -281,6 +281,9 @@ const THREE_PLAYER_DECK_ZONE_TOP_PCT = 58;
 const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 14;
 const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
 const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
+/** Одна ширина/высота зоны веера для двух верхних — зеркало по окружности и одинаковая раскладка по ширине. */
+const THREE_PLAYER_OPP_FAN_MAX_VW = 36;
+const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 26;
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -1707,8 +1710,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   <div
                     className="relative flex items-end justify-center overflow-visible"
                     style={{
-                      height: `min(${mults.handHeightRem}rem, 28vw)`,
-                      width: `min(${mults.handWidthRem}rem, 44vw)`,
+                      height: isThreeOpponentsRow
+                        ? `min(${mults.handHeightRem}rem, ${THREE_PLAYER_OPP_FAN_MAX_VH_VW}vw)`
+                        : `min(${mults.handHeightRem}rem, 28vw)`,
+                      width: isThreeOpponentsRow
+                        ? `min(${mults.handWidthRem}rem, ${THREE_PLAYER_OPP_FAN_MAX_VW}vw)`
+                        : `min(${mults.handWidthRem}rem, 44vw)`,
+                      transform: isThreeOpponentsRow && oi === 1 ? "scaleX(-1)" : undefined,
+                      transformOrigin: "center bottom",
                     }}
                   >
                     {bh.map((c, i) => (
