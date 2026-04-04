@@ -999,8 +999,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     [game, localPlayerId]
   );
   const opponentSeatAnglesDeg = useMemo(
-    () => getOpponentSeatAnglesDeg(opponents.length),
-    [opponents.length],
+    () =>
+      getOpponentSeatAnglesDeg(opponents.length, game?.players.length),
+    [opponents.length, game?.players.length],
   );
   const tableLayoutMode = game
     ? getDurakTableLayoutMode(game.players.length)

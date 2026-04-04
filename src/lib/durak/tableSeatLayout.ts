@@ -30,8 +30,18 @@ export function seatOffsetOnCircle(
 
 /**
  * Углы сидений для каждого соперника (индекс 0..N-1), всего N = opponents.length.
+ *
+ * При **3 игроках за столом** соперников два (`opponentCount === 2`), но без `totalPlayerCount`
+ * их углы совпадали бы с дуэлью left/right (`180, 0`). Передайте `totalPlayerCount === 3`,
+ * чтобы поставить их на **верхне-левую и верхне-правую** дугу (`≈225°` и `≈315°` в 0…360).
  */
-export function getOpponentSeatAnglesDeg(opponentCount: number): number[] {
+export function getOpponentSeatAnglesDeg(
+  opponentCount: number,
+  totalPlayerCount?: number,
+): number[] {
+  if (opponentCount === 2 && totalPlayerCount === 3) {
+    return [-135, -45];
+  }
   switch (opponentCount) {
     case 1:
       return [-90];
