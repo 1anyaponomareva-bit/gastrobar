@@ -17,6 +17,10 @@ export const DURAK_CARD_SURFACE_CLASS: Record<DurakCardSurface, string> = {
 /** Клип растра (не подсветка); ::after на корне .game-card / .table-card и т.д. */
 export const DURAK_CARD_MEDIA_CLASS = "durak-card-media";
 
+/** Карты на сукне (рядом с .table-card с тем же surface) — отдельные хуки для радиуса в globals */
+export const DURAK_ATTACK_CARD_CLASS = "attack-card";
+export const DURAK_DEFEND_CARD_CLASS = "defend-card";
+
 export const GAME_CARD_IS_PLAYABLE_CLASS = "is-playable";
 export const GAME_CARD_IS_SELECTED_CLASS = "is-selected";
 /** Неотбитая атака: фаза защиты — выбор цели отбоя */

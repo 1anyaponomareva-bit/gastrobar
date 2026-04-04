@@ -52,7 +52,9 @@ import {
 import {
   CARD_RADIUS_CLASS,
   DURAK_CARD_SURFACE_CLASS,
+  DURAK_ATTACK_CARD_CLASS,
   DURAK_CARD_MEDIA_CLASS,
+  DURAK_DEFEND_CARD_CLASS,
   GAME_CARD_IS_PLAYABLE_CLASS,
   GAME_CARD_IS_SELECTED_CLASS,
   GAME_CARD_IS_THROWABLE_CLASS,
@@ -1805,6 +1807,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                             selected={!!attackSelectedForDefense}
                             disabled={false}
                             className={cn(
+                              DURAK_ATTACK_CARD_CLASS,
                               tableTargetable && GAME_CARD_IS_TARGETABLE_CLASS,
                               tableThrowable && GAME_CARD_IS_THROWABLE_CLASS,
                             )}
@@ -1836,7 +1839,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                               animate={{ opacity: 1, x: 10, y: 9, scale: 1 }}
                               transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
                             >
-                              <CardSprite card={tp.defense} size="tableCompact" surface="table" />
+                              <CardSprite
+                                card={tp.defense}
+                                size="tableCompact"
+                                surface="table"
+                                className={DURAK_DEFEND_CARD_CLASS}
+                              />
                             </motion.div>
                           </div>
                         ) : null}
