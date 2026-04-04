@@ -1815,15 +1815,23 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         </div>
 
                         {tp.defense ? (
-                          <motion.div
-                            key={`def-${tp.defense.id}`}
-                            className="absolute bottom-[0.4rem] left-1/2 z-[22] -translate-x-1/2 sm:bottom-[0.45rem]"
-                            initial={{ opacity: 0, x: 10, y: 6 }}
-                            animate={{ opacity: 1, x: 14, y: 0 }}
-                            transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                          <div
+                            key={`def-wrap-${tp.defense.id}`}
+                            className="pointer-events-none absolute bottom-0 left-1/2 z-[22] -translate-x-1/2"
                           >
-                            <CardSprite card={tp.defense} size="tableCompact" />
-                          </motion.div>
+                            {/*
+                              По центру атаки; только сдвиг вверх (без горизонтального x), чтобы отбой перекрывал атаку, а не «улетал за угол».
+                            */}
+                            <motion.div
+                              key={`def-${tp.defense.id}`}
+                              className="origin-bottom"
+                              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                              animate={{ opacity: 1, y: -34, scale: 1 }}
+                              transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+                            >
+                              <CardSprite card={tp.defense} size="tableCompact" />
+                            </motion.div>
+                          </div>
                         ) : null}
                       </div>
                     </div>
