@@ -68,6 +68,7 @@ import {
   fetchRoomPlayers,
   isRoomPlayerLikelyGone,
 } from "@/lib/durak/online/matchmaking";
+import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
 
 const HUMAN_ID = "human";
 
@@ -825,6 +826,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const tableRoundRef = useRef<HTMLDivElement>(null);
   const boardPlayAreaRef = useRef<HTMLDivElement>(null);
   const [tableOrbitPx, setTableOrbitPx] = useState(0);
+  const [lossResultTitle, setLossResultTitle] = useState("");
+  const lossResultTitleGameIdRef = useRef<string | null>(null);
 
   useLayoutEffect(() => {
     const el = tableRoundRef.current;
@@ -1053,6 +1056,25 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [game?.id, embedded]);
 
   const selfPlayer = game?.players.find((p) => p.id === localPlayerId);
+  const wonByForfeit =
+    !!game &&
+    game.state === "finished" &&
+    Boolean(props.embedded?.opponentForfeitWin) &&
+    game.winnerId === localPlayerId;
+
+  useLayoutEffect(() => {
+    if (!game) return;
+    if (game.state !== "finished") {
+      lossResultTitleGameIdRef.current = null;
+      return;
+    }
+    if (wonByForfeit || game.loserId !== localPlayerId) return;
+    if (lossResultTitleGameIdRef.current === game.id) return;
+    lossResultTitleGameIdRef.current = game.id;
+    const name = (selfPlayer?.name ?? displayName).trim() || "Игрок";
+    setLossResultTitle(getRandomLossResultTitle(name));
+  }, [game, game?.state, game?.id, game?.loserId, localPlayerId, wonByForfeit, selfPlayer?.name, displayName]);
+
   const opponents = useMemo(
     () => (game ? opponentsClockwiseFromLocal(game, localPlayerId) : []),
     [game, localPlayerId]
@@ -1525,12 +1547,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     const i = (game.id.length + game.phase.length + game.tablePairs.length) % pool.length;
     return pool[i] ?? null;
   }, [game, dealing, selfIsAttacker, selfIsDefender, selfCanTossCards]);
-
-  const wonByForfeit =
-    !!game &&
-    game.state === "finished" &&
-    Boolean(props.embedded?.opponentForfeitWin) &&
-    game.winnerId === localPlayerId;
 
   if (!nameHydrated) {
     return (
@@ -2176,7 +2192,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   ? wonByForfeit
                     ? "Техническая победа"
                     : "Партия за тобой"
-                  : "Партия сыграна"}
+                  : "ПАРТИЯ СЫГРАНА"}
               </p>
               <p
                 id="durak-result-title"
@@ -2186,15 +2202,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   ? "Соперник вышел из игры — ты победил! 🥇"
                   : game.winnerId === localPlayerId
                     ? `${selfPlayer?.name ?? playerName}, блеск!`
-                    : `${selfPlayer?.name ?? playerName}, в этот раз чуть не хватило`}
+                    : lossResultTitle ||
+                      `${(selfPlayer?.name ?? playerName).trim() || "Игрок"}, следующий раунд твой`}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-white/55">
                 {wonByForfeit
                   ? "Соперник не выходил на связь больше отведённого времени — стол закрыт."
                   : game.loserId === localPlayerId
-                    ? "Такое бывает у каждого: партия могла сложиться иначе на один ход. Загляни к нам в бар — выбери напиток и что-нибудь поесть, отдохни за стойкой: следующий раунд всегда ждёт, когда ты будешь готов."
+                    ? "Почти дожала. Соберись и заходи на новый раунд."
                     : game.winnerId === localPlayerId
-                      ? "Ты первым освободил руку — отличный повод заглянуть в бар и праздновать не спеша."
+                      ? "Ты первой сбросила все карты — давай ещё одну партию."
                       : ""}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -2203,7 +2220,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   onClick={restart}
                   className="w-full rounded-full bg-[#f8d66d] px-6 py-3.5 text-sm font-semibold text-[#1a1612] shadow-[0_10px_36px_rgba(248,214,109,0.25)] transition hover:brightness-105 sm:w-auto sm:min-w-[10.5rem]"
                 >
-                  {embedded ? "Новая партия" : "Реванш"}
+                  {game.loserId === localPlayerId
+                    ? "Новая партия"
+                    : embedded
+                      ? "Новая партия"
+                      : "Реванш"}
                 </button>
                 {!embedded ? (
                   <button
