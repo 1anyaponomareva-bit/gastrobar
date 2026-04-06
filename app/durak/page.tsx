@@ -65,7 +65,7 @@ const durakMainColumnStyle: CSSProperties = {
   flex: 1,
   flexDirection: "column",
   overflowX: "hidden",
-  paddingTop: "calc(60px + max(0px, env(safe-area-inset-top, 0px)) + 1.15rem)",
+  paddingTop: "calc(60px + max(0px, env(safe-area-inset-top, 0px)) + 0.35rem)",
   backgroundColor: "#14100c",
   color: "#f1f5f9",
 };
@@ -78,7 +78,7 @@ export default function DurakPage() {
     >
       <Header />
       <div
-        className={`durak-page flex min-h-[calc(100svh-5rem)] w-full min-w-0 flex-1 flex-col overflow-x-hidden ${HEADER_OFFSET_TOP_DURAK}`}
+        className={`durak-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${HEADER_OFFSET_TOP_DURAK}`}
         style={durakMainColumnStyle}
       >
         <DurakShell />

@@ -82,7 +82,6 @@ import {
   getDurakTableColumnClassNames,
 } from "@/lib/durak/durakTableLayout";
 import {
-  clampTablePairOffsetYPx,
   DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
   DURAK_SCENE_PLAYER_HAND_SCALE,
   DURAK_SCENE_TABLE_CENTER_Y_VH,
@@ -311,7 +310,6 @@ function tablePairOrbitOffset(
   index: number,
   total: number,
   orbitRadiusPx: number,
-  viewportHeightPx: number,
 ): { x: number; y: number } {
   if (orbitRadiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
 
@@ -787,10 +785,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const skipNameBlurCommitRef = useRef(false);
   const tableRoundRef = useRef<HTMLDivElement>(null);
+  const durakSceneRef = useRef<HTMLDivElement>(null);
   const boardPlayAreaRef = useRef<HTMLDivElement>(null);
   const [tableOrbitPx, setTableOrbitPx] = useState(0);
-  const [viewportHeightPx, setViewportHeightPx] = useState(
-    typeof window !== "undefined" ? window.innerHeight : 800,
+  /** Высота колонки сцены (между хедером и таббаром), не `100vh` — иначе `vh` и px расходятся с абсолютным позиционированием. */
+  const [sceneHeightPx, setSceneHeightPx] = useState(
+    typeof window !== "undefined" ? Math.round(window.innerHeight * 0.72) : 600,
   );
   const [lossResultTitle, setLossResultTitle] = useState("");
   const lossResultTitleGameIdRef = useRef<string | null>(null);
@@ -806,11 +806,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [game?.id]);
 
   useLayoutEffect(() => {
-    const onResize = () => setViewportHeightPx(window.innerHeight);
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    const el = durakSceneRef.current;
+    if (!el) return;
+    const upd = () => setSceneHeightPx(Math.max(240, el.clientHeight));
+    upd();
+    const ro = new ResizeObserver(upd);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [game?.id]);
 
   useLayoutEffect(() => {
     if (!DURAK_TABLE_LAYOUT_DEBUG) return;
@@ -1085,16 +1088,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
   const tableCenterPx = useMemo(
-    () => getTableCenterYPx(viewportHeightPx),
-    [viewportHeightPx],
+    () => getTableCenterYPx(sceneHeightPx),
+    [sceneHeightPx],
   );
   const tableRadiusPx = useMemo(
     () => getTableRadiusPxFromOrbit(orbitPxEff),
     [orbitPxEff],
   );
   const playerHandCenterPx = useMemo(
-    () => getPlayerHandCenterYPx(viewportHeightPx, tableRadiusPx),
-    [viewportHeightPx, tableRadiusPx],
+    () => getPlayerHandCenterYPx(sceneHeightPx, tableRadiusPx),
+    [sceneHeightPx, tableRadiusPx],
   );
   const tableBottomPx = tableCenterPx + tableRadiusPx;
   const opponentTablePlacements = useMemo(() => {
@@ -1676,12 +1679,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         <div
           ref={tableRoundRef}
-          data-durak-table-center-y="50vh"
+          data-durak-table-center-y={`${DURAK_SCENE_TABLE_CENTER_Y_VH}%`}
+          data-durak-scene-height={Math.round(sceneHeightPx)}
           data-durak-players={game.players.length}
           data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="absolute left-1/2 top-[50vh] z-[1] max-w-full -translate-x-1/2 -translate-y-1/2 isolate overflow-visible rounded-full"
+          className="absolute left-1/2 z-[1] max-w-full -translate-x-1/2 -translate-y-1/2 isolate overflow-visible rounded-full"
           style={{
+            top: `${tableCenterPx}px`,
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
           }}
@@ -1752,7 +1757,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     i,
                     game.tablePairs.length,
                     getBattleAreaOrbitPx(orbitPxEff),
-                    viewportHeightPx,
                   );
                   const uncovered = tp.defense === null;
                   const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;

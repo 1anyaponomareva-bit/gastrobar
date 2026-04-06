@@ -22,7 +22,7 @@ const wrapStyle: CSSProperties = {
 function DurakPageShell({ children }: { children: ReactNode }) {
   return (
     <div
-      className="relative z-[1] mx-auto flex min-h-[min(85dvh,820px)] w-full max-w-lg flex-1 flex-col bg-[#14100c]"
+      className="relative z-[1] mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col bg-[#14100c]"
       style={wrapStyle}
     >
       {children}

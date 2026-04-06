@@ -15,7 +15,7 @@ export const DURAK_DECK_WRAPPER_CLASS =
 export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;
 
 /**
- * Колонка сцены: фиксированный safe-area сверху; вертикаль сцены задаётся vh в разметке, без mt от числа игроков.
+ * Колонка сцены: safe-area сверху; вертикаль стола — от высоты колонки (`ResizeObserver` в `DurakGame`), без mt от числа игроков.
  */
 export function getDurakTableColumnClassNames(): string {
   return cn(
