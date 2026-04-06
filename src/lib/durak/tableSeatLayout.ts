@@ -113,7 +113,7 @@ export function opponentTableFanStyle(
   i: number,
   mults: OpponentFanMults,
   fanTightness = 1,
-  opts?: { compact?: boolean },
+  opts?: { compact?: boolean; durakOpponent?: boolean },
 ): CSSProperties {
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
@@ -131,6 +131,9 @@ export function opponentTableFanStyle(
   const denom = Math.max(mid, 1e-6);
   const baseEdge = Math.min(20, 7 + n * 1.65);
   let edgeMaxDeg = baseEdge * mults.edgeMax * t;
+  if (opts?.durakOpponent) {
+    edgeMaxDeg = Math.min(edgeMaxDeg, 15);
+  }
   const baseStep = Math.min(16, Math.max(8, 92 / Math.max(n - 1, 1)));
   let stepPx = baseStep * mults.step * t;
   let arc = Math.abs(rel) * 0.38 * mults.arc * t;

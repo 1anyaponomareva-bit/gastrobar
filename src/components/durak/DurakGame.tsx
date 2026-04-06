@@ -274,6 +274,8 @@ const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
 const TABLE_PAIRS_ROW_GAP_PX = 56;
+/** Сдвиг пар вверх от центра, чтобы нижняя кромка карт не заходила на зону соперников (maxY < centerY − 20). */
+const TABLE_PAIRS_SHIFT_UP_PX = 20;
 
 /**
  * Позиции колонок «атака + отбой» на столе: ряд(и) по горизонтали в центре сукна.
@@ -313,7 +315,9 @@ function tablePairOrbitOffset(
   const totalWidth = (n - 1) * gap;
   const startX = -totalWidth / 2;
   const x = startX + indexInRow * gap;
-  const y = rowIndex === 0 ? -TABLE_PAIRS_ROW_GAP_PX * 0.42 : TABLE_PAIRS_ROW_GAP_PX * 0.58;
+  const y =
+    (rowIndex === 0 ? -TABLE_PAIRS_ROW_GAP_PX * 0.42 : TABLE_PAIRS_ROW_GAP_PX * 0.58) -
+    TABLE_PAIRS_SHIFT_UP_PX;
   return { x, y };
 }
 
@@ -1798,6 +1802,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           1,
                           {
                             compact: true,
+                            durakOpponent: true,
                           },
                         )}
                       >

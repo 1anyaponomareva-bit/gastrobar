@@ -1,68 +1,74 @@
 /**
- * Единый layout соперников за столом (2–6 игроков): углы, внешний радиус, якорь веера.
- * Локальный игрок внизу (90°) в разметке не участвует — только соперники по внешней дуге.
+ * Фиксированная геометрия соперников: верхняя дуга, орбита вне круга стола.
+ * y вниз; центр стола — центр круглого контейнера; углы в градусах, 0° вправо, −90° вверх.
  */
 
 import type { Card, Player } from "@/games/durak/types";
 
 import {
   fanContainerRotationDeg,
-  normalizeAngleDeg180,
   opponentFanLayoutMults,
-  seatOffsetOnCircle,
   type OpponentFanMults,
 } from "./tableSeatLayout";
 
-/** Радиус размещения карт боя — меньше измеренного orbit, чтобы под соперников оставалось кольцо. */
+/** Радиус размещения карт боя — внутри сукна, меньше полного orbit. */
 export const DURAK_TABLE_BATTLE_ORBIT_MULT = 0.78;
 
 export function getBattleAreaOrbitPx(orbitPxEff: number): number {
   return Math.max(1, orbitPxEff) * DURAK_TABLE_BATTLE_ORBIT_MULT;
 }
 
-function opponentAnglesUniform(totalPlayers: number, opponentCount: number): number[] {
-  if (totalPlayers < 2 || opponentCount <= 0) return [];
-  const step = 360 / totalPlayers;
+/**
+ * Радиус круга стола (px): `orbitPxEff = clientWidth * 0.48` → `clientWidth = orbit/0.48`, радиус = W/2.
+ */
+export function getTableRadiusPxFromOrbit(orbitPxEff: number): number {
+  const o = Math.max(1, orbitPxEff);
+  return o / 0.96;
+}
+
+/** Зазор от обода стола до орбиты соперников (70–110px). */
+export function getPlayerOrbitGapPx(tableRadiusPx: number): number {
+  return Math.round(Math.min(110, Math.max(70, 70 + tableRadiusPx * 0.06)));
+}
+
+/** Ниже этой линии (в координатах от центра, oy) соперник не опускается — над сукном. */
+const PLAYER_OY_MAX_ABOVE_TABLE_PX = 40;
+
+function opponentAnglesUniformUpperArc(opponentCount: number): number[] {
+  if (opponentCount <= 0) return [];
+  const lo = -160;
+  const hi = -20;
+  if (opponentCount === 1) return [-90];
+  const span = hi - lo;
   const out: number[] = [];
   for (let i = 0; i < opponentCount; i++) {
-    const k = i + 1;
-    out.push(normalizeAngleDeg180(90 - k * step));
+    const t = opponentCount === 1 ? 0.5 : i / (opponentCount - 1);
+    out.push(lo + t * span);
   }
   return out;
 }
 
 /**
- * Угла сиденья соперников (по часовой от локального внизу), индекс 0…N−2.
- * Явные таблицы для 2–6; иначе равномерный шаг по кругу.
+ * Углы только в верхней дуге [−160°, −20°]. Явные таблицы 2–6; иначе равномерно по дуге.
  */
 export function getSeatAnglesForTotalPlayers(totalPlayers: number): number[] {
   switch (totalPlayers) {
     case 2:
       return [-90];
     case 3:
-      return [-55, -125];
+      return [-140, -40];
     case 4:
-      return [0, -45, -135];
-    case 5: {
-      const step = 360 / 5;
-      const out: number[] = [];
-      for (let i = 0; i < 4; i++) {
-        const k = i + 1;
-        out.push(normalizeAngleDeg180(90 - k * step));
-      }
-      return out;
-    }
+      return [-150, -90, -30];
+    case 5:
+      return [-160, -120, -80, -40];
     case 6:
-      return [45, 0, -45, -135, 135];
+      return [-160, -130, -100, -70, -40];
     default:
       if (totalPlayers < 2) return [];
-      return opponentAnglesUniform(totalPlayers, totalPlayers - 1);
+      return opponentAnglesUniformUpperArc(totalPlayers - 1);
   }
 }
 
-/**
- * Совместимость с прежним API: углы для `opponents.length` соперников при `totalPlayerCount` игроках.
- */
 export function getOpponentSeatAnglesDeg(
   opponentCount: number,
   totalPlayerCount?: number,
@@ -70,37 +76,52 @@ export function getOpponentSeatAnglesDeg(
   const total = totalPlayerCount ?? opponentCount + 1;
   const angles = getSeatAnglesForTotalPlayers(total);
   if (angles.length === opponentCount) return angles;
-  return opponentAnglesUniform(total, opponentCount);
+  return opponentAnglesUniformUpperArc(opponentCount);
 }
 
 /**
- * Радиус якорей соперников: **вне** зоны боя (`getBattleAreaOrbitPx`), у обода круга.
+ * Якорь соперника на орбите; oy не ниже −tableRadius − 40 (не «сползать» на сукно).
  */
-export function getOpponentRimRadiusPx(orbitPxEff: number, embedded: boolean): number {
-  const base = Math.max(1, orbitPxEff);
-  const embeddedExtra = embedded ? 22 : 0;
-  const tableHalfPx = (base / 0.48) * 0.5;
-  const maxR = tableHalfPx * 0.96;
-  const battleR = base * DURAK_TABLE_BATTLE_ORBIT_MULT;
-  /** Радиальный зазор между внешним краем боя и соперниками (~18% радиуса круга, max 72px). */
-  const gapRadial = Math.min(72, Math.max(28, tableHalfPx * 0.18));
-  const minR = Math.min(maxR, battleR + gapRadial);
-  const raw = base * 1.1 + embeddedExtra + 36;
-  return Math.min(maxR, Math.max(minR, Math.min(raw, maxR)));
+function clampOpponentRadialOffset(params: {
+  angleDeg: number;
+  tableRadiusPx: number;
+  playerRadiusPx: number;
+}): { ox: number; oy: number; rUsed: number } {
+  const { angleDeg, tableRadiusPx, playerRadiusPx } = params;
+  const rad = (angleDeg * Math.PI) / 180;
+  const sinA = Math.sin(rad);
+  const cosA = Math.cos(rad);
+  let r = Math.max(1, playerRadiusPx);
+  let ox = cosA * r;
+  let oy = sinA * r;
+
+  const oyMax = -tableRadiusPx - PLAYER_OY_MAX_ABOVE_TABLE_PX;
+  if (oy > oyMax && sinA < -1e-6) {
+    r = oyMax / sinA;
+    ox = cosA * r;
+    oy = oyMax;
+  }
+  return { ox, oy, rUsed: r };
 }
 
-/**
- * Сдвиг угла якоря веера относительно угла сиденья: зона колоды слева (верхний левый сектор).
- */
-export function getFanAnchorAngleOffsetDeg(seatAngleDeg: number): number {
-  if (seatAngleDeg <= -95 && seatAngleDeg >= -175) return 6;
-  return 0;
+/** Ужатый веер соперника: scale 0.75–0.85, меньше раскрытие. */
+export function applyDurakOpponentFanTightness(m: OpponentFanMults): OpponentFanMults {
+  const scale = Math.min(0.85, Math.max(0.75, m.scale * 0.82));
+  return {
+    ...m,
+    scale,
+    edgeMax: m.edgeMax * 0.42,
+    step: m.step * 0.88,
+    arc: m.arc * 0.88,
+    handWidthRem: m.handWidthRem * 0.9,
+    handHeightRem: m.handHeightRem * 0.92,
+  };
 }
 
 function labelRadialPx(opponentCount: number): number {
-  if (opponentCount >= 5) return 38;
-  if (opponentCount >= 4) return 44;
-  return 50;
+  if (opponentCount >= 5) return 36;
+  if (opponentCount >= 4) return 40;
+  return 46;
 }
 
 export type DurakOpponentTablePlacement = {
@@ -119,23 +140,35 @@ export function buildOpponentTablePlacements(args: {
   opponents: Player[];
   totalPlayers: number;
   orbitPxEff: number;
-  embedded: boolean;
+  embedded?: boolean;
 }): DurakOpponentTablePlacement[] {
-  const { opponents, totalPlayers, orbitPxEff, embedded } = args;
-  const rimR = getOpponentRimRadiusPx(orbitPxEff, embedded);
-  const mults = opponentFanLayoutMults(opponents.length);
+  const { opponents, totalPlayers, orbitPxEff } = args;
+  const tableRadiusPx = getTableRadiusPxFromOrbit(orbitPxEff);
+  const gapPx = getPlayerOrbitGapPx(tableRadiusPx);
+  const playerRadiusPx = tableRadiusPx + gapPx;
+
+  const baseMults = opponentFanLayoutMults(opponents.length);
+  const mults = applyDurakOpponentFanTightness(baseMults);
   const lr = labelRadialPx(opponents.length);
   const angles = getOpponentSeatAnglesDeg(opponents.length, totalPlayers);
 
   return opponents.map((opp, oi) => {
     const bh = opp.hand;
     const seatAngleDeg = angles[oi] ?? -90;
-    const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(seatAngleDeg, rimR);
-    const fanAnchorAngleDeg = seatAngleDeg + getFanAnchorAngleOffsetDeg(seatAngleDeg);
-    const { ox: fanAx, oy: fanAy } = seatOffsetOnCircle(fanAnchorAngleDeg, rimR);
-    const fanRot = fanContainerRotationDeg(fanAnchorAngleDeg);
+    const rad = (seatAngleDeg * Math.PI) / 180;
+    const nx = Math.cos(rad);
+    const ny = Math.sin(rad);
+    const { ox: rimOx, oy: rimOy } = clampOpponentRadialOffset({
+      angleDeg: seatAngleDeg,
+      tableRadiusPx,
+      playerRadiusPx,
+    });
+    const fanAx = rimOx;
+    const fanAy = rimOy;
+    const fanRot = fanContainerRotationDeg(seatAngleDeg);
     const lx = rimOx + nx * lr;
     const ly = rimOy + ny * lr;
+
     return {
       oppId: opp.id,
       oppName: opp.name,
