@@ -1,10 +1,14 @@
 /**
  * Геометрия рассадки вокруг круглого стола (мобильный UI).
- * Углы: 0° = вправо по экрану, 90° = низ (место локального игрока), 180° = влево, -90° = верх.
- * Соперники в порядке `opponentsClockwiseFromLocal` — по часовой от локального относительно стола.
  *
- * Для **2 игроков** углы для одного соперника остаются частью legacy-режима (`duel_legacy` в
- * `getDurakTableLayoutMode`); не подменяйте их общей multi-формулой без явной ветки в `DurakGame`.
+ * Конвенция углов (как в тригонометрии на экране, y вниз):
+ *   x = cx + r * cos(θ),   y = cy + r * sin(θ)
+ *   0° = вправо, 90° = низ (место локального игрока), 180° = влево, -90° = верх.
+ *
+ * Локальный игрок всегда внизу при θ = 90°. Соперники в порядке
+ * `opponentsClockwiseFromLocal` — по часовой стрелке от локального вдоль окружности.
+ *
+ * Для **2** в дуэли (`duel_legacy`) сохраняем классические углы [180°, 0°].
  */
 
 import type { CSSProperties } from "react";
@@ -16,7 +20,7 @@ export function normalizeAngleDeg180(a: number): number {
   return x;
 }
 
-/** Смещение якоря сиденья от центра стола (ox вправо, oy вниз). */
+/** Смещение центра якоря сиденья от центра стола: ox вправо, oy вниз (px). */
 export function seatOffsetOnCircle(
   angleDeg: number,
   radiusPx: number,
@@ -29,78 +33,61 @@ export function seatOffsetOnCircle(
 }
 
 /**
- * Углы сидений для каждого соперника (индекс 0..N-1), всего N = opponents.length.
+ * Равномерное размещение N игроков: локальный k=0 → 90°, далее по часовой
+ * θ_k = 90° − k·(360°/N). Соперник i (0..N-2) соответствует k = i+1.
+ */
+function opponentAnglesUniform(totalPlayers: number, opponentCount: number): number[] {
+  if (totalPlayers < 2 || opponentCount <= 0) return [];
+  const step = 360 / totalPlayers;
+  const out: number[] = [];
+  for (let i = 0; i < opponentCount; i++) {
+    const k = i + 1;
+    out.push(normalizeAngleDeg180(90 - k * step));
+  }
+  return out;
+}
+
+/**
+ * Шесть игроков: две верхние «полки» (1 и 2), бок и низ по схеме циферблата.
+ * Углы в нашей конвенции; порядок массива = по часовой от локального (90°).
+ * Локальный не в списке — только 5 соперников.
  *
- * При **3 игроках за столом** соперников два (`opponentCount === 2`), но без `totalPlayerCount`
- * их углы совпадали бы с дуэлью left/right (`180, 0`). Передайте `totalPlayerCount === 3`,
- * чтобы поставить их на **верхне-левую и верхне-правую** дугу (сейчас −120° / −60°, зеркально к вертикали).
+ * По часовой от низа: BR → R → UR → UL → BL.
+ */
+const SIX_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [45, 0, -45, -135, 135];
+
+/**
+ * Углы сидений для каждого соперника (индекс 0..N-1), N = opponents.length.
+ * `totalPlayerCount` — всего игроков за столом (включая локального).
  */
 export function getOpponentSeatAnglesDeg(
   opponentCount: number,
   totalPlayerCount?: number,
 ): number[] {
-  if (opponentCount === 2 && totalPlayerCount === 3) {
-    /**
-     * Верхняя дуга: чуть ближе к горизонтали середины — не «под потолок»/хедер.
-     * Симметрия относительно вертикали (−90°).
-     */
-    return [-132, -50];
+  const total = totalPlayerCount ?? opponentCount + 1;
+
+  if (opponentCount === 2 && total === 2) {
+    return [180, 0];
   }
-  switch (opponentCount) {
-    case 1:
-      return [-90];
-    case 2:
-      return [180, 0];
-    case 3:
-      return [180, -90, 0];
-    case 4:
-      return [150, 210, -45, 25];
-    case 5:
-      return [150, 210, -90, -30, 30];
-    default:
-      return fallbackArcSeatAngles(opponentCount);
+
+  if (total === 6 && opponentCount === 5) {
+    return [...SIX_PLAYER_OPPONENT_ANGLES_CW_DEG];
   }
+
+  return opponentAnglesUniform(total, opponentCount);
 }
 
-function fallbackArcSeatAngles(n: number): number[] {
-  if (n <= 0) return [];
-  const bottomDeg = 90;
-  const gapHalfDeg = 48;
-  const gapStart = bottomDeg - gapHalfDeg;
-  const gapEnd = bottomDeg + gapHalfDeg;
-  const available = 360 - (gapEnd - gapStart);
-  const step = available / n;
-  const halfSpan = available / 2;
-  const topDeg = -90;
-  const out: number[] = [];
-  for (let i = 0; i < n; i++) {
-    let angleDeg = topDeg - halfSpan + step * (i + 0.5);
-    angleDeg = normalizeAngleDeg180(angleDeg);
-    if (angleDeg >= gapStart && angleDeg <= gapEnd) {
-      angleDeg = normalizeAngleDeg180(angleDeg + ((i % 2) * 2 - 1) * (step * 0.5 + 2));
-    }
-    out.push(angleDeg);
-  }
-  return out;
-}
-
-/** Поворот контейнера руки: веер локально «вверх» смотрит к центру стола. */
+/** Поворот контейнера веера: локально «верх» веера направлен к центру стола. */
 export function fanContainerRotationDeg(seatAngleDeg: number): number {
   return normalizeAngleDeg180(seatAngleDeg - 90);
 }
 
 export type OpponentFanMults = {
-  /** Множитель к edgeMaxDeg */
   edgeMax: number;
-  /** Множитель к шагу tx между картами */
   step: number;
-  /** Множитель к дуге arc */
   arc: number;
-  /** Общий scale всего блока руки */
   scale: number;
-  /** Высота зоны веера (rem), дальше clamp в vw в JSX */
   handHeightRem: number;
-  /** Ширина зоны веера (rem) */
   handWidthRem: number;
 };
 
@@ -164,13 +151,12 @@ export function opponentFanLayoutMults(opponentCount: number): OpponentFanMults 
 }
 
 /**
- * Веер рубашек соперника: касательно к столу (локально: разворот относительно нижней кромки контейнера).
+ * Веер рубашек соперника: касательно к столу (локально от нижней кромки контейнера).
  */
 export function opponentTableFanStyle(
   n: number,
   i: number,
   mults: OpponentFanMults,
-  /** Доп. сжатие веера (1 = как в mults; меньше 1 — уже, для 3 игроков). */
   fanTightness = 1,
 ): CSSProperties {
   if (n <= 0) return {};
@@ -202,4 +188,19 @@ export function opponentTableFanStyle(
     transformOrigin: "bottom center",
     zIndex: 16 + zFromCenter + i,
   };
+}
+
+/**
+ * Радиус окружности сидений: визуальный радиус «сукна» (orbit) + вынесение наружу.
+ * `tableOrbitRadiusPx` — половина ширины зоны боя (~0.48 * диаметр круга).
+ */
+export function opponentSeatRadiusPx(
+  tableOrbitRadiusPx: number,
+  opts?: { embedded?: boolean },
+): number {
+  const base = Math.max(1, tableOrbitRadiusPx);
+  const embeddedExtra = opts?.embedded ? 22 : 0;
+  /** Снаружи обода сукна, без двойного умножения на малый mult. */
+  const outward = 28;
+  return base * 1.06 + embeddedExtra + outward;
 }

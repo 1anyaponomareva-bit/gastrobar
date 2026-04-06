@@ -74,9 +74,9 @@ import {
   fanContainerRotationDeg,
   getOpponentSeatAnglesDeg,
   opponentFanLayoutMults,
+  opponentSeatRadiusPx,
   opponentTableFanStyle,
   seatOffsetOnCircle,
-  type OpponentFanMults,
 } from "@/lib/durak/tableSeatLayout";
 
 const HUMAN_ID = "human";
@@ -211,11 +211,6 @@ const HAND_ROW_MAX = 6;
 const HAND_ROW_GAP_PX = 56;
 
 /**
- * Руки на ободке сукна (~тот же радиус, что и зона боя): визуально «сидят» по контуру круга, не в стороне.
- */
-const OPPONENT_ORBIT_RADIUS_MULT = 1.02;
-
-/**
  * `true` → в консоль пишутся rect игровой зоны и стола (временная отладка геометрии).
  */
 const DURAK_TABLE_LAYOUT_DEBUG = false;
@@ -269,44 +264,6 @@ function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[]
 
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
 const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
-/** Онлайн: чуть вынести веер от линии сукна (px), без «парящих» рук вне стола. */
-const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
-
-/**
- * Только `players.length === 3`: колода/козырь — отдельный нижний левый сектор (не по центру слева).
- * Позиции соперников от колоды **не** считаем — только CSS сектора `boardPlayArea`.
- */
-/** Множитель радиуса якоря: внешняя дуга без излишнего «вытягивания» к краю экрана. */
-const THREE_PLAYER_OPP_HAND_RADIUS_MULT = 1.06;
-/** Сдвиг вдоль луча «центр → сиденье» наружу (px). */
-const THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX = 36;
-/** Опустить верхних двух (px в системе top: 50% + y): больше воздуха под хедером. */
-const THREE_PLAYER_TOP_VERTICAL_DOWN_PX = 26;
-/** Верхний левый — чуть вправо от зоны колоды (px). */
-const THREE_PLAYER_LEFT_TOP_AWAY_FROM_DECK_PX = 14;
-/** Подписи ближе к вееру, чем к верху экрана (множитель к labelRadial). */
-const THREE_PLAYER_LABEL_RADIAL_MULT = 0.9;
-/** Лёгкий сдвиг к ободу сукна вдоль луча к центру (якорь веера не уезжает в поле боя). */
-const THREE_PLAYER_TOP_OPP_INWARD_PAD_PX = 10;
-/** Доп. сжатие шага/дуги в `opponentTableFanStyle` (1 = без доп. сжатия). */
-const THREE_PLAYER_OPP_FAN_TIGHTNESS = 0.88;
-const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
-const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
-const THREE_PLAYER_OPP_FAN_MAX_VW = 26;
-const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 20;
-
-/** Чуть компактнее веер у двух верхних при 3 игроках (симметрия, без «залезания» в центр). */
-function threePlayerUpperOppFanMults(base: OpponentFanMults): OpponentFanMults {
-  return {
-    ...base,
-    edgeMax: base.edgeMax * 0.78,
-    step: base.step * 0.82,
-    arc: base.arc * 0.8,
-    scale: base.scale * 0.96,
-    handWidthRem: base.handWidthRem * 0.88,
-    handHeightRem: base.handHeightRem * 0.94,
-  };
-}
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -1069,7 +1026,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [humanHand]);
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
-  const opponentOrbitPx = orbitPxEff * OPPONENT_ORBIT_RADIUS_MULT;
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1699,34 +1655,16 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
             const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
-            const isThreeOpponentsRow = isThreePlayerTable && opponents.length === 2;
-            const fanScaleExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT : 1;
-            const labelRadialExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX : 0;
-            const mults = isThreeOpponentsRow
-              ? threePlayerUpperOppFanMults(opponentFanLayoutMults(opponents.length))
-              : opponentFanLayoutMults(opponents.length);
-            const handRadius =
-              opponentOrbitPx *
-                OPPONENT_ORBIT_RADIUS_MULT *
-                (isThreeOpponentsRow ? THREE_PLAYER_OPP_HAND_RADIUS_MULT : 1) +
-              (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
+            const mults = opponentFanLayoutMults(opponents.length);
+            const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
             const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
             const fanRot = fanContainerRotationDeg(angleDeg);
-            const labelRadialBase =
-              (opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50) + labelRadialExtra;
             const labelRadialPx =
-              labelRadialBase * (isThreeOpponentsRow ? THREE_PLAYER_LABEL_RADIAL_MULT : 1);
-            const inwardPadPx = isThreeOpponentsRow
-              ? THREE_PLAYER_TOP_OPP_INWARD_PAD_PX
-              : 8 + Math.min(6, opponents.length);
-            const radialOutPx = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX : 0;
-            const verticalDown = isThreeOpponentsRow ? THREE_PLAYER_TOP_VERTICAL_DOWN_PX : 0;
-            const leftAway =
-              isThreeOpponentsRow && oi === 0 ? THREE_PLAYER_LEFT_TOP_AWAY_FROM_DECK_PX : 0;
-            const fanAx = rimOx - nx * inwardPadPx + nx * radialOutPx + leftAway;
-            const fanAy = rimOy - ny * inwardPadPx + ny * radialOutPx + verticalDown;
-            const lx = rimOx + nx * labelRadialPx + leftAway;
-            const ly = rimOy + ny * labelRadialPx + verticalDown;
+              opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
+            const fanAx = rimOx;
+            const fanAy = rimOy;
+            const lx = rimOx + nx * labelRadialPx;
+            const ly = rimOy + ny * labelRadialPx;
             return (
               <div
                 key={opp.id}
@@ -1755,19 +1693,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   style={{
                     left: `calc(50% + ${fanAx}px)`,
                     top: `calc(50% + ${fanAy}px)`,
-                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale * fanScaleExtra})`,
+                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale})`,
                     transformOrigin: "center center",
                   }}
                 >
                   <div
                     className="relative flex items-end justify-center overflow-visible"
                     style={{
-                      height: isThreeOpponentsRow
-                        ? `min(${mults.handHeightRem}rem, ${THREE_PLAYER_OPP_FAN_MAX_VH_VW}vw)`
-                        : `min(${mults.handHeightRem}rem, 28vw)`,
-                      width: isThreeOpponentsRow
-                        ? `min(${mults.handWidthRem}rem, ${THREE_PLAYER_OPP_FAN_MAX_VW}vw)`
-                        : `min(${mults.handWidthRem}rem, 44vw)`,
+                      height: `min(${mults.handHeightRem}rem, 28vw)`,
+                      width: `min(${mults.handWidthRem}rem, 44vw)`,
                       transformOrigin: "center bottom",
                     }}
                   >
@@ -1775,12 +1709,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       <div
                         key={c.id}
                         className="absolute"
-                        style={opponentTableFanStyle(
-                          bh.length,
-                          i,
-                          mults,
-                          isThreeOpponentsRow ? THREE_PLAYER_OPP_FAN_TIGHTNESS : 1,
-                        )}
+                        style={opponentTableFanStyle(bh.length, i, mults)}
                       >
                         <motion.div
                           className="[transform:translateZ(0)]"
@@ -1920,9 +1849,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 const opp = opponents[0]!;
                 const bh = opp.hand;
                 const angleDeg = opponentSeatAnglesDeg[0] ?? -90;
-                const handRadius =
-                  opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
-                  (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
+                const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
                 const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
                 const labelRadialPx =
                   opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
