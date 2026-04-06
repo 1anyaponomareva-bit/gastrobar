@@ -1,6 +1,5 @@
 /**
- * Фиксированная геометрия соперников: верхняя дуга, орбита вне круга стола.
- * y вниз; центр стола — центр круглого контейнера; углы в градусах, 0° вправо, −90° вверх.
+ * Геометрия соперников: горизонтальная дуга над столом; вертикаль — от центра стола (rimOy = −R − gap).
  */
 
 import type { Card, Player } from "@/games/durak/types";
@@ -11,10 +10,8 @@ import {
   type OpponentFanMults,
 } from "./tableSeatLayout";
 import {
-  clampOpponentRimOyViewportPx,
-  DURAK_SCENE_PLAYER_ORBIT_GAP_PX,
-  DURAK_SCENE_TABLE_OY_ABOVE_TABLE_PX,
-  radialOxForOyOnCircle,
+  DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX,
+  getOpponentRimOyPx,
 } from "./durakSceneLayout";
 
 /** Радиус размещения карт боя — внутри сукна, меньше полного orbit. */
@@ -32,9 +29,9 @@ export function getTableRadiusPxFromOrbit(orbitPxEff: number): number {
   return o / 0.96;
 }
 
-/** Фиксированный зазор от обода стола до орбиты соперников (px). */
+/** @deprecated оставлено для совместимости имён; горизонталь задаётся DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX. */
 export function getPlayerOrbitGapPx(_tableRadiusPx: number): number {
-  return DURAK_SCENE_PLAYER_ORBIT_GAP_PX;
+  return DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX;
 }
 
 function opponentAnglesUniformUpperArc(opponentCount: number): number[] {
@@ -51,9 +48,6 @@ function opponentAnglesUniformUpperArc(opponentCount: number): number[] {
   return out;
 }
 
-/**
- * Углы только в верхней дуге [−160°, −20°]. Явные таблицы 2–6; иначе равномерно по дуге.
- */
 export function getSeatAnglesForTotalPlayers(totalPlayers: number): number[] {
   switch (totalPlayers) {
     case 2:
@@ -80,35 +74,6 @@ export function getOpponentSeatAnglesDeg(
   const angles = getSeatAnglesForTotalPlayers(total);
   if (angles.length === opponentCount) return angles;
   return opponentAnglesUniformUpperArc(opponentCount);
-}
-
-/**
- * Орбита в локальных координатах стола; затем oy клампится по viewport (12vh … center−R−20).
- */
-function orbitOpponentLocal(params: {
-  angleDeg: number;
-  tableRadiusPx: number;
-  playerRadiusPx: number;
-}): { ox: number; oy: number; rUsed: number } {
-  const { angleDeg, tableRadiusPx, playerRadiusPx } = params;
-  const rad = (angleDeg * Math.PI) / 180;
-  const cosA = Math.cos(rad);
-  const r = Math.max(1, playerRadiusPx);
-  let ox = cosA * r;
-  let oy = Math.sin(rad) * r;
-
-  const oyMax = -tableRadiusPx - DURAK_SCENE_TABLE_OY_ABOVE_TABLE_PX;
-  if (oy > oyMax) {
-    oy = oyMax;
-    const disc = r * r - oy * oy;
-    if (disc <= 0) {
-      ox = 0;
-    } else {
-      const mag = Math.sqrt(disc);
-      ox = cosA >= 0 ? mag : -mag;
-    }
-  }
-  return { ox, oy, rUsed: r };
 }
 
 /** Ужатый веер соперника: scale 0.75–0.85, меньше раскрытие. */
@@ -147,12 +112,11 @@ export function buildOpponentTablePlacements(args: {
   opponents: Player[];
   totalPlayers: number;
   orbitPxEff: number;
-  viewportHeightPx: number;
 }): DurakOpponentTablePlacement[] {
-  const { opponents, totalPlayers, orbitPxEff, viewportHeightPx } = args;
+  const { opponents, totalPlayers, orbitPxEff } = args;
   const tableRadiusPx = getTableRadiusPxFromOrbit(orbitPxEff);
-  const gapPx = getPlayerOrbitGapPx(tableRadiusPx);
-  const playerRadiusPx = tableRadiusPx + gapPx;
+  const rimOy = getOpponentRimOyPx(tableRadiusPx);
+  const horizR = tableRadiusPx + DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX;
 
   const baseMults = opponentFanLayoutMults(opponents.length);
   const mults = applyDurakOpponentFanTightness(baseMults);
@@ -165,21 +129,7 @@ export function buildOpponentTablePlacements(args: {
     const rad = (seatAngleDeg * Math.PI) / 180;
     const nx = Math.cos(rad);
     const ny = Math.sin(rad);
-    const local = orbitOpponentLocal({
-      angleDeg: seatAngleDeg,
-      tableRadiusPx,
-      playerRadiusPx,
-    });
-    const rimOy = clampOpponentRimOyViewportPx({
-      rimOy: local.oy,
-      viewportHeightPx,
-      tableRadiusPx,
-    });
-    const rimOx = radialOxForOyOnCircle({
-      rimOy,
-      playerRadiusPx,
-      angleDeg: seatAngleDeg,
-    });
+    const rimOx = Math.cos(rad) * horizR;
     const fanAx = rimOx;
     const fanAy = rimOy;
     const fanRot = fanContainerRotationDeg(seatAngleDeg);

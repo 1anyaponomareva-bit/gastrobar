@@ -74,6 +74,7 @@ import {
   buildOpponentTablePlacements,
   getBattleAreaOrbitPx,
   getOpponentSeatAnglesDeg,
+  getTableRadiusPxFromOrbit,
 } from "@/lib/durak/durakTableLayoutEngine";
 import {
   DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
@@ -84,7 +85,9 @@ import {
   clampTablePairOffsetYPx,
   DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
   DURAK_SCENE_PLAYER_HAND_SCALE,
-  DURAK_SCENE_PLAYER_HAND_CENTER_Y_VH,
+  DURAK_SCENE_TABLE_CENTER_Y_VH,
+  getPlayerHandCenterYPx,
+  getTableCenterYPx,
 } from "@/lib/durak/durakSceneLayout";
 
 const HUMAN_ID = "human";
@@ -1081,15 +1084,27 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [humanHand]);
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
+  const tableCenterPx = useMemo(
+    () => getTableCenterYPx(viewportHeightPx),
+    [viewportHeightPx],
+  );
+  const tableRadiusPx = useMemo(
+    () => getTableRadiusPxFromOrbit(orbitPxEff),
+    [orbitPxEff],
+  );
+  const playerHandCenterPx = useMemo(
+    () => getPlayerHandCenterYPx(viewportHeightPx, tableRadiusPx),
+    [viewportHeightPx, tableRadiusPx],
+  );
+  const tableBottomPx = tableCenterPx + tableRadiusPx;
   const opponentTablePlacements = useMemo(() => {
     if (!game) return [];
     return buildOpponentTablePlacements({
       opponents: opponentsForTable,
       totalPlayers: totalPlayersForSeatLayout,
       orbitPxEff,
-      viewportHeightPx,
     });
-  }, [game, opponentsForTable, orbitPxEff, totalPlayersForSeatLayout, viewportHeightPx]);
+  }, [game, opponentsForTable, orbitPxEff, totalPlayersForSeatLayout]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1893,7 +1908,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         </div>
 
-      <div className="pointer-events-auto absolute left-1/2 top-[60vh] z-20 w-full max-w-[min(100%,580px)] -translate-x-1/2 px-1 pt-0.5 sm:px-2">
+      <div
+        className="pointer-events-auto absolute left-1/2 z-20 w-full max-w-[min(100%,580px)] -translate-x-1/2 px-1 pt-0.5 sm:px-2"
+        style={{ top: `${tableBottomPx + 52}px` }}
+      >
         <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1956,7 +1974,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       {phaseLine ? (
         <div
-          className="pointer-events-none absolute left-1/2 top-[54vh] z-21 flex max-w-[min(100%,580px)] -translate-x-1/2 flex-col items-center gap-1 px-2"
+          className="pointer-events-none absolute left-1/2 z-21 flex max-w-[min(100%,580px)] -translate-x-1/2 flex-col items-center gap-1 px-2"
+          style={{ top: `${tableBottomPx + 6}px` }}
           role="status"
         >
           <div className="flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
@@ -1992,10 +2011,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       <section
         className={cn(
-          "pointer-events-auto absolute left-1/2 z-[25] w-full max-w-[min(100%,580px)] bg-transparent px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] pt-0 sm:px-2",
+          "pointer-events-auto absolute left-1/2 z-[35] w-full max-w-[min(100%,580px)] bg-transparent px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] pt-0 sm:px-2",
         )}
         style={{
-          top: `${DURAK_SCENE_PLAYER_HAND_CENTER_Y_VH}vh`,
+          top: `${playerHandCenterPx}px`,
           transform: `translate(-50%, -50%) scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
           transformOrigin: "center center",
         }}
