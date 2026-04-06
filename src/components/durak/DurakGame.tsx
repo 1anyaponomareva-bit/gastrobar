@@ -83,6 +83,18 @@ import {
 
 const HUMAN_ID = "human";
 
+/** Если в `game.players` ещё один участник (рассинхрон) — показываем веер рубашек, не пустой стол. */
+const DURAK_OPPONENT_PLACEHOLDER_ID = "__durak_opponent_placeholder__";
+function durakOpponentPlaceholderPlayer(): Player {
+  return {
+    id: DURAK_OPPONENT_PLACEHOLDER_ID,
+    name: "Соперник",
+    type: "remote",
+    hand: [],
+    seatIndex: 1,
+  };
+}
+
 const PLAYER_NAME_LS = "player_name";
 const ONLINE_TURN_MS = 12_000;
 const ONLINE_TURN_WARN_SEC = 3;
@@ -253,8 +265,8 @@ function handFanStyle(
   };
 }
 
-/** Соперники по часовой стрелке от «меня» внизу — как рассадка за столом. */
-function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[] {
+/** Все остальные игроки по часовой стрелке от локального (рука внизу). */
+function otherPlayersClockwiseFromLocal(game: GameTable, localId: string): Player[] {
   let idx = game.players.findIndex((p) => p.id === localId);
   if (idx < 0) {
     /** Иначе filter даёт всех кроме id — при 2 игроках оба попадали в «соперники», ломая углы. */
@@ -1011,14 +1023,31 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     setLossResultTitle(getRandomLossResultTitle(name));
   }, [game, game?.state, game?.id, game?.loserId, localPlayerId, wonByForfeit, selfPlayer?.name, displayName]);
 
-  const opponents = useMemo(
-    () => (game ? opponentsClockwiseFromLocal(game, localPlayerId) : []),
+  const otherPlayers = useMemo(
+    () => (game ? otherPlayersClockwiseFromLocal(game, localPlayerId) : []),
     [game, localPlayerId]
   );
+
+  /** Слоты для рендера веера сверху: реальные соперники или одна заглушка при `players.length === 1`. */
+  const opponentsForTable = useMemo((): Player[] => {
+    if (!game) return [];
+    if (otherPlayers.length > 0) return otherPlayers;
+    if (game.players.length === 1) return [durakOpponentPlaceholderPlayer()];
+    return [];
+  }, [game, otherPlayers]);
+
+  const totalPlayersForSeatLayout = useMemo(() => {
+    if (!game) return 0;
+    return Math.max(game.players.length, opponentsForTable.length + 1);
+  }, [game, opponentsForTable.length]);
+
   const opponentSeatAnglesDeg = useMemo(
     () =>
-      getOpponentSeatAnglesDeg(opponents.length, game?.players.length),
-    [opponents.length, game?.players.length],
+      getOpponentSeatAnglesDeg(
+        opponentsForTable.length,
+        totalPlayersForSeatLayout > 0 ? totalPlayersForSeatLayout : undefined,
+      ),
+    [opponentsForTable.length, totalPlayersForSeatLayout],
   );
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
@@ -1033,12 +1062,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const opponentTablePlacements = useMemo(() => {
     if (!game) return [];
     return buildOpponentTablePlacements({
-      opponents,
-      totalPlayers: game.players.length,
+      opponents: opponentsForTable,
+      totalPlayers: totalPlayersForSeatLayout,
       orbitPxEff,
-      embedded: !!embedded,
     });
-  }, [embedded, game, opponents, orbitPxEff]);
+  }, [game, opponentsForTable, orbitPxEff, totalPlayersForSeatLayout]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1606,12 +1634,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       <div
         className={getDurakTableColumnClassNames({
           embedded: !!embedded,
-          hasOpponents: opponents.length > 0,
+          hasOpponents: opponentsForTable.length > 0,
         })}
       >
         <div
           ref={tableRoundRef}
           data-durak-players={game.players.length}
+          data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
           className="relative isolate z-0 max-w-full shrink-0 translate-y-[min(3vmin,5vh)] overflow-visible rounded-full"
           style={{
@@ -1951,7 +1980,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           embedded && "shadow-none",
         )}
         style={
-          opponents.length > 0 && orbitPxEff > 20
+          opponentsForTable.length > 0 && orbitPxEff > 20
             ? {
                 marginTop: `-${Math.min(32, Math.round(orbitPxEff * 0.088))}px`,
               }

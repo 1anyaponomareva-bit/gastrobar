@@ -81,6 +81,8 @@ export function getOpponentSeatAnglesDeg(
 
 /**
  * Якорь соперника на орбите; oy не ниже −tableRadius − 40 (не «сползать» на сукно).
+ * Точка остаётся на круге радиуса `playerRadiusPx`: при фиксации `oy` пересчитываем `ox` как
+ * пересечение окружности с горизонталью (а не удлиняем луч — иначе при углах ~−160° `ox` уходит за экран).
  */
 function clampOpponentRadialOffset(params: {
   angleDeg: number;
@@ -89,17 +91,21 @@ function clampOpponentRadialOffset(params: {
 }): { ox: number; oy: number; rUsed: number } {
   const { angleDeg, tableRadiusPx, playerRadiusPx } = params;
   const rad = (angleDeg * Math.PI) / 180;
-  const sinA = Math.sin(rad);
   const cosA = Math.cos(rad);
-  let r = Math.max(1, playerRadiusPx);
+  const r = Math.max(1, playerRadiusPx);
   let ox = cosA * r;
-  let oy = sinA * r;
+  let oy = Math.sin(rad) * r;
 
   const oyMax = -tableRadiusPx - PLAYER_OY_MAX_ABOVE_TABLE_PX;
-  if (oy > oyMax && sinA < -1e-6) {
-    r = oyMax / sinA;
-    ox = cosA * r;
+  if (oy > oyMax) {
     oy = oyMax;
+    const disc = r * r - oy * oy;
+    if (disc <= 0) {
+      ox = 0;
+    } else {
+      const mag = Math.sqrt(disc);
+      ox = cosA >= 0 ? mag : -mag;
+    }
   }
   return { ox, oy, rUsed: r };
 }
