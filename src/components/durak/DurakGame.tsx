@@ -1637,6 +1637,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           hasOpponents: opponentsForTable.length > 0,
         })}
       >
+        {/*
+          Запас сверху: веер соперника (absolute от центра круга) уходит выше верхней кромки стола.
+          Без in-flow отступа overflow-y-auto на предке обрезает рубашки — их «не видно».
+        */}
+        <div
+          className={cn(
+            "relative flex w-full max-w-full shrink-0 flex-col items-center overflow-visible",
+            opponentsForTable.length > 0 &&
+              "pt-[min(5.5rem,clamp(3.5rem,17vmin,9.5rem))] sm:pt-[min(6rem,clamp(4rem,18vmin,10rem))]",
+          )}
+        >
         <div
           ref={tableRoundRef}
           data-durak-players={game.players.length}
@@ -1803,7 +1814,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 className="pointer-events-none absolute inset-0 overflow-visible"
               >
                 <div
-                  className="pointer-events-none absolute z-[1]"
+                  className="pointer-events-none absolute z-[10]"
                   style={{
                     left: `calc(50% + ${pl.fanAx}px)`,
                     top: `calc(50% + ${pl.fanAy}px)`,
@@ -1837,12 +1848,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       >
                         <motion.div
                           className="[transform:translateZ(0)]"
-                          initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
+                          initial={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                           animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                          transition={{
-                            ...SPRING_SOFT,
-                            delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                          }}
+                          transition={{ duration: 0 }}
                         >
                           <CardSprite faceDown size="tableCompact" surface="opponent" />
                         </motion.div>
@@ -1870,6 +1878,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             ))}
           </div>
 
+        </div>
         </div>
       </div>
 
