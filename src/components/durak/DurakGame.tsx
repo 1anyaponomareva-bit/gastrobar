@@ -278,7 +278,9 @@ const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
  */
 /** Общие для левого и правого верхнего соперника (симметрия относительно вертикали стола). */
 /** Больше — сильнее тянем веера к центру стола (меньше «дыра» между двумя верхними). */
-const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 40;
+const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 54;
+/** Доп. сжатие шага/дуги в `opponentTableFanStyle` (умножается на геометрию веера). */
+const THREE_PLAYER_OPP_FAN_TIGHTNESS = 0.68;
 const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.86;
 const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
 /** Одна ширина/высота зоны веера для двух верхних — зеркало по окружности и одинаковая раскладка по ширине. */
@@ -582,17 +584,13 @@ function DeckPile({
           compact ? "min-h-0 w-full" : "min-h-0",
         )}
       >
-        <div className={cn("relative shrink-0", tuck && "z-20")}>{stackWrap}</div>
+        <div className={cn("relative shrink-0", tuck && "z-30")}>{stackWrap}</div>
         <div
-          className={cn("trump-area shrink-0 overflow-visible", tuck && "relative z-[8]")}
-          style={
-            tuck
-              ? {
-                  /* Высота компактной карты ≈ min-h колоды; −1/3 — верхняя треть козыря под стопкой */
-                  marginTop: "calc(-1 * min(4.35rem, 13vw) / 3)",
-                }
-              : undefined
-          }
+          className={cn(
+            "trump-area shrink-0 overflow-visible",
+            tuck &&
+              "relative z-[6] -mt-[calc(3rem*340/242/3)] sm:-mt-[calc(3.85rem*340/242/3)]",
+          )}
         >
           {trumpVisual}
         </div>
@@ -1755,7 +1753,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       <div
                         key={c.id}
                         className="absolute"
-                        style={opponentTableFanStyle(bh.length, i, mults)}
+                        style={opponentTableFanStyle(
+                          bh.length,
+                          i,
+                          mults,
+                          isThreeOpponentsRow ? THREE_PLAYER_OPP_FAN_TIGHTNESS : 1,
+                        )}
                       >
                         <motion.div
                           className="[transform:translateZ(0)]"

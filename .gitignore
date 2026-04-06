@@ -13,6 +13,8 @@
 .env*.local
 
 # debug / os
+# Windows: случайный файл из `> nul` в неверном cwd
+/nul
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

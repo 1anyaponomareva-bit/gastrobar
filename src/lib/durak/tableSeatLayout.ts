@@ -40,8 +40,8 @@ export function getOpponentSeatAnglesDeg(
   totalPlayerCount?: number,
 ): number[] {
   if (opponentCount === 2 && totalPlayerCount === 3) {
-    /** Симметрия ±30° от верха (−90°): меньше заход влево у верхне-левого — зазор под колоду у края. */
-    return [-120, -60];
+    /** Уже дуга, чем −120/−60: меньше «дыра» между веерами у центра стола (симметрия к вертикали). */
+    return [-112, -68];
   }
   switch (opponentCount) {
     case 1:
@@ -167,6 +167,8 @@ export function opponentTableFanStyle(
   n: number,
   i: number,
   mults: OpponentFanMults,
+  /** Доп. сжатие веера (1 = как в mults; меньше 1 — уже, для 3 игроков). */
+  fanTightness = 1,
 ): CSSProperties {
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
@@ -180,14 +182,15 @@ export function opponentTableFanStyle(
       zIndex: 20,
     };
   }
+  const t = Math.max(0.35, Math.min(1.25, fanTightness));
   const denom = Math.max(mid, 1e-6);
   const baseEdge = Math.min(20, 7 + n * 1.65);
-  const edgeMaxDeg = baseEdge * mults.edgeMax;
+  const edgeMaxDeg = baseEdge * mults.edgeMax * t;
   const rot = (rel / denom) * edgeMaxDeg;
   const baseStep = Math.min(16, Math.max(8, 92 / Math.max(n - 1, 1)));
-  const stepPx = baseStep * mults.step;
+  const stepPx = baseStep * mults.step * t;
   const tx = rel * stepPx;
-  const arc = Math.abs(rel) * 0.38 * mults.arc;
+  const arc = Math.abs(rel) * 0.38 * mults.arc * t;
   const zFromCenter = Math.round(4 * (mid - Math.abs(rel)));
   return {
     left: "50%",
