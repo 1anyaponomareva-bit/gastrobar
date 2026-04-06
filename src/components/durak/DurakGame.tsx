@@ -69,19 +69,14 @@ import {
   isRoomPlayerLikelyGone,
 } from "@/lib/durak/online/matchmaking";
 import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
+import { opponentTableFanStyle } from "@/lib/durak/tableSeatLayout";
 import {
-  fanContainerRotationDeg,
+  buildOpponentTablePlacements,
   getOpponentSeatAnglesDeg,
-  opponentFanLayoutMults,
-  opponentSeatRadiusPx,
-  opponentTableFanStyle,
-  seatOffsetOnCircle,
-} from "@/lib/durak/tableSeatLayout";
+} from "@/lib/durak/durakTableLayoutEngine";
 import {
-  clampUpperOpponentFanVerticalPx,
   DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
   DURAK_DECK_WRAPPER_CLASS,
-  durakFanAnchorAngleOffsetDeg,
   getDurakTableColumnClassNames,
 } from "@/lib/durak/durakTableLayout";
 
@@ -1016,7 +1011,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       getOpponentSeatAnglesDeg(opponents.length, game?.players.length),
     [opponents.length, game?.players.length],
   );
-  const totalPlayers = game?.players.length ?? 0;
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1029,47 +1023,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
   const opponentTablePlacements = useMemo(() => {
     if (!game) return [];
-    return opponents.map((opp, oi) => {
-      const bh = opp.hand;
-      const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
-      const mults = opponentFanLayoutMults(opponents.length);
-      const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
-      const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
-      const fanAnchorAngleDeg =
-        angleDeg + durakFanAnchorAngleOffsetDeg(totalPlayers, oi);
-      const { ox: fanAx, oy: fanAy } = seatOffsetOnCircle(fanAnchorAngleDeg, handRadius);
-      const fanRot = fanContainerRotationDeg(fanAnchorAngleDeg);
-      const labelRadialPx =
-        opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
-      const lx = rimOx + nx * labelRadialPx;
-      const ly = rimOy + ny * labelRadialPx;
-      const clamped = clampUpperOpponentFanVerticalPx({
-        seatAngleDeg: angleDeg,
-        fanAy,
-        ly,
-        orbitPxEff,
-        handHeightRem: mults.handHeightRem,
-      });
-      return {
-        oppId: opp.id,
-        oppName: opp.name,
-        bh,
-        lx,
-        ly: clamped.ly,
-        fanAx,
-        fanAy: clamped.fanAy,
-        fanRot,
-        mults,
-      };
+    return buildOpponentTablePlacements({
+      opponents,
+      totalPlayers: game.players.length,
+      orbitPxEff,
+      embedded: !!embedded,
     });
-  }, [
-    embedded,
-    game,
-    opponentSeatAnglesDeg,
-    opponents,
-    orbitPxEff,
-    totalPlayers,
-  ]);
+  }, [embedded, game, opponents, orbitPxEff]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 

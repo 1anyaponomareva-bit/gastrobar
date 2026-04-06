@@ -7,6 +7,7 @@
  *
  * Локальный игрок всегда внизу при θ = 90°. Соперники в порядке
  * `opponentsClockwiseFromLocal` — по часовой стрелке от локального вдоль окружности.
+ * Угла сидений и радиус обода — в `durakTableLayoutEngine.ts`.
  */
 
 import type { CSSProperties } from "react";
@@ -28,67 +29,6 @@ export function seatOffsetOnCircle(
   const nx = Math.cos(rad);
   const ny = Math.sin(rad);
   return { ox: nx * r, oy: ny * r, nx, ny };
-}
-
-/**
- * Равномерное размещение N игроков: локальный k=0 → 90°, далее по часовой
- * θ_k = 90° − k·(360°/N). Соперник i (0..N-2) соответствует k = i+1.
- */
-function opponentAnglesUniform(totalPlayers: number, opponentCount: number): number[] {
-  if (totalPlayers < 2 || opponentCount <= 0) return [];
-  const step = 360 / totalPlayers;
-  const out: number[] = [];
-  for (let i = 0; i < opponentCount; i++) {
-    const k = i + 1;
-    out.push(normalizeAngleDeg180(90 - k * step));
-  }
-  return out;
-}
-
-/**
- * Шесть игроков: две верхние «полки» (1 и 2), бок и низ по схеме циферблата.
- * Углы в нашей конвенции; порядок массива = по часовой от локального (90°).
- * Локальный не в списке — только 5 соперников.
- *
- * По часовой от низа: BR → R → UR → UL → BL.
- */
-const SIX_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [45, 0, -45, -135, 135];
-
-/**
- * Четыре игрока: равномерный шаг 90° даёт ровно «крест» (0° / −90° / 180°) — один соперник
- * висит на 12 часах. Фиксируем три сиденья: право, верх-право, верх-лево (без −90° по центру).
- * Порядок — по часовой от локального внизу (90°): сначала правый бок (0°), затем −45°, −135°.
- */
-const FOUR_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [0, -45, -135];
-
-/**
- * Три игрока: два соперника на верхней дуге симметрично (не один «вверху по центру»).
- */
-const THREE_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [-55, -125];
-
-/**
- * Углы сидений для каждого соперника (индекс 0..N-1), N = opponents.length.
- * `totalPlayerCount` — всего игроков за столом (включая локального).
- */
-export function getOpponentSeatAnglesDeg(
-  opponentCount: number,
-  totalPlayerCount?: number,
-): number[] {
-  const total = totalPlayerCount ?? opponentCount + 1;
-
-  if (total === 6 && opponentCount === 5) {
-    return [...SIX_PLAYER_OPPONENT_ANGLES_CW_DEG];
-  }
-
-  if (total === 4 && opponentCount === 3) {
-    return [...FOUR_PLAYER_OPPONENT_ANGLES_CW_DEG];
-  }
-
-  if (total === 3 && opponentCount === 2) {
-    return [...THREE_PLAYER_OPPONENT_ANGLES_CW_DEG];
-  }
-
-  return opponentAnglesUniform(total, opponentCount);
 }
 
 /** Поворот контейнера веера: локально «верх» веера направлен к центру стола. */
@@ -210,18 +150,4 @@ export function opponentTableFanStyle(
     transformOrigin: "bottom center",
     zIndex: 16 + zFromCenter + i,
   };
-}
-
-/**
- * Радиус окружности сидений: визуальный радиус «сукна» (orbit) + вынесение наружу.
- * `tableOrbitRadiusPx` — половина ширины зоны боя (~0.48 * диаметр круга).
- */
-export function opponentSeatRadiusPx(
-  tableOrbitRadiusPx: number,
-  opts?: { embedded?: boolean },
-): number {
-  const base = Math.max(1, tableOrbitRadiusPx);
-  const embeddedExtra = opts?.embedded ? 22 : 0;
-  /** Единый якорь у обода сукна — веер «лежит» на столе при любом числе игроков. */
-  return base * 1.02 + embeddedExtra + 12;
 }
