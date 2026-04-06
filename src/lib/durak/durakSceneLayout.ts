@@ -3,14 +3,15 @@
  * `H` в getTableCenterYPx / getPlayerHandCenterYPx — высота **колонки сцены** (между хедером и таббаром), не `window.innerHeight`.
  */
 
-/** Центр круглого стола по вертикали (доля высоты **сцены**). См. `DURAK_SCENE_TABLE_CENTER_Y_RATIO` в `durakSceneZones`. */
-export const DURAK_SCENE_TABLE_CENTER_Y_VH = 52;
+import { DURAK_SCENE_TABLE_CENTER_Y_RATIO } from "./durakSceneZones";
+
+export { DURAK_SCENE_TABLE_CENTER_Y_VH } from "./durakSceneZones";
 
 /**
- * Вертикаль: центр веера соперника на `tableTop - g` (локально от центра стола: rimOy = −R − g).
- * g подобран так, чтобы нижний край веера был не ниже чем на 24px выше верхней границы круга стола.
+ * Вертикаль: центр веера соперника на `tableTop - g` (локально: rimOy = −R − g).
+ * g невелик: нижний край веера **заходит** на сукно на ~15–35px (не «висит» только на фоне).
  */
-export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 84;
+export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 36;
 
 /** Горизонтальный вылет якоря соперника от центра стола (px): ox = cos(θ)·(tableRadius + это). */
 export const DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX = 60;
@@ -42,7 +43,7 @@ export const DURAK_SCENE_TABLE_CARDS_BOTTOM_MARGIN_ABOVE_HAND_PX = 100;
 
 export function getTableCenterYPx(viewportHeightPx: number): number {
   const H = Math.max(320, viewportHeightPx);
-  return (DURAK_SCENE_TABLE_CENTER_Y_VH / 100) * H;
+  return DURAK_SCENE_TABLE_CENTER_Y_RATIO * H;
 }
 
 /**

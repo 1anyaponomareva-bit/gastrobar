@@ -3,8 +3,11 @@
  * Все координаты — от верха и левого края **игровой колонки** (без шапки сайта).
  */
 
-/** Центр стола по вертикали: доля высоты доступной игровой области. */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.52;
+/** Центр стола по вертикали: доля высоты сцены (меньше — стол визуально выше). */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.44;
+
+/** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
+export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
@@ -48,7 +51,7 @@ export type DurakSceneZoneLayout = {
 };
 
 /**
- * Одна точка правды: размеры сцены → стол по центру (52% высоты), радиус от ширины стола.
+ * Одна точка правды: размеры сцены → стол по центру по вертикали, радиус от ширины стола.
  */
 export function computeDurakSceneZoneLayout(sceneW: number, sceneH: number): DurakSceneZoneLayout {
   const W = Math.max(280, sceneW);

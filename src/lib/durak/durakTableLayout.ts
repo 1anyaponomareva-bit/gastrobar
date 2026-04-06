@@ -19,7 +19,7 @@ export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;
  */
 export function getDurakTableColumnClassNames(): string {
   return cn(
-    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
+    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-stretch px-0.5 pb-1 pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
   );
 }
 
