@@ -57,6 +57,18 @@ function opponentAnglesUniform(totalPlayers: number, opponentCount: number): num
 const SIX_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [45, 0, -45, -135, 135];
 
 /**
+ * Четыре игрока: равномерный шаг 90° даёт ровно «крест» (0° / −90° / 180°) — один соперник
+ * висит на 12 часах. Фиксируем три сиденья: право, верх-право, верх-лево (без −90° по центру).
+ * Порядок — по часовой от локального внизу (90°): сначала правый бок (0°), затем −45°, −135°.
+ */
+const FOUR_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [0, -45, -135];
+
+/**
+ * Три игрока: два соперника на верхней дуге симметрично (не один «вверху по центру»).
+ */
+const THREE_PLAYER_OPPONENT_ANGLES_CW_DEG: number[] = [-55, -125];
+
+/**
  * Углы сидений для каждого соперника (индекс 0..N-1), N = opponents.length.
  * `totalPlayerCount` — всего игроков за столом (включая локального).
  */
@@ -72,6 +84,14 @@ export function getOpponentSeatAnglesDeg(
 
   if (total === 6 && opponentCount === 5) {
     return [...SIX_PLAYER_OPPONENT_ANGLES_CW_DEG];
+  }
+
+  if (total === 4 && opponentCount === 3) {
+    return [...FOUR_PLAYER_OPPONENT_ANGLES_CW_DEG];
+  }
+
+  if (total === 3 && opponentCount === 2) {
+    return [...THREE_PLAYER_OPPONENT_ANGLES_CW_DEG];
   }
 
   return opponentAnglesUniform(total, opponentCount);
@@ -200,7 +220,7 @@ export function opponentSeatRadiusPx(
 ): number {
   const base = Math.max(1, tableOrbitRadiusPx);
   const embeddedExtra = opts?.embedded ? 22 : 0;
-  /** Снаружи обода сукна, без двойного умножения на малый mult. */
-  const outward = 28;
-  return base * 1.06 + embeddedExtra + outward;
+  /** Вынести центр веера заметно снаружи зелёного круга — иначе рубашки заходят на сукно. */
+  const outward = 52;
+  return base * 1.1 + embeddedExtra + outward;
 }

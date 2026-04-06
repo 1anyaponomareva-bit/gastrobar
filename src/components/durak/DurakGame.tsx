@@ -1607,6 +1607,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       >
         <div
           ref={tableRoundRef}
+          data-durak-players={game.players.length}
+          data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
           className="relative max-w-full shrink-0 overflow-visible rounded-full"
           style={{
             width: "min(86vw, 26rem, 76vmin)",
