@@ -76,6 +76,7 @@ import {
   opponentFanLayoutMults,
   opponentTableFanStyle,
   seatOffsetOnCircle,
+  type OpponentFanMults,
 } from "@/lib/durak/tableSeatLayout";
 
 const HUMAN_ID = "human";
@@ -276,12 +277,26 @@ const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
  * чтобы не пересекать веер верхне-левого. Дуэль и 4+ не трогаем.
  */
 /** Общие для левого и правого верхнего соперника (симметрия относительно вертикали стола). */
-const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 18;
-const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
+/** Больше — сильнее тянем веера к центру стола (меньше «дыра» между двумя верхними). */
+const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 40;
+const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.86;
 const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
 /** Одна ширина/высота зоны веера для двух верхних — зеркало по окружности и одинаковая раскладка по ширине. */
-const THREE_PLAYER_OPP_FAN_MAX_VW = 36;
-const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 26;
+const THREE_PLAYER_OPP_FAN_MAX_VW = 22;
+const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 17;
+
+/** Уже веер у двух верхних соперников (тот же mults для обоих — симметрия). */
+function threePlayerUpperOppFanMults(base: OpponentFanMults): OpponentFanMults {
+  return {
+    ...base,
+    edgeMax: base.edgeMax * 0.48,
+    step: base.step * 0.52,
+    arc: base.arc * 0.5,
+    scale: base.scale * 0.91,
+    handWidthRem: base.handWidthRem * 0.72,
+    handHeightRem: base.handHeightRem * 0.86,
+  };
+}
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -458,6 +473,8 @@ function DeckPile({
   trumpCard,
   trumpSuit,
   compact,
+  /** Козырь под колодой: стопка перекрывает верхнюю треть карты козыря (режим 3 игроков). */
+  trumpTuckUnderDeck,
 }: {
   count: number;
   trumpCard: Card | null;
@@ -465,6 +482,7 @@ function DeckPile({
   trumpSuit: Suit;
   /** Меньшая колода у края овального стола */
   compact?: boolean;
+  trumpTuckUnderDeck?: boolean;
 }) {
   const stackLayers = count > 0 ? Math.min(8, Math.max(2, Math.ceil(count / 5))) : 0;
   const deckBox = compact ? CARD_TABLE_COMPACT_BOX : CARD_BOX_CLASS;
@@ -555,15 +573,29 @@ function DeckPile({
     ) : null;
 
   if (trumpCard != null || count > 0) {
+    const tuck = Boolean(compact && trumpTuckUnderDeck && (count > 0 || trumpCard != null));
     return (
       <div
         className={cn(
-          "deck-area flex shrink-0 flex-col items-center gap-2 overflow-visible",
-          compact ? "min-h-0 w-full" : "min-h-0"
+          "deck-area flex shrink-0 flex-col items-center overflow-visible",
+          tuck ? "gap-0" : "gap-2",
+          compact ? "min-h-0 w-full" : "min-h-0",
         )}
       >
-        {stackWrap}
-        <div className="trump-area shrink-0 overflow-visible">{trumpVisual}</div>
+        <div className={cn("relative shrink-0", tuck && "z-20")}>{stackWrap}</div>
+        <div
+          className={cn("trump-area shrink-0 overflow-visible", tuck && "relative z-[8]")}
+          style={
+            tuck
+              ? {
+                  /* Высота компактной карты ≈ min-h колоды; −1/3 — верхняя треть козыря под стопкой */
+                  marginTop: "calc(-1 * min(4.35rem, 13vw) / 3)",
+                }
+              : undefined
+          }
+        >
+          {trumpVisual}
+        </div>
       </div>
     );
   }
@@ -1660,7 +1692,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const fanScaleExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT : 1;
             const labelRadialExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX : 0;
             const inwardPadExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX : 0;
-            const mults = opponentFanLayoutMults(opponents.length);
+            const mults = isThreeOpponentsRow
+              ? threePlayerUpperOppFanMults(opponentFanLayoutMults(opponents.length))
+              : opponentFanLayoutMults(opponents.length);
             const handRadius =
               opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
               (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
@@ -1760,6 +1794,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   trumpCard={trumpShow ?? null}
                   trumpSuit={game.trumpSuit}
                   compact
+                  trumpTuckUnderDeck={isThreePlayerTable}
                 />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
