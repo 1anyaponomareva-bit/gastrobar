@@ -72,6 +72,7 @@ import {
 import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
 import {
   fanContainerRotationDeg,
+  fourPlayerOpponentFanMults,
   getOpponentSeatAnglesDeg,
   opponentFanLayoutMults,
   opponentSeatRadiusPx,
@@ -1016,6 +1017,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   /** Дуэль (2 игрока): legacy-раскладка; правки для 3+ — только при `tableLayoutMode === "multi"`. */
   const isDuelLayout = tableLayoutMode === "duel_legacy";
   const isThreePlayerTable = game != null && game.players.length === 3;
+  const isFourPlayerTable = game != null && game.players.length === 4;
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1657,16 +1659,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           {opponents.map((opp, oi) => {
             const bh = opp.hand;
             const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
-            const mults = opponentFanLayoutMults(opponents.length);
-            const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
+            const mults = isFourPlayerTable
+              ? fourPlayerOpponentFanMults()
+              : opponentFanLayoutMults(opponents.length);
+            const handRadius = opponentSeatRadiusPx(orbitPxEff, {
+              embedded: !!embedded,
+              fourPlayer: isFourPlayerTable,
+            });
             const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
-            const fanRot = fanContainerRotationDeg(angleDeg);
+            /** Только якорь веера: чуть по дуге от колоды (сукно слева), углы сидений не меняем. */
+            const fanAnchorAngleDeg =
+              isFourPlayerTable && oi === 2 ? angleDeg + 6 : angleDeg;
+            const { ox: fanAx, oy: fanAy } = seatOffsetOnCircle(fanAnchorAngleDeg, handRadius);
+            const fanRot = fanContainerRotationDeg(fanAnchorAngleDeg);
             const labelRadialPx =
               opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
-            const fanAx = rimOx;
-            const fanAy = rimOy;
             const lx = rimOx + nx * labelRadialPx;
             const ly = rimOy + ny * labelRadialPx;
+            const fanCompact = isFourPlayerTable;
             return (
               <div
                 key={opp.id}
@@ -1700,10 +1710,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   }}
                 >
                   <div
-                    className="relative flex items-end justify-center overflow-visible"
+                    className="relative flex max-w-full items-end justify-center overflow-visible"
                     style={{
                       height: `min(${mults.handHeightRem}rem, 28vw)`,
-                      width: `min(${mults.handWidthRem}rem, 44vw)`,
+                      width: fanCompact
+                        ? `min(${mults.handWidthRem}rem, 30vw)`
+                        : `min(${mults.handWidthRem}rem, 44vw)`,
+                      maxWidth: fanCompact ? "min(6.25rem, 30vw)" : undefined,
                       transformOrigin: "center bottom",
                     }}
                   >
@@ -1711,7 +1724,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       <div
                         key={c.id}
                         className="absolute"
-                        style={opponentTableFanStyle(bh.length, i, mults)}
+                        style={opponentTableFanStyle(bh.length, i, mults, 1, {
+                          compact: fanCompact,
+                        })}
                       >
                         <motion.div
                           className="[transform:translateZ(0)]"

@@ -171,13 +171,29 @@ export function opponentFanLayoutMults(opponentCount: number): OpponentFanMults 
 }
 
 /**
+ * Компактный веер для 4 игроков: меньше раскрытие и шаг; больше карт — сильнее перекрытие.
+ */
+export function fourPlayerOpponentFanMults(): OpponentFanMults {
+  return {
+    edgeMax: 0.52,
+    step: 0.46,
+    arc: 0.58,
+    scale: 0.78,
+    handHeightRem: 3.65,
+    handWidthRem: 6.75,
+  };
+}
+
+/**
  * Веер рубашек соперника: касательно к столу (локально от нижней кромки контейнера).
+ * `compact`: узкий веер, при n > 4 дополнительно ужимает шаг (перекрытие вместо ширины).
  */
 export function opponentTableFanStyle(
   n: number,
   i: number,
   mults: OpponentFanMults,
   fanTightness = 1,
+  opts?: { compact?: boolean },
 ): CSSProperties {
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
@@ -194,12 +210,18 @@ export function opponentTableFanStyle(
   const t = Math.max(0.35, Math.min(1.25, fanTightness));
   const denom = Math.max(mid, 1e-6);
   const baseEdge = Math.min(20, 7 + n * 1.65);
-  const edgeMaxDeg = baseEdge * mults.edgeMax * t;
-  const rot = (rel / denom) * edgeMaxDeg;
+  let edgeMaxDeg = baseEdge * mults.edgeMax * t;
   const baseStep = Math.min(16, Math.max(8, 92 / Math.max(n - 1, 1)));
-  const stepPx = baseStep * mults.step * t;
+  let stepPx = baseStep * mults.step * t;
+  let arc = Math.abs(rel) * 0.38 * mults.arc * t;
+  if (opts?.compact) {
+    edgeMaxDeg *= 0.72;
+    stepPx *= 0.55;
+    stepPx /= 1 + Math.max(0, n - 4) * 0.16;
+    arc *= 0.78;
+  }
+  const rot = (rel / denom) * edgeMaxDeg;
   const tx = rel * stepPx;
-  const arc = Math.abs(rel) * 0.38 * mults.arc * t;
   const zFromCenter = Math.round(4 * (mid - Math.abs(rel)));
   return {
     left: "50%",
@@ -216,11 +238,14 @@ export function opponentTableFanStyle(
  */
 export function opponentSeatRadiusPx(
   tableOrbitRadiusPx: number,
-  opts?: { embedded?: boolean },
+  opts?: { embedded?: boolean; /** Якорь ближе к ободу сукна — веер «лежит» на столе (4 игрока). */ fourPlayer?: boolean },
 ): number {
   const base = Math.max(1, tableOrbitRadiusPx);
   const embeddedExtra = opts?.embedded ? 22 : 0;
-  /** Вынести центр веера заметно снаружи зелёного круга — иначе рубашки заходят на сукно. */
+  if (opts?.fourPlayer) {
+    return base * 1.02 + embeddedExtra + 12;
+  }
+  /** Вынести центр веера снаружи зелёного круга — иначе рубашки заходят на сукно. */
   const outward = 52;
   return base * 1.1 + embeddedExtra + outward;
 }
