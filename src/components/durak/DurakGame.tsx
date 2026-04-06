@@ -78,6 +78,7 @@ import {
   seatOffsetOnCircle,
 } from "@/lib/durak/tableSeatLayout";
 import {
+  clampUpperOpponentFanVerticalPx,
   DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
   DURAK_DECK_WRAPPER_CLASS,
   durakFanAnchorAngleOffsetDeg,
@@ -1042,14 +1043,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
       const lx = rimOx + nx * labelRadialPx;
       const ly = rimOy + ny * labelRadialPx;
+      const clamped = clampUpperOpponentFanVerticalPx({
+        seatAngleDeg: angleDeg,
+        fanAy,
+        ly,
+        orbitPxEff,
+        handHeightRem: mults.handHeightRem,
+      });
       return {
         oppId: opp.id,
         oppName: opp.name,
         bh,
         lx,
-        ly,
+        ly: clamped.ly,
         fanAx,
-        fanAy,
+        fanAy: clamped.fanAy,
         fanRot,
         mults,
       };

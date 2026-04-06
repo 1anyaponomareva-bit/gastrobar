@@ -26,9 +26,46 @@ export function getDurakTableColumnClassNames(opts: {
     "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
     opts.embedded && opts.hasOpponents && "pt-2 sm:pt-3",
     opts.hasOpponents
-      ? "pt-[max(0.35rem,env(safe-area-inset-top,0px))] sm:pt-[max(0.5rem,env(safe-area-inset-top,0px))] mt-[min(2.85rem,8vmin)] sm:mt-[min(3.1rem,8.5vmin)]"
+      ? [
+          /* Запас под status bar / notch + воздух до фикс. шапки сайта (~60px) внутри скролла */
+          "pt-[max(0.85rem,calc(env(safe-area-inset-top,0px)+0.75rem))] sm:pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.9rem))]",
+          "mt-[min(2.85rem,8vmin)] sm:mt-[min(3.1rem,8.5vmin)]",
+        ]
       : "mt-[min(1.25rem,3.5vmin)]",
   );
+}
+
+/** sin(angle) ниже порога — соперник в верхней полусфере стола (риск обрезки у края экрана). */
+const UPPER_OPPONENT_SIN_THRESHOLD = -0.35;
+
+/**
+ * Не даём якорю веера уезжать слишком вверх: верх веера остаётся ниже «опасной» зоны.
+ * `orbitPxEff` — как в столе: clientWidth * 0.48; половина высоты круга ≈ orbit / 0.96.
+ */
+export function clampUpperOpponentFanVerticalPx(params: {
+  seatAngleDeg: number;
+  fanAy: number;
+  ly: number;
+  orbitPxEff: number;
+  handHeightRem: number;
+}): { fanAy: number; ly: number } {
+  const rad = (params.seatAngleDeg * Math.PI) / 180;
+  if (Math.sin(rad) >= UPPER_OPPONENT_SIN_THRESHOLD) {
+    return { fanAy: params.fanAy, ly: params.ly };
+  }
+
+  const tableW = params.orbitPxEff / 0.48;
+  const fanH = Math.min(params.handHeightRem * 16, 0.28 * tableW);
+  const tableHalfPx = (params.orbitPxEff / 0.48) * 0.5;
+  /** Верх веера: tableHalf + fanAy − fanH/2 ≥ guard от верхнего края круга + запас под хедер/обрезку */
+  const guardPx = 12;
+  const headerViewportGuardPx = 20;
+  const minFanAy = fanH / 2 - tableHalfPx + guardPx + headerViewportGuardPx;
+
+  const fanAy2 = Math.max(params.fanAy, minFanAy);
+  if (fanAy2 === params.fanAy) return { fanAy: params.fanAy, ly: params.ly };
+  const delta = fanAy2 - params.fanAy;
+  return { fanAy: fanAy2, ly: params.ly + delta };
 }
 
 /**
