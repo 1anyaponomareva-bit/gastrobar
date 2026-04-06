@@ -272,13 +272,11 @@ const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
 /**
- * Только `players.length === 3`: колода слева ниже центра; два верхних соперника — зеркально (−135° / −45°)
- * с одинаковыми поправками веера. Дуэль и 4+ не трогаем.
+ * Только `players.length === 3`: колода/козырь — отдельный нижний левый сектор (не по центру слева),
+ * чтобы не пересекать веер верхне-левого. Дуэль и 4+ не трогаем.
  */
-const THREE_PLAYER_DECK_ZONE_LEFT_PCT = 3.5;
-const THREE_PLAYER_DECK_ZONE_TOP_PCT = 58;
 /** Общие для левого и правого верхнего соперника (симметрия относительно вертикали стола). */
-const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 14;
+const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 18;
 const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
 const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
 /** Одна ширина/высота зоны веера для двух верхних — зеркало по окружности и одинаковая раскладка по ширине. */
@@ -1716,7 +1714,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       width: isThreeOpponentsRow
                         ? `min(${mults.handWidthRem}rem, ${THREE_PLAYER_OPP_FAN_MAX_VW}vw)`
                         : `min(${mults.handWidthRem}rem, 44vw)`,
-                      transform: isThreeOpponentsRow && oi === 1 ? "scaleX(-1)" : undefined,
                       transformOrigin: "center bottom",
                     }}
                   >
@@ -1752,17 +1749,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
               <div
                 className={cn(
-                  "pointer-events-auto absolute z-[8] -translate-y-1/2 overflow-visible",
-                  !isThreePlayerTable && "left-[0.5%] top-1/2 sm:left-[2%]",
-                )}
-                style={
+                  "pointer-events-auto absolute z-[8] overflow-visible",
                   isThreePlayerTable
-                    ? {
-                        left: `${THREE_PLAYER_DECK_ZONE_LEFT_PCT}%`,
-                        top: `${THREE_PLAYER_DECK_ZONE_TOP_PCT}%`,
-                      }
-                    : undefined
-                }
+                    ? "left-[min(0.35rem,1vw)] bottom-[max(11%,4.25rem)] max-w-[min(5.75rem,32vw)] sm:left-[1%] sm:bottom-[12%]"
+                    : "left-[0.5%] top-1/2 -translate-y-1/2 sm:left-[2%]",
+                )}
               >
                 <DeckPile
                   count={deckCount}
