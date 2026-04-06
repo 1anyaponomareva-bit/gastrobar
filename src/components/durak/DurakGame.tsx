@@ -276,10 +276,16 @@ const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
  * Только `players.length === 3`: колода/козырь — отдельный нижний левый сектор (не по центру слева).
  * Позиции соперников от колоды **не** считаем — только CSS сектора `boardPlayArea`.
  */
-/** Множитель радиуса якоря (центр веера) — вынести на внешнюю дугу вокруг сукна. */
-const THREE_PLAYER_OPP_HAND_RADIUS_MULT = 1.12;
-/** Сдвиг вдоль луча «центр → сиденье» наружу (px): веер не внутри круга сукна. */
-const THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX = 40;
+/** Множитель радиуса якоря: внешняя дуга без излишнего «вытягивания» к краю экрана. */
+const THREE_PLAYER_OPP_HAND_RADIUS_MULT = 1.06;
+/** Сдвиг вдоль луча «центр → сиденье» наружу (px). */
+const THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX = 36;
+/** Опустить верхних двух (px в системе top: 50% + y): больше воздуха под хедером. */
+const THREE_PLAYER_TOP_VERTICAL_DOWN_PX = 26;
+/** Верхний левый — чуть вправо от зоны колоды (px). */
+const THREE_PLAYER_LEFT_TOP_AWAY_FROM_DECK_PX = 14;
+/** Подписи ближе к вееру, чем к верху экрана (множитель к labelRadial). */
+const THREE_PLAYER_LABEL_RADIAL_MULT = 0.9;
 /** Лёгкий сдвиг к ободу сукна вдоль луча к центру (якорь веера не уезжает в поле боя). */
 const THREE_PLAYER_TOP_OPP_INWARD_PAD_PX = 10;
 /** Доп. сжатие шага/дуги в `opponentTableFanStyle` (1 = без доп. сжатия). */
@@ -1632,9 +1638,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         className={cn(
           "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
           embedded && opponents.length > 0 && "pt-2 sm:pt-3",
+          /* 3 игрока: воздух под шапкой + safe-area (имена соперников не упираются вверх). */
+          isThreePlayerTable &&
+            "pt-[max(0.35rem,env(safe-area-inset-top,0px))] sm:pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
           /* margin вместо transform: translateY + border-radius давал обрезку карт/козыря в WebKit/Chromium */
           opponents.length > 0
-            ? "mt-[min(2.35rem,7vmin)]"
+            ? isThreePlayerTable
+              ? "mt-[min(2.85rem,8vmin)] sm:mt-[min(3.1rem,8.5vmin)]"
+              : "mt-[min(2.35rem,7vmin)]"
             : "mt-[min(1.25rem,3.5vmin)]"
         )}
       >
@@ -1701,16 +1712,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
             const fanRot = fanContainerRotationDeg(angleDeg);
-            const labelRadialPx =
+            const labelRadialBase =
               (opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50) + labelRadialExtra;
+            const labelRadialPx =
+              labelRadialBase * (isThreeOpponentsRow ? THREE_PLAYER_LABEL_RADIAL_MULT : 1);
             const inwardPadPx = isThreeOpponentsRow
               ? THREE_PLAYER_TOP_OPP_INWARD_PAD_PX
               : 8 + Math.min(6, opponents.length);
             const radialOutPx = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX : 0;
-            const fanAx = rimOx - nx * inwardPadPx + nx * radialOutPx;
-            const fanAy = rimOy - ny * inwardPadPx + ny * radialOutPx;
-            const lx = rimOx + nx * labelRadialPx;
-            const ly = rimOy + ny * labelRadialPx;
+            const verticalDown = isThreeOpponentsRow ? THREE_PLAYER_TOP_VERTICAL_DOWN_PX : 0;
+            const leftAway =
+              isThreeOpponentsRow && oi === 0 ? THREE_PLAYER_LEFT_TOP_AWAY_FROM_DECK_PX : 0;
+            const fanAx = rimOx - nx * inwardPadPx + nx * radialOutPx + leftAway;
+            const fanAy = rimOy - ny * inwardPadPx + ny * radialOutPx + verticalDown;
+            const lx = rimOx + nx * labelRadialPx + leftAway;
+            const ly = rimOy + ny * labelRadialPx + verticalDown;
             return (
               <div
                 key={opp.id}
@@ -1794,7 +1810,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 className={cn(
                   "pointer-events-auto absolute z-[8] overflow-visible",
                   isThreePlayerTable
-                    ? "left-[min(0.35rem,1vw)] bottom-[max(11%,4.25rem)] max-w-[min(5.75rem,32vw)] sm:left-[1%] sm:bottom-[12%]"
+                    ? "left-0 bottom-[max(6.5%,3rem)] max-w-[min(5.75rem,32vw)] sm:left-[0.25%] sm:bottom-[max(7%,3.25rem)]"
                     : "left-[0.5%] top-1/2 -translate-y-1/2 sm:left-[2%]",
                 )}
               >
