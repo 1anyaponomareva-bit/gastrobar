@@ -3,13 +3,14 @@
  * `H` в getTableCenterYPx / getPlayerHandCenterYPx — высота **колонки сцены** (между хедером и таббаром), не `window.innerHeight`.
  */
 
-/** Центр круглого стола по вертикали (доля высоты экрана) — чуть ниже геометрического центра. */
-export const DURAK_SCENE_TABLE_CENTER_Y_VH = 55;
+/** Центр круглого стола по вертикали (доля высоты **сцены**). См. `DURAK_SCENE_TABLE_CENTER_Y_RATIO` в `durakSceneZones`. */
+export const DURAK_SCENE_TABLE_CENTER_Y_VH = 52;
 
-/** Зазор «сукно — соперник» по вертикали (40–70px), фиксированное значение по умолчанию. */
-export const DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_PX = 50;
-export const DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_MIN_PX = 40;
-export const DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_MAX_PX = 70;
+/**
+ * Вертикаль: центр веера соперника на `tableTop - g` (локально от центра стола: rimOy = −R − g).
+ * g подобран так, чтобы нижний край веера был не ниже чем на 24px выше верхней границы круга стола.
+ */
+export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 84;
 
 /** Горизонтальный вылет якоря соперника от центра стола (px): ox = cos(θ)·(tableRadius + это). */
 export const DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX = 60;
@@ -44,20 +45,11 @@ export function getTableCenterYPx(viewportHeightPx: number): number {
   return (DURAK_SCENE_TABLE_CENTER_Y_VH / 100) * H;
 }
 
-/** Зазор «над сукном» в px с учётом вилки 40–70. */
-export function getOpponentGapAboveTablePx(): number {
-  return Math.min(
-    DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_MAX_PX,
-    Math.max(DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_MIN_PX, DURAK_SCENE_OPPONENT_GAP_ABOVE_TABLE_PX),
-  );
-}
-
 /**
- * Локальный oy якоря соперника от центра стола: прямо над столом.
- * opponentY (viewport) = tableY + rimOy = tableY - tableRadius - gap.
+ * Локальный oy якоря соперника от центра стола (см. `DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX`).
  */
 export function getOpponentRimOyPx(tableRadiusPx: number): number {
-  return -tableRadiusPx - getOpponentGapAboveTablePx();
+  return -tableRadiusPx - DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX;
 }
 
 /**

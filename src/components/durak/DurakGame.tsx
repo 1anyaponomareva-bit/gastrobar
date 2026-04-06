@@ -74,8 +74,8 @@ import {
   buildOpponentTablePlacements,
   getBattleAreaOrbitPx,
   getOpponentSeatAnglesDeg,
-  getTableRadiusPxFromOrbit,
 } from "@/lib/durak/durakTableLayoutEngine";
+import { computeDurakSceneZoneLayout } from "@/lib/durak/durakSceneZones";
 import {
   DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
   DURAK_DECK_WRAPPER_CLASS,
@@ -85,8 +85,6 @@ import {
   DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
   DURAK_SCENE_PLAYER_HAND_SCALE,
   DURAK_SCENE_TABLE_CENTER_Y_VH,
-  getPlayerHandCenterYPx,
-  getTableCenterYPx,
 } from "@/lib/durak/durakSceneLayout";
 
 const HUMAN_ID = "human";
@@ -294,7 +292,6 @@ function otherPlayersClockwiseFromLocal(game: GameTable, localId: string): Playe
 }
 
 /** Если ещё не измерили стол, не даём радиусу стать 0 — иначе все соперники в центре. */
-const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 
 const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
@@ -787,28 +784,19 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const tableRoundRef = useRef<HTMLDivElement>(null);
   const durakSceneRef = useRef<HTMLDivElement>(null);
   const boardPlayAreaRef = useRef<HTMLDivElement>(null);
-  const [tableOrbitPx, setTableOrbitPx] = useState(0);
-  /** Высота колонки сцены (между хедером и таббаром), не `100vh` — иначе `vh` и px расходятся с абсолютным позиционированием. */
-  const [sceneHeightPx, setSceneHeightPx] = useState(
-    typeof window !== "undefined" ? Math.round(window.innerHeight * 0.72) : 600,
-  );
+  /** Размеры игровой колонки — единая система координат для стола, соперников и зоны игрока. */
+  const [sceneRect, setSceneRect] = useState({ w: 400, h: 640 });
   const [lossResultTitle, setLossResultTitle] = useState("");
   const lossResultTitleGameIdRef = useRef<string | null>(null);
 
   useLayoutEffect(() => {
-    const el = tableRoundRef.current;
-    if (!el) return;
-    const upd = () => setTableOrbitPx(el.clientWidth * 0.48);
-    upd();
-    const ro = new ResizeObserver(upd);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [game?.id]);
-
-  useLayoutEffect(() => {
     const el = durakSceneRef.current;
     if (!el) return;
-    const upd = () => setSceneHeightPx(Math.max(240, el.clientHeight));
+    const upd = () =>
+      setSceneRect({
+        w: Math.max(280, el.clientWidth),
+        h: Math.max(240, el.clientHeight),
+      });
     upd();
     const ro = new ResizeObserver(upd);
     ro.observe(el);
@@ -830,15 +818,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         x: boardR.left + boardR.width / 2,
         y: boardR.top + boardR.height / 2,
       },
-      orbitPxEff: tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX,
+      orbitPxEff: computeDurakSceneZoneLayout(
+        Math.max(280, durakSceneRef.current?.clientWidth ?? tableEl.clientWidth),
+        Math.max(240, durakSceneRef.current?.clientHeight ?? tableEl.clientHeight),
+      ).orbitPxEff,
       pairCount,
       note: "Карты боя позиционируются от центра boardPlayArea; рука — отдельный слой ниже (z-8).",
     });
-  }, [
-    game?.tablePairs.length,
-    game?.id,
-    tableOrbitPx,
-  ]);
+  }, [game?.tablePairs.length, game?.id, sceneRect.w, sceneRect.h]);
 
   useEffect(() => {
     try {
@@ -1085,21 +1072,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     }
     return rows;
   }, [humanHand]);
-  /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
-  const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
-  const tableCenterPx = useMemo(
-    () => getTableCenterYPx(sceneHeightPx),
-    [sceneHeightPx],
+  const layout = useMemo(
+    () => computeDurakSceneZoneLayout(sceneRect.w, sceneRect.h),
+    [sceneRect.w, sceneRect.h],
   );
-  const tableRadiusPx = useMemo(
-    () => getTableRadiusPxFromOrbit(orbitPxEff),
-    [orbitPxEff],
-  );
-  const playerHandCenterPx = useMemo(
-    () => getPlayerHandCenterYPx(sceneHeightPx, tableRadiusPx),
-    [sceneHeightPx, tableRadiusPx],
-  );
-  const tableBottomPx = tableCenterPx + tableRadiusPx;
+  const orbitPxEff = layout.orbitPxEff;
+  const tableRadiusPx = layout.tableRadiusPx;
   const opponentTablePlacements = useMemo(() => {
     if (!game) return [];
     return buildOpponentTablePlacements({
@@ -1637,7 +1615,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   return (
     <div
       className={cn(
-        "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
+        "flex h-full min-h-0 w-full flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
           ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-hidden pb-0"
@@ -1648,9 +1626,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       )}
     >
       <div
+        ref={durakSceneRef}
         className={cn(
           getDurakTableColumnClassNames(),
-          "relative isolate min-h-[100dvh] w-full overflow-x-hidden overflow-y-hidden",
+          "relative isolate flex-1 min-h-0 w-full overflow-hidden",
         )}
       >
         <div className="pointer-events-none absolute inset-0 z-0 bg-[#14100c]" aria-hidden />
@@ -1677,18 +1656,87 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </motion.div>
         ) : null}
 
+        <div className="pointer-events-none absolute inset-0 z-[30] overflow-visible">
+          {opponentTablePlacements.map((pl) => (
+            <div
+              key={`fan-${pl.oppId}`}
+              className="pointer-events-none absolute z-[30]"
+              style={{
+                left: layout.centerX + pl.fanAx,
+                top: layout.centerY + pl.fanAy,
+                transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
+                transformOrigin: "center center",
+              }}
+            >
+              <div
+                className="relative flex max-w-full items-end justify-center overflow-visible"
+                style={{
+                  height: `min(${pl.mults.handHeightRem}rem, 28vw)`,
+                  width: `min(${pl.mults.handWidthRem}rem, 30vw)`,
+                  maxWidth: "min(6.25rem, 30vw)",
+                  transformOrigin: "center bottom",
+                }}
+              >
+                {(pl.bh.length > 0 ? pl.bh : [null]).map((c, i) => (
+                  <div
+                    key={c?.id ?? `opponent-hand-placeholder-${pl.oppId}`}
+                    className="absolute"
+                    style={opponentTableFanStyle(
+                      Math.max(1, pl.bh.length),
+                      i,
+                      pl.mults,
+                      1,
+                      {
+                        compact: true,
+                        durakOpponent: true,
+                      },
+                    )}
+                  >
+                    <motion.div
+                      className="[transform:translateZ(0)]"
+                      initial={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                      animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                      transition={{ duration: 0 }}
+                    >
+                      <CardSprite faceDown size="tableCompact" surface="opponent" />
+                    </motion.div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {opponentTablePlacements.map((pl) => (
+            <div
+              key={`lbl-${pl.oppId}`}
+              className="pointer-events-none absolute z-[30] max-w-[min(9.5rem,24vw)] text-center"
+              style={{
+                left: layout.centerX + pl.lx,
+                top: layout.centerY + pl.ly,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                {pl.oppName?.trim() || "Соперник"}
+              </p>
+              <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
+            </div>
+          ))}
+        </div>
+
         <div
           ref={tableRoundRef}
           data-durak-table-center-y={`${DURAK_SCENE_TABLE_CENTER_Y_VH}%`}
-          data-durak-scene-height={Math.round(sceneHeightPx)}
+          data-durak-scene-w={Math.round(sceneRect.w)}
+          data-durak-scene-h={Math.round(sceneRect.h)}
           data-durak-players={game.players.length}
           data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="absolute left-1/2 z-[1] max-w-full -translate-x-1/2 -translate-y-1/2 isolate overflow-visible rounded-full"
+          className="absolute z-[10] isolate overflow-visible rounded-full"
           style={{
-            top: `${tableCenterPx}px`,
-            width: "min(86vw, 26rem, 76vmin)",
-            aspectRatio: "1",
+            left: layout.tableLeft,
+            top: layout.tableTop,
+            width: layout.tableWidthPx,
+            height: layout.tableWidthPx,
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-[1] rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1732,7 +1780,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           <div
             ref={boardPlayAreaRef}
-            className="table-area pointer-events-none absolute inset-0 z-[2] min-h-0 overflow-visible"
+            className="table-area pointer-events-none absolute inset-0 z-[20] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-0 h-full min-h-0 w-full overflow-visible">
               <div className={DURAK_DECK_WRAPPER_CLASS}>
@@ -1745,7 +1793,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 px-2">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[20] -translate-x-1/2 -translate-y-1/2 px-2">
                   <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
                     Карты раздаются…
                   </span>
@@ -1769,7 +1817,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     highlightUnbeaten &&
                       (game.phase === "attack_toss" || game.phase === "player_can_throw_more"),
                   );
-                  const stackZ = 10 + i;
+                  const stackZ = 20 + i;
 
                   return (
                     <div
@@ -1782,7 +1830,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     >
                       {/* Габариты задаёт CardSprite (aspect-ratio колоды), без фиксированного «пухлого» блока. */}
                       <div className="relative flex min-h-0 items-end justify-center overflow-visible">
-                        <div className="absolute bottom-0 left-1/2 z-[21] -translate-x-1/2">
+                        <div className="absolute bottom-0 left-1/2 z-[20] -translate-x-1/2">
                           <CardSprite
                             card={tp.attack}
                             size="tableCompact"
@@ -1810,7 +1858,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         {tp.defense ? (
                           <div
                             key={`def-wrap-${tp.defense.id}`}
-                            className="pointer-events-none absolute bottom-0 left-1/2 z-[3] -translate-x-1/2"
+                            className="pointer-events-none absolute bottom-0 left-1/2 z-[20] -translate-x-1/2"
                           >
                             {/*
                               Чуть левее и ниже центра атаки: заметнее перекрывает, угол нижней карты с достоинством читаем.
@@ -1839,84 +1887,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           </div>
 
-          <div className="pointer-events-none absolute inset-0 z-[3] overflow-visible">
-            {opponentTablePlacements.map((pl) => (
-              <div
-                key={`fan-${pl.oppId}`}
-                className="pointer-events-none absolute inset-0 overflow-visible"
-              >
-                <div
-                  className="pointer-events-none absolute z-[10]"
-                  style={{
-                    left: `calc(50% + ${pl.fanAx}px)`,
-                    top: `calc(50% + ${pl.fanAy}px)`,
-                    transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
-                    transformOrigin: "center center",
-                  }}
-                >
-                  <div
-                    className="relative flex max-w-full items-end justify-center overflow-visible"
-                    style={{
-                      height: `min(${pl.mults.handHeightRem}rem, 28vw)`,
-                      width: `min(${pl.mults.handWidthRem}rem, 30vw)`,
-                      maxWidth: "min(6.25rem, 30vw)",
-                      transformOrigin: "center bottom",
-                    }}
-                  >
-                    {(pl.bh.length > 0 ? pl.bh : [null]).map((c, i) => (
-                      <div
-                        key={c?.id ?? `opponent-hand-placeholder-${pl.oppId}`}
-                        className="absolute"
-                        style={opponentTableFanStyle(
-                          Math.max(1, pl.bh.length),
-                          i,
-                          pl.mults,
-                          1,
-                          {
-                            compact: true,
-                            durakOpponent: true,
-                          },
-                        )}
-                      >
-                        <motion.div
-                          className="[transform:translateZ(0)]"
-                          initial={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                          transition={{ duration: 0 }}
-                        >
-                          <CardSprite faceDown size="tableCompact" surface="opponent" />
-                        </motion.div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {opponentTablePlacements.map((pl) => (
-              <div
-                key={`lbl-${pl.oppId}`}
-                className="pointer-events-none absolute z-[15] max-w-[min(9.5rem,24vw)] text-center"
-                style={{
-                  left: `calc(50% + ${pl.lx}px)`,
-                  top: `calc(50% + ${pl.ly}px)`,
-                  transform: "translate(-50%, -50%)",
-                }}
-              >
-                <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                  {pl.oppName?.trim() || "Соперник"}
-                </p>
-                <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
-              </div>
-            ))}
-          </div>
-
         </div>
 
       <div
-        className="pointer-events-auto absolute left-1/2 z-20 w-full max-w-[min(100%,580px)] -translate-x-1/2 px-1 pt-0.5 sm:px-2"
-        style={{ top: `${tableBottomPx + 52}px` }}
+        className="pointer-events-none absolute inset-x-0 z-[40] mx-auto flex max-w-[min(100%,580px)] flex-col px-1 sm:px-2"
+        style={{
+          top: layout.playerZoneTopY,
+          bottom: layout.tabBarReservePx,
+          minHeight: 0,
+        }}
       >
-        <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
+        <div className="pointer-events-auto relative z-[40] shrink-0 pt-0.5">
+        <div className="relative z-[40] grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
@@ -1974,15 +1956,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
-      {phaseLine ? (
+        {phaseLine ? (
         <div
-          className="pointer-events-none absolute left-1/2 z-21 flex max-w-[min(100%,580px)] -translate-x-1/2 flex-col items-center gap-1 px-2"
-          style={{ top: `${tableBottomPx + 6}px` }}
+          className="z-[40] mt-1 flex w-full flex-col items-center gap-1 px-2"
           role="status"
         >
-          <div className="flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
+          <div className="pointer-events-auto flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
             {embedded &&
             game.state === "playing" &&
             !dealing &&
@@ -2011,18 +1992,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </p>
           ) : null}
         </div>
-      ) : null}
+        ) : null}
 
-      <section
-        className={cn(
-          "pointer-events-auto absolute left-1/2 z-[35] w-full max-w-[min(100%,580px)] bg-transparent px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] pt-0 sm:px-2",
-        )}
-        style={{
-          top: `${playerHandCenterPx}px`,
-          transform: `translate(-50%, -50%) scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
-          transformOrigin: "center center",
-        }}
-      >
+        <div
+          className="pointer-events-auto z-[40] shrink-0 px-1 pt-1 sm:px-2"
+          style={{ paddingLeft: layout.deckNameClearanceLeftPx }}
+        >
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
             {nameEditing ? (
@@ -2064,6 +2039,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
         </div>
+        </div>
         {game.message ? (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
@@ -2076,11 +2052,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
         <div
           className={cn(
-            "player-hand relative z-0 mx-auto mt-3 w-full max-w-full overflow-visible pb-1 pt-1 sm:mt-4 sm:pt-2",
+            "player-hand pointer-events-auto relative z-[35] mx-auto mt-2 flex w-full min-h-0 flex-1 flex-col justify-end overflow-visible pb-1 pt-1 sm:mt-2",
             humanHandRows.length > 1
-              ? "min-h-[15.5rem] sm:min-h-[17rem]"
-              : "flex min-h-[11rem] flex-1 items-end justify-center sm:min-h-[12rem]"
+              ? "min-h-[12rem] sm:min-h-[14rem]"
+              : "min-h-[9.5rem] sm:min-h-[10.5rem]"
           )}
+          style={{
+            transform: `scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
+            transformOrigin: "bottom center",
+          }}
         >
           {humanHandRows.map((row, rowIdx) => (
             <div
@@ -2199,7 +2179,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           ))}
         </div>
-      </section>
+      </div>
       </div>
 
       <AnimatePresence>
