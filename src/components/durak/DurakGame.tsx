@@ -72,6 +72,7 @@ import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
 import { opponentTableFanStyle } from "@/lib/durak/tableSeatLayout";
 import {
   buildOpponentTablePlacements,
+  getBattleAreaOrbitPx,
   getOpponentSeatAnglesDeg,
 } from "@/lib/durak/durakTableLayoutEngine";
 import {
@@ -1608,13 +1609,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           ref={tableRoundRef}
           data-durak-players={game.players.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="relative max-w-full shrink-0 overflow-visible rounded-full"
+          className="relative isolate z-0 max-w-full shrink-0 translate-y-[min(3vmin,5vh)] overflow-visible rounded-full"
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
           }}
         >
-          <div className="pointer-events-none absolute inset-0 z-0 rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
+          <div className="pointer-events-none absolute inset-0 z-[1] rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
 
           <div
             className="pointer-events-none absolute inset-[2%] z-[1] rounded-full border-[2px] border-[#5a9a6a]/90 sm:border-[3px] sm:border-[#6dae7e]"
@@ -1635,7 +1636,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           {/* Тиснение на сукне — крупнее, низкий контраст */}
           <div
-            className="pointer-events-none absolute inset-[7%] z-[2] flex items-center justify-center rounded-full"
+            className="pointer-events-none absolute inset-[7%] z-[1] flex items-center justify-center rounded-full"
             aria-hidden
           >
             <span
@@ -1654,72 +1655,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </div>
 
           <div
-            className={cn(
-              "pointer-events-none absolute inset-0 z-[6] overflow-visible opacity-100",
-              embedded && "z-[5]",
-            )}
-          >
-            {opponentTablePlacements.map((pl) => (
-              <div
-                key={`fan-${pl.oppId}`}
-                className="pointer-events-none absolute inset-0 overflow-visible"
-              >
-                <div
-                  className="pointer-events-none absolute z-[11]"
-                  style={{
-                    left: `calc(50% + ${pl.fanAx}px)`,
-                    top: `calc(50% + ${pl.fanAy}px)`,
-                    transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
-                    transformOrigin: "center center",
-                  }}
-                >
-                  <div
-                    className="relative flex max-w-full items-end justify-center overflow-visible"
-                    style={{
-                      height: `min(${pl.mults.handHeightRem}rem, 28vw)`,
-                      width: `min(${pl.mults.handWidthRem}rem, 30vw)`,
-                      maxWidth: "min(6.25rem, 30vw)",
-                      transformOrigin: "center bottom",
-                    }}
-                  >
-                    {(pl.bh.length > 0 ? pl.bh : [null]).map((c, i) => (
-                      <div
-                        key={c?.id ?? `opponent-hand-placeholder-${pl.oppId}`}
-                        className="absolute"
-                        style={opponentTableFanStyle(
-                          Math.max(1, pl.bh.length),
-                          i,
-                          pl.mults,
-                          1,
-                          {
-                            compact: true,
-                          },
-                        )}
-                      >
-                        <motion.div
-                          className="[transform:translateZ(0)]"
-                          initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
-                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                          transition={{
-                            ...SPRING_SOFT,
-                            delay: (2 * i + 1) * DEAL_STAGGER_SEC,
-                          }}
-                        >
-                          <CardSprite faceDown size="tableCompact" surface="opponent" />
-                        </motion.div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div
             ref={boardPlayAreaRef}
-            className="table-area pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
+            className="table-area pointer-events-none absolute inset-0 z-[2] min-h-0 overflow-visible"
           >
-            <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
+            <div className="pointer-events-none relative z-0 h-full min-h-0 w-full overflow-visible">
               <div className={DURAK_DECK_WRAPPER_CLASS}>
                 <DeckPile
                   count={deckCount}
@@ -1730,7 +1669,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 px-2">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 px-2">
                   <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
                     Карты раздаются…
                   </span>
@@ -1738,7 +1677,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               ) : null}
               {game.tablePairs.length > 0 ? (
                 game.tablePairs.map((tp, i) => {
-                  const { x, y } = tablePairOrbitOffset(i, game.tablePairs.length, orbitPxEff);
+                  const { x, y } = tablePairOrbitOffset(
+                    i,
+                    game.tablePairs.length,
+                    getBattleAreaOrbitPx(orbitPxEff),
+                  );
                   const uncovered = tp.defense === null;
                   const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
                   const attackSelectedForDefense =
@@ -1791,7 +1734,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         {tp.defense ? (
                           <div
                             key={`def-wrap-${tp.defense.id}`}
-                            className="pointer-events-none absolute bottom-0 left-1/2 z-[22] -translate-x-1/2"
+                            className="pointer-events-none absolute bottom-0 left-1/2 z-[3] -translate-x-1/2"
                           >
                             {/*
                               Чуть левее и ниже центра атаки: заметнее перекрывает, угол нижней карты с достоинством читаем.
@@ -1820,26 +1763,78 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           </div>
 
-          {opponentTablePlacements.length > 0 ? (
-            <div className="pointer-events-none absolute inset-0 z-[38] overflow-visible">
-              {opponentTablePlacements.map((pl) => (
+          <div className="pointer-events-none absolute inset-0 z-[3] overflow-visible">
+            {opponentTablePlacements.map((pl) => (
+              <div
+                key={`fan-${pl.oppId}`}
+                className="pointer-events-none absolute inset-0 overflow-visible"
+              >
                 <div
-                  key={`lbl-${pl.oppId}`}
-                  className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
+                  className="pointer-events-none absolute z-[1]"
                   style={{
-                    left: `calc(50% + ${pl.lx}px)`,
-                    top: `calc(50% + ${pl.ly}px)`,
-                    transform: "translate(-50%, -50%)",
+                    left: `calc(50% + ${pl.fanAx}px)`,
+                    top: `calc(50% + ${pl.fanAy}px)`,
+                    transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
+                    transformOrigin: "center center",
                   }}
                 >
-                  <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                    {pl.oppName?.trim() || "Соперник"}
-                  </p>
-                  <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
+                  <div
+                    className="relative flex max-w-full items-end justify-center overflow-visible"
+                    style={{
+                      height: `min(${pl.mults.handHeightRem}rem, 28vw)`,
+                      width: `min(${pl.mults.handWidthRem}rem, 30vw)`,
+                      maxWidth: "min(6.25rem, 30vw)",
+                      transformOrigin: "center bottom",
+                    }}
+                  >
+                    {(pl.bh.length > 0 ? pl.bh : [null]).map((c, i) => (
+                      <div
+                        key={c?.id ?? `opponent-hand-placeholder-${pl.oppId}`}
+                        className="absolute"
+                        style={opponentTableFanStyle(
+                          Math.max(1, pl.bh.length),
+                          i,
+                          pl.mults,
+                          1,
+                          {
+                            compact: true,
+                          },
+                        )}
+                      >
+                        <motion.div
+                          className="[transform:translateZ(0)]"
+                          initial={{ opacity: 0, y: -18, scale: 0.94, rotate: -0.8 }}
+                          animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                          transition={{
+                            ...SPRING_SOFT,
+                            delay: (2 * i + 1) * DEAL_STAGGER_SEC,
+                          }}
+                        >
+                          <CardSprite faceDown size="tableCompact" surface="opponent" />
+                        </motion.div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : null}
+              </div>
+            ))}
+            {opponentTablePlacements.map((pl) => (
+              <div
+                key={`lbl-${pl.oppId}`}
+                className="pointer-events-none absolute z-[2] max-w-[min(9.5rem,24vw)] text-center"
+                style={{
+                  left: `calc(50% + ${pl.lx}px)`,
+                  top: `calc(50% + ${pl.ly}px)`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                  {pl.oppName?.trim() || "Соперник"}
+                </p>
+                <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
+              </div>
+            ))}
+          </div>
 
         </div>
       </div>

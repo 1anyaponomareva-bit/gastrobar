@@ -9,7 +9,7 @@ import { getOpponentSeatAnglesDeg } from "./durakTableLayoutEngine";
 
 /** Колода: слева по центру по вертикали, одинаково для 2–6 игроков. */
 export const DURAK_DECK_WRAPPER_CLASS =
-  "pointer-events-auto absolute z-[8] overflow-visible left-[0.5%] top-1/2 -translate-y-1/2 sm:left-[2%]";
+  "pointer-events-auto absolute z-[1] overflow-visible left-[0.5%] top-1/2 -translate-y-1/2 sm:left-[2%]";
 
 /** Козырь под колодой — единое правило для всех столов. */
 export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;

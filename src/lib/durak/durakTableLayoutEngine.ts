@@ -13,6 +13,13 @@ import {
   type OpponentFanMults,
 } from "./tableSeatLayout";
 
+/** Радиус размещения карт боя — меньше измеренного orbit, чтобы под соперников оставалось кольцо. */
+export const DURAK_TABLE_BATTLE_ORBIT_MULT = 0.78;
+
+export function getBattleAreaOrbitPx(orbitPxEff: number): number {
+  return Math.max(1, orbitPxEff) * DURAK_TABLE_BATTLE_ORBIT_MULT;
+}
+
 function opponentAnglesUniform(totalPlayers: number, opponentCount: number): number[] {
   if (totalPlayers < 2 || opponentCount <= 0) return [];
   const step = 360 / totalPlayers;
@@ -67,17 +74,19 @@ export function getOpponentSeatAnglesDeg(
 }
 
 /**
- * Радиус окружности якорей соперников (px): **внешняя дуга** относительно зоны боя `orbitPxEff`.
- * Без «притягивания» к центру — веер остаётся над ободом сукна, не внутри зелёного круга.
+ * Радиус якорей соперников: **вне** зоны боя (`getBattleAreaOrbitPx`), у обода круга.
  */
 export function getOpponentRimRadiusPx(orbitPxEff: number, embedded: boolean): number {
   const base = Math.max(1, orbitPxEff);
   const embeddedExtra = embedded ? 22 : 0;
-  const raw = base * 1.16 + embeddedExtra + 48;
-  /** Полуось квадрата стола (orbit = 0.48·ширина); без верхнего предела якорь уезжает за край и веер не виден. */
   const tableHalfPx = (base / 0.48) * 0.5;
-  const maxR = tableHalfPx * 0.88;
-  return Math.min(raw, maxR);
+  const maxR = tableHalfPx * 0.96;
+  const battleR = base * DURAK_TABLE_BATTLE_ORBIT_MULT;
+  /** Радиальный зазор между внешним краем боя и соперниками (~18% радиуса круга, max 72px). */
+  const gapRadial = Math.min(72, Math.max(28, tableHalfPx * 0.18));
+  const minR = Math.min(maxR, battleR + gapRadial);
+  const raw = base * 1.1 + embeddedExtra + 36;
+  return Math.min(maxR, Math.max(minR, Math.min(raw, maxR)));
 }
 
 /**
