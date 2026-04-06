@@ -7,8 +7,6 @@
  *
  * Локальный игрок всегда внизу при θ = 90°. Соперники в порядке
  * `opponentsClockwiseFromLocal` — по часовой стрелке от локального вдоль окружности.
- *
- * Для **2** в дуэли (`duel_legacy`) сохраняем классические углы [180°, 0°].
  */
 
 import type { CSSProperties } from "react";
@@ -77,10 +75,6 @@ export function getOpponentSeatAnglesDeg(
   totalPlayerCount?: number,
 ): number[] {
   const total = totalPlayerCount ?? opponentCount + 1;
-
-  if (opponentCount === 2 && total === 2) {
-    return [180, 0];
-  }
 
   if (total === 6 && opponentCount === 5) {
     return [...SIX_PLAYER_OPPONENT_ANGLES_CW_DEG];
@@ -171,20 +165,6 @@ export function opponentFanLayoutMults(opponentCount: number): OpponentFanMults 
 }
 
 /**
- * Компактный веер для 4 игроков: меньше раскрытие и шаг; больше карт — сильнее перекрытие.
- */
-export function fourPlayerOpponentFanMults(): OpponentFanMults {
-  return {
-    edgeMax: 0.52,
-    step: 0.46,
-    arc: 0.58,
-    scale: 0.78,
-    handHeightRem: 3.65,
-    handWidthRem: 6.75,
-  };
-}
-
-/**
  * Веер рубашек соперника: касательно к столу (локально от нижней кромки контейнера).
  * `compact`: узкий веер, при n > 4 дополнительно ужимает шаг (перекрытие вместо ширины).
  */
@@ -238,14 +218,10 @@ export function opponentTableFanStyle(
  */
 export function opponentSeatRadiusPx(
   tableOrbitRadiusPx: number,
-  opts?: { embedded?: boolean; /** Якорь ближе к ободу сукна — веер «лежит» на столе (4 игрока). */ fourPlayer?: boolean },
+  opts?: { embedded?: boolean },
 ): number {
   const base = Math.max(1, tableOrbitRadiusPx);
   const embeddedExtra = opts?.embedded ? 22 : 0;
-  if (opts?.fourPlayer) {
-    return base * 1.02 + embeddedExtra + 12;
-  }
-  /** Вынести центр веера снаружи зелёного круга — иначе рубашки заходят на сукно. */
-  const outward = 52;
-  return base * 1.1 + embeddedExtra + outward;
+  /** Единый якорь у обода сукна — веер «лежит» на столе при любом числе игроков. */
+  return base * 1.02 + embeddedExtra + 12;
 }

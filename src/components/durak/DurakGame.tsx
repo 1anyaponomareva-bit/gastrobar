@@ -30,7 +30,6 @@ import {
 import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
-import { getDurakTableLayoutMode } from "@/components/durak/durakLayoutConstants";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
@@ -72,13 +71,18 @@ import {
 import { getRandomLossResultTitle } from "@/lib/durak/lossResultModalTitles";
 import {
   fanContainerRotationDeg,
-  fourPlayerOpponentFanMults,
   getOpponentSeatAnglesDeg,
   opponentFanLayoutMults,
   opponentSeatRadiusPx,
   opponentTableFanStyle,
   seatOffsetOnCircle,
 } from "@/lib/durak/tableSeatLayout";
+import {
+  DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
+  DURAK_DECK_WRAPPER_CLASS,
+  durakFanAnchorAngleOffsetDeg,
+  getDurakTableColumnClassNames,
+} from "@/lib/durak/durakTableLayout";
 
 const HUMAN_ID = "human";
 
@@ -1011,13 +1015,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       getOpponentSeatAnglesDeg(opponents.length, game?.players.length),
     [opponents.length, game?.players.length],
   );
-  const tableLayoutMode = game
-    ? getDurakTableLayoutMode(game.players.length)
-    : "multi";
-  /** Дуэль (2 игрока): legacy-раскладка; правки для 3+ — только при `tableLayoutMode === "multi"`. */
-  const isDuelLayout = tableLayoutMode === "duel_legacy";
-  const isThreePlayerTable = game != null && game.players.length === 3;
-  const isFourPlayerTable = game != null && game.players.length === 4;
+  const totalPlayers = game?.players.length ?? 0;
   const humanHand = selfPlayer?.hand ?? [];
   const humanHandRows = useMemo(() => {
     const rows: Card[][] = [];
@@ -1028,6 +1026,42 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   }, [humanHand]);
   /** Окружность сукна в px: не 0 до первого ResizeObserver, иначе соперники и бой схлопываются в центр. */
   const orbitPxEff = tableOrbitPx > 8 ? tableOrbitPx : TABLE_ORBIT_FALLBACK_PX;
+  const opponentTablePlacements = useMemo(() => {
+    if (!game) return [];
+    return opponents.map((opp, oi) => {
+      const bh = opp.hand;
+      const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
+      const mults = opponentFanLayoutMults(opponents.length);
+      const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
+      const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
+      const fanAnchorAngleDeg =
+        angleDeg + durakFanAnchorAngleOffsetDeg(totalPlayers, oi);
+      const { ox: fanAx, oy: fanAy } = seatOffsetOnCircle(fanAnchorAngleDeg, handRadius);
+      const fanRot = fanContainerRotationDeg(fanAnchorAngleDeg);
+      const labelRadialPx =
+        opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
+      const lx = rimOx + nx * labelRadialPx;
+      const ly = rimOy + ny * labelRadialPx;
+      return {
+        oppId: opp.id,
+        oppName: opp.name,
+        bh,
+        lx,
+        ly,
+        fanAx,
+        fanAy,
+        fanRot,
+        mults,
+      };
+    });
+  }, [
+    embedded,
+    game,
+    opponentSeatAnglesDeg,
+    opponents,
+    orbitPxEff,
+    totalPlayers,
+  ]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1593,19 +1627,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       </div>
 
       <div
-        className={cn(
-          "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
-          embedded && opponents.length > 0 && "pt-2 sm:pt-3",
-          /* 3 игрока: воздух под шапкой + safe-area (имена соперников не упираются вверх). */
-          isThreePlayerTable &&
-            "pt-[max(0.35rem,env(safe-area-inset-top,0px))] sm:pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
-          /* margin вместо transform: translateY + border-radius давал обрезку карт/козыря в WebKit/Chromium */
-          opponents.length > 0
-            ? isThreePlayerTable
-              ? "mt-[min(2.85rem,8vmin)] sm:mt-[min(3.1rem,8.5vmin)]"
-              : "mt-[min(2.35rem,7vmin)]"
-            : "mt-[min(1.25rem,3.5vmin)]"
-        )}
+        className={getDurakTableColumnClassNames({
+          embedded: !!embedded,
+          hasOpponents: opponents.length > 0,
+        })}
       >
         <div
           ref={tableRoundRef}
@@ -1656,76 +1681,41 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </span>
           </div>
 
-          {opponents.map((opp, oi) => {
-            const bh = opp.hand;
-            const angleDeg = opponentSeatAnglesDeg[oi] ?? -90;
-            const mults = isFourPlayerTable
-              ? fourPlayerOpponentFanMults()
-              : opponentFanLayoutMults(opponents.length);
-            const handRadius = opponentSeatRadiusPx(orbitPxEff, {
-              embedded: !!embedded,
-              fourPlayer: isFourPlayerTable,
-            });
-            const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
-            /** Только якорь веера: чуть по дуге от колоды (сукно слева), углы сидений не меняем. */
-            const fanAnchorAngleDeg =
-              isFourPlayerTable && oi === 2 ? angleDeg + 6 : angleDeg;
-            const { ox: fanAx, oy: fanAy } = seatOffsetOnCircle(fanAnchorAngleDeg, handRadius);
-            const fanRot = fanContainerRotationDeg(fanAnchorAngleDeg);
-            const labelRadialPx =
-              opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
-            const lx = rimOx + nx * labelRadialPx;
-            const ly = rimOy + ny * labelRadialPx;
-            const fanCompact = isFourPlayerTable;
-            return (
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 z-[6] overflow-visible opacity-100",
+              embedded && "z-[5]",
+            )}
+          >
+            {opponentTablePlacements.map((pl) => (
               <div
-                key={opp.id}
-                className={cn(
-                  "pointer-events-none absolute inset-0 overflow-visible",
-                  embedded ? "z-[5] opacity-100" : "z-[8] opacity-100",
-                )}
+                key={`fan-${pl.oppId}`}
+                className="pointer-events-none absolute inset-0 overflow-visible"
               >
-                {!isDuelLayout ? (
-                  <div
-                    className="pointer-events-none absolute z-[12] max-w-[min(9.5rem,24vw)] text-center"
-                    style={{
-                      left: `calc(50% + ${lx}px)`,
-                      top: `calc(50% + ${ly}px)`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  >
-                    <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                      {opp.name?.trim() || "Соперник"}
-                    </p>
-                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
-                  </div>
-                ) : null}
                 <div
                   className="pointer-events-none absolute z-[11]"
                   style={{
-                    left: `calc(50% + ${fanAx}px)`,
-                    top: `calc(50% + ${fanAy}px)`,
-                    transform: `translate(-50%, -50%) rotate(${fanRot}deg) scale(${mults.scale})`,
+                    left: `calc(50% + ${pl.fanAx}px)`,
+                    top: `calc(50% + ${pl.fanAy}px)`,
+                    transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
                     transformOrigin: "center center",
                   }}
                 >
                   <div
                     className="relative flex max-w-full items-end justify-center overflow-visible"
                     style={{
-                      height: `min(${mults.handHeightRem}rem, 28vw)`,
-                      width: fanCompact
-                        ? `min(${mults.handWidthRem}rem, 30vw)`
-                        : `min(${mults.handWidthRem}rem, 44vw)`,
-                      maxWidth: fanCompact ? "min(6.25rem, 30vw)" : undefined,
+                      height: `min(${pl.mults.handHeightRem}rem, 28vw)`,
+                      width: `min(${pl.mults.handWidthRem}rem, 30vw)`,
+                      maxWidth: "min(6.25rem, 30vw)",
                       transformOrigin: "center bottom",
                     }}
                   >
-                    {bh.map((c, i) => (
+                    {pl.bh.map((c, i) => (
                       <div
                         key={c.id}
                         className="absolute"
-                        style={opponentTableFanStyle(bh.length, i, mults, 1, {
-                          compact: fanCompact,
+                        style={opponentTableFanStyle(pl.bh.length, i, pl.mults, 1, {
+                          compact: true,
                         })}
                       >
                         <motion.div
@@ -1744,28 +1734,21 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
 
           <div
             ref={boardPlayAreaRef}
             className="table-area pointer-events-none absolute inset-0 z-[35] min-h-0 overflow-visible"
           >
             <div className="pointer-events-none relative z-[1] h-full min-h-0 w-full overflow-visible">
-              <div
-                className={cn(
-                  "pointer-events-auto absolute z-[8] overflow-visible",
-                  isThreePlayerTable
-                    ? "left-0 bottom-[max(6.5%,3rem)] max-w-[min(5.75rem,32vw)] sm:left-[0.25%] sm:bottom-[max(7%,3.25rem)]"
-                    : "left-[0.5%] top-1/2 -translate-y-1/2 sm:left-[2%]",
-                )}
-              >
+              <div className={DURAK_DECK_WRAPPER_CLASS}>
                 <DeckPile
                   count={deckCount}
                   trumpCard={trumpShow ?? null}
                   trumpSuit={game.trumpSuit}
                   compact
-                  trumpTuckUnderDeck={isThreePlayerTable}
+                  trumpTuckUnderDeck={DURAK_DECK_TRUMP_TUCK_UNDER_DECK}
                 />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
@@ -1859,36 +1842,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             </div>
           </div>
 
-          {/* Дуэль: подпись соперника поверх зоны боя (z-35), иначе имя закрывают карты стола. 3+ — без изменений. */}
-          {isDuelLayout && opponents[0] ? (
-            <div className="pointer-events-none absolute inset-0 z-[40] overflow-visible">
-              {(() => {
-                const opp = opponents[0]!;
-                const bh = opp.hand;
-                const angleDeg = opponentSeatAnglesDeg[0] ?? -90;
-                const handRadius = opponentSeatRadiusPx(orbitPxEff, { embedded: !!embedded });
-                const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
-                const labelRadialPx =
-                  opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50;
-                const lx = rimOx + nx * labelRadialPx;
-                const ly = rimOy + ny * labelRadialPx;
-                const displayName = opp.name?.trim() || "Соперник";
-                return (
-                  <div
-                    className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
-                    style={{
-                      left: `calc(50% + ${lx}px)`,
-                      top: `calc(50% + ${ly}px)`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  >
-                    <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                      {displayName}
-                    </p>
-                    <p className="text-[10px] leading-tight text-white/45">{bh.length} карт</p>
-                  </div>
-                );
-              })()}
+          {opponentTablePlacements.length > 0 ? (
+            <div className="pointer-events-none absolute inset-0 z-[38] overflow-visible">
+              {opponentTablePlacements.map((pl) => (
+                <div
+                  key={`lbl-${pl.oppId}`}
+                  className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
+                  style={{
+                    left: `calc(50% + ${pl.lx}px)`,
+                    top: `calc(50% + ${pl.ly}px)`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                >
+                  <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
+                    {pl.oppName?.trim() || "Соперник"}
+                  </p>
+                  <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
+                </div>
+              ))}
             </div>
           ) : null}
 
@@ -1961,7 +1932,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           className="relative z-20 mx-auto mt-2 flex max-w-[min(100%,580px)] shrink-0 flex-col items-center gap-1 px-2 sm:mt-2.5"
           role="status"
         >
-          <div className="flex w-full max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
+          <div className="flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
             {embedded &&
             game.state === "playing" &&
             !dealing &&
