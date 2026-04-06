@@ -40,8 +40,11 @@ export function getOpponentSeatAnglesDeg(
   totalPlayerCount?: number,
 ): number[] {
   if (opponentCount === 2 && totalPlayerCount === 3) {
-    /** Уже дуга, чем −120/−60: меньше «дыра» между веерами у центра стола (симметрия к вертикали). */
-    return [-112, -68];
+    /**
+     * Верхний левый / верхний правый по **внешней** дуге (шире к краям экрана, больше «воздуха» у центра сукна).
+     * Симметрия относительно вертикали (−90°).
+     */
+    return [-125, -55];
   }
   switch (opponentCount) {
     case 1:

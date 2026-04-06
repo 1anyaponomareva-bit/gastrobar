@@ -273,30 +273,32 @@ const TABLE_ORBIT_FALLBACK_PX = 280 * 0.48;
 const OPP_HAND_EMBEDDED_RIM_OUTWARD_PX = 22;
 
 /**
- * Только `players.length === 3`: колода/козырь — отдельный нижний левый сектор (не по центру слева),
- * чтобы не пересекать веер верхне-левого. Дуэль и 4+ не трогаем.
+ * Только `players.length === 3`: колода/козырь — отдельный нижний левый сектор (не по центру слева).
+ * Позиции соперников от колоды **не** считаем — только CSS сектора `boardPlayArea`.
  */
-/** Общие для левого и правого верхнего соперника (симметрия относительно вертикали стола). */
-/** Больше — сильнее тянем веера к центру стола (меньше «дыра» между двумя верхними). */
-const THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX = 54;
-/** Доп. сжатие шага/дуги в `opponentTableFanStyle` (умножается на геометрию веера). */
-const THREE_PLAYER_OPP_FAN_TIGHTNESS = 0.68;
-const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.86;
+/** Множитель радиуса якоря (центр веера) — вынести на внешнюю дугу вокруг сукна. */
+const THREE_PLAYER_OPP_HAND_RADIUS_MULT = 1.12;
+/** Сдвиг вдоль луча «центр → сиденье» наружу (px): веер не внутри круга сукна. */
+const THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX = 40;
+/** Лёгкий сдвиг к ободу сукна вдоль луча к центру (якорь веера не уезжает в поле боя). */
+const THREE_PLAYER_TOP_OPP_INWARD_PAD_PX = 10;
+/** Доп. сжатие шага/дуги в `opponentTableFanStyle` (1 = без доп. сжатия). */
+const THREE_PLAYER_OPP_FAN_TIGHTNESS = 0.88;
+const THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT = 0.92;
 const THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX = 10;
-/** Одна ширина/высота зоны веера для двух верхних — зеркало по окружности и одинаковая раскладка по ширине. */
-const THREE_PLAYER_OPP_FAN_MAX_VW = 22;
-const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 17;
+const THREE_PLAYER_OPP_FAN_MAX_VW = 26;
+const THREE_PLAYER_OPP_FAN_MAX_VH_VW = 20;
 
-/** Уже веер у двух верхних соперников (тот же mults для обоих — симметрия). */
+/** Чуть компактнее веер у двух верхних при 3 игроках (симметрия, без «залезания» в центр). */
 function threePlayerUpperOppFanMults(base: OpponentFanMults): OpponentFanMults {
   return {
     ...base,
-    edgeMax: base.edgeMax * 0.48,
-    step: base.step * 0.52,
-    arc: base.arc * 0.5,
-    scale: base.scale * 0.91,
-    handWidthRem: base.handWidthRem * 0.72,
-    handHeightRem: base.handHeightRem * 0.86,
+    edgeMax: base.edgeMax * 0.78,
+    step: base.step * 0.82,
+    arc: base.arc * 0.8,
+    scale: base.scale * 0.96,
+    handWidthRem: base.handWidthRem * 0.88,
+    handHeightRem: base.handHeightRem * 0.94,
   };
 }
 
@@ -1689,20 +1691,24 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             const isThreeOpponentsRow = isThreePlayerTable && opponents.length === 2;
             const fanScaleExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_FAN_SCALE_MULT : 1;
             const labelRadialExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_LABEL_RADIAL_EXTRA_PX : 0;
-            const inwardPadExtra = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_INWARD_PAD_EXTRA_PX : 0;
             const mults = isThreeOpponentsRow
               ? threePlayerUpperOppFanMults(opponentFanLayoutMults(opponents.length))
               : opponentFanLayoutMults(opponents.length);
             const handRadius =
-              opponentOrbitPx * OPPONENT_ORBIT_RADIUS_MULT +
+              opponentOrbitPx *
+                OPPONENT_ORBIT_RADIUS_MULT *
+                (isThreeOpponentsRow ? THREE_PLAYER_OPP_HAND_RADIUS_MULT : 1) +
               (embedded ? OPP_HAND_EMBEDDED_RIM_OUTWARD_PX : 0);
             const { ox: rimOx, oy: rimOy, nx, ny } = seatOffsetOnCircle(angleDeg, handRadius);
             const fanRot = fanContainerRotationDeg(angleDeg);
             const labelRadialPx =
               (opponents.length >= 5 ? 38 : opponents.length >= 4 ? 44 : 50) + labelRadialExtra;
-            const inwardPadPx = 8 + Math.min(6, opponents.length) + inwardPadExtra;
-            const fanAx = rimOx - nx * inwardPadPx;
-            const fanAy = rimOy - ny * inwardPadPx;
+            const inwardPadPx = isThreeOpponentsRow
+              ? THREE_PLAYER_TOP_OPP_INWARD_PAD_PX
+              : 8 + Math.min(6, opponents.length);
+            const radialOutPx = isThreeOpponentsRow ? THREE_PLAYER_OPP_PAIR_RADIAL_OUTWARD_PX : 0;
+            const fanAx = rimOx - nx * inwardPadPx + nx * radialOutPx;
+            const fanAy = rimOy - ny * inwardPadPx + ny * radialOutPx;
             const lx = rimOx + nx * labelRadialPx;
             const ly = rimOy + ny * labelRadialPx;
             return (
