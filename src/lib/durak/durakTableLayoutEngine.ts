@@ -73,7 +73,11 @@ export function getOpponentSeatAnglesDeg(
 export function getOpponentRimRadiusPx(orbitPxEff: number, embedded: boolean): number {
   const base = Math.max(1, orbitPxEff);
   const embeddedExtra = embedded ? 22 : 0;
-  return base * 1.16 + embeddedExtra + 48;
+  const raw = base * 1.16 + embeddedExtra + 48;
+  /** Полуось квадрата стола (orbit = 0.48·ширина); без верхнего предела якорь уезжает за край и веер не виден. */
+  const tableHalfPx = (base / 0.48) * 0.5;
+  const maxR = tableHalfPx * 0.88;
+  return Math.min(raw, maxR);
 }
 
 /**

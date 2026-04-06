@@ -254,8 +254,12 @@ function handFanStyle(
 
 /** Соперники по часовой стрелке от «меня» внизу — как рассадка за столом. */
 function opponentsClockwiseFromLocal(game: GameTable, localId: string): Player[] {
-  const idx = game.players.findIndex((p) => p.id === localId);
-  if (idx < 0) return game.players.filter((p) => p.id !== localId);
+  let idx = game.players.findIndex((p) => p.id === localId);
+  if (idx < 0) {
+    /** Иначе filter даёт всех кроме id — при 2 игроках оба попадали в «соперники», ломая углы. */
+    const humanIdx = game.players.findIndex((p) => p.type === "human");
+    idx = humanIdx >= 0 ? humanIdx : 0;
+  }
   const out: Player[] = [];
   for (let k = 1; k < game.players.length; k++) {
     out.push(game.players[(idx + k) % game.players.length]!);
@@ -1678,13 +1682,19 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                       transformOrigin: "center bottom",
                     }}
                   >
-                    {pl.bh.map((c, i) => (
+                    {(pl.bh.length > 0 ? pl.bh : [null]).map((c, i) => (
                       <div
-                        key={c.id}
+                        key={c?.id ?? `opponent-hand-placeholder-${pl.oppId}`}
                         className="absolute"
-                        style={opponentTableFanStyle(pl.bh.length, i, pl.mults, 1, {
-                          compact: true,
-                        })}
+                        style={opponentTableFanStyle(
+                          Math.max(1, pl.bh.length),
+                          i,
+                          pl.mults,
+                          1,
+                          {
+                            compact: true,
+                          },
+                        )}
                       >
                         <motion.div
                           className="[transform:translateZ(0)]"
