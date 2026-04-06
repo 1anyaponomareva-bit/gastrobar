@@ -80,6 +80,12 @@ import {
   DURAK_DECK_WRAPPER_CLASS,
   getDurakTableColumnClassNames,
 } from "@/lib/durak/durakTableLayout";
+import {
+  clampTablePairOffsetYPx,
+  DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
+  DURAK_SCENE_PLAYER_HAND_SCALE,
+  DURAK_SCENE_PLAYER_HAND_CENTER_Y_VH,
+} from "@/lib/durak/durakSceneLayout";
 
 const HUMAN_ID = "human";
 
@@ -237,8 +243,13 @@ function handFanStyle(
   if (n <= 0) return {};
   const mid = (n - 1) / 2;
   const rel = i - mid;
-  const spreadCap = mode === "player" && n >= 6 ? 7 : 9;
-  const spread = n <= 1 ? 0 : Math.min(50 / (n - 1), spreadCap);
+  const spreadCap = mode === "player" ? Math.min(14, DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG / 2) : 9;
+  const spread =
+    mode === "player"
+      ? n <= 1
+        ? 0
+        : Math.min(DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG / Math.max(n - 1, 1), spreadCap)
+      : Math.min(50 / (n - 1), spreadCap);
   const rot = rel * spread;
   const step =
     mode === "player"
@@ -296,7 +307,8 @@ const TABLE_PAIRS_SHIFT_UP_PX = 20;
 function tablePairOrbitOffset(
   index: number,
   total: number,
-  orbitRadiusPx: number
+  orbitRadiusPx: number,
+  viewportHeightPx: number,
 ): { x: number; y: number } {
   if (orbitRadiusPx <= 0 || total <= 0) return { x: 0, y: 0 };
 
@@ -774,6 +786,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const tableRoundRef = useRef<HTMLDivElement>(null);
   const boardPlayAreaRef = useRef<HTMLDivElement>(null);
   const [tableOrbitPx, setTableOrbitPx] = useState(0);
+  const [viewportHeightPx, setViewportHeightPx] = useState(
+    typeof window !== "undefined" ? window.innerHeight : 800,
+  );
   const [lossResultTitle, setLossResultTitle] = useState("");
   const lossResultTitleGameIdRef = useRef<string | null>(null);
 
@@ -786,6 +801,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ro.observe(el);
     return () => ro.disconnect();
   }, [game?.id]);
+
+  useLayoutEffect(() => {
+    const onResize = () => setViewportHeightPx(window.innerHeight);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useLayoutEffect(() => {
     if (!DURAK_TABLE_LAYOUT_DEBUG) return;
@@ -1065,8 +1087,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       opponents: opponentsForTable,
       totalPlayers: totalPlayersForSeatLayout,
       orbitPxEff,
+      viewportHeightPx,
     });
-  }, [game, opponentsForTable, orbitPxEff, totalPlayersForSeatLayout]);
+  }, [game, opponentsForTable, orbitPxEff, totalPlayersForSeatLayout, viewportHeightPx]);
   const deckCount = game?.deck.length ?? 0;
   const trumpShow = game?.trumpCard;
 
@@ -1599,20 +1622,26 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         "flex w-full min-h-0 flex-col bg-[#14100c] text-slate-100",
         /* В /durak стол уже под общим Header + BottomNav — заполняем flex-1, без второго pt и без лишней высоты. */
         embedded
-          ? "flex-1 basis-0 min-h-0 overflow-y-auto overflow-x-visible pb-0"
-          : "min-h-0 flex-1 overflow-x-visible overflow-y-auto",
+          ? "flex-1 basis-0 min-h-0 overflow-x-hidden overflow-y-hidden pb-0"
+          : "min-h-0 flex-1 overflow-x-hidden overflow-y-auto",
         /* Снизу: для офлайна — общий отступ; для встроенного онлайн нижний зазор только у секции руки (иначе двойной pb). */
         !embedded &&
           "pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+5.85rem))]"
       )}
     >
-      <div className="shrink-0 space-y-0.5 px-2 pb-0.5 pt-0.5">
+      <div
+        className={cn(
+          getDurakTableColumnClassNames(),
+          "relative isolate min-h-[100dvh] w-full overflow-x-hidden overflow-y-hidden",
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[#14100c]" aria-hidden />
         {tableGreeting ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
+            className="absolute left-1/2 top-[max(0.35rem,env(safe-area-inset-top,0px))] z-50 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
             role="status"
           >
             {tableGreeting}
@@ -1623,37 +1652,20 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
+            className="absolute left-1/2 top-[max(2.25rem,env(safe-area-inset-top,0px))] z-50 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
             role="status"
           >
             {autoMoveBanner}
           </motion.div>
         ) : null}
-      </div>
 
-      <div
-        className={getDurakTableColumnClassNames({
-          embedded: !!embedded,
-          hasOpponents: opponentsForTable.length > 0,
-        })}
-      >
-        {/*
-          Запас сверху: веер соперника (absolute от центра круга) уходит выше верхней кромки стола.
-          Без in-flow отступа overflow-y-auto на предке обрезает рубашки — их «не видно».
-        */}
-        <div
-          className={cn(
-            "relative flex w-full max-w-full shrink-0 flex-col items-center overflow-visible",
-            opponentsForTable.length > 0 &&
-              "pt-[min(5.5rem,clamp(3.5rem,17vmin,9.5rem))] sm:pt-[min(6rem,clamp(4rem,18vmin,10rem))]",
-          )}
-        >
         <div
           ref={tableRoundRef}
+          data-durak-table-center-y="50vh"
           data-durak-players={game.players.length}
           data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="relative isolate z-0 max-w-full shrink-0 translate-y-[min(3vmin,5vh)] overflow-visible rounded-full"
+          className="absolute left-1/2 top-[50vh] z-[1] max-w-full -translate-x-1/2 -translate-y-1/2 isolate overflow-visible rounded-full"
           style={{
             width: "min(86vw, 26rem, 76vmin)",
             aspectRatio: "1",
@@ -1725,6 +1737,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     i,
                     game.tablePairs.length,
                     getBattleAreaOrbitPx(orbitPxEff),
+                    viewportHeightPx,
                   );
                   const uncovered = tp.defense === null;
                   const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
@@ -1863,7 +1876,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             {opponentTablePlacements.map((pl) => (
               <div
                 key={`lbl-${pl.oppId}`}
-                className="pointer-events-none absolute z-[2] max-w-[min(9.5rem,24vw)] text-center"
+                className="pointer-events-none absolute z-[15] max-w-[min(9.5rem,24vw)] text-center"
                 style={{
                   left: `calc(50% + ${pl.lx}px)`,
                   top: `calc(50% + ${pl.ly}px)`,
@@ -1879,10 +1892,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           </div>
 
         </div>
-        </div>
-      </div>
 
-      <div className="relative z-40 mt-3 shrink-0 space-y-0 bg-transparent px-1 pt-1.5 sm:mt-4 sm:px-2 sm:pt-2.5">
+      <div className="pointer-events-auto absolute left-1/2 top-[60vh] z-20 w-full max-w-[min(100%,580px)] -translate-x-1/2 px-1 pt-0.5 sm:px-2">
         <div className="relative z-40 grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
           <div className="flex min-w-0 justify-center">
             <button
@@ -1945,7 +1956,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       {phaseLine ? (
         <div
-          className="relative z-20 mx-auto mt-2 flex max-w-[min(100%,580px)] shrink-0 flex-col items-center gap-1 px-2 sm:mt-2.5"
+          className="pointer-events-none absolute left-1/2 top-[54vh] z-21 flex max-w-[min(100%,580px)] -translate-x-1/2 flex-col items-center gap-1 px-2"
           role="status"
         >
           <div className="flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
@@ -1981,20 +1992,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
       <section
         className={cn(
-          "relative z-0 isolate shrink-0 bg-[#14100c] px-1 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] sm:px-2 sm:pt-2",
-          /* Зазор над нижним баром: нав + safe-area + запас, чтобы веер карточек не заходил под табы */
-          embedded
-            ? "pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] sm:pb-[max(0.6rem,calc(env(safe-area-inset-bottom,0px)+6rem))]"
-            : "pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+8.5rem))]",
-          embedded && "shadow-none",
+          "pointer-events-auto absolute left-1/2 z-[25] w-full max-w-[min(100%,580px)] bg-transparent px-1 pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)+0.35rem))] pt-0 sm:px-2",
         )}
-        style={
-          opponentsForTable.length > 0 && orbitPxEff > 20
-            ? {
-                marginTop: `-${Math.min(32, Math.round(orbitPxEff * 0.088))}px`,
-              }
-            : undefined
-        }
+        style={{
+          top: `${DURAK_SCENE_PLAYER_HAND_CENTER_Y_VH}vh`,
+          transform: `translate(-50%, -50%) scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
+          transformOrigin: "center center",
+        }}
       >
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
@@ -2173,6 +2177,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           ))}
         </div>
       </section>
+      </div>
 
       <AnimatePresence>
         {game.state === "finished" ? (

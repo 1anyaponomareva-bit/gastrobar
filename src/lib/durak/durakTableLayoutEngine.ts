@@ -10,6 +10,12 @@ import {
   opponentFanLayoutMults,
   type OpponentFanMults,
 } from "./tableSeatLayout";
+import {
+  clampOpponentRimOyViewportPx,
+  DURAK_SCENE_PLAYER_ORBIT_GAP_PX,
+  DURAK_SCENE_TABLE_OY_ABOVE_TABLE_PX,
+  radialOxForOyOnCircle,
+} from "./durakSceneLayout";
 
 /** Радиус размещения карт боя — внутри сукна, меньше полного orbit. */
 export const DURAK_TABLE_BATTLE_ORBIT_MULT = 0.78;
@@ -26,13 +32,10 @@ export function getTableRadiusPxFromOrbit(orbitPxEff: number): number {
   return o / 0.96;
 }
 
-/** Зазор от обода стола до орбиты соперников (70–110px). */
-export function getPlayerOrbitGapPx(tableRadiusPx: number): number {
-  return Math.round(Math.min(110, Math.max(70, 70 + tableRadiusPx * 0.06)));
+/** Фиксированный зазор от обода стола до орбиты соперников (px). */
+export function getPlayerOrbitGapPx(_tableRadiusPx: number): number {
+  return DURAK_SCENE_PLAYER_ORBIT_GAP_PX;
 }
-
-/** Ниже этой линии (в координатах от центра, oy) соперник не опускается — над сукном. */
-const PLAYER_OY_MAX_ABOVE_TABLE_PX = 40;
 
 function opponentAnglesUniformUpperArc(opponentCount: number): number[] {
   if (opponentCount <= 0) return [];
@@ -80,11 +83,9 @@ export function getOpponentSeatAnglesDeg(
 }
 
 /**
- * Якорь соперника на орбите; oy не ниже −tableRadius − 40 (не «сползать» на сукно).
- * Точка остаётся на круге радиуса `playerRadiusPx`: при фиксации `oy` пересчитываем `ox` как
- * пересечение окружности с горизонталью (а не удлиняем луч — иначе при углах ~−160° `ox` уходит за экран).
+ * Орбита в локальных координатах стола; затем oy клампится по viewport (12vh … center−R−20).
  */
-function clampOpponentRadialOffset(params: {
+function orbitOpponentLocal(params: {
   angleDeg: number;
   tableRadiusPx: number;
   playerRadiusPx: number;
@@ -96,7 +97,7 @@ function clampOpponentRadialOffset(params: {
   let ox = cosA * r;
   let oy = Math.sin(rad) * r;
 
-  const oyMax = -tableRadiusPx - PLAYER_OY_MAX_ABOVE_TABLE_PX;
+  const oyMax = -tableRadiusPx - DURAK_SCENE_TABLE_OY_ABOVE_TABLE_PX;
   if (oy > oyMax) {
     oy = oyMax;
     const disc = r * r - oy * oy;
@@ -146,9 +147,9 @@ export function buildOpponentTablePlacements(args: {
   opponents: Player[];
   totalPlayers: number;
   orbitPxEff: number;
-  embedded?: boolean;
+  viewportHeightPx: number;
 }): DurakOpponentTablePlacement[] {
-  const { opponents, totalPlayers, orbitPxEff } = args;
+  const { opponents, totalPlayers, orbitPxEff, viewportHeightPx } = args;
   const tableRadiusPx = getTableRadiusPxFromOrbit(orbitPxEff);
   const gapPx = getPlayerOrbitGapPx(tableRadiusPx);
   const playerRadiusPx = tableRadiusPx + gapPx;
@@ -164,10 +165,20 @@ export function buildOpponentTablePlacements(args: {
     const rad = (seatAngleDeg * Math.PI) / 180;
     const nx = Math.cos(rad);
     const ny = Math.sin(rad);
-    const { ox: rimOx, oy: rimOy } = clampOpponentRadialOffset({
+    const local = orbitOpponentLocal({
       angleDeg: seatAngleDeg,
       tableRadiusPx,
       playerRadiusPx,
+    });
+    const rimOy = clampOpponentRimOyViewportPx({
+      rimOy: local.oy,
+      viewportHeightPx,
+      tableRadiusPx,
+    });
+    const rimOx = radialOxForOyOnCircle({
+      rimOy,
+      playerRadiusPx,
+      angleDeg: seatAngleDeg,
     });
     const fanAx = rimOx;
     const fanAy = rimOy;

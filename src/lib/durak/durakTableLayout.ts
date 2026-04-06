@@ -15,23 +15,11 @@ export const DURAK_DECK_WRAPPER_CLASS =
 export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;
 
 /**
- * Обёртка колонки со столом: safe-area сверху + отступ от «шапки» контента.
- * `embedded` — только встроенный онлайн-вид (не число игроков).
+ * Колонка сцены: фиксированный safe-area сверху; вертикаль сцены задаётся vh в разметке, без mt от числа игроков.
  */
-export function getDurakTableColumnClassNames(opts: {
-  embedded: boolean;
-  hasOpponents: boolean;
-}): string {
+export function getDurakTableColumnClassNames(): string {
   return cn(
-    "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-1 sm:pt-2",
-    opts.embedded && opts.hasOpponents && "pt-2 sm:pt-3",
-    opts.hasOpponents
-      ? [
-          /* Запас под status bar / notch + воздух до фикс. шапки сайта (~60px) внутри скролла */
-          "pt-[max(0.85rem,calc(env(safe-area-inset-top,0px)+0.75rem))] sm:pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.9rem))]",
-          "mt-[min(2.85rem,8vmin)] sm:mt-[min(3.1rem,8.5vmin)]",
-        ]
-      : "mt-[min(1.25rem,3.5vmin)]",
+    "relative z-30 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-center px-0.5 pb-1 pt-[max(0.5rem,env(safe-area-inset-top,0px))]",
   );
 }
 
