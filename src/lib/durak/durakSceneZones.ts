@@ -3,8 +3,8 @@
  * Все координаты — от верха и левого края **игровой колонки** (без шапки сайта).
  */
 
-/** Центр стола по вертикали — выше середины экрана, остаётся место под UI снизу. */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.46;
+/** Центр стола по вертикали — выше, под столом больше места под кнопки и статус. */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.41;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
@@ -38,8 +38,8 @@ export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {
   return 10;
 }
 
-/** Резерв под кнопки и строку состояния над блоком «имя | рука» (px). */
-export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 96;
+/** Резерв под кнопки и блок состояния над «имя | рука» (px). */
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 118;
 
 export type DurakSceneZoneLayout = {
   sceneW: number;

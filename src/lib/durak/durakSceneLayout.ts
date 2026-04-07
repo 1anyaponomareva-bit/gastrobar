@@ -7,16 +7,28 @@ import { DURAK_SCENE_TABLE_CENTER_Y_RATIO } from "./durakSceneZones";
 
 export { DURAK_SCENE_TABLE_CENTER_Y_VH } from "./durakSceneZones";
 
-/**
- * Нижний край веера соперника заходит на сукно примерно на эту величину (px) — ~20–25% высоты компактной карты.
- */
-export const DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX = 14;
+/** Высота компактной карты на столе (px) — для расчёта «¼ на сукне». */
+export const DURAK_SCENE_OPPONENT_COMPACT_CARD_HEIGHT_PX = 60;
 
-/** Оценка: от якоря веера (центр трансформа) до нижнего края карт compact (px). */
+/** Доля высоты карты на зелёном сукне (остальное — на чёрном фоне). */
+export const DURAK_SCENE_OPPONENT_ON_FELT_CARD_FRACTION = 0.25;
+
+/**
+ * Оценка: от якоря веера вдоль радиуса к столу до ближайшей к центру кромки карт (px).
+ * Якорь = center + (nx,ny)·d; ближайшая к столу кромка ≈ d − halfH; задаём d − halfH = R − fraction·h.
+ */
 export const DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX = 46;
 
-/** Горизонтальный вылет якоря соперника от центра стола (px): ox = cos(θ)·(tableRadius + это). */
-export const DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX = 60;
+/**
+ * Радиус до центра якоря веера на луче сиденья: на окружности стола с учётом ¼ карты на сукне.
+ * d = R − fraction·h + halfH (для всех углов θ одна и та же логика).
+ */
+export function getOpponentFanAnchorRadialDistPx(tableRadiusPx: number): number {
+  const R = Math.max(1, tableRadiusPx);
+  const h = DURAK_SCENE_OPPONENT_COMPACT_CARD_HEIGHT_PX;
+  const halfH = DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX;
+  return R - DURAK_SCENE_OPPONENT_ON_FELT_CARD_FRACTION * h + halfH;
+}
 
 /** Центр веера руки: tableY + tableRadius + это (px). */
 export const DURAK_SCENE_HAND_OFFSET_BELOW_TABLE_PX = 80;
@@ -46,18 +58,6 @@ export const DURAK_SCENE_TABLE_CARDS_BOTTOM_MARGIN_ABOVE_HAND_PX = 100;
 export function getTableCenterYPx(viewportHeightPx: number): number {
   const H = Math.max(320, viewportHeightPx);
   return DURAK_SCENE_TABLE_CENTER_Y_RATIO * H;
-}
-
-/**
- * Локальный oy якоря соперника от центра стола: низ веера ≈ `tableTop + overlap`.
- * fanBottom ≈ centerY + rimOy + halfH = tableTop + DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX.
- */
-export function getOpponentRimOyPx(tableRadiusPx: number): number {
-  return (
-    -tableRadiusPx +
-    DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX -
-    DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX
-  );
 }
 
 /**

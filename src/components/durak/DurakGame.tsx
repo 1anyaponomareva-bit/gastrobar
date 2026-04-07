@@ -1988,53 +1988,60 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
         </div>
 
-        {phaseLine ? (
-        <div
-          className="mt-1 flex w-full flex-col items-center gap-1 px-2"
-          role="status"
-          style={{ zIndex: DURAK_Z_STATUS_LINE }}
-        >
-          <div className="pointer-events-auto flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
-            {embedded &&
-            game.state === "playing" &&
-            !dealing &&
-            getOnlineMandatoryHumanActorId(game) != null ? (
-              <TurnDeadlineRing progress={turnProgress} />
-            ) : null}
-            <motion.p
-              key={phaseLine}
-              layout
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22 }}
-              className={cn(
-                "line-clamp-4 min-w-0 flex-1 rounded-full px-4 py-2 text-center text-[10px] font-medium leading-snug shadow-[0_4px_20px_rgba(0,0,0,0.2)] backdrop-blur-sm sm:py-2 sm:text-[11px]",
-                statusStripHighlightAttackerTurn
-                  ? "border border-[#f8d66d]/55 bg-gradient-to-b from-[#f8d66d]/22 via-amber-950/25 to-[#1a1410] font-semibold text-[#fff8e8] shadow-[0_0_28px_rgba(248,214,109,0.18)]"
-                  : "border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] text-emerald-50/95",
-              )}
-            >
-              {phaseLine}
-            </motion.p>
-          </div>
-          {microFlavour ? (
-            <p className="max-w-[20rem] text-center text-[9px] font-normal italic leading-snug text-white/38 sm:text-[10px]">
-              {microFlavour}
-            </p>
-          ) : null}
-        </div>
-        ) : null}
-
-        {game.message ? (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-1 shrink-0 rounded-lg border border-amber-500/35 bg-[#14100c] px-2 py-1 text-center text-[11px] text-amber-100/95"
-            role="status"
+        {phaseLine || game.message ? (
+          <div
+            className="mt-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5"
             style={{ zIndex: DURAK_Z_STATUS_LINE }}
+            role="region"
+            aria-label="Состояние партии"
           >
-            {game.message}
-          </motion.div>
+            {phaseLine ? (
+              <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
+                <div className="pointer-events-auto flex w-full min-w-0 items-center justify-center gap-2 sm:gap-3">
+                  {embedded &&
+                  game.state === "playing" &&
+                  !dealing &&
+                  getOnlineMandatoryHumanActorId(game) != null ? (
+                    <TurnDeadlineRing progress={turnProgress} />
+                  ) : null}
+                  <motion.p
+                    key={phaseLine}
+                    layout
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className={cn(
+                      "line-clamp-4 min-w-0 flex-1 rounded-lg px-3 py-2 text-center text-[10px] font-medium leading-snug sm:py-2 sm:text-[11px]",
+                      statusStripHighlightAttackerTurn
+                        ? "border border-[#f8d66d]/45 bg-black/90 font-semibold text-[#fff8e8]"
+                        : "border border-white/10 bg-black/90 text-emerald-50/95",
+                    )}
+                    role="status"
+                  >
+                    {phaseLine}
+                  </motion.p>
+                </div>
+                {microFlavour ? (
+                  <p className="max-w-[24rem] px-1 text-center text-[9px] font-normal italic leading-snug text-white/50 sm:text-[10px]">
+                    {microFlavour}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {game.message ? (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "rounded-md border border-amber-500/35 bg-black/90 px-2 py-1.5 text-center text-[11px] text-amber-100/95",
+                  phaseLine ? "mt-2" : null,
+                )}
+                role="status"
+              >
+                {game.message}
+              </motion.div>
+            ) : null}
+          </div>
         ) : null}
 
         <div
