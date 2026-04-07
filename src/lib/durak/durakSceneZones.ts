@@ -10,23 +10,22 @@ export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.36;
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
 
 /**
- * Z-order: фон → стол → соперники → карты боя → колода → кнопки нижней колонки → баннеры → рука → строка состояния (текст партии читается над веером).
+ * Z-order: … → колода → кнопки → статус → баннеры. Рука выше статуса, чтобы веер (в т.ч. 2 ряд) не уходил под текст.
  */
 export const DURAK_Z_TABLE_SURFACE = 10;
 export const DURAK_Z_OPPONENTS = 20;
 export const DURAK_Z_TABLE_CARDS = 25;
 export const DURAK_Z_DECK = 30;
-export const DURAK_Z_CONTROLS = 35;
-/** Строка состояния — выше веера, чтобы текст не перекрывался картами. */
-export const DURAK_Z_STATUS_LINE = 54;
+export const DURAK_Z_CONTROLS = 40;
+export const DURAK_Z_STATUS_LINE = 42;
 export const DURAK_Z_GAME_HEADER_BANNERS = 45;
-/** Рука в нижней колонке — ниже статуса (z выше колоды/кнопок стола, ниже статуса партии). */
-export const DURAK_Z_PLAYER_HAND = 44;
+/** Рука и имя: поверх блока состояния при вертикальном наплыве. */
+export const DURAK_Z_PLAYER_HAND = 52;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
 
-/** Зазор: низ стола → верх «чёрной» зоны игрока. */
+/** Низ стола → верх чёрной зоны (не менять без нужды: влияет на всю нижнюю колонку). */
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 6;
 
 /** Нижний край веера игрока не ближе к верху таббара (px). */

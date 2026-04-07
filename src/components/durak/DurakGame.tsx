@@ -1913,7 +1913,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col gap-2 bg-[#14100c] px-1 sm:px-2"
+        className="pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col gap-1 bg-[#14100c] px-1 sm:px-2"
         style={{
           top: layout.playerZoneTopY,
           bottom: layout.tabBarReservePx,
@@ -1922,7 +1922,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         }}
       >
         <div
-          className="pointer-events-auto relative shrink-0 pt-0.5"
+          className="pointer-events-auto relative -mt-2 shrink-0 pt-0 sm:-mt-2.5"
           style={{ zIndex: DURAK_Z_CONTROLS }}
         >
         <div
@@ -1990,13 +1990,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         {phaseLine || game.message ? (
           <div
-            className="w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5"
+            className="mb-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:mb-3 sm:px-3 sm:py-2"
             style={{ zIndex: DURAK_Z_STATUS_LINE }}
             role="region"
             aria-label="Состояние партии"
           >
             {phaseLine ? (
-              <div className="flex w-full min-w-0 flex-col items-center gap-1.5">
+              <div className="flex w-full min-w-0 flex-col items-center gap-1">
                 <div className="pointer-events-auto flex w-full min-w-0 items-center justify-center gap-2 sm:gap-3">
                   {embedded &&
                   game.state === "playing" &&
@@ -2011,7 +2011,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22 }}
                     className={cn(
-                      "line-clamp-4 min-w-0 flex-1 rounded-lg px-3 py-2 text-center text-[10px] font-medium leading-snug sm:py-2 sm:text-[11px]",
+                      "line-clamp-3 max-h-[4.25rem] min-w-0 flex-1 overflow-y-auto overscroll-y-contain rounded-lg px-2.5 py-1.5 text-center text-[10px] font-medium leading-snug sm:max-h-[4.75rem] sm:px-3 sm:py-2 sm:text-[11px]",
                       statusStripHighlightAttackerTurn
                         ? "border border-[#f8d66d]/45 bg-black/90 font-semibold text-[#fff8e8]"
                         : "border border-white/10 bg-black/90 text-emerald-50/95",
@@ -2022,7 +2022,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   </motion.p>
                 </div>
                 {microFlavour ? (
-                  <p className="max-w-[24rem] px-1 text-center text-[9px] font-normal italic leading-snug text-white/50 sm:text-[10px]">
+                  <p className="line-clamp-2 max-w-[24rem] px-1 text-center text-[9px] font-normal italic leading-snug text-white/50 sm:text-[10px]">
                     {microFlavour}
                   </p>
                 ) : null}
@@ -2033,8 +2033,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  "rounded-md border border-amber-500/35 bg-black/90 px-2 py-1.5 text-center text-[11px] text-amber-100/95",
-                  phaseLine ? "mt-2" : null,
+                  "max-h-[3.5rem] overflow-y-auto overscroll-y-contain rounded-md border border-amber-500/35 bg-black/90 px-2 py-1 text-center text-[10px] text-amber-100/95 sm:text-[11px]",
+                  phaseLine ? "mt-1.5" : null,
                 )}
                 role="status"
               >
@@ -2045,13 +2045,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-0.5"
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-3 sm:pt-4"
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div
             className="pointer-events-auto shrink-0 self-end bg-[#14100c] py-1 pl-1 pr-2"
             style={{
-              zIndex: DURAK_Z_STATUS_LINE,
+              zIndex: DURAK_Z_PLAYER_HAND,
               maxWidth: "min(9.5rem, 32vw)",
               paddingTop: "0.125rem",
             }}
