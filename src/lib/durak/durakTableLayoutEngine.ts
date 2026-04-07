@@ -14,8 +14,8 @@ import {
   getOpponentRimOyPx,
 } from "./durakSceneLayout";
 
-/** Радиус размещения карт боя — внутри сукна, меньше полного orbit. */
-export const DURAK_TABLE_BATTLE_ORBIT_MULT = 0.78;
+/** Радиус размещения карт боя — строже внутри круга, без пересечения соперников. */
+export const DURAK_TABLE_BATTLE_ORBIT_MULT = 0.68;
 
 export function getBattleAreaOrbitPx(orbitPxEff: number): number {
   return Math.max(1, orbitPxEff) * DURAK_TABLE_BATTLE_ORBIT_MULT;

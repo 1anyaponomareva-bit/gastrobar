@@ -3,26 +3,29 @@
  * Все координаты — от верха и левого края **игровой колонки** (без шапки сайта).
  */
 
-/** Центр стола по вертикали: 52% высоты доступной игровой области. */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.52;
+/** Центр стола по вертикали — выше середины экрана, остаётся место под UI снизу. */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.46;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
 
-/** Жёсткий z-order сцены (не разбрасывать по компонентам). */
+/**
+ * Z-order снизу вверх: фон → стол → вееры соперников → карты боя → колода+козырь → кнопки → статус → баннеры → рука (всегда верх).
+ */
 export const DURAK_Z_TABLE_SURFACE = 10;
-export const DURAK_Z_DECK = 15;
-export const DURAK_Z_TABLE_CARDS = 20;
-export const DURAK_Z_OPPONENTS = 30;
-export const DURAK_Z_PLAYER_HAND = 35;
-export const DURAK_Z_CONTROLS = 40;
-export const DURAK_Z_GAME_HEADER_BANNERS = 50;
+export const DURAK_Z_OPPONENTS = 20;
+export const DURAK_Z_TABLE_CARDS = 25;
+export const DURAK_Z_DECK = 30;
+export const DURAK_Z_CONTROLS = 35;
+export const DURAK_Z_STATUS_LINE = 40;
+export const DURAK_Z_GAME_HEADER_BANNERS = 45;
+export const DURAK_Z_PLAYER_HAND = 50;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
 
-/** Минимум между нижней границей круга стола и верхним краем зоны руки (px). */
-export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 24;
+/** Зазор: низ стола → верх «чёрной» зоны игрока (кнопки ближе к столу). */
+export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 10;
 
 /** Нижний край веера игрока не ближе к верху таббара (px). */
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX = 16;
@@ -30,16 +33,13 @@ export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX = 16;
 /** Резерв под нижний таббар + safe-area внутри сцены (px). */
 export const DURAK_SCENE_TABBAR_RESERVE_PX = 92;
 
-/**
- * Отступ слева для имени/руки, чтобы не наезжать на колоду в левой части стола.
- * Оценка: ~половина радиуса + запас.
- */
-export function getDeckNameClearanceLeftPx(tableRadiusPx: number): number {
-  return Math.min(220, Math.max(88, tableRadiusPx * 0.55 + 40));
+/** Горизонтальный внутренний отступ в нижней зоне (имя слева от руки; не связано с колодой на столе). */
+export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {
+  return 10;
 }
 
-/** Резерв под кнопки / фазу / имя внутри player zone (px). */
-export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 132;
+/** Резерв под кнопки и строку состояния над блоком «имя | рука» (px). */
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 96;
 
 export type DurakSceneZoneLayout = {
   sceneW: number;

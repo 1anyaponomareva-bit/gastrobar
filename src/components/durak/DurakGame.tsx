@@ -79,9 +79,11 @@ import {
   computeDurakSceneZoneLayout,
   DURAK_SCENE_TABLE_CENTER_Y_VH,
   DURAK_Z_CONTROLS,
+  DURAK_Z_DECK,
   DURAK_Z_GAME_HEADER_BANNERS,
   DURAK_Z_OPPONENTS,
   DURAK_Z_PLAYER_HAND,
+  DURAK_Z_STATUS_LINE,
   DURAK_Z_TABLE_CARDS,
   DURAK_Z_TABLE_SURFACE,
 } from "@/lib/durak/durakSceneZones";
@@ -305,7 +307,7 @@ const TABLE_PAIRS_FIRST_ROW_MAX = 4;
 /** Вертикальный зазор между рядами пар на столе (второй ряд — снизу). */
 const TABLE_PAIRS_ROW_GAP_PX = 56;
 /** Сдвиг пар вверх от центра, чтобы нижняя кромка карт не заходила на зону соперников (maxY < centerY − 20). */
-const TABLE_PAIRS_SHIFT_UP_PX = 20;
+const TABLE_PAIRS_SHIFT_UP_PX = 28;
 
 /**
  * Позиции колонок «атака + отбой» на столе: ряд(и) по горизонтали в центре сукна.
@@ -1635,9 +1637,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     >
       <div
         ref={durakSceneRef}
-        className={cn(
+          className={cn(
           getDurakTableColumnClassNames(),
-          "relative isolate flex-1 min-h-0 w-full overflow-hidden",
+          "relative isolate flex-1 min-h-0 w-full overflow-x-hidden overflow-y-visible",
         )}
       >
         <div className="pointer-events-none absolute inset-0 z-0 bg-[#14100c]" aria-hidden />
@@ -1674,7 +1676,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           data-durak-players={game.players.length}
           data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="absolute left-1/2 isolate overflow-visible rounded-full -translate-x-1/2"
+          className="absolute left-1/2 overflow-visible rounded-full -translate-x-1/2"
           style={{
             top: layout.tableTop,
             width: layout.tableWidthPx,
@@ -1720,124 +1722,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               GASTROBAR
             </span>
           </div>
-
-          <div
-            ref={boardPlayAreaRef}
-            className="table-area pointer-events-none absolute inset-0 min-h-0 overflow-visible"
-            style={{ zIndex: DURAK_Z_TABLE_CARDS }}
-          >
-            <div className="pointer-events-none relative z-0 h-full min-h-0 w-full overflow-visible">
-              <div className={DURAK_DECK_WRAPPER_CLASS}>
-                <DeckPile
-                  count={deckCount}
-                  trumpCard={trumpShow ?? null}
-                  trumpSuit={game.trumpSuit}
-                  compact
-                  trumpTuckUnderDeck={DURAK_DECK_TRUMP_TUCK_UNDER_DECK}
-                />
-              </div>
-              {game.tablePairs.length === 0 && dealing ? (
-                <div
-                  className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2"
-                  style={{ zIndex: DURAK_Z_TABLE_CARDS }}
-                >
-                  <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
-                    Карты раздаются…
-                  </span>
-                </div>
-              ) : null}
-              {game.tablePairs.length > 0 ? (
-                game.tablePairs.map((tp, i) => {
-                  const { x, y } = tablePairOrbitOffset(
-                    i,
-                    game.tablePairs.length,
-                    getBattleAreaOrbitPx(orbitPxEff),
-                  );
-                  const uncovered = tp.defense === null;
-                  const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
-                  const attackSelectedForDefense =
-                    humanMustDefend && defenseTargetAttackId === tp.attack.id;
-                  const highlightUnbeaten =
-                    uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
-                  const tableTargetable = Boolean(highlightUnbeaten && game.phase === "defend");
-                  const tableThrowable = Boolean(
-                    highlightUnbeaten &&
-                      (game.phase === "attack_toss" || game.phase === "player_can_throw_more"),
-                  );
-                  const stackZ = DURAK_Z_TABLE_CARDS + i;
-
-                  return (
-                    <div
-                      key={tp.attack.id}
-                      className="pointer-events-auto absolute left-1/2 top-1/2"
-                      style={{
-                        transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                        zIndex: stackZ,
-                      }}
-                    >
-                      {/* Габариты задаёт CardSprite (aspect-ratio колоды), без фиксированного «пухлого» блока. */}
-                      <div className="relative flex min-h-0 items-end justify-center overflow-visible">
-                        <div
-                          className="absolute bottom-0 left-1/2 -translate-x-1/2"
-                          style={{ zIndex: DURAK_Z_TABLE_CARDS }}
-                        >
-                          <CardSprite
-                            card={tp.attack}
-                            size="tableCompact"
-                            surface="table"
-                            selected={!!attackSelectedForDefense}
-                            disabled={false}
-                            className={cn(
-                              DURAK_ATTACK_CARD_CLASS,
-                              tableTargetable && GAME_CARD_IS_TARGETABLE_CLASS,
-                              tableThrowable && GAME_CARD_IS_THROWABLE_CLASS,
-                            )}
-                            onPress={
-                              humanMustDefend
-                                ? () => {
-                                    setDefenseTargetAttackId((prev) =>
-                                      prev === tp.attack.id ? null : tp.attack.id
-                                    );
-                                    setGame((g) => (g ? { ...g, message: null } : g));
-                                  }
-                                : undefined
-                            }
-                          />
-                        </div>
-
-                        {tp.defense ? (
-                          <div
-                            key={`def-wrap-${tp.defense.id}`}
-                            className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2"
-                            style={{ zIndex: DURAK_Z_TABLE_CARDS + 1 }}
-                          >
-                            {/*
-                              Чуть левее и ниже центра атаки: заметнее перекрывает, угол нижней карты с достоинством читаем.
-                            */}
-                            <motion.div
-                              key={`def-${tp.defense.id}`}
-                              className="origin-bottom"
-                              initial={{ opacity: 0, x: 4, y: 4 }}
-                              animate={{ opacity: 1, x: 10, y: 9 }}
-                              transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
-                            >
-                              <CardSprite
-                                card={tp.defense}
-                                size="tableCompact"
-                                surface="table"
-                                className={DURAK_DEFEND_CARD_CLASS}
-                              />
-                            </motion.div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : null}
-            </div>
-          </div>
-
         </div>
 
         <div
@@ -1910,8 +1794,126 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           ))}
         </div>
 
+        <div
+          ref={boardPlayAreaRef}
+          className="table-area pointer-events-none absolute left-1/2 min-h-0 -translate-x-1/2 overflow-visible rounded-full"
+          style={{
+            top: layout.tableTop,
+            width: layout.tableWidthPx,
+            height: layout.tableWidthPx,
+            zIndex: DURAK_Z_TABLE_CARDS,
+          }}
+        >
+          <div className="pointer-events-none relative isolate z-0 h-full min-h-0 w-full overflow-visible">
+            <div className={cn(DURAK_DECK_WRAPPER_CLASS)} style={{ zIndex: DURAK_Z_DECK }}>
+              <DeckPile
+                count={deckCount}
+                trumpCard={trumpShow ?? null}
+                trumpSuit={game.trumpSuit}
+                compact
+                trumpTuckUnderDeck={DURAK_DECK_TRUMP_TUCK_UNDER_DECK}
+              />
+            </div>
+            {game.tablePairs.length === 0 && dealing ? (
+              <div
+                className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2"
+                style={{ zIndex: DURAK_Z_TABLE_CARDS }}
+              >
+                <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
+                  Карты раздаются…
+                </span>
+              </div>
+            ) : null}
+            {game.tablePairs.length > 0 ? (
+              game.tablePairs.map((tp, i) => {
+                const { x, y } = tablePairOrbitOffset(
+                  i,
+                  game.tablePairs.length,
+                  getBattleAreaOrbitPx(orbitPxEff),
+                );
+                const uncovered = tp.defense === null;
+                const humanMustDefend = selfIsDefender && game.phase === "defend" && uncovered;
+                const attackSelectedForDefense =
+                  humanMustDefend && defenseTargetAttackId === tp.attack.id;
+                const highlightUnbeaten =
+                  uncovered && (game.phase === "defend" || game.phase === "player_can_throw_more");
+                const tableTargetable = Boolean(highlightUnbeaten && game.phase === "defend");
+                const tableThrowable = Boolean(
+                  highlightUnbeaten &&
+                    (game.phase === "attack_toss" || game.phase === "player_can_throw_more"),
+                );
+                const stackZ = Math.min(DURAK_Z_DECK - 1, DURAK_Z_TABLE_CARDS + i);
+
+                return (
+                  <div
+                    key={tp.attack.id}
+                    className="pointer-events-auto absolute left-1/2 top-1/2"
+                    style={{
+                      transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                      zIndex: stackZ,
+                    }}
+                  >
+                    <div className="relative flex min-h-0 items-end justify-center overflow-visible">
+                      <div
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                        style={{ zIndex: DURAK_Z_TABLE_CARDS }}
+                      >
+                        <CardSprite
+                          card={tp.attack}
+                          size="tableCompact"
+                          surface="table"
+                          selected={!!attackSelectedForDefense}
+                          disabled={false}
+                          className={cn(
+                            DURAK_ATTACK_CARD_CLASS,
+                            tableTargetable && GAME_CARD_IS_TARGETABLE_CLASS,
+                            tableThrowable && GAME_CARD_IS_THROWABLE_CLASS,
+                          )}
+                          onPress={
+                            humanMustDefend
+                              ? () => {
+                                  setDefenseTargetAttackId((prev) =>
+                                    prev === tp.attack.id ? null : tp.attack.id
+                                  );
+                                  setGame((g) => (g ? { ...g, message: null } : g));
+                                }
+                              : undefined
+                          }
+                        />
+                      </div>
+
+                      {tp.defense ? (
+                        <div
+                          key={`def-wrap-${tp.defense.id}`}
+                          className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2"
+                          style={{ zIndex: DURAK_Z_TABLE_CARDS + 1 }}
+                        >
+                          <motion.div
+                            key={`def-${tp.defense.id}`}
+                            className="origin-bottom"
+                            initial={{ opacity: 0, x: 4, y: 4 }}
+                            animate={{ opacity: 1, x: 10, y: 9 }}
+                            transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+                          >
+                            <CardSprite
+                              card={tp.defense}
+                              size="tableCompact"
+                              surface="table"
+                              className={DURAK_DEFEND_CARD_CLASS}
+                            />
+                          </motion.div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })
+            ) : null}
+          </div>
+        </div>
+
       <div
-        className="pointer-events-none absolute inset-x-0 mx-auto flex max-w-[min(100%,580px)] flex-col px-1 sm:px-2"
+        className="pointer-events-none absolute inset-x-0 mx-auto flex max-w-[min(100%,580px)] flex-col bg-[#14100c] px-1 sm:px-2"
         style={{
           top: layout.playerZoneTopY,
           bottom: layout.tabBarReservePx,
@@ -1990,7 +1992,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         <div
           className="mt-1 flex w-full flex-col items-center gap-1 px-2"
           role="status"
-          style={{ zIndex: DURAK_Z_CONTROLS }}
+          style={{ zIndex: DURAK_Z_STATUS_LINE }}
         >
           <div className="pointer-events-auto flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
             {embedded &&
@@ -2023,15 +2025,29 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
         ) : null}
 
+        {game.message ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-1 shrink-0 rounded-lg border border-amber-500/35 bg-[#14100c] px-2 py-1 text-center text-[11px] text-amber-100/95"
+            role="status"
+            style={{ zIndex: DURAK_Z_STATUS_LINE }}
+          >
+            {game.message}
+          </motion.div>
+        ) : null}
+
         <div
-          className="pointer-events-auto shrink-0 px-1 pt-1 sm:px-2"
-          style={{
-            paddingLeft: layout.deckNameClearanceLeftPx,
-            zIndex: DURAK_Z_CONTROLS,
-          }}
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-1"
+          style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
-        <div className="mb-0 flex items-center justify-between px-1">
-          <div className="min-w-0">
+          <div
+            className="pointer-events-auto shrink-0 self-end bg-[#14100c] py-1 pl-1 pr-2"
+            style={{
+              zIndex: DURAK_Z_STATUS_LINE,
+              maxWidth: "min(9.5rem, 32vw)",
+            }}
+          >
             {nameEditing ? (
               <input
                 ref={nameInputRef}
@@ -2056,7 +2072,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 }}
                 autoComplete="off"
                 spellCheck={false}
-                className="block w-full max-w-[11rem] rounded-md border border-amber-300/40 bg-black/35 px-2 py-0.5 text-[13px] font-medium text-white outline-none ring-0 placeholder:text-white/35 focus:border-amber-200/70"
+                className="block w-full max-w-[10rem] rounded-md border border-amber-300/40 bg-black/60 px-2 py-0.5 text-[13px] font-medium text-white outline-none ring-0 placeholder:text-white/35 focus:border-amber-200/70"
                 aria-label="Твоё имя"
               />
             ) : (
@@ -2070,21 +2086,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             )}
             <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
           </div>
-        </div>
-        </div>
-        {game.message ? (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-0.5 shrink-0 rounded-lg border border-amber-500/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] text-amber-100/95"
-            role="status"
-          >
-            {game.message}
-          </motion.div>
-        ) : null}
         <div
           className={cn(
-            "player-hand pointer-events-auto relative mx-auto mt-2 flex w-full min-h-0 flex-1 flex-col justify-end overflow-visible pb-1 pt-1 sm:mt-2",
+            "player-hand pointer-events-auto relative min-h-0 min-w-0 flex-1 flex-col justify-end overflow-visible",
           )}
           style={{
             transform: `scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
@@ -2213,6 +2217,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
       </div>

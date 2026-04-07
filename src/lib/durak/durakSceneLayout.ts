@@ -8,10 +8,12 @@ import { DURAK_SCENE_TABLE_CENTER_Y_RATIO } from "./durakSceneZones";
 export { DURAK_SCENE_TABLE_CENTER_Y_VH } from "./durakSceneZones";
 
 /**
- * Вертикаль: центр веера соперника на `tableTop - g` (локально: rimOy = −R − g).
- * Нижний край веера ≤ tableTop − 24px: при оценке «полувысоты» веера ~52px нужно g ≥ ~76.
+ * Нижний край веера соперника заходит на сукно примерно на эту величину (px) — ~20–25% высоты компактной карты.
  */
-export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 80;
+export const DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX = 14;
+
+/** Оценка: от якоря веера (центр трансформа) до нижнего края карт compact (px). */
+export const DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX = 46;
 
 /** Горизонтальный вылет якоря соперника от центра стола (px): ox = cos(θ)·(tableRadius + это). */
 export const DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX = 60;
@@ -47,10 +49,15 @@ export function getTableCenterYPx(viewportHeightPx: number): number {
 }
 
 /**
- * Локальный oy якоря соперника от центра стола (см. `DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX`).
+ * Локальный oy якоря соперника от центра стола: низ веера ≈ `tableTop + overlap`.
+ * fanBottom ≈ centerY + rimOy + halfH = tableTop + DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX.
  */
 export function getOpponentRimOyPx(tableRadiusPx: number): number {
-  return -tableRadiusPx - DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX;
+  return (
+    -tableRadiusPx +
+    DURAK_SCENE_OPPONENT_OVERLAP_INTO_TABLE_PX -
+    DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX
+  );
 }
 
 /**
@@ -96,8 +103,8 @@ export function clampTablePairOffsetYPx(params: {
   return cap;
 }
 
-/** orbitBattlePx = getBattleAreaOrbitPx(...); восстановить tableRadius как в engine. */
+/** orbitBattlePx = getBattleAreaOrbitPx(...); синхронно с `DURAK_TABLE_BATTLE_ORBIT_MULT` в engine. */
 function getTableRadiusFromOrbitBattle(orbitBattlePx: number): number {
-  const o = orbitBattlePx / 0.78;
+  const o = orbitBattlePx / 0.68;
   return o / 0.96;
 }
