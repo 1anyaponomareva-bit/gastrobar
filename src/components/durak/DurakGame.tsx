@@ -1512,48 +1512,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     selfCanTossCards &&
     (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
 
-  const microFlavour = useMemo(() => {
-    if (!game || dealing || game.state !== "playing") return null;
-    let pool: string[] | null = null;
-    if (game.phase === "attack_initial" && selfIsAttacker) {
-      pool = ["Сукно ждёт твоего первого хода.", "Задай темп партии — без спешки."];
-    } else if (game.phase === "defend" && selfIsDefender) {
-      pool = ["Отбейся аккуратно или заберёшь стол — твой выбор.", "Козырь и старшинство — твои друзья."];
-    } else if (game.phase === "player_can_throw_more" && selfIsAttacker) {
-      pool = [
-        "Соперник ждёт: ты можешь ещё подкинуть по рангам на сукне или снять стол кнопкой «Бито».",
-        "Игра не стоит — это твой ход после «Взять» у защитника.",
-      ];
-    } else if (game.phase === "attack_toss" && selfIsAttacker) {
-      pool = [
-        "Отбой принят — реши, докинуть карты или завершить раунд «Бито».",
-        "Пока не нажали «Бито», можно подкидывать только по тем же достоинствам, что на столе.",
-      ];
-    } else if (
-      (game.phase === "attack_toss" || game.phase === "player_can_throw_more") &&
-      selfCanTossCards &&
-      !selfIsAttacker
-    ) {
-      pool = [
-        "Тоже можешь подкинуть по столу — или жми «Бито», если ты ведущий после отбоя.",
-        "Подкинуть можно только по достоинствам, которые уже лежат на сукне.",
-      ];
-    } else if (
-      (game.phase === "attack_toss" || game.phase === "player_can_throw_more") &&
-      selfIsDefender
-    ) {
-      pool = [
-        "Сейчас ход у атакующих: тебе нужно только дождаться подкидывания или «Бито».",
-        "Ничего нажимать не нужно — соперник либо докинет карты, либо закроет стол.",
-      ];
-    } else if (game.phase === "attack_initial" && !selfIsAttacker) {
-      pool = ["Пока соперник думает — можно выдохнуть.", "Смотри на стол — скоро твой ход."];
-    }
-    if (!pool?.length) return null;
-    const i = (game.id.length + game.phase.length + game.tablePairs.length) % pool.length;
-    return pool[i] ?? null;
-  }, [game, dealing, selfIsAttacker, selfIsDefender, selfCanTossCards]);
-
   if (!nameHydrated) {
     return (
       <div
@@ -2021,11 +1979,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     {phaseLine}
                   </motion.p>
                 </div>
-                {microFlavour ? (
-                  <p className="line-clamp-2 max-w-[24rem] px-1 text-center text-[9px] font-normal italic leading-snug text-white/50 sm:text-[10px]">
-                    {microFlavour}
-                  </p>
-                ) : null}
               </div>
             ) : null}
             {game.message ? (
