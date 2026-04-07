@@ -3,11 +3,20 @@
  * Все координаты — от верха и левого края **игровой колонки** (без шапки сайта).
  */
 
-/** Центр стола по вертикали: доля высоты сцены (меньше — стол визуально выше). */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.44;
+/** Центр стола по вертикали: 52% высоты доступной игровой области. */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.52;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
+
+/** Жёсткий z-order сцены (не разбрасывать по компонентам). */
+export const DURAK_Z_TABLE_SURFACE = 10;
+export const DURAK_Z_DECK = 15;
+export const DURAK_Z_TABLE_CARDS = 20;
+export const DURAK_Z_OPPONENTS = 30;
+export const DURAK_Z_PLAYER_HAND = 35;
+export const DURAK_Z_CONTROLS = 40;
+export const DURAK_Z_GAME_HEADER_BANNERS = 50;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
@@ -29,6 +38,9 @@ export function getDeckNameClearanceLeftPx(tableRadiusPx: number): number {
   return Math.min(220, Math.max(88, tableRadiusPx * 0.55 + 40));
 }
 
+/** Резерв под кнопки / фазу / имя внутри player zone (px). */
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 132;
+
 export type DurakSceneZoneLayout = {
   sceneW: number;
   sceneH: number;
@@ -46,6 +58,10 @@ export type DurakSceneZoneLayout = {
   playerZoneTopY: number;
   /** Нижняя граница контента игрока над таббаром. */
   playerZoneBottomY: number;
+  /** Высота player zone между top и bottom (px). */
+  playerZoneHeightPx: number;
+  /** Макс. высота блока веера (px), чтобы не заезжать на стол при flex-сжатии. */
+  maxPlayerHandHeightPx: number;
   tabBarReservePx: number;
   deckNameClearanceLeftPx: number;
 };
@@ -65,7 +81,13 @@ export function computeDurakSceneZoneLayout(sceneW: number, sceneH: number): Dur
   const orbitPxEff = Math.max(8, tableW * 0.48);
   const tabBarReservePx = DURAK_SCENE_TABBAR_RESERVE_PX;
   const playerZoneTopY = tableBottom + DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX;
-  const playerZoneBottomY = H - tabBarReservePx - DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX;
+  const playerZoneBottomYRaw = H - tabBarReservePx - DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX;
+  const playerZoneBottomY = Math.max(playerZoneTopY + 80, playerZoneBottomYRaw);
+  const playerZoneHeightPx = Math.max(0, playerZoneBottomY - playerZoneTopY);
+  const maxPlayerHandHeightPx = Math.max(
+    100,
+    playerZoneHeightPx - DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX,
+  );
 
   return {
     sceneW: W,
@@ -80,7 +102,9 @@ export function computeDurakSceneZoneLayout(sceneW: number, sceneH: number): Dur
     orbitPxEff,
     opponentZoneBottomY: Math.max(0, tableTop - DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX),
     playerZoneTopY,
-    playerZoneBottomY: Math.max(playerZoneTopY + 80, playerZoneBottomY),
+    playerZoneBottomY,
+    playerZoneHeightPx,
+    maxPlayerHandHeightPx,
     tabBarReservePx,
     deckNameClearanceLeftPx: getDeckNameClearanceLeftPx(R),
   };

@@ -9,9 +9,9 @@ export { DURAK_SCENE_TABLE_CENTER_Y_VH } from "./durakSceneZones";
 
 /**
  * Вертикаль: центр веера соперника на `tableTop - g` (локально: rimOy = −R − g).
- * g невелик: нижний край веера **заходит** на сукно на ~15–35px (не «висит» только на фоне).
+ * Нижний край веера ≤ tableTop − 24px: при оценке «полувысоты» веера ~52px нужно g ≥ ~76.
  */
-export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 36;
+export const DURAK_SCENE_OPPONENT_CENTER_ABOVE_TABLE_TOP_PX = 80;
 
 /** Горизонтальный вылет якоря соперника от центра стола (px): ox = cos(θ)·(tableRadius + это). */
 export const DURAK_SCENE_OPPONENT_HORIZONTAL_ORBIT_PX = 60;
@@ -77,7 +77,7 @@ export function getPlayerHandCenterYPx(
 
 /**
  * Смещение пар на столе вниз от центра стола: низ карт не уходит в зону руки.
- * centerY стола = 55% высоты сцены.
+ * centerY стола — `DURAK_SCENE_TABLE_CENTER_Y_RATIO` из `durakSceneZones`.
  */
 export function clampTablePairOffsetYPx(params: {
   y: number;

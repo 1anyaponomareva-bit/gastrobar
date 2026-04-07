@@ -75,7 +75,16 @@ import {
   getBattleAreaOrbitPx,
   getOpponentSeatAnglesDeg,
 } from "@/lib/durak/durakTableLayoutEngine";
-import { computeDurakSceneZoneLayout } from "@/lib/durak/durakSceneZones";
+import {
+  computeDurakSceneZoneLayout,
+  DURAK_SCENE_TABLE_CENTER_Y_VH,
+  DURAK_Z_CONTROLS,
+  DURAK_Z_GAME_HEADER_BANNERS,
+  DURAK_Z_OPPONENTS,
+  DURAK_Z_PLAYER_HAND,
+  DURAK_Z_TABLE_CARDS,
+  DURAK_Z_TABLE_SURFACE,
+} from "@/lib/durak/durakSceneZones";
 import {
   DURAK_DECK_TRUMP_TUCK_UNDER_DECK,
   DURAK_DECK_WRAPPER_CLASS,
@@ -84,7 +93,6 @@ import {
 import {
   DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
   DURAK_SCENE_PLAYER_HAND_SCALE,
-  DURAK_SCENE_TABLE_CENTER_Y_VH,
 } from "@/lib/durak/durakSceneLayout";
 
 const HUMAN_ID = "human";
@@ -1638,7 +1646,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-[max(0.35rem,env(safe-area-inset-top,0px))] z-50 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
+            className="absolute left-1/2 top-[max(0.35rem,env(safe-area-inset-top,0px))] max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
+            style={{ zIndex: DURAK_Z_GAME_HEADER_BANNERS }}
             role="status"
           >
             {tableGreeting}
@@ -1649,7 +1658,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-[max(2.25rem,env(safe-area-inset-top,0px))] z-50 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
+            className="absolute left-1/2 top-[max(2.25rem,env(safe-area-inset-top,0px))] max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
+            style={{ zIndex: DURAK_Z_GAME_HEADER_BANNERS }}
             role="status"
           >
             {autoMoveBanner}
@@ -1664,11 +1674,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           data-durak-players={game.players.length}
           data-durak-opponents-render={opponentsForTable.length}
           data-durak-seat-angles={opponentSeatAnglesDeg.join(",")}
-          className="absolute left-1/2 z-[22] isolate overflow-visible rounded-full -translate-x-1/2"
+          className="absolute left-1/2 isolate overflow-visible rounded-full -translate-x-1/2"
           style={{
             top: layout.tableTop,
             width: layout.tableWidthPx,
             height: layout.tableWidthPx,
+            zIndex: DURAK_Z_TABLE_SURFACE,
           }}
         >
           <div className="pointer-events-none absolute inset-0 z-[1] rounded-full bg-black/30 shadow-[0_14px_36px_rgba(0,0,0,0.55)]" />
@@ -1712,7 +1723,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
           <div
             ref={boardPlayAreaRef}
-            className="table-area pointer-events-none absolute inset-0 z-[20] min-h-0 overflow-visible"
+            className="table-area pointer-events-none absolute inset-0 min-h-0 overflow-visible"
+            style={{ zIndex: DURAK_Z_TABLE_CARDS }}
           >
             <div className="pointer-events-none relative z-0 h-full min-h-0 w-full overflow-visible">
               <div className={DURAK_DECK_WRAPPER_CLASS}>
@@ -1725,7 +1737,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 />
               </div>
               {game.tablePairs.length === 0 && dealing ? (
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[20] -translate-x-1/2 -translate-y-1/2 px-2">
+                <div
+                  className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2"
+                  style={{ zIndex: DURAK_Z_TABLE_CARDS }}
+                >
                   <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
                     Карты раздаются…
                   </span>
@@ -1749,7 +1764,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     highlightUnbeaten &&
                       (game.phase === "attack_toss" || game.phase === "player_can_throw_more"),
                   );
-                  const stackZ = 20 + i;
+                  const stackZ = DURAK_Z_TABLE_CARDS + i;
 
                   return (
                     <div
@@ -1762,7 +1777,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     >
                       {/* Габариты задаёт CardSprite (aspect-ratio колоды), без фиксированного «пухлого» блока. */}
                       <div className="relative flex min-h-0 items-end justify-center overflow-visible">
-                        <div className="absolute bottom-0 left-1/2 z-[20] -translate-x-1/2">
+                        <div
+                          className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                          style={{ zIndex: DURAK_Z_TABLE_CARDS }}
+                        >
                           <CardSprite
                             card={tp.attack}
                             size="tableCompact"
@@ -1790,7 +1808,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                         {tp.defense ? (
                           <div
                             key={`def-wrap-${tp.defense.id}`}
-                            className="pointer-events-none absolute bottom-0 left-1/2 z-[20] -translate-x-1/2"
+                            className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2"
+                            style={{ zIndex: DURAK_Z_TABLE_CARDS + 1 }}
                           >
                             {/*
                               Чуть левее и ниже центра атаки: заметнее перекрывает, угол нижней карты с достоинством читаем.
@@ -1821,11 +1840,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         </div>
 
-        <div className="pointer-events-none absolute inset-0 z-[32] overflow-visible">
+        <div
+          className="pointer-events-none absolute inset-0 overflow-visible"
+          style={{ zIndex: DURAK_Z_OPPONENTS }}
+        >
           {opponentTablePlacements.map((pl) => (
             <div
               key={`fan-${pl.oppId}`}
-              className="pointer-events-none absolute z-[32]"
+              className="pointer-events-none absolute"
               style={{
                 left: `calc(50% + ${pl.fanAx}px)`,
                 top: layout.centerY + pl.fanAy,
@@ -1873,7 +1895,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           {opponentTablePlacements.map((pl) => (
             <div
               key={`lbl-${pl.oppId}`}
-              className="pointer-events-none absolute z-[32] max-w-[min(9.5rem,24vw)] text-center"
+              className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
               style={{
                 left: `calc(50% + ${pl.lx}px)`,
                 top: layout.centerY + pl.ly,
@@ -1889,15 +1911,22 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 z-[40] mx-auto flex max-w-[min(100%,580px)] flex-col px-1 sm:px-2"
+        className="pointer-events-none absolute inset-x-0 mx-auto flex max-w-[min(100%,580px)] flex-col px-1 sm:px-2"
         style={{
           top: layout.playerZoneTopY,
           bottom: layout.tabBarReservePx,
           minHeight: 0,
+          zIndex: DURAK_Z_CONTROLS,
         }}
       >
-        <div className="pointer-events-auto relative z-[40] shrink-0 pt-0.5">
-        <div className="relative z-[40] grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3">
+        <div
+          className="pointer-events-auto relative shrink-0 pt-0.5"
+          style={{ zIndex: DURAK_Z_CONTROLS }}
+        >
+        <div
+          className="relative grid w-full min-w-0 grid-cols-2 items-center gap-x-1.5 gap-y-1 px-0.5 sm:gap-x-3"
+          style={{ zIndex: DURAK_Z_CONTROLS }}
+        >
           <div className="flex min-w-0 justify-center">
             <button
               type="button"
@@ -1959,8 +1988,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         {phaseLine ? (
         <div
-          className="z-[40] mt-1 flex w-full flex-col items-center gap-1 px-2"
+          className="mt-1 flex w-full flex-col items-center gap-1 px-2"
           role="status"
+          style={{ zIndex: DURAK_Z_CONTROLS }}
         >
           <div className="pointer-events-auto flex w-full min-w-0 max-w-[min(100%,520px)] items-center justify-center gap-2 sm:gap-3">
             {embedded &&
@@ -1994,8 +2024,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-auto z-[40] shrink-0 px-1 pt-1 sm:px-2"
-          style={{ paddingLeft: layout.deckNameClearanceLeftPx }}
+          className="pointer-events-auto shrink-0 px-1 pt-1 sm:px-2"
+          style={{
+            paddingLeft: layout.deckNameClearanceLeftPx,
+            zIndex: DURAK_Z_CONTROLS,
+          }}
         >
         <div className="mb-0 flex items-center justify-between px-1">
           <div className="min-w-0">
@@ -2051,14 +2084,17 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
         <div
           className={cn(
-            "player-hand pointer-events-auto relative z-[35] mx-auto mt-2 flex w-full min-h-0 flex-1 flex-col justify-end overflow-visible pb-1 pt-1 sm:mt-2",
-            humanHandRows.length > 1
-              ? "min-h-[12rem] sm:min-h-[14rem]"
-              : "min-h-[9.5rem] sm:min-h-[10.5rem]"
+            "player-hand pointer-events-auto relative mx-auto mt-2 flex w-full min-h-0 flex-1 flex-col justify-end overflow-visible pb-1 pt-1 sm:mt-2",
           )}
           style={{
             transform: `scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
             transformOrigin: "bottom center",
+            zIndex: DURAK_Z_PLAYER_HAND,
+            maxHeight: layout.maxPlayerHandHeightPx,
+            minHeight: Math.min(
+              humanHandRows.length > 1 ? 192 : 152,
+              layout.maxPlayerHandHeightPx,
+            ),
           }}
         >
           {humanHandRows.map((row, rowIdx) => (
