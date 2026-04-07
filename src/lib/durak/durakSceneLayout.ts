@@ -14,10 +14,11 @@ export const DURAK_SCENE_OPPONENT_COMPACT_CARD_HEIGHT_PX = 60;
 export const DURAK_SCENE_OPPONENT_ON_FELT_CARD_FRACTION = 0.25;
 
 /**
- * Оценка: от якоря веера вдоль радиуса к столу до ближайшей к центру кромки карт (px).
- * Якорь = center + (nx,ny)·d; ближайшая к столу кромка ≈ d − halfH; задаём d − halfH = R − fraction·h.
+ * Оценка проекции веера соперника вдоль радиуса к центру стола (px).
+ * Завышенное значение «вешало» веер на фон — держим ближе к реальной compact-геометрии + rotate.
+ * Условие: d − halfH ≈ R − fraction·h → при h=60, fraction=0.25: halfH ≈ 22.
  */
-export const DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX = 46;
+export const DURAK_SCENE_OPPONENT_FAN_HALF_HEIGHT_EST_PX = 22;
 
 /**
  * Радиус до центра якоря веера на луче сиденья: на окружности стола с учётом ¼ карты на сукне.

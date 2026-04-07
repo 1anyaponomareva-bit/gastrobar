@@ -3,29 +3,31 @@
  * Все координаты — от верха и левого края **игровой колонки** (без шапки сайта).
  */
 
-/** Центр стола по вертикали — выше, под столом больше места под кнопки и статус. */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.41;
+/** Центр стола — выше по экрану: под столом больше места под кнопки, статус и руку. */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.36;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
 
 /**
- * Z-order снизу вверх: фон → стол → вееры соперников → карты боя → колода+козырь → кнопки → статус → баннеры → рука (всегда верх).
+ * Z-order: фон → стол → соперники → карты боя → колода → кнопки нижней колонки → баннеры → рука → строка состояния (текст партии читается над веером).
  */
 export const DURAK_Z_TABLE_SURFACE = 10;
 export const DURAK_Z_OPPONENTS = 20;
 export const DURAK_Z_TABLE_CARDS = 25;
 export const DURAK_Z_DECK = 30;
 export const DURAK_Z_CONTROLS = 35;
-export const DURAK_Z_STATUS_LINE = 40;
+/** Строка состояния — выше веера, чтобы текст не перекрывался картами. */
+export const DURAK_Z_STATUS_LINE = 54;
 export const DURAK_Z_GAME_HEADER_BANNERS = 45;
-export const DURAK_Z_PLAYER_HAND = 50;
+/** Рука в нижней колонке — ниже статуса (z выше колоды/кнопок стола, ниже статуса партии). */
+export const DURAK_Z_PLAYER_HAND = 44;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
 
-/** Зазор: низ стола → верх «чёрной» зоны игрока (кнопки ближе к столу). */
-export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 10;
+/** Зазор: низ стола → верх «чёрной» зоны игрока. */
+export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 6;
 
 /** Нижний край веера игрока не ближе к верху таббара (px). */
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX = 16;
@@ -39,7 +41,7 @@ export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {
 }
 
 /** Резерв под кнопки и блок состояния над «имя | рука» (px). */
-export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 118;
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 130;
 
 export type DurakSceneZoneLayout = {
   sceneW: number;

@@ -1913,7 +1913,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 mx-auto flex max-w-[min(100%,580px)] flex-col bg-[#14100c] px-1 sm:px-2"
+        className="pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col gap-2 bg-[#14100c] px-1 sm:px-2"
         style={{
           top: layout.playerZoneTopY,
           bottom: layout.tabBarReservePx,
@@ -1990,7 +1990,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         {phaseLine || game.message ? (
           <div
-            className="mt-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5"
+            className="w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2.5"
             style={{ zIndex: DURAK_Z_STATUS_LINE }}
             role="region"
             aria-label="Состояние партии"
@@ -2045,7 +2045,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-1"
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-0.5"
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div
@@ -2053,6 +2053,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             style={{
               zIndex: DURAK_Z_STATUS_LINE,
               maxWidth: "min(9.5rem, 32vw)",
+              paddingTop: "0.125rem",
             }}
           >
             {nameEditing ? (
@@ -2211,7 +2212,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                           className="will-change-transform"
                           style={
                             selected
-                              ? { transform: "translateY(-3.25rem)" }
+                              ? { transform: "translateY(-1.6rem)" }
                               : undefined
                           }
                         >
