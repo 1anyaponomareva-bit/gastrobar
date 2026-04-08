@@ -92,7 +92,7 @@ export function BottomNav() {
                 {tab.id === "bar" && "🍸"}
                 {tab.id === "hookahs" && (
                   <img
-                    src="/hookah/emojie.jpg"
+                    src="/hookah/emojie.png"
                     alt=""
                     width={28}
                     height={28}
