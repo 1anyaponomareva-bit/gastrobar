@@ -1,6 +1,9 @@
 export type BarSubcategory = "cocktail" | "wine" | "beer" | "tincture" | "snacks";
 export type MenuSubcategory = "snack" | "sausage" | "dumpling";
 
+/** Группа вкуса кальяна — вкладки сортировки в меню. */
+export type HookahFlavorCategory = "sweet" | "sour" | "fresh" | "herbal";
+
 export type MenuItemCategory = "food" | "cocktail" | "hookah";
 
 export type MenuItem = {
@@ -23,6 +26,8 @@ export type MenuItem = {
   tobacco?: string;
   /** Для кальяна: вкусовая смесь */
   flavor?: string;
+  /** Кальян: вкладка вкуса (Сладкие / Кислые / …) */
+  hookahFlavorCategory?: HookahFlavorCategory;
   /** Бейдж крепости (напитки: слабый; кальян: лёгкий и т.д.) */
   strength?: "weak" | "medium" | "strong";
   /** Пометки для снеков: к пиву, к коктейлям, к вину (можно несколько) */
@@ -276,19 +281,35 @@ export const MENU_ITEMS: MenuItem[] = [
 /** Кальяны: те же бейджи хит / крепость; табак и вкус — на правой колонке карточки. */
 export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   {
-    id: "hookah-aurora",
-    name: "Северное сияние",
+    id: "hookah-black-burn-brownie",
+    name: "Брауни",
     description:
-      "Холодный ягодный микс с мятой: лёгкий пар, долго держит вкус. Хорошо заходит после коктейля с цитрусом.",
-    image: "/hookah/hookah1.jpg",
-    imageList: "/hookah/hookah1.jpg",
+      "Это удачное сочетание нот ванили, корицы и шоколада. В результате, с первой же затяжки ароматного табака вы отчётливо почувствуете вкус популярного десерта.",
+    image: "/hookah/brownie.png",
+    imageList: "/hookah/brownie.png",
     category: "hookah",
-    price: "195000",
+    price: "490000",
     grammage: "50–60 мин",
     badge: "hit",
-    tobacco: "Serbetli",
-    flavor: "ледяная малина, мята",
+    tobacco: "Black Burn",
+    flavor: "Brownie",
     strength: "weak",
+    hookahFlavorCategory: "sweet",
+  },
+  {
+    id: "hookah-black-burn-elka",
+    name: "Ёлка",
+    description:
+      "Глубокий и ароматный запах еловой смолы, создающий ощущение тепла. Лёгкая свежесть и нотка эвкалипта добавляют освежающий и пряный акцент, создавая баланс между интенсивностью и свежестью. Вместе они формируют уникальное впечатление, напоминающее прогулку по лесу и ощущение природной чистоты.",
+    image: "/hookah/Elka.jpg",
+    imageList: "/hookah/Elka.jpg",
+    category: "hookah",
+    price: "490000",
+    grammage: "50–60 мин",
+    tobacco: "Black Burn",
+    flavor: "Elka",
+    strength: "medium",
+    hookahFlavorCategory: "herbal",
   },
   {
     id: "hookah-pier",
@@ -298,11 +319,12 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     image: "/hookah/hookah1.jpg",
     imageList: "/hookah/hookah1.jpg",
     category: "hookah",
-    price: "185000",
+    price: "490000",
     grammage: "50–60 мин",
     tobacco: "Darkside",
     flavor: "апельсин, корица",
     strength: "medium",
+    hookahFlavorCategory: "sour",
   },
   {
     id: "hookah-midnight-doc",
@@ -312,11 +334,27 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     image: "/hookah/hookah1.jpg",
     imageList: "/hookah/hookah1.jpg",
     category: "hookah",
-    price: "210000",
+    price: "490000",
     grammage: "55–65 мин",
     tobacco: "Must Have",
     flavor: "черника, гранат",
     strength: "strong",
+    hookahFlavorCategory: "fresh",
+  },
+  {
+    id: "hookah-meadow-mint",
+    name: "Утренний сад",
+    description:
+      "Свежие травяные ноты мяты и лайма на мягкой основе. Лёгкий пар без навязчивой сладости — хорош в паре с чаем или лимонадом.",
+    image: "/hookah/hookah1.jpg",
+    imageList: "/hookah/hookah1.jpg",
+    category: "hookah",
+    price: "490000",
+    grammage: "50–60 мин",
+    tobacco: "Sebero",
+    flavor: "мята, лайм",
+    strength: "weak",
+    hookahFlavorCategory: "herbal",
   },
 ];
 

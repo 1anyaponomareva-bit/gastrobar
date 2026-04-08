@@ -7,6 +7,7 @@ import { useFavorites } from "@/components/FavoritesProvider";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
 import { useBarHome } from "@/components/BarHomeContext";
 import { CategoryTabs, type BarCategoryId } from "@/components/CategoryTabs";
+import { HookahCategoryTabs, type HookahCategoryId } from "@/components/HookahCategoryTabs";
 import { MenuListItem } from "@/components/MenuListItem";
 import { HookahListItem } from "@/components/HookahListItem";
 import { MenuDetailView } from "@/components/MenuDetailView";
@@ -29,7 +30,7 @@ const HEADER_HEIGHT = 60;
 const TABS_HEIGHT = 58;
 const TOP_BUFFER = 24;
 const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
-const HOOKAH_LIST_TOP = HEADER_HEIGHT + TOP_BUFFER;
+const HOOKAH_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
 /** Напитки, затем снеки — как в MENU_ITEMS */
@@ -46,6 +47,11 @@ function filterBarItems(items: MenuItem[], categoryId: BarCategoryId): MenuItem[
   return drinks.filter((i) => i.barSubcategory === categoryId);
 }
 
+function filterHookahItems(items: MenuItem[], categoryId: HookahCategoryId): MenuItem[] {
+  if (categoryId === "all") return items;
+  return items.filter((i) => i.hookahFlavorCategory === categoryId);
+}
+
 export function MenuList({ items }: { items: MenuItem[] }) {
   const { period } = useTheme();
   const { favoriteIds } = useFavorites();
@@ -55,6 +61,7 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   const savedScrollTop = useRef<number>(0);
 
   const [barCategory, setBarCategory] = useState<BarCategoryId>("all");
+  const [hookahCategory, setHookahCategory] = useState<HookahCategoryId>("all");
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -64,6 +71,10 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   const filtered = period === "bar" ? filterBarItems(items, barCategory) : [];
 
   const hookahItems = useMemo(() => items.filter((i) => i.category === "hookah"), [items]);
+  const hookahFiltered = useMemo(
+    () => filterHookahItems(hookahItems, hookahCategory),
+    [hookahItems, hookahCategory],
+  );
 
   const showWheelNavBanner =
     period === "bar" &&
@@ -89,8 +100,16 @@ export function MenuList({ items }: { items: MenuItem[] }) {
     setViewMode("list");
     setSelectedItem(null);
     setBarCategory("all");
+    setHookahCategory("all");
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [period]);
+
+  useEffect(() => {
+    if (period !== "hookahs") return;
+    setViewMode("list");
+    setSelectedItem(null);
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [hookahCategory, period]);
 
   useEffect(() => {
     if (viewMode === "list" && savedScrollTop.current > 0) {
@@ -228,6 +247,13 @@ export function MenuList({ items }: { items: MenuItem[] }) {
               className="flex h-[100dvh] flex-col overflow-hidden bg-[#030303]"
             >
               <div
+                className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
+                style={{ top: HEADER_HEIGHT }}
+              >
+                <HookahCategoryTabs value={hookahCategory} onChange={setHookahCategory} />
+              </div>
+
+              <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
               >
@@ -247,7 +273,7 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       minHeight: `calc(${HOOKAH_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
                     }}
                   />
-                  {hookahItems.map((item, index) => (
+                  {hookahFiltered.map((item, index) => (
                     <HookahListItem
                       key={item.id}
                       item={item}
@@ -261,10 +287,10 @@ export function MenuList({ items }: { items: MenuItem[] }) {
             </div>
           )}
           <AnimatePresence>
-            {viewMode === "detail" && selectedItem && hookahItems.length > 0 && (
+            {viewMode === "detail" && selectedItem && hookahFiltered.length > 0 && (
               <MenuDetailView
-                key={`detail-hookah-${selectedIndex}-${hookahItems[0]?.id}`}
-                items={hookahItems}
+                key={`detail-hookah-${hookahCategory}-${selectedIndex}-${hookahFiltered[0]?.id}`}
+                items={hookahFiltered}
                 initialIndex={selectedIndex}
                 onClose={closeDetail}
               />
