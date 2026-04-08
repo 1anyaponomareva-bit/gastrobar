@@ -1,4 +1,4 @@
-import { MENU_ITEMS } from "@/data/menu";
+import { MENU_AND_HOOKAH_ITEMS } from "@/data/menu";
 import type { BarCategoryId } from "@/components/CategoryTabs";
 
 export const BONUS_VALIDITY_HOURS = 2;
@@ -29,7 +29,7 @@ export type BonusTypeKey =
 
 export function menuProductName(productId: string | null): string | null {
   if (!productId) return null;
-  return MENU_ITEMS.find((i) => i.id === productId)?.name ?? null;
+  return MENU_AND_HOOKAH_ITEMS.find((i) => i.id === productId)?.name ?? null;
 }
 
 /** Подпись кнопки перехода в раздел бара (колесо / «Мои бонусы»). */

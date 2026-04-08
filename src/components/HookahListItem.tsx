@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { strengthDisplayLabel } from "@/data/menu";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -26,26 +25,26 @@ const HeartIcon = ({ filled }: { filled: boolean }) =>
     </svg>
   );
 
-export function MenuListItem({
+/**
+ * Карточка кальяна: как барная по стилю, но иллюстрация слева, справа — название микса, табак и вкус.
+ */
+export function HookahListItem({
   item,
   index: _index,
-  bonusProductId,
   highlightProductId,
   onClick,
 }: {
   item: MenuItem;
   index: number;
-  bonusProductId?: string | null;
   highlightProductId?: string | null;
   onClick: () => void;
 }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const liked = isFavorite(item.id);
   const priceFormatted = formatVnd(item.price);
-  const isBonusItem = bonusProductId != null && bonusProductId === item.id;
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
   const listImage = item.imageList ?? item.image;
-  const strengthLbl = strengthDisplayLabel(item);
+  const strengthLabel = strengthDisplayLabel(item);
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,19 +66,37 @@ export function MenuListItem({
       className={`relative flex min-h-[120px] w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
       style={{ minHeight: "max(120px, 24dvh)", maxHeight: "190px" }}
     >
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col py-3 pl-4 pr-2">
-        {isBonusItem && (
-          <div className="mb-2 w-full shrink-0 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/12 to-transparent px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">
-              Бесплатно по бонусу
-            </p>
-            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
-          </div>
-        )}
+      <div className="relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-l-2xl bg-[#030303]">
+        <img
+          src={listImage}
+          alt=""
+          className="h-full min-h-[120px] w-full object-contain object-center p-2"
+          style={{
+            maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+          }}
+          loading="lazy"
+        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="absolute left-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white/70 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
+          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
+          aria-label="Подробнее"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </button>
+      </div>
 
-        <div className={`flex items-start justify-between gap-2 ${isBonusItem ? "mb-1" : "mb-2"}`}>
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col py-3 pl-3 pr-4">
+        <div className="mb-2 flex items-start justify-between gap-2">
           <div className="min-h-[28px] min-w-0 flex-1">
-            {!isBonusItem && item.badge === "hit" && (
+            {item.badge === "hit" && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-black"
                 style={{ backgroundColor: "#F59E0B", boxShadow: "0 0 12px rgba(245,158,11,0.5)" }}
@@ -105,15 +122,19 @@ export function MenuListItem({
 
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-1 text-left">
           <h3 className="text-lg font-bold leading-tight text-white">{item.name}</h3>
-          {item.category === "food" && item.pairing && item.pairing.length > 0 && (
-            <p className="text-xs text-white/70">
-              {item.pairing.map((p) => (p === "beer" ? "к пиву" : p === "cocktail" ? "к коктейлям" : "к вину")).join(", ")}
+          {item.tobacco && (
+            <p className="text-[13px] font-medium text-white/85">
+              <span className="text-white/45">Табак · </span>
+              {item.tobacco}
             </p>
           )}
-          {item.taste && (
-            <p className="line-clamp-2 text-xs text-white/55">{item.taste}</p>
+          {item.flavor && (
+            <p className="line-clamp-2 text-xs text-white/55">
+              <span className="text-white/40">Вкус · </span>
+              {item.flavor}
+            </p>
           )}
-          {strengthLbl && (
+          {strengthLabel && (
             <span
               className="mt-0.5 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
@@ -131,7 +152,7 @@ export function MenuListItem({
                       : "#fca5a5",
               }}
             >
-              {strengthLbl}
+              {strengthLabel}
             </span>
           )}
           <span
@@ -141,39 +162,6 @@ export function MenuListItem({
             {priceFormatted} VND
           </span>
         </div>
-      </div>
-
-      <div className="relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]">
-        <img
-          src={listImage}
-          alt=""
-          className="h-full min-h-[120px] w-full object-contain object-center"
-          style={{
-            maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-            maskSize: "100% 100%",
-            WebkitMaskSize: "100% 100%",
-            maskPosition: "center",
-            WebkitMaskPosition: "center",
-            maskRepeat: "no-repeat",
-            WebkitMaskRepeat: "no-repeat",
-          }}
-          loading="lazy"
-        />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white/70 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
-          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
-          aria-label="Перейти"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
-          </svg>
-        </button>
       </div>
     </article>
   );

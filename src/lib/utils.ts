@@ -5,4 +5,4 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type MenuPeriod = "bar" | "promo" | "favorites";
+export type MenuPeriod = "bar" | "hookahs" | "promo" | "favorites";

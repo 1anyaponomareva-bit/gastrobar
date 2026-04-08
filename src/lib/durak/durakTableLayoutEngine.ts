@@ -120,11 +120,13 @@ export function buildOpponentTablePlacements(args: {
     const rad = (seatAngleDeg * Math.PI) / 180;
     const nx = Math.cos(rad);
     const ny = Math.sin(rad);
-    const fanAx = nx * radial;
-    const fanAy = ny * radial;
+    /** Боковые места ближе к центру стола — веер не залезает на колоду / козырь. */
+    const sideInward = 1 - 0.14 * Math.min(1, Math.abs(nx));
+    const fanAx = nx * radial * sideInward;
+    const fanAy = ny * radial * sideInward;
     const fanRot = fanContainerRotationDeg(seatAngleDeg);
-    const lx = nx * (radial + lr);
-    const ly = ny * (radial + lr);
+    const lx = nx * (radial + lr) * sideInward;
+    const ly = ny * (radial + lr) * sideInward;
 
     return {
       oppId: opp.id,

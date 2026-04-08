@@ -41,17 +41,8 @@ export function chooseTossForSeat(table: GameTable, playerIndex: number): { type
   return { type: "pass" };
 }
 
-/** Первое место в `attackingSeatOrder`, которое должно подкинуть (3+ игроков). При дуэли — null. */
-export function firstSeatThatMustThrow(table: GameTable): number | null {
-  if (table.players.length < 3) return null;
-  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return null;
-  const eligible = new Set(engine.eligibleThrowInSeatIndices(table));
-  if (eligible.size === 0) return null;
-  for (const idx of engine.attackingSeatOrder(table)) {
-    if (eligible.has(idx)) return idx;
-  }
-  return null;
-}
+/** Реэкспорт: каноническая реализация в `engine`. */
+export const firstSeatThatMustThrow = engine.firstSeatThatMustThrow;
 
 function chooseTossOrBeatForAttacker(
   table: GameTable,
@@ -127,35 +118,23 @@ export function tryAutoMove(table: GameTable, playerId: string): GameTable | nul
     const choice = chooseTossOrBeatForAttacker(table, playerId);
     if (choice.type === "noop") return null;
     if (choice.type === "beat") {
-      if (table.phase === "player_can_throw_more") {
-        const def = table.players[table.defenderIndex];
-        if (!def) return null;
-        const r = engine.defenderTake(table, def.id);
-        return "error" in r ? null : r.table;
-      }
-      const r = engine.attackerBeat(table, playerId);
+      const r = engine.registerBeatAck(table, playerId);
       return "error" in r ? null : r.table;
     }
     const r = engine.attackToss(table, playerId, choice.ids);
     if ("error" in r) {
-      if (table.phase === "player_can_throw_more") {
-        const def = table.players[table.defenderIndex];
-        if (def) {
-          const take = engine.defenderTake(table, def.id);
-          if (!("error" in take)) return take.table;
-        }
-      }
-      const beat = engine.attackerBeat(table, playerId);
+      const beat = engine.registerBeatAck(table, playerId);
       return "error" in beat ? null : beat.table;
     }
     return r.table;
   }
 
-  /** В `player_can_throw_more` кнопку «Бито» показывают всем не-защитникам — не только leading attacker. */
-  if (table.phase === "player_can_throw_more" && table.players[table.defenderIndex]!.id !== playerId) {
-    const def = table.players[table.defenderIndex];
-    if (!def) return null;
-    const r = engine.defenderTake(table, def.id);
+  /** В фазах подкидывания «Бито» — согласование; любой не-защитник может подтвердить, когда ему позволяет очередь. */
+  if (
+    (table.phase === "attack_toss" || table.phase === "player_can_throw_more") &&
+    table.players[table.defenderIndex]!.id !== playerId
+  ) {
+    const r = engine.registerBeatAck(table, playerId);
     return "error" in r ? null : r.table;
   }
 
@@ -241,30 +220,33 @@ export function localPlayerMustActOnline(table: GameTable, localId: string): boo
         table.tablePairs.length + 1 <= table.roundDefenderInitialHand
     );
 
-  const selfShowBito =
-    (table.phase === "attack_toss" && selfIsAttacker) ||
-    (table.phase === "player_can_throw_more" && !selfIsDefender);
+  const acked = (table.beatAckPlayerIds ?? []).includes(localId);
 
   if (table.phase === "attack_initial") return selfIsAttacker;
   if (table.phase === "defend") return selfIsDefender;
-  if (table.phase === "attack_toss") {
+
+  if (table.phase === "attack_toss" || table.phase === "player_can_throw_more") {
     if (selfIsDefender) return false;
-    if (table.players.length >= 3) {
-      const tossFirst = firstSeatThatMustThrow(table);
-      if (tossFirst != null) return selfIdx === tossFirst;
-      return selfIsAttacker;
+
+    const tossFirst = table.players.length >= 3 ? firstSeatThatMustThrow(table) : null;
+
+    if (tossFirst != null && selfIdx !== tossFirst) {
+      return false;
     }
-    if (selfIsAttacker) return true;
-    return hasValidToss;
-  }
-  if (table.phase === "player_can_throw_more") {
-    if (selfIsDefender) return false;
-    if (table.players.length >= 3) {
-      const tossFirst = firstSeatThatMustThrow(table);
-      if (tossFirst != null) return selfIdx === tossFirst;
-      return !selfIsDefender;
+
+    if (tossFirst != null && selfIdx === tossFirst) {
+      if (hasValidToss) return true;
+      return !acked;
     }
-    return hasValidToss || selfShowBito;
+
+    if (table.phase === "attack_toss" && table.players.length < 3) {
+      if (!selfIsAttacker) return false;
+      if (hasValidToss) return true;
+      return !acked;
+    }
+
+    if (hasValidToss) return true;
+    return !acked;
   }
   return false;
 }

@@ -1,6 +1,8 @@
 export type BarSubcategory = "cocktail" | "wine" | "beer" | "tincture" | "snacks";
 export type MenuSubcategory = "snack" | "sausage" | "dumpling";
 
+export type MenuItemCategory = "food" | "cocktail" | "hookah";
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -8,7 +10,7 @@ export type MenuItem = {
   image: string;
   /** Изображение для горизонтального списка (в полноэкранном виде используется image) */
   imageList?: string;
-  category: "food" | "cocktail";
+  category: MenuItemCategory;
   price: string; // VND
   grammage?: string;
   barSubcategory?: BarSubcategory; // напитки; «snacks» не на карточке — только вкладка
@@ -17,7 +19,11 @@ export type MenuItem = {
   badge?: "hit";
   /** Вкус: короткая строка под напитком, напр. "кисло-сладкий, виски, лимон, мёд" */
   taste?: string;
-  /** Бейдж крепости (только для напитков) */
+  /** Для кальяна: бренд табака (показывается на карточке) */
+  tobacco?: string;
+  /** Для кальяна: вкусовая смесь */
+  flavor?: string;
+  /** Бейдж крепости (напитки: слабый; кальян: лёгкий и т.д.) */
   strength?: "weak" | "medium" | "strong";
   /** Пометки для снеков: к пиву, к коктейлям, к вину (можно несколько) */
   pairing?: ("beer" | "cocktail" | "wine")[];
@@ -266,3 +272,65 @@ export const MENU_ITEMS: MenuItem[] = [
     pairing: ["beer"],
   },
 ];
+
+/** Кальяны: те же бейджи хит / крепость; табак и вкус — на правой колонке карточки. */
+export const HOOKAH_MENU_ITEMS: MenuItem[] = [
+  {
+    id: "hookah-aurora",
+    name: "Северное сияние",
+    description:
+      "Холодный ягодный микс с мятой: лёгкий пар, долго держит вкус. Хорошо заходит после коктейля с цитрусом.",
+    image: "/menu/hookah-mix-aurora.svg",
+    imageList: "/menu/hookah-mix-aurora.svg",
+    category: "hookah",
+    price: "195000",
+    grammage: "50–60 мин",
+    badge: "hit",
+    tobacco: "Serbetli",
+    flavor: "ледяная малина, мята",
+    strength: "weak",
+  },
+  {
+    id: "hookah-pier",
+    name: "Огни набережной",
+    description:
+      "Тёплый цитрус с корицей — как вечер у причала: сбалансированный вкус без резкой кислоты.",
+    image: "/menu/hookah-mix-pier.svg",
+    imageList: "/menu/hookah-mix-pier.svg",
+    category: "hookah",
+    price: "185000",
+    grammage: "50–60 мин",
+    tobacco: "Darkside",
+    flavor: "апельсин, корица",
+    strength: "medium",
+  },
+  {
+    id: "hookah-midnight-doc",
+    name: "Полночный док",
+    description:
+      "Насыщенные ягоды и гранат, плотный дым — для тех, кто любит «тяжёлый» вкус и крепкую забивку.",
+    image: "/menu/hookah-mix-midnight.svg",
+    imageList: "/menu/hookah-mix-midnight.svg",
+    category: "hookah",
+    price: "210000",
+    grammage: "55–65 мин",
+    tobacco: "Must Have",
+    flavor: "черника, гранат",
+    strength: "strong",
+  },
+];
+
+/** Бар + кальяны — для списка избранного и общих ссылок по id. */
+export const MENU_AND_HOOKAH_ITEMS: MenuItem[] = [...MENU_ITEMS, ...HOOKAH_MENU_ITEMS];
+
+export function strengthDisplayLabel(item: MenuItem): string | null {
+  if (!item.strength) return null;
+  if (item.category === "hookah") {
+    if (item.strength === "weak") return "Лёгкий";
+    if (item.strength === "medium") return "Средний";
+    return "Крепкий";
+  }
+  if (item.strength === "weak") return "Слабый";
+  if (item.strength === "medium") return "Средний";
+  return "Крепкий";
+}

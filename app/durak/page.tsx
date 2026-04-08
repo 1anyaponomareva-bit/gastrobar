@@ -50,7 +50,7 @@ const durakPageShellStyle: React.CSSProperties = {
   isolation: "isolate",
   zIndex: 0,
   display: "flex",
-  minHeight: "100vh",
+  minHeight: "100dvh",
   width: "100%",
   flexDirection: "column",
   backgroundColor: "#14100c",
@@ -59,7 +59,7 @@ const durakPageShellStyle: React.CSSProperties = {
 
 const durakMainColumnStyle: CSSProperties = {
   display: "flex",
-  minHeight: "calc(100vh - 5rem)",
+  minHeight: "calc(100dvh - 5rem)",
   width: "100%",
   minWidth: 0,
   flex: 1,

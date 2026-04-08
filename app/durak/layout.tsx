@@ -9,7 +9,7 @@ export default function DurakLayout({ children }: { children: React.ReactNode })
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         backgroundColor: "#14100c",
         color: "#f1f5f9",
       }}

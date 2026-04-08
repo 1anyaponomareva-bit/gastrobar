@@ -13,6 +13,9 @@ import {
 
 export { canBeat, rankValue, sortHand, SUITS };
 
+/** Окно согласования «Бито» между всеми атакующими (мс). */
+export const BEAT_ACK_WINDOW_MS = 14_000;
+
 function tableId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -77,6 +80,159 @@ export function eligibleThrowInSeatIndices(table: GameTable): number[] {
     if (hand.some((c) => ranksOnTable.has(c.rank))) out.push(i);
   }
   return out;
+}
+
+/**
+ * Первое место по `attackingSeatOrder`, с которого нужно решать подкид (3+ игроков).
+ * В дуэли — null (очередь не блокирует «Бито» так же строго).
+ */
+export function firstSeatThatMustThrow(table: GameTable): number | null {
+  if (table.players.length < 3) return null;
+  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return null;
+  const eligible = new Set(eligibleThrowInSeatIndices(table));
+  if (eligible.size === 0) return null;
+  for (const idx of attackingSeatOrder(table)) {
+    if (eligible.has(idx)) return idx;
+  }
+  return null;
+}
+
+function freshBeatRoundMeta(): { beatAckPlayerIds: string[]; beatRoundDeadlineMs: number } {
+  return { beatAckPlayerIds: [], beatRoundDeadlineMs: Date.now() + BEAT_ACK_WINDOW_MS };
+}
+
+export function withoutBeatRoundMeta(table: GameTable): GameTable {
+  const { beatAckPlayerIds: _a, beatRoundDeadlineMs: _d, ...rest } = table;
+  return rest as GameTable;
+}
+
+function nonDefenderPlayerIds(table: GameTable): string[] {
+  return table.players.filter((_, i) => i !== table.defenderIndex).map((p) => p.id);
+}
+
+function allNonDefendersHaveAcked(table: GameTable): boolean {
+  const need = nonDefenderPlayerIds(table);
+  const ack = new Set(table.beatAckPlayerIds ?? []);
+  return need.every((id) => ack.has(id));
+}
+
+/** Можно ли нажать «Бито» с учётом очереди подкидывания. */
+export function canRegisterBeatAck(
+  table: GameTable,
+  playerId: string,
+): { ok: true } | { error: string } {
+  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") {
+    return { error: "«Бито» сейчас недоступно" };
+  }
+  const seat = table.players.findIndex((p) => p.id === playerId);
+  if (seat < 0) return { error: "Игрок не найден" };
+  if (seat === table.defenderIndex) return { error: "Защитник не подтверждает «Бито»" };
+
+  if (table.phase === "attack_toss" && !table.tablePairs.every((tp) => tp.defense !== null)) {
+    return { error: "Не всё отбито" };
+  }
+
+  const elig = eligibleThrowInSeatIndices(table);
+  const tossFirst = firstSeatThatMustThrow(table);
+
+  if (tossFirst != null) {
+    if (seat !== tossFirst) {
+      return { error: "Дождитесь очереди подкидывания" };
+    }
+    if (elig.includes(seat)) {
+      return { error: "Сначала подкините по столу" };
+    }
+    return { ok: true };
+  }
+
+  if (table.phase === "attack_toss" && table.players.length < 3) {
+    if (seat !== table.attackerIndex) {
+      return { error: "Не ваш ход" };
+    }
+    if (elig.includes(seat)) {
+      return { error: "Сначала подкините по столу" };
+    }
+  }
+
+  if (elig.includes(seat)) {
+    return { error: "Сначала подкините по столу" };
+  }
+
+  return { ok: true };
+}
+
+function resolveBeatRoundFull(table: GameTable): GameTable {
+  const cleared = withoutBeatRoundMeta(table);
+  if (table.phase === "attack_toss") {
+    const toDiscard: Card[] = [];
+    for (const tp of table.tablePairs) {
+      toDiscard.push(tp.attack);
+      if (tp.defense) toDiscard.push(tp.defense);
+    }
+
+    const n = table.players.length;
+    const oldAtt = table.attackerIndex;
+    const oldDef = table.defenderIndex;
+    const newAttacker = oldDef;
+    const newDefender = nextDefenderIndex(oldDef, n);
+
+    let next: GameTable = {
+      ...cleared,
+      tablePairs: [],
+      discardPile: [...table.discardPile, ...toDiscard],
+      attackerIndex: newAttacker,
+      defenderIndex: newDefender,
+      phase: "attack_initial",
+      message: null,
+    };
+
+    next = drawCardsFromDeck(next, oldAtt);
+    return checkGameEnd(next);
+  }
+
+  if (table.phase === "player_can_throw_more") {
+    const def = table.players[table.defenderIndex]!;
+    const r = defenderTake(cleared, def.id);
+    return "error" in r ? table : r.table;
+  }
+
+  return table;
+}
+
+/**
+ * Подтверждение «Бито»: раунд закрывается, когда все не-защитники подтвердили или истёк `beatRoundDeadlineMs`.
+ */
+export function registerBeatAck(
+  table: GameTable,
+  playerId: string,
+): { table: GameTable } | { error: string } {
+  const gate = canRegisterBeatAck(table, playerId);
+  if ("error" in gate) return gate;
+
+  const deadline = table.beatRoundDeadlineMs ?? Date.now() + BEAT_ACK_WINDOW_MS;
+  const now = Date.now();
+  const ack = [...new Set([...(table.beatAckPlayerIds ?? []), playerId])];
+
+  let next: GameTable = {
+    ...table,
+    beatAckPlayerIds: ack,
+    beatRoundDeadlineMs: deadline,
+  };
+
+  const timedOut = now >= deadline;
+  if (allNonDefendersHaveAcked(next) || timedOut) {
+    return { table: resolveBeatRoundFull(next) };
+  }
+  return { table: next };
+}
+
+/** По таймеру: завершить раунд подкидывания без ожидания остальных клиентов. */
+export function tryResolveBeatIfDeadline(table: GameTable, nowMs?: number): GameTable {
+  const now = nowMs ?? Date.now();
+  if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return table;
+  const d = table.beatRoundDeadlineMs;
+  if (d == null || now < d) return table;
+  return resolveBeatRoundFull(table);
 }
 
 export function drawCardsFromDeck(table: GameTable, firstIndex: number): GameTable {
@@ -336,7 +492,11 @@ export function defendPlay(
   };
 
   if (tablePairs.every((tp) => tp.defense !== null)) {
-    next.phase = "attack_toss";
+    next = {
+      ...withoutBeatRoundMeta(next),
+      phase: "attack_toss",
+      ...freshBeatRoundMeta(),
+    };
   }
 
   next = checkGameEnd(next);
@@ -365,6 +525,7 @@ export function defenderCannotBeat(
       ...table,
       phase: "player_can_throw_more",
       message: null,
+      ...freshBeatRoundMeta(),
     },
   };
 }
@@ -400,7 +561,7 @@ export function defenderTake(table: GameTable, defenderId: string): { table: Gam
   const newDefender = nextDefenderIndex(newAttacker, n);
 
   let next: GameTable = {
-    ...table,
+    ...withoutBeatRoundMeta(table),
     players: newPlayers,
     tablePairs: [],
     attackerIndex: newAttacker,
@@ -414,43 +575,9 @@ export function defenderTake(table: GameTable, defenderId: string): { table: Gam
   return { table: next };
 }
 
+/** @deprecated Используйте `registerBeatAck` — «Бито» согласуют все не-защитники или таймер. */
 export function attackerBeat(table: GameTable, attackerId: string): { table: GameTable } | { error: string } {
-  if (table.phase !== "attack_toss") {
-    return { error: "«Бито» только после отбоя" };
-  }
-  const attacker = table.players[table.attackerIndex];
-  if (attacker.id !== attackerId) {
-    return { error: "Не ваш ход" };
-  }
-  if (!table.tablePairs.every((tp) => tp.defense !== null)) {
-    return { error: "Не всё отбито" };
-  }
-
-  const toDiscard: Card[] = [];
-  for (const tp of table.tablePairs) {
-    toDiscard.push(tp.attack);
-    if (tp.defense) toDiscard.push(tp.defense);
-  }
-
-  const n = table.players.length;
-  const oldAtt = table.attackerIndex;
-  const oldDef = table.defenderIndex;
-  const newAttacker = oldDef;
-  const newDefender = nextDefenderIndex(oldDef, n);
-
-  let next: GameTable = {
-    ...table,
-    tablePairs: [],
-    discardPile: [...table.discardPile, ...toDiscard],
-    attackerIndex: newAttacker,
-    defenderIndex: newDefender,
-    phase: "attack_initial",
-    message: null,
-  };
-
-  next = drawCardsFromDeck(next, oldAtt);
-  next = checkGameEnd(next);
-  return { table: next };
+  return registerBeatAck(table, attackerId);
 }
 
 export function attackToss(
@@ -510,6 +637,7 @@ export function attackToss(
     tablePairs: newPairs,
     phase: nextPhase,
     message: null,
+    ...freshBeatRoundMeta(),
   };
   next = checkGameEnd(next);
   return { table: next };

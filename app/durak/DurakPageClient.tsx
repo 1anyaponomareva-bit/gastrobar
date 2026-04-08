@@ -8,7 +8,7 @@ const wrapStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
   display: "flex",
-  minHeight: "min(85vh, 820px)",
+  minHeight: "min(820px, calc(100dvh - 5.5rem))",
   width: "100%",
   maxWidth: "32rem",
   marginLeft: "auto",

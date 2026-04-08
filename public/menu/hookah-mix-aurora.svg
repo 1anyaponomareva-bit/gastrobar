@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" fill="none">
+  <defs>
+    <linearGradient id="bowl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="55%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="hose" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="268" rx="58" ry="16" fill="#0f172a" opacity="0.9"/>
+  <path d="M100 195v65" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
+  <path d="M100 75 L100 195" stroke="#475569" stroke-width="12" stroke-linecap="round"/>
+  <ellipse cx="100" cy="58" rx="40" ry="24" fill="url(#bowl)"/>
+  <ellipse cx="100" cy="52" rx="34" ry="14" fill="#1e1b4b" opacity="0.35"/>
+  <path d="M108 70q52 18 62 88" stroke="url(#hose)" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <circle cx="164" cy="168" r="7" fill="#7c3aed"/>
+</svg>

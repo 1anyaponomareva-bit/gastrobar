@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
+import { strengthDisplayLabel } from "@/data/menu";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -33,6 +34,7 @@ export function MenuDetailView({
   const startY = useRef(0);
 
   const item = items[currentIndex];
+  const strengthLbl = item ? strengthDisplayLabel(item) : null;
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < items.length - 1;
 
@@ -138,12 +140,18 @@ export function MenuDetailView({
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="absolute inset-0"
         >
-          {/* Фото на весь экран */}
-          <div className="absolute inset-0">
+          {/* Фото / иллюстрация на весь экран */}
+          <div
+            className={`absolute inset-0 ${item.category === "hookah" ? "bg-gradient-to-b from-zinc-900 via-black to-black" : ""}`}
+          >
             <img
               src={item.image}
               alt={item.name}
-              className="h-full w-full object-cover object-center"
+              className={
+                item.category === "hookah"
+                  ? "h-full w-full object-contain object-center px-8 py-6"
+                  : "h-full w-full object-cover object-center"
+              }
             />
           </div>
 
@@ -171,7 +179,7 @@ export function MenuDetailView({
               <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
                 {item.name}
               </h2>
-              {item.strength && (
+              {strengthLbl && (
                 <span
                   className="mt-1.5 inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide"
                   style={{
@@ -189,12 +197,22 @@ export function MenuDetailView({
                           : "#fca5a5",
                   }}
                 >
-                  {item.strength === "weak" ? "Слабый" : item.strength === "medium" ? "Средний" : "Крепкий"}
+                  {strengthLbl}
                 </span>
               )}
               <p className="line-clamp-3 text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
                 {item.description || "Описание блюда."}
               </p>
+              {item.category === "hookah" && item.tobacco && (
+                <p className="text-sm font-medium text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+                  Табак · {item.tobacco}
+                </p>
+              )}
+              {item.category === "hookah" && item.flavor && (
+                <p className="text-sm text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+                  Вкус · {item.flavor}
+                </p>
+              )}
               {item.taste && (
                 <p className="text-sm text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
                   {item.taste}
@@ -210,7 +228,8 @@ export function MenuDetailView({
                   {formatVnd(item.price)} VND
                 </p>
                 <p className="text-sm text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  {item.grammage ?? (item.category === "cocktail" ? "300 мл" : "150 г")}
+                  {item.grammage ??
+                    (item.category === "cocktail" ? "300 мл" : item.category === "hookah" ? "50–60 мин" : "150 г")}
                 </p>
               </div>
             </div>

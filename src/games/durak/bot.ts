@@ -134,25 +134,12 @@ export function applyBotMove(table: GameTable): GameTable | null {
       const choice = botChooseTossOrBeat(table);
       if (choice.type === "noop") return null;
       if (choice.type === "beat") {
-        if (table.phase === "player_can_throw_more") {
-          const def = table.players[table.defenderIndex];
-          if (!def) return null;
-          const r = engine.defenderTake(table, def.id);
-          return "error" in r ? null : r.table;
-        }
-        const r = engine.attackerBeat(table, att.id);
+        const r = engine.registerBeatAck(table, att.id);
         return "error" in r ? null : r.table;
       }
       const r = engine.attackToss(table, att.id, choice.ids);
       if ("error" in r) {
-        if (table.phase === "player_can_throw_more") {
-          const def = table.players[table.defenderIndex];
-          if (def) {
-            const take = engine.defenderTake(table, def.id);
-            if (!("error" in take)) return take.table;
-          }
-        }
-        const beat = engine.attackerBeat(table, att.id);
+        const beat = engine.registerBeatAck(table, att.id);
         return "error" in beat ? null : beat.table;
       }
       return r.table;
@@ -160,4 +147,32 @@ export function applyBotMove(table: GameTable): GameTable | null {
   }
 
   return null;
+}
+
+/**
+ * После хода человека или таймера: боты без возможного подкида сразу подтверждают «Бито».
+ */
+export function applyBotBeatRoundAcks(table: GameTable): GameTable {
+  let t = table;
+  let guard = 0;
+  while (guard++ < 16) {
+    if (t.phase !== "attack_toss" && t.phase !== "player_can_throw_more") break;
+    const order = engine.attackingSeatOrder(t);
+    let progressed = false;
+    for (const idx of order) {
+      const pl = t.players[idx];
+      if (!pl || pl.type !== "bot" || idx === t.defenderIndex) continue;
+      const acked = (t.beatAckPlayerIds ?? []).includes(pl.id);
+      if (acked) continue;
+      const toss = botChooseTossForPlayer(t, idx);
+      if (toss.type === "toss") break;
+      const r = engine.registerBeatAck(t, pl.id);
+      if ("error" in r) continue;
+      t = r.table;
+      progressed = true;
+      break;
+    }
+    if (!progressed) break;
+  }
+  return t;
 }

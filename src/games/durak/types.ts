@@ -67,4 +67,8 @@ export interface GameTable {
   roundDefenderInitialHand: number;
   /** Сообщение для UI (ошибка хода и т.д.) */
   message: string | null;
+  /** Кто из не-защитников нажал «Бито» (согласие завершить раунд подкидывания). */
+  beatAckPlayerIds?: string[];
+  /** Когда истекает окно «Бито» — автозавершение раунда. */
+  beatRoundDeadlineMs?: number;
 }

@@ -8,6 +8,7 @@ import { useHighlightProduct } from "@/components/HighlightProductContext";
 import { useBarHome } from "@/components/BarHomeContext";
 import { CategoryTabs, type BarCategoryId } from "@/components/CategoryTabs";
 import { MenuListItem } from "@/components/MenuListItem";
+import { HookahListItem } from "@/components/HookahListItem";
 import { MenuDetailView } from "@/components/MenuDetailView";
 import { PromoCarousel } from "@/components/PromoCarousel";
 import {
@@ -28,6 +29,7 @@ const HEADER_HEIGHT = 60;
 const TABS_HEIGHT = 58;
 const TOP_BUFFER = 24;
 const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
+const HOOKAH_LIST_TOP = HEADER_HEIGHT + TOP_BUFFER;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
 /** Напитки, затем снеки — как в MENU_ITEMS */
@@ -60,6 +62,8 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   const bonusProductId = activeBonus && !isCategoryBonus(activeBonus.type) ? activeBonus.productId : null;
 
   const filtered = period === "bar" ? filterBarItems(items, barCategory) : [];
+
+  const hookahItems = useMemo(() => items.filter((i) => i.category === "hookah"), [items]);
 
   const showWheelNavBanner =
     period === "bar" &&
@@ -112,7 +116,8 @@ export function MenuList({ items }: { items: MenuItem[] }) {
   }, [pendingListCategory, clearPendingListCategory]);
 
   useEffect(() => {
-    if (!highlightProductId || !scrollRef.current || period !== "bar") return;
+    if (!highlightProductId || !scrollRef.current) return;
+    if (period !== "bar" && period !== "hookahs") return;
     const el = scrollRef.current.querySelector(`[data-product-id="${highlightProductId}"]`);
     if (el) {
       requestAnimationFrame(() => {
@@ -171,7 +176,7 @@ export function MenuList({ items }: { items: MenuItem[] }) {
             {favoriteItems.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
                 <p className="text-lg leading-relaxed text-white/80">
-                  Здесь пока пусто. Добавьте напитки или блюда, которые вам понравились!
+                  Здесь пока пусто. Добавьте напитки, блюда или кальяны, которые вам понравились!
                 </p>
               </div>
             ) : (
@@ -179,16 +184,26 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                 className="flex flex-col pb-28"
                 style={{ gap: 10, paddingLeft: 16, paddingRight: 16 }}
               >
-                {favoriteItems.map((item, index) => (
-                  <MenuListItem
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    bonusProductId={bonusProductId}
-                    highlightProductId={highlightProductId}
-                    onClick={() => openDetail(item, index)}
-                  />
-                ))}
+                {favoriteItems.map((item, index) =>
+                  item.category === "hookah" ? (
+                    <HookahListItem
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      highlightProductId={highlightProductId}
+                      onClick={() => openDetail(item, index)}
+                    />
+                  ) : (
+                    <MenuListItem
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      bonusProductId={bonusProductId}
+                      highlightProductId={highlightProductId}
+                      onClick={() => openDetail(item, index)}
+                    />
+                  ),
+                )}
               </div>
             )}
           </div>
@@ -203,6 +218,59 @@ export function MenuList({ items }: { items: MenuItem[] }) {
             )}
           </AnimatePresence>
         </div>
+      )}
+
+      {period === "hookahs" && (
+        <>
+          {viewMode === "list" && (
+            <div
+              key="hookah-list"
+              className="flex h-[100dvh] flex-col overflow-hidden bg-[#030303]"
+            >
+              <div
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
+              >
+                <div
+                  className="flex flex-col"
+                  style={{
+                    gap: 8,
+                    paddingLeft: 16,
+                    paddingRight: 16,
+                    paddingBottom: LIST_BOTTOM_PADDING,
+                  }}
+                >
+                  <div
+                    aria-hidden
+                    className="shrink-0 bg-[#030303]"
+                    style={{
+                      minHeight: `calc(${HOOKAH_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
+                    }}
+                  />
+                  {hookahItems.map((item, index) => (
+                    <HookahListItem
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      highlightProductId={highlightProductId}
+                      onClick={() => openDetail(item, index)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <AnimatePresence>
+            {viewMode === "detail" && selectedItem && hookahItems.length > 0 && (
+              <MenuDetailView
+                key={`detail-hookah-${selectedIndex}-${hookahItems[0]?.id}`}
+                items={hookahItems}
+                initialIndex={selectedIndex}
+                onClose={closeDetail}
+              />
+            )}
+          </AnimatePresence>
+        </>
       )}
 
       {period === "bar" && (

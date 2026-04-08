@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 const TABS: { id: MenuPeriod; label: string }[] = [
   { id: "bar", label: "Бар" },
+  { id: "hookahs", label: "Кальяны" },
   { id: "promo", label: "Акции" },
   { id: "favorites", label: "Любимое" },
 ];
@@ -34,7 +35,7 @@ export function BottomNav() {
       transition={{ duration: 0.2 }}
       className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center safe-bottom px-3"
     >
-      <div className="pointer-events-auto mx-auto flex w-[min(23.5rem,calc(100vw-1.5rem))] max-w-none flex-nowrap items-center justify-between gap-0.5 rounded-full bg-white/10 px-2 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(24rem,calc(100vw-2rem))] sm:px-2.5 sm:py-2">
+      <div className="pointer-events-auto mx-auto flex w-[min(24.5rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(26rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">
         {TABS.map((tab) => {
           const active = !onGames && tab.id === period;
           return (
@@ -43,7 +44,7 @@ export function BottomNav() {
               type="button"
               onClick={() => goPeriod(tab.id)}
               className={cn(
-                "relative flex min-w-[3.2rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:min-w-0 sm:px-1.5 sm:py-2",
+                "relative flex min-w-[2.85rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-[12px] font-medium transition-all sm:min-w-0 sm:px-1 sm:py-2",
                 active
                   ? "bg-white text-black shadow-sm"
                   : "text-white/70 hover:text-white"
@@ -59,18 +60,25 @@ export function BottomNav() {
                           rotate: [0, -10, 10, 0],
                           y: [0, -2, 0],
                         }
-                      : tab.id === "favorites"
-                        ? { scale: [1, 1.2, 1] }
-                        : {
-                            scale: [1, 1.25, 1],
-                            y: [0, -3, 0],
+                      : tab.id === "hookahs"
+                        ? {
+                            scale: [1, 1.28, 1],
+                            y: [0, -5, -1, -4, 0],
+                            opacity: [1, 0.88, 1, 0.92, 1],
                           }
+                        : tab.id === "favorites"
+                          ? { scale: [1, 1.2, 1] }
+                          : {
+                              scale: [1, 1.25, 1],
+                              y: [0, -3, 0],
+                            }
                     : { scale: 1, rotate: 0, y: 0 }
                 }
                 transition={
                   active
                     ? {
-                        duration: tab.id === "bar" ? 0.9 : tab.id === "favorites" ? 0.6 : 0.7,
+                        duration:
+                          tab.id === "bar" ? 0.9 : tab.id === "hookahs" ? 1.05 : tab.id === "favorites" ? 0.6 : 0.7,
                         repeat: Infinity,
                         ease: "easeInOut",
                       }
@@ -78,10 +86,11 @@ export function BottomNav() {
                 }
               >
                 {tab.id === "bar" && "🍸"}
+                {tab.id === "hookahs" && "💨"}
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
-              <span className="max-w-[4.25rem] text-center text-[9px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]">
+              <span className="max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]">
                 {tab.label}
               </span>
             </button>

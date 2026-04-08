@@ -15,12 +15,13 @@ import type { Card, GameTable, Player, Rank, Suit } from "@/games/durak/types";
 import {
   attackInitial,
   attackToss,
-  attackerBeat,
   defendPlay,
   defenderCannotBeat,
   defenderTake,
+  registerBeatAck,
+  tryResolveBeatIfDeadline,
 } from "@/games/durak/engine";
-import { applyBotMove } from "@/games/durak/bot";
+import { applyBotBeatRoundAcks, applyBotMove } from "@/games/durak/bot";
 import {
   getOnlineHumanTimeoutExecutorId,
   getOnlineMandatoryHumanActorId,
@@ -789,6 +790,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const [nameDraft, setNameDraft] = useState("");
   const [turnProgress, setTurnProgress] = useState(1);
   const [autoMoveBanner, setAutoMoveBanner] = useState<string | null>(null);
+  const [beatSecLeft, setBeatSecLeft] = useState<number | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const skipNameBlurCommitRef = useRef(false);
   const tableRoundRef = useRef<HTMLDivElement>(null);
@@ -1220,12 +1222,53 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     const t = window.setTimeout(() => {
       setGame((g) => {
         if (!g) return g;
-        const next = applyBotMove(g);
-        return next ?? g;
+        const moved = applyBotMove(g);
+        const base = moved ?? g;
+        const next = applyBotBeatRoundAcks(base);
+        if (moved == null && next === base) return g;
+        return { ...next, message: null };
       });
     }, randomBotThinkDelayMs());
     return () => window.clearTimeout(t);
   }, [game, dealing, embedded, localPlayerId, onlineBotDriverId]);
+
+  useEffect(() => {
+    if (!game || game.state !== "playing") {
+      setBeatSecLeft(null);
+      return;
+    }
+    if (game.phase !== "attack_toss" && game.phase !== "player_can_throw_more") {
+      setBeatSecLeft(null);
+      return;
+    }
+    const d = game.beatRoundDeadlineMs;
+    if (d == null) {
+      setBeatSecLeft(null);
+      return;
+    }
+    const tick = () => setBeatSecLeft(Math.max(0, Math.ceil((d - Date.now()) / 1000)));
+    tick();
+    const id = window.setInterval(tick, 450);
+    return () => window.clearInterval(id);
+  }, [game?.state, game?.phase, game?.beatRoundDeadlineMs, game?.id, game?.tablePairs.length]);
+
+  useEffect(() => {
+    if (!game || game.state !== "playing") return;
+    if (game.phase !== "attack_toss" && game.phase !== "player_can_throw_more") return;
+    const d = game.beatRoundDeadlineMs;
+    if (d == null) return;
+    const ms = Math.max(0, d - Date.now());
+    const t = window.setTimeout(() => {
+      setGame((g) => {
+        if (!g) return g;
+        const n = tryResolveBeatIfDeadline(g);
+        const nb = applyBotBeatRoundAcks(n);
+        if (nb === g) return g;
+        return { ...nb, message: null };
+      });
+    }, ms + 40);
+    return () => window.clearTimeout(t);
+  }, [game?.beatRoundDeadlineMs, game?.phase, game?.id, game?.tablePairs.length, game?.state]);
 
   const onlineTurnKey = useMemo(() => {
     if (!embedded || !game || game.state !== "playing") return "";
@@ -1413,24 +1456,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   const onBeat = () => {
     if (!game) return;
-    if (game.phase === "player_can_throw_more") {
-      const defPl = game.players[game.defenderIndex];
-      if (!defPl) return;
-      const r = defenderTake(game, defPl.id);
-      if ("error" in r) {
-        setErr(r.error);
-        return;
-      }
-      setGame({ ...r.table, message: null });
-      clearPicks();
-      return;
-    }
-    const r = attackerBeat(game, localPlayerId);
+    const r = registerBeatAck(game, localPlayerId);
     if ("error" in r) {
       setErr(r.error);
       return;
     }
-    setGame({ ...r.table, message: null });
+    const withBots = applyBotBeatRoundAcks({ ...r.table, message: null });
+    setGame({ ...withBots, message: null });
     clearPicks();
   };
 
@@ -1478,16 +1510,30 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (game.phase === "attack_toss") {
       if (selfIsDefender)
         return "Соперник решает — подкинет ещё карты или нажмёт «Бито». Ожидайте.";
+      const nonDef = game.players.filter((_, i) => i !== game.defenderIndex);
+      const ack = new Set(game.beatAckPlayerIds ?? []);
+      const nAck = nonDef.filter((p) => ack.has(p.id)).length;
+      const beatHint =
+        beatSecLeft != null
+          ? ` «Бито»: подтвердили ${nAck}/${nonDef.length}${beatSecLeft > 0 ? ` · авто ${beatSecLeft} с` : ""}.`
+          : "";
       return selfIsAttacker
-        ? "Ваш ход — подкините по достоинствам на столе или нажмите «Бито»"
-        : `Ваш ход — можете подкинуть по столу или дождаться «Бито»`;
+        ? `Подкините по достоинствам на столе или «Бито» (все атакующие или таймер).${beatHint}`
+        : `Можете подкинуть по столу или «Бито» (все атакующие или таймер).${beatHint}`;
     }
     if (game.phase === "player_can_throw_more") {
       if (selfIsDefender)
-        return "Вы не отбиваетесь — ждите: соперник подкинет карты или нажмёт «Бито».";
+        return "Вы не отбиваетесь — ждите: подкидывают карты или согласуют «Бито».";
+      const nonDef = game.players.filter((_, i) => i !== game.defenderIndex);
+      const ack = new Set(game.beatAckPlayerIds ?? []);
+      const nAck = nonDef.filter((p) => ack.has(p.id)).length;
+      const beatHint =
+        beatSecLeft != null
+          ? ` «Бито»: подтвердили ${nAck}/${nonDef.length}${beatSecLeft > 0 ? ` · авто ${beatSecLeft} с` : ""}.`
+          : "";
       return selfIsAttacker
-        ? "Ваш ход — соперник не бьётся: подкините ещё или нажмите «Бито»"
-        : `Ваш ход — подкините по столу (пока не «Бито») или подождите`;
+        ? `Подкините ещё или «Бито» — забирает стол защитник (все не-защитники или таймер).${beatHint}`
+        : `Подкините по столу или «Бито» (все не-защитники или таймер).${beatHint}`;
     }
     return "";
   })();
@@ -1498,11 +1544,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     !selfIsDefender &&
     (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
 
-  /** «Бито» после полного отбоя — только ведущий атакующий; иначе завершение подкидывания — любой не-защитник. */
+  /** «Бито» в фазах подкидывания — у всех не-защитников (очередь подкида и правила движка решают, можно ли нажать сейчас). */
   const selfShowBitoForToss =
     !!game &&
-    ((game.phase === "attack_toss" && selfIsAttacker) ||
-      (game.phase === "player_can_throw_more" && !selfIsDefender));
+    !selfIsDefender &&
+    (game.phase === "attack_toss" || game.phase === "player_can_throw_more");
 
   /** Явный акцент в строке состояния: сторона атаки должна действовать (подкинуть / бито). */
   const statusStripHighlightAttackerTurn =

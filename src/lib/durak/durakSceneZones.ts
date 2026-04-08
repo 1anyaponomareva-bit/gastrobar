@@ -42,7 +42,8 @@ export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 6;
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABBAR_PX = 16;
 
 /** Резерв под нижний таббар + safe-area внутри сцены (px). */
-export const DURAK_SCENE_TABBAR_RESERVE_PX = 92;
+/** Чуть больше под сочетание нижнего таба сайта и панелей мобильного Chrome (не PWA). */
+export const DURAK_SCENE_TABBAR_RESERVE_PX = 102;
 
 /** Горизонтальный внутренний отступ в нижней зоне (имя слева от руки; не связано с колодой на столе). */
 export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {

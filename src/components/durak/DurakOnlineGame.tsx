@@ -245,6 +245,17 @@ function coerceRemoteGame(raw: unknown, stableTableId?: string | null): GameTabl
       ? Math.max(0, Number(g.roundDefenderInitialHand))
       : 6,
     message: typeof g.message === "string" ? g.message : null,
+    beatAckPlayerIds: (() => {
+      const raw = (g as { beatAckPlayerIds?: unknown }).beatAckPlayerIds;
+      if (!Array.isArray(raw)) return undefined;
+      const ids = raw.filter((x): x is string => typeof x === "string" && x.length > 0);
+      return ids.length ? ids : [];
+    })(),
+    beatRoundDeadlineMs:
+      typeof (g as { beatRoundDeadlineMs?: unknown }).beatRoundDeadlineMs === "number" &&
+      Number.isFinite((g as { beatRoundDeadlineMs?: number }).beatRoundDeadlineMs)
+        ? Number((g as { beatRoundDeadlineMs?: number }).beatRoundDeadlineMs)
+        : undefined,
   };
 }
 
