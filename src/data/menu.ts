@@ -326,6 +326,21 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     strength: "medium",
     hookahFlavorCategory: "sour",
   },
+  {
+    id: "hookah-black-burn-shock-currant",
+    name: "Смородина",
+    description:
+      "Кислый микс красной и чёрной смородины. Яркий ягодный профиль с выразительной кислинкой: на вдохе — сочная красная смородина, на выдохе — глубже и чуть терпковатее нота чёрной. Пар насыщенный, без навязчивой сладости, хорошо бодрит и отлично заходит после еды или со сладким или цитрусовым напитком.",
+    image: "/hookah/ShockCurrant.png",
+    imageList: "/hookah/ShockCurrant.png",
+    category: "hookah",
+    price: "490000",
+    grammage: "50–60 мин",
+    tobacco: "Black Burn",
+    flavor: "Shock Currant",
+    strength: "medium",
+    hookahFlavorCategory: "sour",
+  },
 ];
 
 /** Бар + кальяны — для списка избранного и общих ссылок по id. */
