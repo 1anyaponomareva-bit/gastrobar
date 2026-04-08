@@ -280,8 +280,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Северное сияние",
     description:
       "Холодный ягодный микс с мятой: лёгкий пар, долго держит вкус. Хорошо заходит после коктейля с цитрусом.",
-    image: "/menu/hookah-mix-aurora.svg",
-    imageList: "/menu/hookah-mix-aurora.svg",
+    image: "/hookah/hookah1.jpg",
+    imageList: "/hookah/hookah1.jpg",
     category: "hookah",
     price: "195000",
     grammage: "50–60 мин",
@@ -295,8 +295,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Огни набережной",
     description:
       "Тёплый цитрус с корицей — как вечер у причала: сбалансированный вкус без резкой кислоты.",
-    image: "/menu/hookah-mix-pier.svg",
-    imageList: "/menu/hookah-mix-pier.svg",
+    image: "/hookah/hookah1.jpg",
+    imageList: "/hookah/hookah1.jpg",
     category: "hookah",
     price: "185000",
     grammage: "50–60 мин",
@@ -309,8 +309,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Полночный док",
     description:
       "Насыщенные ягоды и гранат, плотный дым — для тех, кто любит «тяжёлый» вкус и крепкую забивку.",
-    image: "/menu/hookah-mix-midnight.svg",
-    imageList: "/menu/hookah-mix-midnight.svg",
+    image: "/hookah/hookah1.jpg",
+    imageList: "/hookah/hookah1.jpg",
     category: "hookah",
     price: "210000",
     grammage: "55–65 мин",

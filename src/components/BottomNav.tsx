@@ -86,7 +86,7 @@ export function BottomNav() {
                 }
               >
                 {tab.id === "bar" && "🍸"}
-                {tab.id === "hookahs" && "💨"}
+                {tab.id === "hookahs" && "🌿"}
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
