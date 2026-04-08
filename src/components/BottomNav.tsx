@@ -51,7 +51,10 @@ export function BottomNav() {
               )}
             >
               <motion.span
-                className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]"
+                className={cn(
+                  "inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]",
+                  tab.id === "hookahs" && "min-h-[1.75rem] min-w-[1.75rem]",
+                )}
                 animate={
                   active
                     ? tab.id === "bar"
@@ -62,9 +65,10 @@ export function BottomNav() {
                         }
                       : tab.id === "hookahs"
                         ? {
-                            scale: [1, 1.28, 1],
-                            y: [0, -5, -1, -4, 0],
-                            opacity: [1, 0.88, 1, 0.92, 1],
+                            scale: [1, 1.15, 1],
+                            y: [0, -4, -1, -3, 0],
+                            rotate: [0, -4, 4, -2, 0],
+                            opacity: [1, 0.92, 1, 0.95, 1],
                           }
                         : tab.id === "favorites"
                           ? { scale: [1, 1.2, 1] }
@@ -72,7 +76,7 @@ export function BottomNav() {
                               scale: [1, 1.25, 1],
                               y: [0, -3, 0],
                             }
-                    : { scale: 1, rotate: 0, y: 0 }
+                    : { scale: 1, rotate: 0, y: 0, opacity: 1 }
                 }
                 transition={
                   active
@@ -86,7 +90,20 @@ export function BottomNav() {
                 }
               >
                 {tab.id === "bar" && "🍸"}
-                {tab.id === "hookahs" && "🌿"}
+                {tab.id === "hookahs" && (
+                  <img
+                    src="/emojie.png"
+                    alt=""
+                    width={28}
+                    height={28}
+                    draggable={false}
+                    className={cn(
+                      "pointer-events-none h-7 w-7 max-h-[1.75rem] max-w-[1.75rem] select-none object-contain",
+                      /* На тёмной кнопке «убираем» чёрный мат в PNG/JPG; на активной белой — обычное наложение */
+                      active ? "mix-blend-normal" : "mix-blend-screen",
+                    )}
+                  />
+                )}
                 {tab.id === "promo" && "🎉"}
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
