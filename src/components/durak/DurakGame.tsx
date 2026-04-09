@@ -242,6 +242,8 @@ const HAND_CARD_BOX = cn(HAND_CARD_W_CLASS, CARD_PNG_ASPECT_CLASS);
 /** Не больше 6 карт в ряду — следующие вторым рядом, без вылета за края экрана. */
 const HAND_ROW_MAX = 6;
 const HAND_ROW_GAP_PX = 56;
+/** Под фикс. шапку сайта + баннеры сцены: сдвиг геометрии в `computeDurakSceneZoneLayout` (имя соперника сверху). */
+const DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX = 14;
 
 /**
  * `true` → в консоль пишутся rect игровой зоны и стола (временная отладка геометрии).
@@ -1105,6 +1107,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     () =>
       computeDurakSceneZoneLayout(sceneRect.w, sceneRect.h, {
         topInsetPx: durakChromeInsets.top,
+        layoutExtraTopPx: DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX,
         bottomInsetPx: durakChromeInsets.bottom,
       }),
     [sceneRect.w, sceneRect.h, durakChromeInsets.top, durakChromeInsets.bottom],
@@ -1812,7 +1815,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
               style={{
                 left: `calc(50% + ${pl.lx}px)`,
-                top: layout.centerY + pl.ly,
+                top: `max(${DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX}px, ${layout.centerY + pl.ly}px)`,
                 transform: "translate(-50%, -50%)",
               }}
             >
@@ -2070,7 +2073,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-3 mt-8 sm:mt-10 sm:pt-4"
+          className={cn(
+            "pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0",
+            humanHandRows.length > 1
+              ? "mt-10 pt-10 sm:mt-12 sm:pt-12"
+              : "mt-8 pt-3 sm:mt-10 sm:pt-4",
+          )}
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div
@@ -2124,12 +2132,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             "player-hand pointer-events-auto relative min-h-0 min-w-0 flex-1 flex-col justify-end overflow-visible",
           )}
           style={{
-            transform: `scale(${DURAK_SCENE_PLAYER_HAND_SCALE})`,
+            transform: `scale(${
+              humanHandRows.length > 1 ? DURAK_SCENE_PLAYER_HAND_SCALE * 0.9 : DURAK_SCENE_PLAYER_HAND_SCALE
+            })`,
             transformOrigin: "bottom center",
             zIndex: DURAK_Z_PLAYER_HAND,
             maxHeight: layout.maxPlayerHandHeightPx,
             minHeight: Math.min(
-              humanHandRows.length > 1 ? 192 : 152,
+              humanHandRows.length > 1 ? 220 : 152,
               layout.maxPlayerHandHeightPx,
             ),
           }}

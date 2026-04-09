@@ -67,6 +67,11 @@ export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 212;
 export type DurakSceneZoneLayoutOptions = {
   /** Доп. отступ сверху: статус-бар / вырез; сдвигает стол и зоны вниз. */
   topInsetPx?: number;
+  /**
+   * Доп. сдвиг сцены вниз (px): фиксированный хедер сайта, Chrome `visualViewport`,
+   * чтобы метки соперников не заезжали под шапку.
+   */
+  layoutExtraTopPx?: number;
   /** Доп. снизу: home indicator / жесты + запас поверх фиксированного таббара. */
   bottomInsetPx?: number;
 };
@@ -109,7 +114,8 @@ export function computeDurakSceneZoneLayout(
 ): DurakSceneZoneLayout {
   const W = Math.max(280, sceneW);
   const H = Math.max(320, sceneH);
-  const topInset = Math.max(0, options?.topInsetPx ?? 0);
+  const topInset =
+    Math.max(0, options?.topInsetPx ?? 0) + Math.max(0, options?.layoutExtraTopPx ?? 0);
   const bottomInset = Math.max(0, options?.bottomInsetPx ?? 0);
   const layoutH = Math.max(240, H - topInset);
   const tableW = Math.min(W * 0.86, 416, Math.min(W, H) * 0.76);
