@@ -72,16 +72,15 @@ export function Header() {
         top: 0,
         left: 0,
         width: "100%",
-        height: 60,
-        minHeight: 60,
         zIndex: 1000,
         background: "#000",
-        paddingTop: "max(12px, env(safe-area-inset-top))",
-        boxSizing: "border-box",
+        /* Один раз: вырез/status bar; полоса контента ровно 60px ниже (box-sizing: content-box). */
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        boxSizing: "content-box",
       }}
     >
       {/* Контейнер: Telegram и локация слева, логотип по центру, RU справа */}
-      <div className="relative mx-auto flex h-full max-w-md items-center justify-between px-4">
+      <div className="relative mx-auto flex h-[60px] min-h-[60px] max-w-md items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <a
             href={CONFIG.telegramUrl}

@@ -1,9 +1,5 @@
-/** Под фиксированный `Header` (высота 60px + safe-area). */
-export const HEADER_OFFSET_TOP =
-  "pt-[calc(60px+max(0px,env(safe-area-inset-top,0px)))]";
+/** Под фиксированный `Header`: см. `--app-main-padding-top` в `globals.css` (60px + safe-area, без дубля). */
+export const HEADER_OFFSET_TOP = "pt-[var(--app-main-padding-top)]";
 
-/**
- * Страница дурака: только под хедер + safe-area. Вертикаль стола задаётся в `DurakGame` от высоты сцены, без лишнего «воздуха».
- */
-export const HEADER_OFFSET_TOP_DURAK =
-  "pt-[calc(60px+max(0px,env(safe-area-inset-top,0px))+0.15rem)] sm:pt-[calc(60px+max(0px,env(safe-area-inset-top,0px))+0.25rem)]";
+/** Контент дурака под той же шапкой; отдельный класс только при необходимости (страница задаёт padding через тот же токен). */
+export const HEADER_OFFSET_TOP_DURAK = "pt-[var(--app-main-padding-top)]";

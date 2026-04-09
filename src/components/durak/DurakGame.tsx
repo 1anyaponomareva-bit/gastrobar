@@ -242,8 +242,10 @@ const HAND_CARD_BOX = cn(HAND_CARD_W_CLASS, CARD_PNG_ASPECT_CLASS);
 /** Не больше 6 карт в ряду — следующие вторым рядом, без вылета за края экрана. */
 const HAND_ROW_MAX = 6;
 const HAND_ROW_GAP_PX = 56;
-/** Под фикс. шапку сайта + баннеры сцены: сдвиг геометрии в `computeDurakSceneZoneLayout` (имя соперника сверху). */
-const DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX = 14;
+/**
+ * Доп. сдвиг сцены вниз (px) — оставить 0: safe-area только в `Header` + `--app-main-padding-top`.
+ */
+const DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX = 0;
 
 /**
  * `true` → в консоль пишутся rect игровой зоны и стола (временная отладка геометрии).
@@ -1681,7 +1683,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-[max(0.35rem,env(safe-area-inset-top,0px))] max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
+            className="absolute left-1/2 top-1 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-emerald-500/40 bg-emerald-950/55 px-2 py-1 text-center text-[11px] font-medium text-emerald-100"
             style={{ zIndex: DURAK_Z_GAME_HEADER_BANNERS }}
             role="status"
           >
@@ -1693,7 +1695,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-[max(2.25rem,env(safe-area-inset-top,0px))] max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
+            className="absolute left-1/2 top-10 max-w-[min(100%,520px)] -translate-x-1/2 rounded-lg border border-amber-400/35 bg-amber-950/50 px-2 py-1 text-center text-[11px] font-medium text-amber-100"
             style={{ zIndex: DURAK_Z_GAME_HEADER_BANNERS }}
             role="status"
           >
@@ -1815,7 +1817,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
               style={{
                 left: `calc(50% + ${pl.lx}px)`,
-                top: `max(${DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX}px, ${layout.centerY + pl.ly}px)`,
+                top: layout.centerY + pl.ly,
                 transform: "translate(-50%, -50%)",
               }}
             >

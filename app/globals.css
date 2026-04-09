@@ -2,7 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Единый отступ основного контента под фикс. шапку:
+ * высота полосы 60px + safe-area (notch). Без повторного env() в дочерних обёртках.
+ */
 :root {
+  --app-header-bar: 60px;
+  --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
   --theme-bg: #121212;
   --theme-card: rgba(255, 255, 255, 0.04);
   --theme-accent: #f8d66d;
@@ -53,11 +59,22 @@
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* Гарантированный чёрный фон меню (поверх сбросов Tailwind) */
+/* Сброс и фон; safe-area только в шапке и в --app-main-padding-top, не дублировать margin/padding на html/body */
 html,
 body {
+  margin: 0;
+  padding: 0;
   background-color: #000 !important;
   color: #fff !important;
+}
+
+/**
+ * Корневой контейнер приложения (Next: обёртка в layout.tsx).
+ * Без padding-top — иначе двойной зазор с фикс. Header (там уже env(safe-area-inset-top)).
+ */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Страница «Дурак»: фон как у стола — иначе при сбое рендера виден только #000 от html/body */

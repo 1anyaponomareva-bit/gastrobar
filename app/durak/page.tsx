@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-import { HEADER_OFFSET_TOP_DURAK } from "@/components/durak/durakLayoutConstants";
 import { DurakShell } from "./DurakShell";
 
 function pickStol(searchParams: Record<string, string | string[] | undefined>): string | undefined {
@@ -65,7 +64,7 @@ const durakMainColumnStyle: CSSProperties = {
   flex: 1,
   flexDirection: "column",
   overflowX: "hidden",
-  paddingTop: "calc(60px + max(0px, env(safe-area-inset-top, 0px)) + 0.15rem)",
+  paddingTop: "var(--app-main-padding-top)",
   backgroundColor: "#14100c",
   color: "#f1f5f9",
 };
@@ -78,7 +77,7 @@ export default function DurakPage() {
     >
       <Header />
       <div
-        className={`durak-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden ${HEADER_OFFSET_TOP_DURAK}`}
+        className="durak-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden"
         style={durakMainColumnStyle}
       >
         <DurakShell />

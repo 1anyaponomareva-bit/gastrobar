@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body
-        className={`${montserrat.className} min-h-screen bg-black pb-28 pt-0 text-white`}
+        className={`${montserrat.className} app min-h-screen bg-black pb-28 pt-0 text-white`}
         style={{ backgroundColor: "#000", color: "#fff", minHeight: "100dvh" }}
       >
         <ThemeProvider initialPeriod="bar">
@@ -59,7 +59,7 @@ export default function RootLayout({
               <BarHomeProvider>
                 <AppWithSplash>
                   <BonusScreenProvider>
-                    <div className="min-h-[100dvh]">{children}</div>
+                    <div className="app min-h-[100dvh] min-h-[100svh]">{children}</div>
                   </BonusScreenProvider>
                 </AppWithSplash>
               </BarHomeProvider>

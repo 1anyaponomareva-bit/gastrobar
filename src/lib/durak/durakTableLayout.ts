@@ -18,8 +18,9 @@ export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;
  * Колонка сцены: safe-area сверху; вертикаль стола — от высоты колонки (`ResizeObserver` в `DurakGame`), без mt от числа игроков.
  */
 export function getDurakTableColumnClassNames(): string {
+  /* Safe-area уже в padding страницы под Header; здесь только лёгкий зазор и JS-инсеты. */
   return cn(
-    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-stretch px-0.5 pb-1 pt-[max(0.25rem,env(safe-area-inset-top,0px),var(--durak-scene-top,0px))]",
+    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-stretch px-0.5 pb-1 pt-[max(0.25rem,var(--durak-scene-top,0px))]",
   );
 }
 

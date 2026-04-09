@@ -288,8 +288,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Брауни: шоколад, ваниль и корица",
     description:
       "Ваниль, корица и шоколад в духе классического брауни: узнаваемый «пироговый» профиль с первых затяжек. Сладко, но без приторности — удобно курить соло; многим близок и аромат какао или шоколадного печенья.",
-    image: "/hookah/brownie.png",
-    imageList: "/hookah/brownie.png",
+    image: "/hookah/brownie.jpg",
+    imageList: "/hookah/brownie.jpg",
     category: "hookah",
     price: HOOKAH_PRICE,
     grammage: HOOKAH_GRAMMAGE,
@@ -304,8 +304,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Хвоя, смола и прохлада",
     description:
       "Глубокий аромат еловой смолы с лёгкой свежестью и нотой эвкалипта: тепло и пряность уравновешены прохладой, как прогулка по хвойному лесу после снега.",
-    image: "/hookah/elka.png",
-    imageList: "/hookah/elka.png",
+    image: "/hookah/elka.jpg",
+    imageList: "/hookah/elka.jpg",
     category: "hookah",
     price: HOOKAH_PRICE,
     grammage: HOOKAH_GRAMMAGE,
@@ -319,8 +319,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Терпкий цитрус помело",
     description:
       "Тот самый вкус помело: сочно, с кислинкой и приятной горечью на выдохе — насыщенный тропический цитрус, который хорошо читается в соло.",
-    image: "/hookah/pomelo.png",
-    imageList: "/hookah/pomelo.png",
+    image: "/hookah/pomelo.jpg",
+    imageList: "/hookah/pomelo.jpg",
     category: "hookah",
     price: HOOKAH_PRICE,
     grammage: HOOKAH_GRAMMAGE,
@@ -334,8 +334,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Чёрная и красная смородина",
     description:
       "Кисло-сладкое сочетание красной и чёрной смородины с плотным ягодным дымом — ярко, без лишней терпкости. Игривая кислинка в духе линейки Shock / Red Currant.",
-    image: "/hookah/ShockCurrant.png",
-    imageList: "/hookah/ShockCurrant.png",
+    image: "/hookah/ShockCurrant.jpg",
+    imageList: "/hookah/ShockCurrant.jpg",
     category: "hookah",
     price: HOOKAH_PRICE,
     grammage: HOOKAH_GRAMMAGE,
