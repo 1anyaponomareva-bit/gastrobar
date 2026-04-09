@@ -33,6 +33,7 @@ import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
+import { useStandalonePwa } from "@/hooks/useStandalonePwa";
 import { useRouter } from "next/navigation";
 import { DurakEntryFlow } from "@/components/durak/DurakEntryFlow";
 import { DurakOnlineGame } from "@/components/durak/DurakOnlineGame";
@@ -751,6 +752,7 @@ function DurakNameGate({
 }
 
 export function DurakGame(props: DurakGameRootProps = {}) {
+  const standalonePwa = useStandalonePwa();
   const router = useRouter();
   const embedded = props.embedded;
   const friendInviteCodeFromUrl = props.friendInviteCodeFromUrl ?? null;
@@ -2026,7 +2028,14 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         {phaseLine || game.message ? (
           <div
-            className="relative mb-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:mb-3 sm:px-3 sm:py-2"
+            className={cn(
+              "relative w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2",
+              humanHandRows.length > 1
+                ? standalonePwa
+                  ? "mb-1 sm:mb-1.5"
+                  : "mb-4 sm:mb-5"
+                : "mb-2 sm:mb-3",
+            )}
             style={{ zIndex: DURAK_Z_STATUS_LINE }}
             role="region"
             aria-label="Состояние партии"
@@ -2079,8 +2088,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           className={cn(
             "pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0",
             humanHandRows.length > 1
-              ? "mt-10 pt-10 sm:mt-12 sm:pt-12"
-              : "mt-8 pt-3 sm:mt-10 sm:pt-4",
+              ? standalonePwa
+                ? "mt-5 pt-4 sm:mt-6 sm:pt-5"
+                : "mt-10 pt-12 sm:mt-12 sm:pt-14"
+              : standalonePwa
+                ? "mt-5 pt-2 sm:mt-6 sm:pt-3"
+                : "mt-8 pt-3 sm:mt-10 sm:pt-4",
           )}
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >

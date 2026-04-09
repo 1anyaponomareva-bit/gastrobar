@@ -91,8 +91,12 @@ export function firstSeatThatMustThrow(table: GameTable): number | null {
   if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") return null;
   const eligible = new Set(eligibleThrowInSeatIndices(table));
   if (eligible.size === 0) return null;
+  const ack = new Set(table.beatAckPlayerIds ?? []);
   for (const idx of attackingSeatOrder(table)) {
-    if (eligible.has(idx)) return idx;
+    if (!eligible.has(idx)) continue;
+    const pid = table.players[idx]?.id;
+    if (pid && ack.has(pid)) continue;
+    return idx;
   }
   return null;
 }
@@ -132,16 +136,13 @@ export function canRegisterBeatAck(
     return { error: "Не всё отбито" };
   }
 
-  const elig = eligibleThrowInSeatIndices(table);
   const tossFirst = firstSeatThatMustThrow(table);
 
   if (tossFirst != null) {
     if (seat !== tossFirst) {
       return { error: "Дождитесь очереди подкидывания" };
     }
-    if (elig.includes(seat)) {
-      return { error: "Сначала подкините по столу" };
-    }
+    /** Подкид не обязателен — «Бито» закрывает раунд без подкида. */
     return { ok: true };
   }
 
@@ -149,13 +150,6 @@ export function canRegisterBeatAck(
     if (seat !== table.attackerIndex) {
       return { error: "Не ваш ход" };
     }
-    if (elig.includes(seat)) {
-      return { error: "Сначала подкините по столу" };
-    }
-  }
-
-  if (elig.includes(seat)) {
-    return { error: "Сначала подкините по столу" };
   }
 
   return { ok: true };

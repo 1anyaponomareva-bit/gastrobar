@@ -17,11 +17,12 @@ export const PROMOS: PromoItem[] = [
     description: "Ежедневно с 19:00 до 20:00 специальная цена на коктейльную карту.",
   },
   {
-    id: "combo-whisky-jerky",
-    title: "Combo: Whisky Sour + Jerky",
-    price: "230.000 VND",
-    image: "/menu/promo-combo-whisky-jerky.png",
+    id: "combo-nastoiki-5",
+    title: "Комбо: 5 настоек",
+    price: "300.000 VND",
+    image: "/menu/promo_nastoika.png",
     imageFit: "contain",
-    description: "Бокал Виски Сауэр с пеной и цедрой в паре с крафтовой тарелкой мясных джерки. Идеальное сочетание для вечера.",
+    description:
+      "Набор из пяти настоек по специальной цене. Покажите офер бармену.",
   },
 ];

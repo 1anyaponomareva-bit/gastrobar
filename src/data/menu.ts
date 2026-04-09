@@ -58,7 +58,6 @@ export const MENU_ITEMS: MenuItem[] = [
     category: "cocktail",
     price: "135000",
     barSubcategory: "cocktail",
-    badge: "hit",
     taste: "кисло-сладкий, виски, лимон, мёд",
     strength: "strong",
   },
@@ -217,7 +216,6 @@ export const MENU_ITEMS: MenuItem[] = [
     category: "food",
     price: "95000",
     menuSubcategory: "snack",
-    badge: "hit",
     pairing: ["beer", "cocktail"],
   },
   {
@@ -229,7 +227,6 @@ export const MENU_ITEMS: MenuItem[] = [
     category: "food",
     price: "115000",
     menuSubcategory: "snack",
-    badge: "hit",
     pairing: ["beer", "cocktail"],
   },
   {

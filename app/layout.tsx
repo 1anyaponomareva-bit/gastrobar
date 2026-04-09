@@ -7,6 +7,7 @@ import { HighlightProductProvider } from "@/components/HighlightProductContext";
 import { BarHomeProvider } from "@/components/BarHomeContext";
 import { AppWithSplash } from "@/components/AppWithSplash";
 import { BonusScreenProvider } from "@/components/BonusScreenContext";
+import { PromoBanner } from "@/components/PromoBanner";
 
 const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
@@ -60,6 +61,7 @@ export default function RootLayout({
                 <AppWithSplash>
                   <BonusScreenProvider>
                     <div className="app min-h-[100dvh] min-h-[100svh]">{children}</div>
+                    <PromoBanner />
                   </BonusScreenProvider>
                 </AppWithSplash>
               </BarHomeProvider>

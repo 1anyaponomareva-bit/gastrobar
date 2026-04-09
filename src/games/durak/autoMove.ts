@@ -109,6 +109,8 @@ export function tryAutoMove(table: GameTable, playerId: string): GameTable | nul
     if (!pl || pl.id !== playerId) continue;
     const sub = chooseTossForSeat(table, idx);
     if (sub.type !== "toss") continue;
+    const ackFirst = engine.registerBeatAck(table, playerId);
+    if (!("error" in ackFirst)) return ackFirst.table;
     const r = engine.attackToss(table, playerId, sub.ids);
     if (!("error" in r)) return r.table;
   }

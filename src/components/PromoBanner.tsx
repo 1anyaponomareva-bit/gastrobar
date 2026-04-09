@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { CONFIG } from "@/lib/config";
 
@@ -9,7 +10,8 @@ const STORAGE_LAST_SHOWN = "gastrobar-tg-popup-last-shown";
 const SESSION_SHOWN = "gastrobar-tg-popup-shown-session";
 /** Показ не чаще чем раз в N дней */
 const COOLDOWN_DAYS = 5;
-const DELAY_MS = 40_000;
+/** После входа в приложение — через 8 минут (не показываем на экране дурака). */
+const DELAY_MS = 8 * 60_000;
 
 const PROMO_IMAGE = "/menu/promo_tg_ultra.png";
 
@@ -47,7 +49,12 @@ function markShown(): void {
   } catch {}
 }
 
+function isDurakPath(path: string): boolean {
+  return path === "/durak" || path.startsWith("/durak/");
+}
+
 export function PromoBanner() {
+  const pathname = usePathname() ?? "";
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -66,12 +73,15 @@ export function PromoBanner() {
 
   useEffect(() => {
     if (!mounted) return;
+    if (isDurakPath(pathname)) return;
 
     const last = getLastShownAt();
     if (last != null && isOnCooldown(last)) return;
     if (wasShownThisBrowserSession()) return;
 
     const timer = setTimeout(() => {
+      const p = typeof window !== "undefined" ? window.location.pathname : pathname;
+      if (isDurakPath(p)) return;
       const lastAgain = getLastShownAt();
       if (lastAgain != null && isOnCooldown(lastAgain)) return;
       if (wasShownThisBrowserSession()) return;
@@ -80,7 +90,7 @@ export function PromoBanner() {
     }, DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [mounted]);
+  }, [mounted, pathname]);
 
   if (!mounted || typeof document === "undefined") return null;
   /* Не монтируем портал, пока попап не нужен — пустой AnimatePresence в body мог перехватывать клики по всей странице */
@@ -102,8 +112,11 @@ export function PromoBanner() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative w-[90vw] max-w-sm"
+        className="relative w-[90vw] max-w-sm rounded-2xl bg-black/90 p-4 shadow-xl ring-1 ring-white/10"
       >
+        <p className="mb-3 text-center text-[15px] font-semibold leading-snug text-white">
+          Приглашаем подписаться на группу GASTROBAR в Telegram — акции и новости.
+        </p>
         <a
           href={CONFIG.telegramUrl}
           target="_blank"
@@ -112,13 +125,13 @@ export function PromoBanner() {
             e.preventDefault();
             goToChannel();
           }}
-          className="block overflow-hidden rounded-2xl bg-black"
-          aria-label="Перейти в Telegram GASTROBAR"
+          className="block overflow-hidden rounded-xl bg-black"
+          aria-label="Открыть Telegram-группу GASTROBAR"
         >
           <img
             src={PROMO_IMAGE}
-            alt="Перейти в Telegram GASTROBAR"
-            className="h-auto max-h-[85vh] w-full object-contain"
+            alt="Подписка на Telegram-группу GASTROBAR"
+            className="h-auto max-h-[min(72vh,520px)] w-full object-contain"
           />
         </a>
 
