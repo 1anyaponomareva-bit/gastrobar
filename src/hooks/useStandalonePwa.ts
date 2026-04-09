@@ -7,14 +7,23 @@ export function useStandalonePwa(): boolean {
   const [standalone, setStandalone] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(display-mode: standalone)");
+    const mqStandalone = window.matchMedia("(display-mode: standalone)");
+    const mqFullscreen = window.matchMedia("(display-mode: fullscreen)");
     const sync = () => {
       const nav = window.navigator as Navigator & { standalone?: boolean };
-      setStandalone(mq.matches === true || nav.standalone === true);
+      setStandalone(
+        nav.standalone === true ||
+          mqStandalone.matches === true ||
+          mqFullscreen.matches === true,
+      );
     };
     sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
+    mqStandalone.addEventListener("change", sync);
+    mqFullscreen.addEventListener("change", sync);
+    return () => {
+      mqStandalone.removeEventListener("change", sync);
+      mqFullscreen.removeEventListener("change", sync);
+    };
   }, []);
 
   return standalone;

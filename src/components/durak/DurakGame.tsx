@@ -1951,7 +1951,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col gap-1 bg-[#14100c] px-1 sm:px-2"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col bg-[#14100c] px-1 sm:px-2",
+          standalonePwa ? "gap-0" : "gap-1",
+        )}
         style={{
           top: layout.playerZoneTopY,
           bottom: layout.playerZoneBottomInsetPx,
@@ -1960,7 +1963,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         }}
       >
         <div
-          className="pointer-events-auto relative -mt-2 shrink-0 pt-0 sm:-mt-2.5"
+          className={cn(
+            "pointer-events-auto relative shrink-0 pt-0",
+            standalonePwa ? "-mt-1 sm:-mt-1" : "-mt-2 sm:-mt-2.5",
+          )}
           style={{ zIndex: DURAK_Z_CONTROLS }}
         >
         <div
@@ -2029,14 +2035,22 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         {phaseLine || game.message ? (
           <div
             className={cn(
-              "relative w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3 sm:py-2",
+              "relative w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-3",
+              standalonePwa ? "py-1 sm:py-1.5" : "py-1.5 sm:py-2",
               humanHandRows.length > 1
                 ? standalonePwa
+                  ? "mb-0"
+                  : "mb-7 sm:mb-9"
+                : standalonePwa
                   ? "mb-1 sm:mb-1.5"
-                  : "mb-4 sm:mb-5"
-                : "mb-2 sm:mb-3",
+                  : "mb-2 sm:mb-3",
             )}
-            style={{ zIndex: DURAK_Z_STATUS_LINE }}
+            style={{
+              zIndex:
+                !standalonePwa && humanHandRows.length > 1
+                  ? DURAK_Z_PLAYER_HAND - 2
+                  : DURAK_Z_STATUS_LINE,
+            }}
             role="region"
             aria-label="Состояние партии"
           >
@@ -2056,7 +2070,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22 }}
                     className={cn(
-                      "line-clamp-3 max-h-[4.25rem] min-w-0 flex-1 overflow-y-auto overscroll-y-contain rounded-lg px-2.5 py-1.5 text-center text-[10px] font-medium leading-snug sm:max-h-[4.75rem] sm:px-3 sm:py-2 sm:text-[11px]",
+                      "min-w-0 flex-1 overflow-y-auto overscroll-y-contain rounded-lg text-center text-[10px] font-medium leading-snug sm:text-[11px]",
+                      standalonePwa
+                        ? "line-clamp-3 max-h-[3.25rem] px-2 py-1 sm:max-h-[3.5rem] sm:px-2.5 sm:py-1"
+                        : humanHandRows.length > 1
+                          ? "line-clamp-2 max-h-[2.9rem] px-2 py-1 sm:max-h-[3.2rem] sm:px-2.5 sm:py-1.5 sm:text-[10.5px]"
+                          : "line-clamp-3 max-h-[4.25rem] px-2.5 py-1.5 sm:max-h-[4.75rem] sm:px-3 sm:py-2",
                       statusStripHighlightAttackerTurn
                         ? "border border-[#f8d66d]/45 bg-black/90 font-semibold text-[#fff8e8]"
                         : "border border-white/10 bg-black/90 text-emerald-50/95",
@@ -2089,13 +2108,18 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             "pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0",
             humanHandRows.length > 1
               ? standalonePwa
-                ? "mt-5 pt-4 sm:mt-6 sm:pt-5"
-                : "mt-10 pt-12 sm:mt-12 sm:pt-14"
+                ? "mt-0.5 pt-1 sm:mt-1 sm:pt-1.5"
+                : "mt-12 pt-16 sm:mt-14 sm:pt-[5.25rem]"
               : standalonePwa
-                ? "mt-5 pt-2 sm:mt-6 sm:pt-3"
+                ? "mt-1.5 pt-0.5 sm:mt-2 sm:pt-1"
                 : "mt-8 pt-3 sm:mt-10 sm:pt-4",
           )}
-          style={{ zIndex: DURAK_Z_PLAYER_HAND }}
+          style={{
+            zIndex:
+              !standalonePwa && humanHandRows.length > 1
+                ? DURAK_Z_STATUS_LINE + 4
+                : DURAK_Z_PLAYER_HAND,
+          }}
         >
           <div
             className="pointer-events-auto shrink-0 self-end bg-[#14100c] py-1 pl-1 pr-2"
