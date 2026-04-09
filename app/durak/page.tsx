@@ -65,7 +65,7 @@ const durakMainColumnStyle: CSSProperties = {
   flex: 1,
   flexDirection: "column",
   overflowX: "hidden",
-  paddingTop: "calc(60px + max(0px, env(safe-area-inset-top, 0px)) + 0.35rem)",
+  paddingTop: "calc(60px + max(0px, env(safe-area-inset-top, 0px)) + 0.15rem)",
   backgroundColor: "#14100c",
   color: "#f1f5f9",
 };

@@ -14,8 +14,11 @@
  * -----------------------------------------------------------------------------
  */
 
-/** Центр стола — выше по экрану: под столом больше места под кнопки, статус и руку. */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.36;
+/**
+ * Центр стола по вертикали сцены (доля ниже topInset). Меньше — стол и соперники выше,
+ * меньше «чёрная полоса» под сайт-хедером, ниже зона руки и проще уместить веер над таббаром.
+ */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.30;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
@@ -36,7 +39,7 @@ export const DURAK_Z_STATUS_LINE = 48;
 export const DURAK_Z_GAME_HEADER_BANNERS = 50;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
-export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
+export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 18;
 
 /** Низ стола → верх чёрной зоны (не менять без нужды: влияет на всю нижнюю колонку). */
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 6;
@@ -55,8 +58,11 @@ export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {
   return 10;
 }
 
-/** Резерв под кнопки и блок состояния над «имя | рука» (px). */
-export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 178;
+/**
+ * Резерв под кнопки и блок состояния над «имя | рука» (px).
+ * Растёт вместе с подъёмом стола — иначе max высота веера «съедает» зазор под статусом.
+ */
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 212;
 
 export type DurakSceneZoneLayoutOptions = {
   /** Доп. отступ сверху: статус-бар / вырез; сдвигает стол и зоны вниз. */

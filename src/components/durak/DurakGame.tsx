@@ -2070,7 +2070,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-6 mt-2 sm:pt-7 sm:mt-3"
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-3 mt-8 sm:mt-10 sm:pt-4"
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div
