@@ -114,8 +114,20 @@ const WIN_SEGMENT_INDICES: readonly number[] = [0, 2, 3, 4, 6, 7];
 /** «без бонуса» и «мимо» — оба считаются проигрышем для 50/50. */
 const LOSS_SEGMENT_INDICES: readonly number[] = [1, 5];
 
+/** После стольких выигрышей подряд следующий спин (если не «отыгрыш» после проигрыша) — проигрыш. Иначе реально возможны длинные серии только из побед (~1/32 на 5 подряд и т.д.). */
+const MAX_CONSECUTIVE_WINS_BEFORE_FORCE_LOSS = 3;
+
+function randomFraction01(): number {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0]! / 0x1_0000_0000;
+  }
+  return Math.random();
+}
+
 function pickRandomIndexFrom(candidates: readonly number[]): number {
-  return candidates[Math.floor(Math.random() * candidates.length)]!;
+  return candidates[Math.floor(randomFraction01() * candidates.length)]!;
 }
 
 /** Следующий выигрыш не совпадает с последним удачным спином (в т.ч. после «мимо» между ними). */
@@ -191,14 +203,17 @@ function markHasPlayed(): void {
 
 export function computeSpinOutcome(): SpinOutcome {
   const played = hasPlayedWheelBefore();
-  const { lastSpinWasLoss, lastWinSegmentIndex } = getStorage();
+  const { lastSpinWasLoss, lastWinSegmentIndex, consecutiveWinsSinceLoss } = getStorage();
   const winPool = winCandidatesExcludingLast(lastWinSegmentIndex);
+  const winStreak = consecutiveWinsSinceLoss ?? 0;
 
   let idx: number;
   if (lastSpinWasLoss) {
     idx = pickRandomIndexFrom(winPool);
+  } else if (winStreak >= MAX_CONSECUTIVE_WINS_BEFORE_FORCE_LOSS) {
+    idx = pickRandomIndexFrom(LOSS_SEGMENT_INDICES);
   } else {
-    const rollWin = Math.random() < 0.5;
+    const rollWin = randomFraction01() < 0.5;
     idx = rollWin ? pickRandomIndexFrom(winPool) : pickRandomIndexFrom(LOSS_SEGMENT_INDICES);
   }
 
@@ -220,6 +235,8 @@ export type WheelStorage = {
   lastSpinWasLoss?: boolean;
   /** Последний сектор с реальным бонусом; не повторяем при следующем выигрыше. */
   lastWinSegmentIndex?: number;
+  /** Сколько выигрышей подряд после последнего проигрыша (для ограничения серии). */
+  consecutiveWinsSinceLoss?: number;
 };
 
 const SPIN_COOLDOWN_MS = IS_TEST_MODE ? 8000 : 24 * 60 * 60 * 1000;
@@ -235,10 +252,16 @@ export function getStorage(): WheelStorage {
       typeof rawWin === "number" && WIN_SEGMENT_INDICES.includes(rawWin)
         ? rawWin
         : undefined;
+    const rawStreak = data.consecutiveWinsSinceLoss;
+    const consecutiveWinsSinceLoss =
+      typeof rawStreak === "number" && rawStreak >= 0 && Number.isFinite(rawStreak)
+        ? Math.floor(rawStreak)
+        : undefined;
     return {
       lastSpinAt: data.lastSpinAt ?? 0,
       lastSpinWasLoss: data.lastSpinWasLoss === true,
       lastWinSegmentIndex,
+      consecutiveWinsSinceLoss,
     };
   } catch {
     return { lastSpinAt: 0 };
@@ -272,12 +295,14 @@ function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | nu
 
 export function saveSpinOutcome(outcome: SpinOutcome): Bonus | null {
   const prev = getStorage();
+  const prevStreak = prev.consecutiveWinsSinceLoss ?? 0;
   setStorage({
     lastSpinAt: Date.now(),
     lastSpinWasLoss: outcome.isLoss,
     lastWinSegmentIndex: outcome.isLoss
       ? prev.lastWinSegmentIndex
       : outcome.segmentIndex,
+    consecutiveWinsSinceLoss: outcome.isLoss ? 0 : prevStreak + 1,
   });
   markHasPlayed();
 

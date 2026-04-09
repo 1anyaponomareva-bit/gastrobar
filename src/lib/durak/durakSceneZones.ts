@@ -7,7 +7,7 @@
  * - Стол: круг по `computeDurakSceneZoneLayout`, центр по `DURAK_SCENE_TABLE_CENTER_Y_RATIO`,
  *   блок сукна отдельно; бой и колода — отдельный слой того же box (см. `DurakGame.tsx`).
  * - Соперники: якорь на окружности, доля сукна — `durakSceneLayout` + `durakTableLayoutEngine`.
- * - Z-order: см. `DURAK_Z_*` ниже; рука выше строки статуса (веер не под текстом). На /durak `BottomNav` выше руки (z-index).
+ * - Z-order: см. `DURAK_Z_*` ниже; строка состояния и кнопки выше веера (текст не перекрывается). На /durak `BottomNav` выше руки.
  * - Нижняя чёрная колонка (`DurakGame`): кнопки (лёгкий -mt) → панель `phaseLine` + `game.message`
  *   (серой italic-приписки / microFlavour нет) → ряд «имя слева | веер», отступ pt между статусом и рукой.
  * - Низ зоны игрока у края сцены (кроме небольшого safe-area); веер может заходить под плавающее меню.
@@ -21,17 +21,19 @@ export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.36;
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
 
 /**
- * Z-order: … → колода → кнопки → статус → баннеры. Рука выше статуса, чтобы веер (в т.ч. 2 ряд) не уходил под текст.
+ * Z-order: … → колода → рука (низ) → кнопки → статус → баннеры.
+ * Веер может геометрически заходить вверх — строка состояния всё равно рисуется поверх.
  */
 export const DURAK_Z_TABLE_SURFACE = 10;
 export const DURAK_Z_OPPONENTS = 20;
 export const DURAK_Z_TABLE_CARDS = 25;
 export const DURAK_Z_DECK = 30;
+/** Веер и имя: ниже кнопок и строки состояния. */
+export const DURAK_Z_PLAYER_HAND = 32;
 export const DURAK_Z_CONTROLS = 40;
-export const DURAK_Z_STATUS_LINE = 42;
-export const DURAK_Z_GAME_HEADER_BANNERS = 45;
-/** Рука и имя: поверх блока состояния при вертикальном наплыве. */
-export const DURAK_Z_PLAYER_HAND = 52;
+/** Поверх кнопок и руки, чтобы текст фазы оставался читаемым. */
+export const DURAK_Z_STATUS_LINE = 48;
+export const DURAK_Z_GAME_HEADER_BANNERS = 50;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 24;
@@ -54,7 +56,7 @@ export function getDeckNameClearanceLeftPx(_tableRadiusPx: number): number {
 }
 
 /** Резерв под кнопки и блок состояния над «имя | рука» (px). */
-export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 158;
+export const DURAK_SCENE_PLAYER_ZONE_CHROME_RESERVE_PX = 178;
 
 export type DurakSceneZoneLayoutOptions = {
   /** Доп. отступ сверху: статус-бар / вырез; сдвигает стол и зоны вниз. */

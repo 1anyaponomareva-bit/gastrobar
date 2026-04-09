@@ -64,17 +64,13 @@ export function HookahListItem({
         }
       }}
       className={`relative flex min-h-[120px] w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
-      style={{ minHeight: "max(120px, 24dvh)", maxHeight: "190px" }}
+      style={{ minHeight: "max(128px, 28dvh)", maxHeight: "min(240px, 40dvh)" }}
     >
-      <div className="relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-l-2xl bg-[#030303]">
+      <div className="relative h-auto min-h-[128px] w-[50%] min-w-[104px] max-w-[200px] shrink-0 overflow-hidden rounded-l-2xl bg-[#030303]">
         <img
           src={listImage}
           alt=""
-          className="h-full min-h-[120px] w-full object-contain object-center p-2"
-          style={{
-            maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-          }}
+          className="h-full min-h-[128px] w-full object-cover object-center"
           loading="lazy"
         />
         <button

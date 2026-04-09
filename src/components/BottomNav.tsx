@@ -35,7 +35,7 @@ export function BottomNav() {
       transition={{ duration: 0.2 }}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-4 flex justify-center safe-bottom px-3",
-        onGames ? "z-[1050]" : "z-40",
+        onGames ? "z-[1180]" : "z-40",
       )}
     >
       <div className="pointer-events-auto mx-auto flex w-[min(24.5rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(26rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">

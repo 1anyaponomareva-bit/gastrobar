@@ -2020,7 +2020,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
         {phaseLine || game.message ? (
           <div
-            className="mb-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:mb-3 sm:px-3 sm:py-2"
+            className="relative mb-2 w-full max-w-full shrink-0 rounded-lg border border-white/[0.08] bg-[#0a0908] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:mb-3 sm:px-3 sm:py-2"
             style={{ zIndex: DURAK_Z_STATUS_LINE }}
             role="region"
             aria-label="Состояние партии"
@@ -2070,7 +2070,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-4 sm:pt-5"
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-6 mt-2 sm:pt-7 sm:mt-3"
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div

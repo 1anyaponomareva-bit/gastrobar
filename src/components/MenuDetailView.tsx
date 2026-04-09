@@ -149,7 +149,7 @@ export function MenuDetailView({
               alt={item.name}
               className={
                 item.category === "hookah"
-                  ? "h-full w-full object-contain object-center px-8 py-6"
+                  ? "h-full min-h-full w-full min-w-full object-cover object-center"
                   : "h-full w-full object-cover object-center"
               }
             />
