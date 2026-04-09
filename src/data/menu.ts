@@ -346,7 +346,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-black-burn-strawberry-jam",
-    name: "Клубничный джем (Strawberry Jam)",
+    name: "Клубничный джем",
     description:
       "Яркий сладкий вкус клубничного варенья с едва заметной кислинкой — близок к джему из лесной клубники, без химозной приторности.",
     image: "/hookah/BlackBurnStrawberryJam.jpg",
@@ -421,7 +421,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-generis-raspberry",
-    name: "Садовая малина (Generis Raspberry)",
+    name: "Садовая малина",
     description:
       "Выразительная садовая малина с лёгкой кислинкой: сочно, ароматно и «по-летнему». Удачная база под любимые фруктовые купажи.",
     image: "/hookah/DarksideCOREGenerisRaspberry.jpg",
@@ -451,7 +451,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-nordberry",
-    name: "Клюквенный сок и ягоды, прохлада (Nordberry)",
+    name: "Клюквенный сок и ягоды",
     description:
       "Освежающий кисло-сладкий ягодный микс с оттенком охлаждённого клюквенного сока — сочно, с «северной» ясностью профиля.",
     image: "/hookah/DarksideCORENordberry.jpg",
@@ -511,7 +511,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-musthave-nord-star",
-    name: "Сочная вишня и свежесть (Nord Star)",
+    name: "Кислая вишня",
     description:
       "Кислая вишня с яркой свежестью и лёгким холодным акцентом: ягодный характер заметен с первых тяг. По задумке бренда — узнаваемый североамериканский вишнёвый профиль.",
     image: "/hookah/MusthaveNordStar.jpg",
@@ -541,7 +541,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-overdose-overcola",
-    name: "Кола с цитрусом и игристостью (Overcola)",
+    name: "Кола",
     description:
       "Узнаваемая кола: сладость с цитрусовыми нотами и лёгкой кислинкой, ощущение газировки в аромате. Линейка Overdose — обжаренный Burley, по характеристикам бренда крепость выше средней.",
     image: "/hookah/OverdoseOvercola.jpg",
@@ -556,7 +556,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-overdose-peach-iced-tea",
-    name: "Персик и ледяной чай",
+    name: "Персиковый чай",
     description:
       "Нежный фруктовый микс с прохладным персиковым чаем — мягко, освежающе, без навязчивой приторности. Обжаренный Burley в линейке Overdose; у бренда крепость указана выше средней.",
     image: "/hookah/OverdosePeachIcedTea.jpg",

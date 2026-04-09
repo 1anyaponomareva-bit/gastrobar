@@ -9,8 +9,8 @@ import {
   profileUrl,
 } from "@/lib/tiktokLive";
 
-/** Совпадает с базовым положением LuckyWheelButton без ленты таймера */
-const FAB_BOTTOM = "max(90px, calc(env(safe-area-inset-bottom, 0px) + 60px))";
+/** См. `--fab-bottom-nav-stack` в globals.css (над BottomNav) */
+const FAB_BOTTOM = "var(--fab-bottom-nav-stack)";
 /** Зеркально right у LuckyWheelButton */
 const FAB_LEFT = "max(16px, calc(env(safe-area-inset-left, 0px) + 16px))";
 

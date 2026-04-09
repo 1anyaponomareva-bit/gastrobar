@@ -17,6 +17,13 @@
   --theme-text-muted: #a3a3a3;
   /* Дурак: единый радиус для всех карт (рука, стол, колода, соперник, козырь) */
   --card-radius: 6px;
+  /**
+   * FAB справа/слева (колесо, TikTok): низ кнопки — выше BottomNav.
+   * Складываем: bottom-4 у навбара (1rem) + safe-bottom + высота пилюли (~5.75rem) + зазор.
+   */
+  --fab-bottom-nav-stack: calc(1rem + 5.75rem + 0.625rem + env(safe-area-inset-bottom, 0px));
+  /* Колесо: лента таймера ниже иконки — чуть выше поднимаем всю кнопку */
+  --fab-bottom-nav-stack-ribbon: calc(1rem + 5.75rem + 0.625rem + 0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 [data-period="lunch"] {

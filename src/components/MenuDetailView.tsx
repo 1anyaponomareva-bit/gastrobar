@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { strengthDisplayLabel } from "@/data/menu";
+import { hookahDescriptionForCard } from "@/lib/hookahDescriptionTrim";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -200,8 +201,16 @@ export function MenuDetailView({
                   {strengthLbl}
                 </span>
               )}
-              <p className="line-clamp-3 text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                {item.description || "Описание блюда."}
+              <p
+                className={
+                  item.category === "hookah"
+                    ? "text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
+                    : "line-clamp-3 text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
+                }
+              >
+                {item.category === "hookah"
+                  ? hookahDescriptionForCard(item.description || "")
+                  : item.description || "Описание блюда."}
               </p>
               {item.category === "hookah" && item.tobacco && (
                 <p className="text-sm font-medium text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">

@@ -29,8 +29,8 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
       className="fixed z-[1020] inline-flex w-max max-w-[min(8rem,100vw)] flex-col items-center justify-end bg-transparent p-0 transition-transform active:scale-[0.98]"
       style={{
         bottom: showRibbon
-          ? "max(102px, calc(env(safe-area-inset-bottom, 0px) + 72px))"
-          : "max(90px, calc(env(safe-area-inset-bottom, 0px) + 60px))",
+          ? "var(--fab-bottom-nav-stack-ribbon)"
+          : "var(--fab-bottom-nav-stack)",
         right: "max(16px, env(safe-area-inset-right, 0px) + 16px)",
         boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       }}
