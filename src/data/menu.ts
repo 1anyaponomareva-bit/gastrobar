@@ -285,7 +285,7 @@ const HOOKAH_GRAMMAGE = "50–60 мин";
 export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   {
     id: "hookah-black-burn-brownie",
-    name: "Шоколад, ваниль, корица (Brownie)",
+    name: "Брауни: шоколад, ваниль и корица (Brownie)",
     description:
       "Ваниль, корица и шоколад в духе классического брауни: узнаваемый «пироговый» профиль с первых затяжек. Сладко, но без приторности — удобно курить соло; многим близок и аромат какао или шоколадного печенья.",
     image: "/hookah/brownie.png",
@@ -331,9 +331,9 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-black-burn-shock-currant",
-    name: "Красная и чёрная смородина, кислинка (Shock Currant)",
+    name: "Чёрная и красная смородина, кислинка (Shock Currant)",
     description:
-      "Кисло-сладкий профиль красной смородины с лёгкой естественной сладостью и плотным ягодным дымом — ярко и без «специй». По описанию линейки созвучно позиции Red Currant: акцент на красной смородине, не на чёрной.",
+      "Кисло-сладкое сочетание красной и чёрной смородины с плотным ягодным дымом — ярко, без лишней терпкости. Игривая кислинка в духе линейки Shock / Red Currant.",
     image: "/hookah/ShockCurrant.png",
     imageList: "/hookah/ShockCurrant.png",
     category: "hookah",
@@ -346,7 +346,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-black-burn-strawberry-jam",
-    name: "Клубничный джем, ягода (Strawberry Jam)",
+    name: "Клубничный джем (Strawberry Jam)",
     description:
       "Яркий сладкий вкус клубничного варенья с едва заметной кислинкой — близок к джему из лесной клубники, без химозной приторности.",
     image: "/hookah/BlackBurnStrawberryJam.jpg",
@@ -361,7 +361,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-basil-blast",
-    name: "Базилик и свежие травы (Basil Blast)",
+    name: "Свежий базилик и травы (Basil Blast)",
     description:
       "Лёгкий аромат свежего базилика: чуть травянистый и пряный, ноты постепенно раскрываются в чаше. Хорош в соло и в миксах со смузи и фруктами.",
     image: "/hookah/DarksideCOREBasilBlast.jpg",
@@ -376,7 +376,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-cosmo-flower",
-    name: "Цветы, лёгкая сладость (Cosmo Flower)",
+    name: "Черника и цветы (Cosmo Flower)",
     description:
       "Устойчивая сладковатая черника в букете с утончёнными цветочными нотами — «глубокий» ягодно-цветочный характер, который не надоедает к концу курения.",
     image: "/hookah/DarksideCORECosmoFlower.jpg",
@@ -391,7 +391,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-dark-supra",
-    name: "Тёмный насыщенный микс (Dark Supra)",
+    name: "Зелёный чай сэнтя и жасмин (Dark Supra)",
     description:
       "Японский зелёный чай сэнтя с лёгким акцентом жасмина: спокойный чайно-травяной профиль с ярким, «уверенным» ароматом. Для тех, кто любит ненавязчивые, утончённые смеси.",
     image: "/hookah/DarksideCOREDarkSupra.jpg",
@@ -406,7 +406,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-falling-star",
-    name: "Фрукты и ягоды, свежесть (Falling Star)",
+    name: "Манго и маракуйя (Falling Star)",
     description:
       "Сладкий тропический союз манго и маракуйи с натуральным характером: плотный аромат, чуть сахаристое послевкусие и универсальность — в соло или в миксах с ягодами и цитрусом.",
     image: "/hookah/DarksideCOREFallingStar.jpg",
@@ -421,7 +421,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-generis-raspberry",
-    name: "Спелая малина (Generis Raspberry)",
+    name: "Садовая малина (Generis Raspberry)",
     description:
       "Выразительная садовая малина с лёгкой кислинкой: сочно, ароматно и «по-летнему». Удачная база под любимые фруктовые купажи.",
     image: "/hookah/DarksideCOREGenerisRaspberry.jpg",
@@ -436,7 +436,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-lemonblast",
-    name: "Кислый лимон, цитрус (Lemonblast)",
+    name: "Лимон, мармеладная сладость (Lemonblast)",
     description:
       "Насыщенный натуральный лимон: кислота мягко подкреплена лёгкой сладостью, близкой к лимонному мармеладу. Отлично тянет и в чистом виде, и в миксе.",
     image: "/hookah/DarksideCORELemonblast.jpg",
@@ -451,7 +451,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-nordberry",
-    name: "Лесные ягоды, северный акцент (Nordberry)",
+    name: "Клюквенный сок и ягоды, прохлада (Nordberry)",
     description:
       "Освежающий кисло-сладкий ягодный микс с оттенком охлаждённого клюквенного сока — сочно, с «северной» ясностью профиля.",
     image: "/hookah/DarksideCORENordberry.jpg",
@@ -466,7 +466,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-darkside-red-rush",
-    name: "Красные ягоды, кислинка (Red Rush)",
+    name: "Барбарисовые леденцы (Red Rush)",
     description:
       "Аромат барбарисовых леденцов: сначала сладость с умеренной кислинкой, затем яркое, «узнаваемое» послевкусие. Универсален — хорош почти в любых миксах.",
     image: "/hookah/DarksideCORERedRush.jpg",
@@ -496,7 +496,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-musthave-mandarin",
-    name: "Мандарин, цитрус и кожура (Mandarin)",
+    name: "Сочный мандарин и цедра (Mandarin)",
     description:
       "Сладкий сочный мандарин в «десертном» прочтении: ясно читается мякоть и цедра. Уверенно курится соло и работает как база для фруктовых миксов.",
     image: "/hookah/MusthaveMandarin.jpg",
@@ -511,7 +511,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-musthave-nord-star",
-    name: "Кислая вишня (Nord Star)",
+    name: "Сочная вишня и свежесть (Nord Star)",
     description:
       "Сочная вишня с яркой свежестью и лёгким холодным акцентом: ягодный характер заметен с первых тяг. По задумке бренда — узнаваемый североамериканский вишнёвый профиль.",
     image: "/hookah/MusthaveNordStar.jpg",
@@ -526,7 +526,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-musthave-rocketman",
-    name: "Яркая сладость, микс (Rocketman)",
+    name: "Клубника, киви и грейпфрут (Rocketman)",
     description:
       "Клубника, киви и грейпфрут: сладкая ягодная база, травянисто-кислый киви и цитрусовый финал с лёгкой характерной горечью. Сочно в соло и гибко в миксах.",
     image: "/hookah/MusthaveRocketman.jpg",
@@ -541,7 +541,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-overdose-overcola",
-    name: "Кола, газировка (Overcola)",
+    name: "Кола с цитрусом и игристостью (Overcola)",
     description:
       "Узнаваемая кола: сладость с цитрусовыми нотами и лёгкой кислинкой, ощущение газировки в аромате. Линейка Overdose — обжаренный Burley, по характеристикам бренда крепость выше средней.",
     image: "/hookah/OverdoseOvercola.jpg",
@@ -556,7 +556,7 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "hookah-overdose-peach-iced-tea",
-    name: "Персиковый холодный чай (Peach Iced Tea)",
+    name: "Персик и ледяной чай (Peach Iced Tea)",
     description:
       "Нежный фруктовый микс с прохладным персиковым чаем — мягко, освежающе, без навязчивой приторности. Обжаренный Burley в линейке Overdose; у бренда крепость указана выше средней.",
     image: "/hookah/OverdosePeachIcedTea.jpg",
