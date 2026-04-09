@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type SetStateAction,
 } from "react";
 import { CARD_BACK_PNG_PATH, CARD_PNG_ASPECT_CLASS } from "@/lib/durak/cardPng";
@@ -97,6 +98,7 @@ import {
   DURAK_SCENE_PLAYER_HAND_FAN_TOTAL_DEG,
   DURAK_SCENE_PLAYER_HAND_SCALE,
 } from "@/lib/durak/durakSceneLayout";
+import { readDurakSafeChromeInsets } from "@/lib/readSafeAreaInsets";
 
 const HUMAN_ID = "human";
 
@@ -798,6 +800,8 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const boardPlayAreaRef = useRef<HTMLDivElement>(null);
   /** Размеры игровой колонки — единая система координат для стола, соперников и зоны игрока. */
   const [sceneRect, setSceneRect] = useState({ w: 400, h: 640 });
+  /** Safe-area + запас под Android (env в раскладке сцены в JS). */
+  const [durakChromeInsets, setDurakChromeInsets] = useState({ top: 0, bottom: 0 });
   const [lossResultTitle, setLossResultTitle] = useState("");
   const lossResultTitleGameIdRef = useRef<string | null>(null);
 
@@ -814,6 +818,19 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     ro.observe(el);
     return () => ro.disconnect();
   }, [game?.id]);
+
+  useLayoutEffect(() => {
+    const sync = () => setDurakChromeInsets(readDurakSafeChromeInsets());
+    sync();
+    window.addEventListener("resize", sync);
+    window.visualViewport?.addEventListener("resize", sync);
+    window.visualViewport?.addEventListener("scroll", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("scroll", sync);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!DURAK_TABLE_LAYOUT_DEBUG) return;
@@ -1085,8 +1102,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     return rows;
   }, [humanHand]);
   const layout = useMemo(
-    () => computeDurakSceneZoneLayout(sceneRect.w, sceneRect.h),
-    [sceneRect.w, sceneRect.h],
+    () =>
+      computeDurakSceneZoneLayout(sceneRect.w, sceneRect.h, {
+        topInsetPx: durakChromeInsets.top,
+        bottomInsetPx: durakChromeInsets.bottom,
+      }),
+    [sceneRect.w, sceneRect.h, durakChromeInsets.top, durakChromeInsets.bottom],
   );
   const orbitPxEff = layout.orbitPxEff;
   const tableRadiusPx = layout.tableRadiusPx;
@@ -1641,10 +1662,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     >
       <div
         ref={durakSceneRef}
-          className={cn(
+        className={cn(
           getDurakTableColumnClassNames(),
           "relative isolate flex-1 min-h-0 w-full overflow-x-hidden overflow-y-visible",
         )}
+        style={
+          {
+            ["--durak-scene-top" as string]: `${durakChromeInsets.top}px`,
+          } as CSSProperties
+        }
       >
         <div className="pointer-events-none absolute inset-0 z-0 bg-[#14100c]" aria-hidden />
         {tableGreeting ? (
@@ -1920,7 +1946,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         className="pointer-events-none absolute inset-x-0 isolate mx-auto flex max-w-[min(100%,580px)] flex-col gap-1 bg-[#14100c] px-1 sm:px-2"
         style={{
           top: layout.playerZoneTopY,
-          bottom: layout.tabBarReservePx,
+          bottom: layout.playerZoneBottomInsetPx,
           minHeight: 0,
           zIndex: DURAK_Z_CONTROLS,
         }}
@@ -2044,7 +2070,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
         ) : null}
 
         <div
-          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-1 pt-3 sm:pt-4"
+          className="pointer-events-none flex min-h-0 flex-1 flex-row items-end gap-2 pb-0 pt-4 sm:pt-5"
           style={{ zIndex: DURAK_Z_PLAYER_HAND }}
         >
           <div

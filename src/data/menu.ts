@@ -301,8 +301,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Ёлка",
     description:
       "Глубокий и ароматный запах еловой смолы, создающий ощущение тепла. Лёгкая свежесть и нотка эвкалипта добавляют освежающий и пряный акцент, создавая баланс между интенсивностью и свежестью. Вместе они формируют уникальное впечатление, напоминающее прогулку по лесу и ощущение природной чистоты.",
-    image: "/hookah/Elka.jpg",
-    imageList: "/hookah/Elka.jpg",
+    image: "/hookah/elka.png",
+    imageList: "/hookah/elka.png",
     category: "hookah",
     price: "490000",
     grammage: "50–60 мин",
@@ -316,8 +316,8 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
     name: "Помело",
     description:
       "Тот самый вкус помело: терпкий, кисло-сладкий с горьковатыми нотками. Это классический насыщенный вкус помело, кисло-сладкий на вдохе и с приятной горечью на выдохе. Сладкий, но в то же время не приторный табак.",
-    image: "/hookah/pomelo.jpg",
-    imageList: "/hookah/pomelo.jpg",
+    image: "/hookah/pomelo.png",
+    imageList: "/hookah/pomelo.png",
     category: "hookah",
     price: "490000",
     grammage: "50–60 мин",

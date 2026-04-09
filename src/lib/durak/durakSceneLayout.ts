@@ -67,8 +67,10 @@ export function getTableCenterYPx(viewportHeightPx: number): number {
 export function getPlayerHandCenterYPx(
   sceneHeightPx: number,
   tableRadiusPx: number,
+  bottomChromeExtraPx: number = 0,
 ): number {
   const H = Math.max(320, sceneHeightPx);
+  const extra = Math.max(0, bottomChromeExtraPx);
   const tableY = getTableCenterYPx(sceneHeightPx);
   let y = tableY + tableRadiusPx + DURAK_SCENE_HAND_OFFSET_BELOW_TABLE_PX;
   const lo = (DURAK_SCENE_PLAYER_HAND_CENTER_MIN_VH / 100) * H;
@@ -77,6 +79,7 @@ export function getPlayerHandCenterYPx(
   const maxY =
     H -
     DURAK_SCENE_BOTTOM_UI_RESERVE_PX -
+    extra -
     DURAK_SCENE_HAND_BOTTOM_CLEARANCE_PX -
     88;
   if (y > maxY) y = Math.max(lo, maxY);
@@ -95,7 +98,11 @@ export function clampTablePairOffsetYPx(params: {
   const H = Math.max(320, params.sceneHeightPx);
   const centerY = getTableCenterYPx(params.sceneHeightPx);
   const approxCardHalf = 68;
-  const handCenterPx = getPlayerHandCenterYPx(params.sceneHeightPx, getTableRadiusFromOrbitBattle(params.orbitBattlePx));
+  const handCenterPx = getPlayerHandCenterYPx(
+    params.sceneHeightPx,
+    getTableRadiusFromOrbitBattle(params.orbitBattlePx),
+    0,
+  );
   const maxBottomViewport = handCenterPx - DURAK_SCENE_TABLE_CARDS_BOTTOM_MARGIN_ABOVE_HAND_PX;
   const maxYDownFromCenter = maxBottomViewport - centerY - approxCardHalf;
   const orbitCap = params.orbitBattlePx * 0.62;

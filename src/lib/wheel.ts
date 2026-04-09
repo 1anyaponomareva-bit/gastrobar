@@ -104,19 +104,32 @@ export type FirstSegmentId = WheelSegmentId;
 export type RegularSegmentId = WheelSegmentId;
 
 /**
- * Веса 0..7, сумма 100. «без бонуса» — индекс 1 (22%), «мимо» — 5 (27%).
+ * Устаревшие веса (раньше ~50% проигрышей). Сейчас см. `computeSpinOutcome`.
  */
 export const SEGMENT_SPIN_WEIGHTS: readonly number[] = [4, 22, 10, 15, 13, 27, 3, 6];
 
-function pickWeightedSegmentIndex(weights: readonly number[]): number {
-  const total = weights.reduce((s, w) => s + w, 0);
-  if (total <= 0) return 0;
-  let r = Math.random() * total;
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i]!;
-    if (r < 0) return i;
+/** Секторы с реальным бонусом (скидка / пиво / снеки / настойки). */
+const WIN_SEGMENT_INDICES: readonly number[] = [0, 2, 3, 4, 6, 7];
+
+/** «без бонуса» и «мимо» — оба считаются проигрышем для 50/50. */
+const LOSS_SEGMENT_INDICES: readonly number[] = [1, 5];
+
+function pickRandomIndexFrom(candidates: readonly number[]): number {
+  return candidates[Math.floor(Math.random() * candidates.length)]!;
+}
+
+/** Следующий выигрыш не совпадает с последним удачным спином (в т.ч. после «мимо» между ними). */
+function winCandidatesExcludingLast(
+  lastWinSegmentIndex: number | undefined
+): readonly number[] {
+  if (
+    lastWinSegmentIndex === undefined ||
+    !WIN_SEGMENT_INDICES.includes(lastWinSegmentIndex)
+  ) {
+    return WIN_SEGMENT_INDICES;
   }
-  return weights.length - 1;
+  const filtered = WIN_SEGMENT_INDICES.filter((i) => i !== lastWinSegmentIndex);
+  return filtered.length > 0 ? filtered : WIN_SEGMENT_INDICES;
 }
 
 const REGULAR_SEGMENT_BONUS: (BonusType | null)[] = [
@@ -178,7 +191,17 @@ function markHasPlayed(): void {
 
 export function computeSpinOutcome(): SpinOutcome {
   const played = hasPlayedWheelBefore();
-  const idx = pickWeightedSegmentIndex(SEGMENT_SPIN_WEIGHTS);
+  const { lastSpinWasLoss, lastWinSegmentIndex } = getStorage();
+  const winPool = winCandidatesExcludingLast(lastWinSegmentIndex);
+
+  let idx: number;
+  if (lastSpinWasLoss) {
+    idx = pickRandomIndexFrom(winPool);
+  } else {
+    const rollWin = Math.random() < 0.5;
+    idx = rollWin ? pickRandomIndexFrom(winPool) : pickRandomIndexFrom(LOSS_SEGMENT_INDICES);
+  }
+
   const bonusType = REGULAR_SEGMENT_BONUS[idx] ?? null;
   const isLoss = bonusType === null;
 
@@ -193,6 +216,10 @@ export function computeSpinOutcome(): SpinOutcome {
 
 export type WheelStorage = {
   lastSpinAt: number;
+  /** Предыдущий спин — проигрыш; следующий обязан выпасть с бонусом (не позже 2-го кручения). */
+  lastSpinWasLoss?: boolean;
+  /** Последний сектор с реальным бонусом; не повторяем при следующем выигрыше. */
+  lastWinSegmentIndex?: number;
 };
 
 const SPIN_COOLDOWN_MS = IS_TEST_MODE ? 8000 : 24 * 60 * 60 * 1000;
@@ -203,7 +230,16 @@ export function getStorage(): WheelStorage {
     const raw = localStorage.getItem(WHEEL_STORAGE_KEY);
     if (!raw) return { lastSpinAt: 0 };
     const data = JSON.parse(raw) as WheelStorage;
-    return { lastSpinAt: data.lastSpinAt ?? 0 };
+    const rawWin = data.lastWinSegmentIndex;
+    const lastWinSegmentIndex =
+      typeof rawWin === "number" && WIN_SEGMENT_INDICES.includes(rawWin)
+        ? rawWin
+        : undefined;
+    return {
+      lastSpinAt: data.lastSpinAt ?? 0,
+      lastSpinWasLoss: data.lastSpinWasLoss === true,
+      lastWinSegmentIndex,
+    };
   } catch {
     return { lastSpinAt: 0 };
   }
@@ -235,7 +271,14 @@ function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | nu
 }
 
 export function saveSpinOutcome(outcome: SpinOutcome): Bonus | null {
-  setStorage({ lastSpinAt: Date.now() });
+  const prev = getStorage();
+  setStorage({
+    lastSpinAt: Date.now(),
+    lastSpinWasLoss: outcome.isLoss,
+    lastWinSegmentIndex: outcome.isLoss
+      ? prev.lastWinSegmentIndex
+      : outcome.segmentIndex,
+  });
   markHasPlayed();
 
   if (outcome.isLoss || !outcome.bonusType) return null;
@@ -251,5 +294,7 @@ export function resetWheelForTest(): void {
     localStorage.removeItem(WHEEL_STORAGE_KEY);
     localStorage.removeItem(HAS_PLAYED_BEFORE_KEY);
     clearCurrentBonus();
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 }
