@@ -18,7 +18,8 @@
  * Центр стола по вертикали сцены (доля ниже topInset). Меньше — стол и соперники выше,
  * меньше «чёрная полоса» под сайт-хедером, ниже зона руки и проще уместить веер над таббаром.
  */
-export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.30;
+/** Чуть ниже — якорь соперника сверху реже уезжает под фикс. хедер при малых высотах */
+export const DURAK_SCENE_TABLE_CENTER_Y_RATIO = 0.34;
 
 /** Для data-атрибутов / подписей; синхронно с `DURAK_SCENE_TABLE_CENTER_Y_RATIO`. */
 export const DURAK_SCENE_TABLE_CENTER_Y_VH = Math.round(DURAK_SCENE_TABLE_CENTER_Y_RATIO * 100);
@@ -40,6 +41,10 @@ export const DURAK_Z_GAME_HEADER_BANNERS = 50;
 
 /** Минимум между верхней границей круга стола и нижним краем веера соперника (px). */
 export const DURAK_SCENE_OPPONENT_FAN_CLEAR_BELOW_TABLE_TOP_PX = 18;
+
+/** Не рисуем якорь веера / подпись выше этой линии (y от верха колонки сцены): хедер сайта фиксирован поверх. */
+export const DURAK_OPPONENT_FAN_MIN_TOP_PX = 12;
+export const DURAK_OPPONENT_LABEL_MIN_TOP_PX = 18;
 
 /** Низ стола → верх чёрной зоны (не менять без нужды: влияет на всю нижнюю колонку). */
 export const DURAK_SCENE_HAND_CLEAR_ABOVE_TABLE_BOTTOM_PX = 6;

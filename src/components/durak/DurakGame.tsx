@@ -79,6 +79,8 @@ import {
 } from "@/lib/durak/durakTableLayoutEngine";
 import {
   computeDurakSceneZoneLayout,
+  DURAK_OPPONENT_FAN_MIN_TOP_PX,
+  DURAK_OPPONENT_LABEL_MIN_TOP_PX,
   DURAK_SCENE_TABLE_CENTER_Y_VH,
   DURAK_Z_CONTROLS,
   DURAK_Z_DECK,
@@ -1108,11 +1110,15 @@ export function DurakGame(props: DurakGameRootProps = {}) {
   const layout = useMemo(
     () =>
       computeDurakSceneZoneLayout(sceneRect.w, sceneRect.h, {
-        topInsetPx: durakChromeInsets.top,
+        /**
+         * `topInsetPx` не трогаем: на /durak страница уже даёт `padding-top: var(--app-main-padding-top)`
+         * (60px + safe-area). Плюс числовой top здесь давал двойной запас в Safari PWA и гигантский зазор до стола.
+         */
+        topInsetPx: 0,
         layoutExtraTopPx: DURAK_LAYOUT_EXTRA_TOP_UNDER_SITE_CHROME_PX,
         bottomInsetPx: durakChromeInsets.bottom,
       }),
-    [sceneRect.w, sceneRect.h, durakChromeInsets.top, durakChromeInsets.bottom],
+    [sceneRect.w, sceneRect.h, durakChromeInsets.bottom],
   );
   const orbitPxEff = layout.orbitPxEff;
   const tableRadiusPx = layout.tableRadiusPx;
@@ -1671,11 +1677,6 @@ export function DurakGame(props: DurakGameRootProps = {}) {
           getDurakTableColumnClassNames(),
           "relative isolate flex-1 min-h-0 w-full overflow-x-hidden overflow-y-visible",
         )}
-        style={
-          {
-            ["--durak-scene-top" as string]: `${durakChromeInsets.top}px`,
-          } as CSSProperties
-        }
       >
         <div className="pointer-events-none absolute inset-0 z-0 bg-[#14100c]" aria-hidden />
         {tableGreeting ? (
@@ -1769,7 +1770,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               className="pointer-events-none absolute"
               style={{
                 left: `calc(50% + ${pl.fanAx}px)`,
-                top: layout.centerY + pl.fanAy,
+                top: Math.max(DURAK_OPPONENT_FAN_MIN_TOP_PX, layout.centerY + pl.fanAy),
                 transform: `translate(-50%, -50%) rotate(${pl.fanRot}deg) scale(${pl.mults.scale})`,
                 transformOrigin: "center center",
               }}
@@ -1817,7 +1818,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               className="pointer-events-none absolute max-w-[min(9.5rem,24vw)] text-center"
               style={{
                 left: `calc(50% + ${pl.lx}px)`,
-                top: layout.centerY + pl.ly,
+                top: Math.max(DURAK_OPPONENT_LABEL_MIN_TOP_PX, layout.centerY + pl.ly),
                 transform: "translate(-50%, -50%)",
               }}
             >

@@ -15,12 +15,12 @@ export const DURAK_DECK_WRAPPER_CLASS =
 export const DURAK_DECK_TRUMP_TUCK_UNDER_DECK = true;
 
 /**
- * Колонка сцены: safe-area сверху; вертикаль стола — от высоты колонки (`ResizeObserver` в `DurakGame`), без mt от числа игроков.
+ * Колонка сцены: вертикаль — от высоты колонки (`ResizeObserver` в `DurakGame`).
+ * Safe-area + 60px шапки только в `padding-top` страницы / родителя (`--app-main-padding-top`), не дублировать здесь.
  */
 export function getDurakTableColumnClassNames(): string {
-  /* Safe-area уже в padding страницы под Header; здесь только лёгкий зазор и JS-инсеты. */
   return cn(
-    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-stretch px-0.5 pb-1 pt-[max(0.25rem,var(--durak-scene-top,0px))]",
+    "relative z-0 mx-auto flex w-full max-w-[min(100%,580px)] shrink-0 flex-col items-stretch px-0.5 pb-1 pt-1",
   );
 }
 
