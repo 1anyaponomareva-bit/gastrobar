@@ -335,14 +335,10 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                     }}
                   />
                   {barCategory === "soft" && (
-                    <div className="mb-1 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3">
-                      <p className="text-[13px] leading-relaxed text-white/82">{SOFT_DRINKS_SECTION_INTRO}</p>
-                    </div>
+                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">{SOFT_DRINKS_SECTION_INTRO}</p>
                   )}
                   {barCategory === "spirits" && (
-                    <div className="mb-1 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3">
-                      <p className="text-[13px] leading-relaxed text-white/82">{SPIRITS_SECTION_INTRO}</p>
-                    </div>
+                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">{SPIRITS_SECTION_INTRO}</p>
                   )}
                   {showWheelNavBanner && activeBonus && (
                     <div

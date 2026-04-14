@@ -49,6 +49,8 @@ export function MenuListItem({
   const isTincture = item.barSubcategory === "tincture";
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
+  /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
+  const isBarCompact = isSoftDrink || isSpirits;
   /** Одна высота для всех карточек настоек; отступ под шапку/вкладки */
   const tinctureCardH = "min(188px, calc((100dvh - 196px) / 3))";
 
@@ -56,107 +58,6 @@ export function MenuListItem({
     e.stopPropagation();
     toggleFavorite(item.id);
   };
-
-  if (isSoftDrink) {
-    return (
-      <article
-        role="button"
-        tabIndex={0}
-        data-product-id={item.id}
-        onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClick();
-          }
-        }}
-        className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
-      >
-        {isBonusItem && (
-          <div className="border-b border-white/[0.06] px-4 py-2.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">Бесплатно по бонусу</p>
-            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
-          </div>
-        )}
-        <div className="flex min-h-[92px] w-full items-center gap-3 px-4 py-3.5">
-          <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-xl bg-black/40">
-            <img
-              src={listImage}
-              alt=""
-              className="max-h-full max-w-full object-contain object-center"
-              loading="lazy"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-white">{item.name}</h3>
-            <p className="mt-1 text-[15px] font-medium tabular-nums text-white/55">{priceFormatted} VND</p>
-          </div>
-          <motion.button
-            type="button"
-            onClick={handleHeartClick}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
-            style={{ color: liked ? "#D4AF37" : "white" }}
-            aria-label={liked ? "Убрать из избранного" : "В избранное"}
-            whileTap={{ scale: 1.15 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            <HeartIcon filled={liked} />
-          </motion.button>
-        </div>
-      </article>
-    );
-  }
-
-  if (isSpirits) {
-    return (
-      <article
-        role="button"
-        tabIndex={0}
-        data-product-id={item.id}
-        onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onClick();
-          }
-        }}
-        className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0a0a0a] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
-      >
-        {isBonusItem && (
-          <div className="border-b border-white/[0.06] px-4 py-2.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">Бесплатно по бонусу</p>
-            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
-          </div>
-        )}
-        <div className="flex min-h-[100px] w-full items-center gap-3 px-4 py-3.5">
-          <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-xl bg-black/50">
-            <img
-              src={listImage}
-              alt=""
-              className="max-h-full max-w-full object-contain object-center"
-              loading="lazy"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-white">{item.name}</h3>
-            <p className="mt-0.5 text-[13px] text-white/45">{item.grammage ?? "50 мл"}</p>
-            <p className="mt-1 text-[15px] font-medium tabular-nums text-[#c9a227]/95">{priceFormatted} VND</p>
-          </div>
-          <motion.button
-            type="button"
-            onClick={handleHeartClick}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
-            style={{ color: liked ? "#D4AF37" : "white" }}
-            aria-label={liked ? "Убрать из избранного" : "В избранное"}
-            whileTap={{ scale: 1.15 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            <HeartIcon filled={liked} />
-          </motion.button>
-        </div>
-      </article>
-    );
-  }
 
   return (
     <article
@@ -225,7 +126,10 @@ export function MenuListItem({
           >
             {item.name}
           </h3>
-          {item.abv && (
+          {isSpirits && (
+            <p className="text-xs text-white/55">{item.grammage ?? "50 мл"}</p>
+          )}
+          {item.abv && !isBarCompact && (
             <span className="inline-flex w-fit shrink-0 rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
               {item.abv}
             </span>
@@ -235,14 +139,14 @@ export function MenuListItem({
               {item.pairing.map((p) => (p === "beer" ? "к пиву" : p === "cocktail" ? "к коктейлям" : "к вину")).join(", ")}
             </p>
           )}
-          {item.taste && (
+          {item.taste && !isBarCompact && (
             <p
               className={`text-white/55 ${isTincture ? "line-clamp-3 text-[11px] leading-snug" : "line-clamp-2 text-xs"}`}
             >
               {item.taste}
             </p>
           )}
-          {strengthLbl && (
+          {strengthLbl && !isBarCompact && (
             <span
               className="mt-0.5 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
@@ -290,16 +194,18 @@ export function MenuListItem({
           style={
             isTincture
               ? undefined
-              : {
-                  maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-                  WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-                  maskSize: "100% 100%",
-                  WebkitMaskSize: "100% 100%",
-                  maskPosition: "center",
-                  WebkitMaskPosition: "center",
-                  maskRepeat: "no-repeat",
-                  WebkitMaskRepeat: "no-repeat",
-                }
+              : isBarCompact
+                ? undefined
+                : {
+                    maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+                    WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+                    maskSize: "100% 100%",
+                    WebkitMaskSize: "100% 100%",
+                    maskPosition: "center",
+                    WebkitMaskPosition: "center",
+                    maskRepeat: "no-repeat",
+                    WebkitMaskRepeat: "no-repeat",
+                  }
           }
           loading="lazy"
         />
