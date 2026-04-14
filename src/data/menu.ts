@@ -386,7 +386,7 @@ export const MENU_ITEMS: MenuItem[] = [
   // Крепкий алкоголь / шоты (50 мл)
   {
     id: "gordons-gin",
-    name: "Gordon's Gin",
+    name: "Джин Gordon's",
     description: "Шот.",
     image: "/menu/gordons-gin.png",
     imageList: "/menu/gordons-gin.png",
@@ -397,7 +397,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "kahlua",
-    name: "Kahlua",
+    name: "Кофейный ликёр Kahlua",
     description: "Шот.",
     image: "/menu/kahlua.png",
     imageList: "/menu/kahlua.png",
@@ -408,7 +408,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "sambuca-vaccari",
-    name: "Sambuca Vaccari",
+    name: "Самбука Vaccari",
     description: "Шот.",
     image: "/menu/sambuca-vaccari.png",
     imageList: "/menu/sambuca-vaccari.png",
@@ -429,8 +429,19 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "spirits",
   },
   {
+    id: "b52-shot",
+    name: "Шот B-52",
+    description: "Шот.",
+    image: "/menu/cocktail_b52_ultra.png",
+    imageList: "/menu/cocktail-b52-horizontal-hero.png",
+    category: "cocktail",
+    price: "90000",
+    grammage: "50 мл",
+    barSubcategory: "spirits",
+  },
+  {
     id: "jameson",
-    name: "Jameson",
+    name: "Виски Jameson",
     description: "Шот.",
     image: "/menu/jameson.png",
     imageList: "/menu/jameson.png",
@@ -441,7 +452,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "absolut-vodka",
-    name: "Absolut Vodka",
+    name: "Водка Absolut",
     description: "Шот.",
     image: "/menu/absolut-vodka.png",
     imageList: "/menu/absolut-vodka.png",
@@ -452,7 +463,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "baileys",
-    name: "Baileys",
+    name: "Ликёр Baileys",
     description: "Шот.",
     image: "/menu/baileys.png",
     imageList: "/menu/baileys.png",
@@ -474,7 +485,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "jagermeister",
-    name: "Jägermeister",
+    name: "Ликёр Jagermeister",
     description: "Шот.",
     image: "/menu/jagermeister.png",
     imageList: "/menu/jagermeister.png",
@@ -485,7 +496,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "bombay-sapphire-gin",
-    name: "Bombay Sapphire",
+    name: "Джин Bombay Sapphire",
     description: "Шот.",
     image: "/menu/bombay-sapphire-gin.png",
     imageList: "/menu/bombay-sapphire-gin.png",
@@ -507,7 +518,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "jim-beam-apple",
-    name: "Jim Beam Apple",
+    name: "Яблочный виски Jim Beam Apple",
     description: "Шот.",
     image: "/menu/jim-beam-apple.png",
     imageList: "/menu/jim-beam-apple.png",
@@ -518,7 +529,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "jim-beam",
-    name: "Jim Beam",
+    name: "Виски Jim Beam",
     description: "Шот.",
     image: "/menu/jim-beam.png",
     imageList: "/menu/jim-beam.png",
@@ -529,7 +540,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "jack-daniels",
-    name: "Jack Daniel's",
+    name: "Виски Jack Daniel's",
     description: "Шот.",
     image: "/menu/jack-daniels.png",
     imageList: "/menu/jack-daniels.png",
