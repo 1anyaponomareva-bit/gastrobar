@@ -105,6 +105,11 @@ export function MenuListItem({
 
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-1 text-left">
           <h3 className="text-lg font-bold leading-tight text-white">{item.name}</h3>
+          {item.abv && (
+            <span className="inline-flex w-fit rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
+              {item.abv}
+            </span>
+          )}
           {item.category === "food" && item.pairing && item.pairing.length > 0 && (
             <p className="text-xs text-white/70">
               {item.pairing.map((p) => (p === "beer" ? "к пиву" : p === "cocktail" ? "к коктейлям" : "к вину")).join(", ")}

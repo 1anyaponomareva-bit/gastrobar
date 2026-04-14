@@ -151,7 +151,9 @@ export function MenuDetailView({
               className={
                 item.category === "hookah"
                   ? "h-full min-h-full w-full min-w-full object-cover object-center"
-                  : "h-full w-full object-cover object-center"
+                  : item.barSubcategory === "tincture"
+                    ? "h-full w-full object-contain object-center"
+                    : "h-full w-full object-cover object-center"
               }
             />
           </div>
@@ -180,6 +182,11 @@ export function MenuDetailView({
               <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
                 {item.name}
               </h2>
+              {item.abv && (
+                <p className="text-base font-semibold tabular-nums text-[#fde68a] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+                  Алкоголь · {item.abv}
+                </p>
+              )}
               {strengthLbl && (
                 <span
                   className="mt-1.5 inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide"
@@ -238,7 +245,13 @@ export function MenuDetailView({
                 </p>
                 <p className="text-sm text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
                   {item.grammage ??
-                    (item.category === "cocktail" ? "300 мл" : item.category === "hookah" ? "50–60 мин" : "150 г")}
+                    (item.category === "cocktail"
+                      ? item.barSubcategory === "tincture"
+                        ? "50 мл"
+                        : "300 мл"
+                      : item.category === "hookah"
+                        ? "50–60 мин"
+                        : "150 г")}
                 </p>
               </div>
             </div>

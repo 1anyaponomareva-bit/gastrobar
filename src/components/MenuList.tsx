@@ -25,6 +25,7 @@ import {
   wheelNavBannerShowTitle,
 } from "@/lib/bonusCopy";
 import type { MenuItem } from "@/data/menu";
+import { TINCTURE_SECTION_INTRO } from "@/data/menu";
 
 const HEADER_HEIGHT = 60;
 const TABS_HEIGHT = 58;
@@ -333,6 +334,11 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       minHeight: `calc(${BAR_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
                     }}
                   />
+                  {barCategory === "tincture" && (
+                    <div className="mb-1 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3">
+                      <p className="text-[13px] leading-relaxed text-white/82">{TINCTURE_SECTION_INTRO}</p>
+                    </div>
+                  )}
                   {showWheelNavBanner && activeBonus && (
                     <div
                       className="mb-3 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-br from-amber-500/[0.12] to-transparent px-4 py-3.5"
