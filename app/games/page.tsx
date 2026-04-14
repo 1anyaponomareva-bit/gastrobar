@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Игры — GASTROBAR",
-  description: "Дурак онлайн и скоро — покер.",
+  description: "Дурак онлайн и скоро — морской бой.",
   openGraph: {
     title: "Игры — GASTROBAR",
-    description: "Выбор игры за столом.",
+    description: "Дурак онлайн и скоро — морской бой.",
   },
 };
 

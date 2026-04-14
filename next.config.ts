@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
       { pathname: "/images/**" },
       { pathname: "/menu/**" },
       { pathname: "/durak.png" },
-      { pathname: "/poker.png" },
+      { pathname: "/morskboi.png" },
     ],
   },
   /**

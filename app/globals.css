@@ -310,8 +310,8 @@ html[data-durak-route="1"] body {
   background-image: url("/durak.png");
 }
 
-.games-pick-card--poker .games-pick-card__bg {
-  background-image: url("/poker.png");
+.games-pick-card--battleship .games-pick-card__bg {
+  background-image: url("/morskboi.png");
 }
 
 a:hover .games-pick-card:not(.games-pick-card--soon) .games-pick-card__bg,

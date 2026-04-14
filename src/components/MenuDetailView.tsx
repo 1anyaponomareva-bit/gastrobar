@@ -156,11 +156,27 @@ export function MenuDetailView({
                     : "h-full w-full object-cover object-center"
               }
             />
+            {item.barSubcategory === "tincture" && (
+              <div
+                className="pointer-events-none absolute inset-0 z-[1]"
+                aria-hidden
+                style={{
+                  boxShadow: "inset 0 0 0 1px rgb(0,0,0)",
+                  background: `
+                    radial-gradient(ellipse 110% 110% at 50% 42%, rgba(0,0,0,0) 28%, rgba(0,0,0,0.5) 62%, rgb(0,0,0) 100%),
+                    linear-gradient(to top, rgb(0,0,0) 0%, rgba(0,0,0,0.75) 18%, transparent 42%),
+                    linear-gradient(to bottom, rgba(0,0,0,0.98) 0%, transparent 18%),
+                    linear-gradient(to right, rgba(0,0,0,0.98) 0%, transparent 14%),
+                    linear-gradient(to left, rgba(0,0,0,0.98) 0%, transparent 14%)
+                  `,
+                }}
+              />
+            )}
           </div>
 
           {/* Градиент внизу */}
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 min-h-[280px]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 min-h-[280px] z-[2]"
             style={{
               height: "40vh",
               background: `linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.98) 15%, rgba(0,0,0,0.9) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.25) 78%, rgba(0,0,0,0) 100%)`,
@@ -168,7 +184,7 @@ export function MenuDetailView({
           />
 
           {/* Текст в тёмной зоне: крупное название, описание, цена, граммовка/объём */}
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-[max(calc(6rem+1cm),calc(env(safe-area-inset-bottom)+5rem+1cm))] pt-10">
+          <div className="absolute inset-x-0 bottom-0 z-[3] px-4 pb-[max(calc(6rem+1cm),calc(env(safe-area-inset-bottom)+5rem+1cm))] pt-10">
             <div className="space-y-3">
               {item.badge === "hit" && (
                 <span

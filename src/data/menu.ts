@@ -201,8 +201,8 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "limoncello",
     name: "Лимончелло",
     description: "Цитрус и цедра — как в Италии, только наш разлив.",
-    image: "/menu/cocktail_tincture_lemoncello_ultra.png",
-    imageList: "/menu/cocktail_tincture_lemoncello_ultra.png",
+    image: "/menu/cocktail-limoncello-horizontal-hero.png",
+    imageList: "/menu/cocktail-limoncello-horizontal-hero.png",
     category: "cocktail",
     price: "60000",
     grammage: "50 мл",
@@ -313,8 +313,8 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "passionfruit",
     name: "Маракуйя",
     description: "Чистая маракуйя — кисло-сладкий удар.",
-    image: "/menu/cocktail_tincture_passion_ultra.png",
-    imageList: "/menu/cocktail_tincture_passion_ultra.png",
+    image: "/menu/cocktail-passion-fruit-horizontal-hero.png",
+    imageList: "/menu/cocktail-passion-fruit-horizontal-hero.png",
     category: "cocktail",
     price: "60000",
     grammage: "50 мл",
@@ -745,10 +745,6 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
 
 /** Бар + кальяны — для списка избранного и общих ссылок по id. */
 export const MENU_AND_HOOKAH_ITEMS: MenuItem[] = [...MENU_ITEMS, ...HOOKAH_MENU_ITEMS];
-
-/** Текст под вкладкой «Настойки» в барном меню */
-export const TINCTURE_SECTION_INTRO =
-  "Настойки на бутылке — отливаем сами. С одной порции начинается вечер, а заканчивается он редко на первом круге.";
 
 export function strengthDisplayLabel(item: MenuItem): string | null {
   if (item.abv) return null;

@@ -190,6 +190,19 @@ export function MenuListItem({
           }
           loading="lazy"
         />
+        {isTincture && (
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] rounded-r-2xl"
+            aria-hidden
+            style={{
+              boxShadow: "inset 0 0 0 1px rgb(0,0,0)",
+              background: `
+                radial-gradient(ellipse 105% 105% at 50% 50%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.55) 68%, rgb(0,0,0) 100%),
+                linear-gradient(to top, rgb(0,0,0) 0%, rgba(0,0,0,0.65) 22%, transparent 48%)
+              `,
+            }}
+          />
+        )}
         <button
           type="button"
           onClick={(e) => {

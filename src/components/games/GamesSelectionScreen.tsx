@@ -11,7 +11,7 @@ function GameTableCardActive({
   detail,
 }: {
   href: string;
-  variant: "durak" | "poker";
+  variant: "durak";
   title: string;
   tagline: string;
   detail: string;
@@ -23,7 +23,6 @@ function GameTableCardActive({
           className={cn(
             "games-pick-card games-pick-card--interactive shadow-[0_18px_48px_-12px_rgba(0,0,0,0.75)] outline-none transition-[box-shadow] duration-300",
             variant === "durak" && "games-pick-card--durak",
-            variant === "poker" && "games-pick-card--poker",
             "group-hover:shadow-[0_22px_52px_-12px_rgba(0,0,0,0.82)]",
             "group-focus-visible:ring-2 group-focus-visible:ring-amber-400/50 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-[#030201]"
           )}
@@ -54,7 +53,7 @@ function GameTableCardSoon({
   tagline,
   detail,
 }: {
-  variant: "durak" | "poker";
+  variant: "durak" | "battleship";
   title: string;
   tagline: string;
   detail: string;
@@ -65,7 +64,7 @@ function GameTableCardSoon({
         className={cn(
           "games-pick-card games-pick-card--soon relative shadow-[0_12px_36px_-16px_rgba(0,0,0,0.8)]",
           variant === "durak" && "games-pick-card--durak",
-          variant === "poker" && "games-pick-card--poker"
+          variant === "battleship" && "games-pick-card--battleship"
         )}
         aria-disabled
       >
@@ -113,8 +112,8 @@ export function GamesSelectionScreen() {
           detail="Есть свободные места"
         />
         <GameTableCardSoon
-          variant="poker"
-          title="ПОКЕР"
+          variant="battleship"
+          title="МОРСКОЙ БОЙ"
           tagline="Скоро откроем стол"
           detail="Стол пока закрыт — загляни позже"
         />
