@@ -171,7 +171,7 @@ export function MenuListItem({
           alt=""
           className={
             isTincture
-              ? "h-full w-full object-cover object-center"
+              ? "h-full w-full origin-center scale-[1.12] object-cover object-center will-change-transform"
               : "h-full min-h-[120px] w-full object-contain object-center"
           }
           style={

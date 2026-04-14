@@ -143,7 +143,7 @@ export function MenuDetailView({
         >
           {/* Фото / иллюстрация на весь экран */}
           <div
-            className={`absolute inset-0 ${item.category === "hookah" ? "bg-gradient-to-b from-zinc-900 via-black to-black" : ""}`}
+            className={`absolute inset-0 overflow-hidden ${item.category === "hookah" ? "bg-gradient-to-b from-zinc-900 via-black to-black" : ""}`}
           >
             <img
               src={item.image}
@@ -152,7 +152,7 @@ export function MenuDetailView({
                 item.category === "hookah"
                   ? "h-full min-h-full w-full min-w-full object-cover object-center"
                   : item.barSubcategory === "tincture"
-                    ? "h-full w-full object-contain object-center"
+                    ? "h-full w-full origin-center scale-[1.08] object-contain object-center will-change-transform"
                     : "h-full w-full object-cover object-center"
               }
             />
