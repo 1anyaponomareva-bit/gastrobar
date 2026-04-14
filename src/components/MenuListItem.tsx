@@ -46,6 +46,9 @@ export function MenuListItem({
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
   const listImage = item.imageList ?? item.image;
   const strengthLbl = strengthDisplayLabel(item);
+  const isTincture = item.barSubcategory === "tincture";
+  /** В списке настоек — квадрат 1:1 (обрезка 9:16), ~3 карточки по высоте экрана */
+  const tinctureCardMaxH = "min(172px, calc((100dvh - 200px) / 3))";
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,8 +67,12 @@ export function MenuListItem({
           onClick();
         }
       }}
-      className={`relative flex min-h-[120px] w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
-      style={{ minHeight: "max(120px, 24dvh)", maxHeight: "190px" }}
+      className={`relative flex w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isTincture ? "min-h-[96px]" : "min-h-[120px]"} ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
+      style={
+        isTincture
+          ? { maxHeight: tinctureCardMaxH, minHeight: "max(96px, min(172px, calc((100dvh - 200px) / 3)))" }
+          : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
+      }
     >
       <div className="relative z-10 flex min-w-0 flex-1 flex-col py-3 pl-4 pr-2">
         {isBonusItem && (
@@ -104,7 +111,11 @@ export function MenuListItem({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-1 text-left">
-          <h3 className="text-lg font-bold leading-tight text-white">{item.name}</h3>
+          <h3
+            className={`font-bold leading-tight text-white ${isTincture ? "line-clamp-2 text-xl" : "text-lg"}`}
+          >
+            {item.name}
+          </h3>
           {item.abv && (
             <span className="inline-flex w-fit rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
               {item.abv}
@@ -148,21 +159,35 @@ export function MenuListItem({
         </div>
       </div>
 
-      <div className="relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]">
+      <div
+        className={
+          isTincture
+            ? "relative aspect-square min-h-0 w-[min(40vw,152px)] max-w-[46%] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
+            : "relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
+        }
+      >
         <img
           src={listImage}
           alt=""
-          className="h-full min-h-[120px] w-full object-contain object-center"
-          style={{
-            maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
-            maskSize: "100% 100%",
-            WebkitMaskSize: "100% 100%",
-            maskPosition: "center",
-            WebkitMaskPosition: "center",
-            maskRepeat: "no-repeat",
-            WebkitMaskRepeat: "no-repeat",
-          }}
+          className={
+            isTincture
+              ? "h-full w-full object-cover object-center"
+              : "h-full min-h-[120px] w-full object-contain object-center"
+          }
+          style={
+            isTincture
+              ? undefined
+              : {
+                  maskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+                  WebkitMaskImage: "radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)",
+                  maskSize: "100% 100%",
+                  WebkitMaskSize: "100% 100%",
+                  maskPosition: "center",
+                  WebkitMaskPosition: "center",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskRepeat: "no-repeat",
+                }
+          }
           loading="lazy"
         />
         <button
