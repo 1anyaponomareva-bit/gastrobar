@@ -39,6 +39,8 @@ export function barNavigateButtonLabel(
 ): string | null {
   if (navBarCategory === "all") return "Перейти в раздел «Все»";
   if (navBarCategory === "beer") return "Перейти в раздел «Пиво»";
+  if (navBarCategory === "soft") return "Перейти в раздел «Безалкогольные напитки»";
+  if (navBarCategory === "spirits") return "Перейти в раздел «Крепкий алкоголь / шоты»";
   if (navBarCategory === "tincture") return "Перейти в раздел «Настойки»";
   if (navBarCategory === "snacks") return "Перейти в раздел «Снеки»";
   if (hasProductId) return "Перейти к позиции в меню";
@@ -52,6 +54,8 @@ export function barSectionDisplayName(categoryId: BarCategoryId): string {
     cocktail: "Коктейли",
     wine: "Вино",
     beer: "Пиво",
+    soft: "Безалкогольные напитки",
+    spirits: "Крепкий алкоголь / шоты",
     tincture: "Настойки",
     snacks: "Снеки",
   };
@@ -87,6 +91,10 @@ export function barNavigateHintLine(
     return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Все» на вкладке «Бар».`;
   if (navBarCategory === "beer")
     return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Пиво».`;
+  if (navBarCategory === "soft")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Безалкогольные напитки».`;
+  if (navBarCategory === "spirits")
+    return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Крепкий алкоголь / шоты».`;
   if (navBarCategory === "tincture")
     return `Действует ${BONUS_VALIDITY_LABEL}. Открой раздел «Настойки».`;
   if (navBarCategory === "snacks")

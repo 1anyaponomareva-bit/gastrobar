@@ -8,6 +8,8 @@ const BAR_TABS: { id: "all" | BarSubcategory; label: string }[] = [
   { id: "cocktail", label: "Коктейли" },
   { id: "wine", label: "Вино" },
   { id: "beer", label: "Пиво" },
+  { id: "soft", label: "Безалкогольные напитки" },
+  { id: "spirits", label: "Крепкий алкоголь / шоты" },
   { id: "tincture", label: "Настойки" },
   { id: "snacks", label: "Снеки" },
 ];

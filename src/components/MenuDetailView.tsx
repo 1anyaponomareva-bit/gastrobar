@@ -92,6 +92,10 @@ export function MenuDetailView({
 
   if (!item) return null;
 
+  const isSoftDrink = item.barSubcategory === "soft";
+  const isSpirits = item.barSubcategory === "spirits";
+  const isMinimalBarCard = isSoftDrink || isSpirits;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
@@ -153,7 +157,9 @@ export function MenuDetailView({
                   ? "h-full min-h-full w-full min-w-full object-cover object-center"
                   : item.barSubcategory === "tincture"
                     ? "h-full w-full origin-center scale-[1.08] object-contain object-center will-change-transform"
-                    : "h-full w-full object-cover object-center"
+                    : isMinimalBarCard
+                      ? "h-full w-full object-contain object-center"
+                      : "h-full w-full object-cover object-center"
               }
             />
             {item.barSubcategory === "tincture" && (
@@ -178,13 +184,35 @@ export function MenuDetailView({
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 min-h-[280px] z-[2]"
             style={{
-              height: "40vh",
+              height: isMinimalBarCard ? "28vh" : "40vh",
               background: `linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.98) 15%, rgba(0,0,0,0.9) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.25) 78%, rgba(0,0,0,0) 100%)`,
             }}
           />
 
           {/* Текст в тёмной зоне: крупное название, описание, цена, граммовка/объём */}
           <div className="absolute inset-x-0 bottom-0 z-[3] px-4 pb-[max(calc(6rem+1cm),calc(env(safe-area-inset-bottom)+5rem+1cm))] pt-10">
+            {isSoftDrink ? (
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
+                  {item.name}
+                </h2>
+                <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
+                  {formatVnd(item.price)} VND
+                </p>
+              </div>
+            ) : isSpirits ? (
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
+                  {item.name}
+                </h2>
+                <p className="text-base text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+                  {item.grammage ?? "50 мл"}
+                </p>
+                <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
+                  {formatVnd(item.price)} VND
+                </p>
+              </div>
+            ) : (
             <div className="space-y-3">
               {item.badge === "hit" && (
                 <span
@@ -271,6 +299,7 @@ export function MenuDetailView({
                 </p>
               </div>
             </div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>

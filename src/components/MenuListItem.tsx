@@ -47,13 +47,116 @@ export function MenuListItem({
   const listImage = item.imageList ?? item.image;
   const strengthLbl = strengthDisplayLabel(item);
   const isTincture = item.barSubcategory === "tincture";
-  /** В списке настоек — квадрат 1:1 (обрезка 9:16), ~3 карточки по высоте экрана */
-  const tinctureCardMaxH = "min(172px, calc((100dvh - 200px) / 3))";
+  const isSoftDrink = item.barSubcategory === "soft";
+  const isSpirits = item.barSubcategory === "spirits";
+  /** Одна высота для всех карточек настоек; отступ под шапку/вкладки */
+  const tinctureCardH = "min(188px, calc((100dvh - 196px) / 3))";
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleFavorite(item.id);
   };
+
+  if (isSoftDrink) {
+    return (
+      <article
+        role="button"
+        tabIndex={0}
+        data-product-id={item.id}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
+      >
+        {isBonusItem && (
+          <div className="border-b border-white/[0.06] px-4 py-2.5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">Бесплатно по бонусу</p>
+            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
+          </div>
+        )}
+        <div className="flex min-h-[92px] w-full items-center gap-3 px-4 py-3.5">
+          <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-xl bg-black/40">
+            <img
+              src={listImage}
+              alt=""
+              className="max-h-full max-w-full object-contain object-center"
+              loading="lazy"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-white">{item.name}</h3>
+            <p className="mt-1 text-[15px] font-medium tabular-nums text-white/55">{priceFormatted} VND</p>
+          </div>
+          <motion.button
+            type="button"
+            onClick={handleHeartClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
+            style={{ color: liked ? "#D4AF37" : "white" }}
+            aria-label={liked ? "Убрать из избранного" : "В избранное"}
+            whileTap={{ scale: 1.15 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
+            <HeartIcon filled={liked} />
+          </motion.button>
+        </div>
+      </article>
+    );
+  }
+
+  if (isSpirits) {
+    return (
+      <article
+        role="button"
+        tabIndex={0}
+        data-product-id={item.id}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0a0a0a] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
+      >
+        {isBonusItem && (
+          <div className="border-b border-white/[0.06] px-4 py-2.5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">Бесплатно по бонусу</p>
+            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
+          </div>
+        )}
+        <div className="flex min-h-[100px] w-full items-center gap-3 px-4 py-3.5">
+          <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-xl bg-black/50">
+            <img
+              src={listImage}
+              alt=""
+              className="max-h-full max-w-full object-contain object-center"
+              loading="lazy"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-white">{item.name}</h3>
+            <p className="mt-0.5 text-[13px] text-white/45">{item.grammage ?? "50 мл"}</p>
+            <p className="mt-1 text-[15px] font-medium tabular-nums text-[#c9a227]/95">{priceFormatted} VND</p>
+          </div>
+          <motion.button
+            type="button"
+            onClick={handleHeartClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
+            style={{ color: liked ? "#D4AF37" : "white" }}
+            aria-label={liked ? "Убрать из избранного" : "В избранное"}
+            whileTap={{ scale: 1.15 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
+            <HeartIcon filled={liked} />
+          </motion.button>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -67,14 +170,16 @@ export function MenuListItem({
           onClick();
         }
       }}
-      className={`relative flex w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isTincture ? "min-h-[96px]" : "min-h-[120px]"} ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
+      className={`relative flex w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isTincture ? "" : "min-h-[120px]"} ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
       style={
         isTincture
-          ? { maxHeight: tinctureCardMaxH, minHeight: "max(96px, min(172px, calc((100dvh - 200px) / 3)))" }
+          ? { height: tinctureCardH, minHeight: tinctureCardH, maxHeight: tinctureCardH }
           : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
       }
     >
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col py-3 pl-4 pr-2">
+      <div
+        className={`relative z-10 flex min-w-0 flex-1 flex-col pl-4 pr-2 ${isTincture ? "min-h-0 py-2.5" : "py-3"}`}
+      >
         {isBonusItem && (
           <div className="mb-2 w-full shrink-0 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/12 to-transparent px-3 py-2">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">
@@ -84,8 +189,10 @@ export function MenuListItem({
           </div>
         )}
 
-        <div className={`flex items-start justify-between gap-2 ${isBonusItem ? "mb-1" : "mb-2"}`}>
-          <div className="min-h-[28px] min-w-0 flex-1">
+        <div
+          className={`flex items-start justify-between gap-2 ${isBonusItem ? "mb-1" : isTincture ? "mb-1.5 shrink-0" : "mb-2"}`}
+        >
+          <div className="flex min-h-[28px] min-w-0 flex-1 items-center">
             {!isBonusItem && item.badge === "hit" && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-black"
@@ -110,14 +217,16 @@ export function MenuListItem({
           </motion.button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col justify-end gap-1 text-left">
+        <div
+          className={`flex min-h-0 flex-1 flex-col gap-1 text-left ${isTincture ? "justify-start" : "justify-end"}`}
+        >
           <h3
-            className={`font-bold leading-tight text-white ${isTincture ? "line-clamp-2 text-xl" : "text-lg"}`}
+            className={`font-bold leading-tight text-white ${isTincture ? "line-clamp-2 text-lg" : "text-lg"}`}
           >
             {item.name}
           </h3>
           {item.abv && (
-            <span className="inline-flex w-fit rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
+            <span className="inline-flex w-fit shrink-0 rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
               {item.abv}
             </span>
           )}
@@ -127,7 +236,11 @@ export function MenuListItem({
             </p>
           )}
           {item.taste && (
-            <p className="line-clamp-2 text-xs text-white/55">{item.taste}</p>
+            <p
+              className={`text-white/55 ${isTincture ? "line-clamp-3 text-[11px] leading-snug" : "line-clamp-2 text-xs"}`}
+            >
+              {item.taste}
+            </p>
           )}
           {strengthLbl && (
             <span
@@ -151,7 +264,7 @@ export function MenuListItem({
             </span>
           )}
           <span
-            className="mt-2 inline-flex w-fit max-w-full rounded-full px-3 py-1 text-sm font-medium text-white/90"
+            className={`inline-flex w-fit max-w-full shrink-0 rounded-full px-3 py-1 text-sm font-medium text-white/90 ${isTincture ? "mt-1" : "mt-2"}`}
             style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
           >
             {priceFormatted} VND
@@ -162,7 +275,7 @@ export function MenuListItem({
       <div
         className={
           isTincture
-            ? "relative aspect-square min-h-0 w-[min(40vw,152px)] max-w-[46%] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
+            ? "relative aspect-square h-full min-h-0 w-auto max-w-[46%] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
             : "relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
         }
       >
