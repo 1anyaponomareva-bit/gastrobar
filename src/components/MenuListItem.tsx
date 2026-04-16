@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
-import { strengthDisplayLabel } from "@/data/menu";
+import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
 
 function formatVnd(price: string): string {
@@ -47,6 +47,7 @@ export function MenuListItem({
   const listImage = item.imageList ?? item.image;
   const strengthLbl = strengthDisplayLabel(item);
   const isTincture = item.barSubcategory === "tincture";
+  const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
   /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
@@ -188,7 +189,9 @@ export function MenuListItem({
           alt=""
           className={
             isTincture
-              ? "h-full w-full origin-center scale-[1.12] object-cover object-center will-change-transform"
+              ? `h-full w-full origin-center scale-[1.12] object-cover will-change-transform ${
+                  tinctureListRimFocus ? "object-[50%_40%]" : "object-center"
+                }`
               : "h-full min-h-[120px] w-full object-contain object-center"
           }
           style={

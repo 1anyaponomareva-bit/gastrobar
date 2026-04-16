@@ -36,6 +36,15 @@ export type MenuItem = {
   pairing?: ("beer" | "cocktail" | "wine")[];
 };
 
+/** Настойки с рюмкой в верхней части кадра: без сдвига object-position верх рюмки режется (cover + scale). */
+export const TINCTURE_RIM_FOCUS_IDS = new Set<string>([
+  "pineapple-vanilla",
+  "coffee-chocolate",
+  "raspberry-rose",
+  "apple-strudel",
+  "strawberry-cream",
+]);
+
 export const MENU_ITEMS: MenuItem[] = [
   // БАР: коктейли → вино → пиво → настойки → шоты → безалкогольные → снеки
   {

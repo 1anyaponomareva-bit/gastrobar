@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
-import { strengthDisplayLabel } from "@/data/menu";
+import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { hookahDescriptionForCard } from "@/lib/hookahDescriptionTrim";
 
 function formatVnd(price: string): string {
@@ -95,6 +95,8 @@ export function MenuDetailView({
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
   const isMinimalBarCard = isSoftDrink || isSpirits;
+  const tinctureDetailRimFocus =
+    item.barSubcategory === "tincture" && TINCTURE_RIM_FOCUS_IDS.has(item.id);
 
   return (
     <motion.div
@@ -156,7 +158,9 @@ export function MenuDetailView({
                 item.category === "hookah"
                   ? "h-full min-h-full w-full min-w-full object-cover object-center"
                   : item.barSubcategory === "tincture"
-                    ? "h-full w-full origin-center scale-[1.08] object-contain object-center will-change-transform"
+                    ? `h-full w-full origin-center scale-[1.08] object-contain will-change-transform ${
+                        tinctureDetailRimFocus ? "object-[50%_42%]" : "object-center"
+                      }`
                     : isMinimalBarCard
                       ? "h-full w-full object-contain object-center"
                       : "h-full w-full object-cover object-center"
