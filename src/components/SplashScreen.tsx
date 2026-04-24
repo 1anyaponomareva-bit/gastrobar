@@ -6,7 +6,7 @@ import gsap from "gsap";
 const LANGUAGES = [
   { id: "en", flag: "🇬🇧", label: "UK" },
   { id: "ru", flag: "🇷🇺", label: "RU" },
-  { id: "vi", flag: "🇻🇳", label: "VN" },
+  { id: "vn", flag: "🇻🇳", label: "VN" },
 ] as const;
 
 type LangId = (typeof LANGUAGES)[number]["id"];
@@ -229,7 +229,7 @@ export function SplashScreen({ onComplete }: { onComplete: (lang: LangId) => voi
 
   const handleLanguageSelect = (lang: LangId) => {
     try {
-      localStorage.setItem("gastrobar-lang", lang);
+      localStorage.setItem("lang", lang);
     } catch {}
     const overlay = overlayRef.current;
     if (!overlay) {

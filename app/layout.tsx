@@ -11,6 +11,8 @@ import { PromoBanner } from "@/components/PromoBanner";
 import { DailyCacheVersionScript } from "@/components/DailyCacheVersionScript";
 import { GastrobarGamesCardBgVersionStyle } from "@/components/GastrobarGamesCardBgVersionStyle";
 import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
+import { I18nProvider } from "@/lib/useTranslation";
+import { I18nDocumentTitle } from "@/components/I18nDocumentTitle";
 
 const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
@@ -60,20 +62,23 @@ export default function RootLayout({
         <GastrobarGamesCardBgVersionStyle />
         <DailyCacheVersionScript />
         <ServiceWorkerCleanup />
-        <ThemeProvider initialPeriod="bar">
-          <FavoritesProvider>
-            <HighlightProductProvider>
-              <BarHomeProvider>
-                <AppWithSplash>
-                  <BonusScreenProvider>
-                    <div className="app min-h-[100dvh] min-h-[100svh]">{children}</div>
-                    <PromoBanner />
-                  </BonusScreenProvider>
-                </AppWithSplash>
-              </BarHomeProvider>
-            </HighlightProductProvider>
-          </FavoritesProvider>
-        </ThemeProvider>
+        <I18nProvider>
+          <I18nDocumentTitle />
+          <ThemeProvider initialPeriod="bar">
+            <FavoritesProvider>
+              <HighlightProductProvider>
+                <BarHomeProvider>
+                  <AppWithSplash>
+                    <BonusScreenProvider>
+                      <div className="app min-h-[100dvh] min-h-[100svh]">{children}</div>
+                      <PromoBanner />
+                    </BonusScreenProvider>
+                  </AppWithSplash>
+                </BarHomeProvider>
+              </HighlightProductProvider>
+            </FavoritesProvider>
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

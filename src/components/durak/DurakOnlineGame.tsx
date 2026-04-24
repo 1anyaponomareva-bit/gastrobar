@@ -30,6 +30,7 @@ import {
 } from "@/lib/durak/online/matchmaking";
 import type { RoomStatePayload } from "@/lib/durak/online/types";
 import type { DurakGameEmbeddedProps } from "./DurakGame";
+import { useTranslation } from "@/lib/useTranslation";
 
 type Props = {
   roomId: string;
@@ -181,7 +182,7 @@ function normalizePlayers(raw: unknown): Player[] | null {
     const seatIndex = typeof siRaw === "number" && siRaw >= 0 ? siRaw : i;
     out.push({
       id,
-      name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "Игрок",
+      name: typeof p.name === "string" && p.name.trim() ? p.name.trim() : "",
       type: normalizePlayerType(p.type),
       hand,
       seatIndex,
@@ -270,6 +271,7 @@ function coerceRemoteGame(raw: unknown, stableTableId?: string | null): GameTabl
  * Сброс только `message` в DurakGame не должен подставлять целиком устаревший `embedded.game` — иначе пропадает отбой соперника.
  */
 export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Props) {
+  const { t } = useTranslation();
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const playerId = useMemo(() => getOrCreateDurakPlayerId(), []);
@@ -277,8 +279,8 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
   useEffect(() => {
     const c = createSupabaseBrowserClient();
     setSupabase(c);
-    if (!c) setError("Нет настроек Supabase");
-  }, []);
+    if (!c) setError(t("dog_err_supabase"));
+  }, [t]);
   const [game, setGame] = useState<GameTable | null>(null);
   /** Победа по отсутствию соперника (отдельный текст оверлея). */
   const [opponentForfeitWin, setOpponentForfeitWin] = useState(false);
@@ -722,7 +724,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           className="rounded-full border border-white/25 px-4 py-2 text-sm text-white/90"
           style={{ color: "#f8fafc", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9999, padding: "0.5rem 1rem" }}
         >
-          Назад
+          {t("back")}
         </button>
       </div>
     );
@@ -743,7 +745,7 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           fontSize: 14,
         }}
       >
-        Подключение…
+        {t("mm_connecting")}
       </div>
     );
   }
@@ -768,16 +770,16 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
           fontSize: 14,
         }}
       >
-        <span>Загрузка стола…</span>
+        <span>{t("dog_loading_table")}</span>
         <span className="max-w-[20rem] text-xs text-white/35" style={{ maxWidth: "20rem", fontSize: 12, color: "rgba(248,250,252,0.45)" }}>
-          Если экран пустой долго, обновите страницу или проверьте сеть.
+          {t("dog_loading_hint")}
         </span>
         <button
           type="button"
           onClick={leaveMatchAndParent}
           className="mt-4 rounded-full border border-white/25 px-4 py-2 text-[13px] font-medium text-white/90"
         >
-          Выйти из стола
+          {t("dog_leave_table")}
         </button>
       </div>
     );

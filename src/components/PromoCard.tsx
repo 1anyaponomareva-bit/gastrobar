@@ -3,13 +3,12 @@
 import { motion } from "framer-motion";
 
 import { getAssetUrl } from "@/lib/appVersion";
+import { useTranslation } from "@/lib/useTranslation";
 
 const PROMO_IMAGE = "/menu/promo_happy_hour_ultra.png";
-const PROMO_TITLE = "HAPPY HOURS";
-const PROMO_DESCRIPTION =
-  "Ежедневно с 19:00 до 20:00 специальная цена на коктейльную карту.";
 
 export function PromoCard() {
+  const { t } = useTranslation();
   return (
     <motion.article
       initial={{ opacity: 1, y: 0 }}
@@ -21,7 +20,7 @@ export function PromoCard() {
       <div className="absolute inset-0 h-full w-full">
         <img
           src={getAssetUrl(PROMO_IMAGE)}
-          alt={PROMO_TITLE}
+          alt={t("promo_happy_hours_title")}
           className="min-h-full min-w-full h-full w-full object-cover object-center"
           loading="eager"
         />
@@ -35,10 +34,10 @@ export function PromoCard() {
       <div className="absolute inset-x-0 bottom-0 px-4 pb-[max(calc(6rem+1cm),calc(env(safe-area-inset-bottom)+5rem+1cm))] pt-28">
         <div className="space-y-2">
           <h3 className="text-xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-            {PROMO_TITLE}
+            {t("promo_happy_hours_title")}
           </h3>
           <p className="line-clamp-3 text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-            {PROMO_DESCRIPTION}
+            {t("promo_happy_hours_desc")}
           </p>
         </div>
       </div>

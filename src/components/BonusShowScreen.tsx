@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Bonus, BonusStatus } from "@/services/bonusService";
+import type { Bonus } from "@/services/bonusService";
 import {
   getBonusStatus,
   getCurrentBonus,
@@ -10,24 +10,23 @@ import {
   formatRemainingTime,
   isBonusExpired,
   removeActiveBonus,
-  getBonusDescription,
 } from "@/services/bonusService";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import { bonusDisplayTitleT, bonusDisplayDescriptionT } from "@/lib/bonusCopyI18n";
+import type { BonusTypeKey } from "@/lib/bonusCopy";
+import { useTranslation } from "@/lib/useTranslation";
 
 const HOLD_DURATION_MS = 1800; // 1.8 сек long press
-
-const STATUS_LABELS: Record<BonusStatus, string> = {
-  active: "Активен",
-  redeemed: "Использован",
-  expired: "Сгорел",
-};
-
 
 type Props = { bonus: Bonus; onClose: () => void };
 
 export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
+  const { t, lang } = useTranslation();
   const [bonus, setBonus] = useState(initialBonus);
   const status = getBonusStatus(bonus);
+  const title = bonusDisplayTitleT(t, bonus.type as BonusTypeKey, bonus.productId ?? null, lang);
+  const description = bonusDisplayDescriptionT(t, bonus.type as BonusTypeKey, bonus.productId ?? null, lang);
+  const statusLabel =
+    status === "active" ? t("bonus_status_active") : status === "redeemed" ? t("bonus_status_redeemed") : t("bonus_status_expired");
   const [holdProgress, setHoldProgress] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const holdStartRef = useRef<number | null>(null);
@@ -111,7 +110,7 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
           type="button"
           onClick={onClose}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white"
-          aria-label="Закрыть"
+          aria-label={t("close")}
         >
           <svg
             width="20"
@@ -144,31 +143,31 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
             }}
           >
             <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/75">
-              Бонус
+              {t("bonus_label")}
             </p>
             <h1 className="mt-2 text-center text-xl font-bold leading-snug text-white sm:text-2xl">
-              {bonus.title}
+              {title}
             </h1>
             <p className="mt-2 text-center text-sm text-white/55">
-              Покажи этот экран бармену
+              {t("bonus_card_show_bartender")}
             </p>
 
             <p className="mt-3 text-center text-[15px] leading-relaxed text-white/78">
-              {bonus.description ?? getBonusDescription(bonus.type, bonus.productId)}
+              {description}
             </p>
             <p className="mt-1.5 text-center text-xs text-amber-500/70">
-              Действует 2 часа
+              {t("bonus_card_valid")}
             </p>
 
             {isActive && (
               <p className="mt-3 text-center font-mono text-2xl tabular-nums text-amber-400/95">
-                Осталось {formatRemainingTime(initialBonus.expiresAt)}
+                {t("remaining_prefix")} {formatRemainingTime(initialBonus.expiresAt)}
               </p>
             )}
 
             <div className="mt-4 rounded-2xl border border-amber-500/35 bg-black/50 px-4 py-4">
               <p className="text-center text-[10px] uppercase tracking-widest text-white/50">
-                Код бонуса
+                {t("code_bonus")}
               </p>
               <p className="mt-1.5 text-center font-mono text-3xl font-bold tracking-[0.25em] text-amber-400">
                 {bonus.id}
@@ -185,16 +184,16 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
                       : "bg-red-950/40 text-red-400/90"
                 }`}
               >
-                {STATUS_LABELS[status]}
+                {statusLabel}
               </span>
             </div>
 
             {status === "redeemed" && (
-              <p className="mt-3 text-center text-sm text-white/40">Бонус погашен</p>
+              <p className="mt-3 text-center text-sm text-white/40">{t("bonus_redeemed_note")}</p>
             )}
 
             {status === "expired" && (
-              <p className="mt-3 text-center text-sm text-white/40">Время действия истекло</p>
+              <p className="mt-3 text-center text-sm text-white/40">{t("bonus_time_expired")}</p>
             )}
           </div>
 
@@ -205,7 +204,7 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
               onClick={onClose}
               className="w-full rounded-full border border-amber-500/45 bg-transparent py-3 text-sm font-semibold text-amber-400"
             >
-              Закрыть
+              {t("close")}
             </button>
 
             {isActive ? (
@@ -220,18 +219,18 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
                   onMouseDown={startHold}
                   onMouseUp={cancelHold}
                   onMouseLeave={cancelHold}
-                  aria-label="Удерживайте для погашения бонуса"
+                  aria-label={t("aria_redeem_hold")}
                 >
                   <div
                     className="absolute inset-y-0 left-0 bg-amber-500/25 transition-[width] duration-75"
                     style={{ width: `${holdProgress * 100}%` }}
                   />
                   <p className="relative z-10 text-center text-sm font-medium text-white/75">
-                    {isHolding ? "Подождите…" : "Погасить бонус"}
+                    {isHolding ? t("hold_wait") : t("hold_redeem")}
                   </p>
                 </div>
                 <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                  Для персонала
+                  {t("for_staff")}
                 </p>
               </div>
             ) : null}
@@ -261,10 +260,10 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-center text-lg font-semibold text-white">
-                Погасить бонус?
+                {t("redeem_confirm_title")}
               </h3>
               <p className="mt-2 text-center text-sm text-white/60">
-                После подтверждения бонус нельзя будет использовать повторно.
+                {t("redeem_confirm_text")}
               </p>
               <div className="mt-6 flex gap-3">
                 <button
@@ -272,14 +271,14 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
                   onClick={() => setShowConfirmModal(false)}
                   className="flex-1 rounded-full border border-white/25 py-3 font-semibold text-white/90"
                 >
-                  Отмена
+                  {t("cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmRedeem}
                   className="flex-1 rounded-full bg-amber-500 py-3 font-semibold text-black"
                 >
-                  Подтвердить
+                  {t("confirm")}
                 </button>
               </div>
             </motion.div>

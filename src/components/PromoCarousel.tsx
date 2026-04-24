@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PROMOS, type PromoItem } from "@/data/promos";
 import { getAssetUrl } from "@/lib/appVersion";
 import { useBarHome } from "@/components/BarHomeContext";
+import { useTranslation } from "@/lib/useTranslation";
 
 const CENTER_SCALE = 1;
 const SIDE_SCALE = 0.88;
@@ -12,16 +13,22 @@ const SIDE_ROTATE = 14;
 const SWIPE_THRESHOLD = 48;
 const CARD_ASPECT = 9 / 16;
 
+function promoI18nKey(promoId: string, field: "title" | "desc"): string {
+  return `promo_${promoId.replace(/-/g, "_")}_${field === "title" ? "title" : "desc"}`;
+}
+
 function PromoSlide({
   promo,
   index,
   currentIndex,
   onSelect,
+  t,
 }: {
   promo: PromoItem;
   index: number;
   currentIndex: number;
   onSelect: () => void;
+  t: (k: string) => string;
 }) {
   const diff = index - currentIndex;
   const isCenter = diff === 0;
@@ -68,9 +75,11 @@ function PromoSlide({
           background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 45%, transparent 100%)",
         }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Акция</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">
+          {t("promo_screen_badge")}
+        </p>
         <h3 className="mt-1.5 text-[17px] font-semibold leading-snug tracking-tight text-white/95 line-clamp-2">
-          {promo.title}
+          {t(promoI18nKey(promo.id, "title"))}
         </h3>
         <p className="mt-2 font-medium tracking-wide text-amber-400/95" style={{ fontSize: "15px" }}>
           {promo.price}
@@ -81,6 +90,7 @@ function PromoSlide({
 }
 
 export function PromoCarousel() {
+  const { t } = useTranslation();
   const { barHomeToken } = useBarHome();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [detailPromo, setDetailPromo] = useState<PromoItem | null>(null);
@@ -134,6 +144,7 @@ export function PromoCarousel() {
             promo={promo}
             index={index}
             currentIndex={currentIndex}
+            t={t}
             onSelect={() => {
               if (index === currentIndex) setDetailPromo(promo);
               else goTo(index);
@@ -159,7 +170,9 @@ export function PromoCarousel() {
               backgroundColor: i === currentIndex ? "#C9A227" : "rgba(255,255,255,0.12)",
               opacity: i === currentIndex ? 1 : 0.65,
             }}
-            aria-label={`Акция ${i + 1} из ${PROMOS.length}`}
+            aria-label={t("promo_pager_aria")
+              .replace("{current}", String(i + 1))
+              .replace("{total}", String(PROMOS.length))}
           />
         ))}
       </div>
@@ -191,24 +204,26 @@ export function PromoCarousel() {
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500/65">
-                    Подробнее
+                    {t("promo_detail_more")}
                   </p>
                   <h3 className="mt-2 text-xl font-semibold leading-snug text-white">
-                    {detailPromo.title}
+                    {t(promoI18nKey(detailPromo.id, "title"))}
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailPromo(null)}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80"
-                  aria-label="Закрыть"
+                  aria-label={t("promo_close")}
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <p className="text-[15px] leading-relaxed text-white/72">{detailPromo.description}</p>
+              <p className="text-[15px] leading-relaxed text-white/72">
+                {t(promoI18nKey(detailPromo.id, "desc"))}
+              </p>
               <p className="mt-5 text-lg font-semibold text-amber-400">{detailPromo.price}</p>
             </motion.div>
           </motion.div>

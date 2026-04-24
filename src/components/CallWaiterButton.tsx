@@ -2,14 +2,16 @@
 
 import { motion } from "framer-motion";
 import { Bell } from "lucide-react";
+import { useTranslation } from "@/lib/useTranslation";
 
 export function CallWaiterButton() {
+  const { t } = useTranslation();
   const handleClick = () => {
     if (typeof document !== "undefined" && "startViewTransition" in document) {
       (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {});
     }
     // В реальном приложении здесь запрос к API / вызвать официанта
-    alert("Официант вызван. Ожидайте, пожалуйста.");
+    alert(t("call_waiter_alert"));
   };
 
   return (
@@ -24,7 +26,7 @@ export function CallWaiterButton() {
       }}
     >
       <Bell className="h-5 w-5" />
-      Вызвать официанта
+      {t("call_waiter")}
     </motion.button>
   );
 }

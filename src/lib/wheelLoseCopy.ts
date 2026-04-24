@@ -1,7 +1,9 @@
 /**
  * Тексты проигрышных секторов колеса («мимо», «без бонуса»).
- * Случайный выбор без повтора одного и того же варианта подряд (sessionStorage).
+ * Случайный выбор без повтора — индексы; строки — через i18n (t).
  */
+
+import type { TFn } from "@/lib/bonusCopyI18n";
 
 export type WheelLoseCopyBundle = {
   title: string;
@@ -13,61 +15,8 @@ export type WheelLoseCopyBundle = {
 const STORAGE_LAST_MIMO = "gastrobar_wheel_lose_mimo_last_ix";
 const STORAGE_LAST_NO_BONUS = "gastrobar_wheel_lose_nobonus_last_ix";
 
-export const loseTexts: readonly WheelLoseCopyBundle[] = [
-  {
-    title: "В этот раз мимо 😏",
-    subtitle: "Но вкус уже есть",
-    footer: "Попробуй Виски Сауэр 👀",
-  },
-  {
-    title: "Мимо 😏",
-    subtitle: "Но направление верное",
-    footer: "Бармен сегодня чаще наливает Sapporo 👀",
-  },
-  {
-    title: "Не выпало 😏",
-    subtitle: "Но здесь сложно ошибиться",
-    footer: "Попробуй Лонг Айленд 👀",
-  },
-  {
-    title: "Мимо 😏",
-    subtitle: "Но вечер только начинается",
-    footer: "Бармен сегодня часто делает Б-52 👀",
-  },
-  {
-    title: "В этот раз мимо 😏",
-    subtitle: "Но выбор уже хороший",
-    footer: "Сейчас часто берут Виски Сауэр 👀",
-  },
-];
-
-export const noBonusTexts: readonly WheelLoseCopyBundle[] = [
-  {
-    title: "Без бонуса… но с хорошим вкусом 😉",
-    subtitle: "А это здесь важнее",
-    footer: "Бармен сегодня чаще наливает Sapporo 👀",
-  },
-  {
-    title: "Сегодня без бонуса 😉",
-    subtitle: "Но выбор отличный",
-    footer: "Попробуй Виски Сауэр 👀",
-  },
-  {
-    title: "Без бонуса 😉",
-    subtitle: "Зато вкус уже есть",
-    footer: "Попробуй Лонг Айленд 👀",
-  },
-  {
-    title: "Сегодня так 😉",
-    subtitle: "Но всё по делу",
-    footer: "Бармен сегодня часто делает Б-52 👀",
-  },
-  {
-    title: "Без бонуса 😉",
-    subtitle: "Но здесь сложно ошибиться",
-    footer: "Сейчас часто берут Sapporo 👀",
-  },
-];
+export const MIMO_LOSE_COUNT = 5;
+export const NOB_LOSE_COUNT = 5;
 
 function readLastIndex(key: string): number {
   if (typeof window === "undefined") return -1;
@@ -104,12 +53,28 @@ function pickNonRepeating(length: number, storageKey: string): number {
   return idx;
 }
 
-export function pickMimoLoseCopy(): WheelLoseCopyBundle {
-  const i = pickNonRepeating(loseTexts.length, STORAGE_LAST_MIMO);
-  return loseTexts[i]!;
+export function pickMimoLoseIndex(): number {
+  return pickNonRepeating(MIMO_LOSE_COUNT, STORAGE_LAST_MIMO);
 }
 
-export function pickNoBonusLoseCopy(): WheelLoseCopyBundle {
-  const i = pickNonRepeating(noBonusTexts.length, STORAGE_LAST_NO_BONUS);
-  return noBonusTexts[i]!;
+export function pickNoBonusLoseIndex(): number {
+  return pickNonRepeating(NOB_LOSE_COUNT, STORAGE_LAST_NO_BONUS);
+}
+
+export function mimoLoseCopyFromT(t: TFn, i: number): WheelLoseCopyBundle {
+  const n = Math.max(0, Math.min(i, MIMO_LOSE_COUNT - 1));
+  return {
+    title: t(`wheel_mimo_${n}_title`),
+    subtitle: t(`wheel_mimo_${n}_sub`),
+    footer: t(`wheel_mimo_${n}_foot`),
+  };
+}
+
+export function noBonusLoseCopyFromT(t: TFn, i: number): WheelLoseCopyBundle {
+  const n = Math.max(0, Math.min(i, NOB_LOSE_COUNT - 1));
+  return {
+    title: t(`wheel_nob_${n}_title`),
+    subtitle: t(`wheel_nob_${n}_sub`),
+    footer: t(`wheel_nob_${n}_foot`),
+  };
 }

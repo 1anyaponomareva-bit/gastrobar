@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { getAssetUrl } from "@/lib/appVersion";
 import { motion } from "framer-motion";
 import { CONFIG } from "@/lib/config";
+import { useTranslation } from "@/lib/useTranslation";
 
 const STORAGE_LAST_SHOWN = "gastrobar-tg-popup-last-shown";
 const SESSION_SHOWN = "gastrobar-tg-popup-shown-session";
@@ -55,6 +56,7 @@ function isDurakPath(path: string): boolean {
 }
 
 export function PromoBanner() {
+  const { t } = useTranslation();
   const pathname = usePathname() ?? "";
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -111,7 +113,7 @@ export function PromoBanner() {
         className="relative w-[90vw] max-w-sm rounded-2xl bg-black/90 p-4 shadow-xl ring-1 ring-white/10"
       >
         <p className="mb-3 text-center text-[15px] font-semibold leading-snug text-white">
-          Приглашаем подписаться на группу GASTROBAR в Telegram — акции и новости.
+          {t("promo_tg")}
         </p>
         <a
           href={CONFIG.telegramUrl}
@@ -121,11 +123,11 @@ export function PromoBanner() {
             close();
           }}
           className="block cursor-pointer touch-manipulation overflow-hidden rounded-xl bg-black outline-none ring-offset-0 transition-opacity active:opacity-95"
-          aria-label="Открыть Telegram-группу GASTROBAR"
+          aria-label={t("aria_tg_group")}
         >
           <img
             src={getAssetUrl(PROMO_IMAGE)}
-            alt="Подписка на Telegram-группу GASTROBAR"
+            alt={t("promo_tg_img_alt")}
             className="pointer-events-none h-auto max-h-[min(72vh,520px)] w-full object-contain select-none"
             draggable={false}
           />
@@ -138,7 +140,7 @@ export function PromoBanner() {
             close();
           }}
           className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/90 backdrop-blur-sm transition hover:bg-black/80 hover:text-white"
-          aria-label="Закрыть"
+          aria-label={t("close")}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

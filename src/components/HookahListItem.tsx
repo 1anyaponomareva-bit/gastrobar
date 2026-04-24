@@ -4,7 +4,9 @@ import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { getAssetUrl } from "@/lib/appVersion";
-import { strengthDisplayLabel } from "@/data/menu";
+import { strengthLabelKey } from "@/lib/menuStrengthLabel";
+import { menuItemDisplayName } from "@/lib/menuItemI18n";
+import { useTranslation } from "@/lib/useTranslation";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -40,12 +42,14 @@ export function HookahListItem({
   highlightProductId?: string | null;
   onClick: () => void;
 }) {
+  const { t, lang } = useTranslation();
+  const displayName = menuItemDisplayName(item, lang);
   const { isFavorite, toggleFavorite } = useFavorites();
   const liked = isFavorite(item.id);
   const priceFormatted = formatVnd(item.price);
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
   const listImage = getAssetUrl(item.imageList ?? item.image);
-  const strengthLabel = strengthDisplayLabel(item);
+  const strengthK = strengthLabelKey(item);
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,7 +86,7 @@ export function HookahListItem({
           }}
           className="absolute left-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white/70 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
           style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
-          aria-label="Подробнее"
+          aria-label={t("aria_open_details")}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
@@ -100,7 +104,7 @@ export function HookahListItem({
                 aria-hidden
               >
                 <span className="leading-none">🔥</span>
-                <span>Хит</span>
+                <span>{t("hit_badge")}</span>
               </span>
             )}
           </div>
@@ -109,7 +113,7 @@ export function HookahListItem({
             onClick={handleHeartClick}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
             style={{ color: liked ? "#D4AF37" : "white" }}
-            aria-label={liked ? "Убрать из избранного" : "В избранное"}
+            aria-label={liked ? t("favorite_remove") : t("favorite_add")}
             whileTap={{ scale: 1.2 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
@@ -118,20 +122,20 @@ export function HookahListItem({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-1 text-left">
-          <h3 className="text-lg font-bold leading-tight text-white">{item.name}</h3>
+          <h3 className="text-lg font-bold leading-tight text-white">{displayName}</h3>
           {item.tobacco && (
             <p className="text-[13px] font-medium text-white/85">
-              <span className="text-white/45">Табак · </span>
+              <span className="text-white/45">{t("hookah_tobacco_prefix")} </span>
               {item.tobacco}
             </p>
           )}
           {item.flavor && (
             <p className="line-clamp-2 text-xs text-white/55">
-              <span className="text-white/40">Вкус · </span>
+              <span className="text-white/40">{t("hookah_flavor_prefix")} </span>
               {item.flavor}
             </p>
           )}
-          {strengthLabel && (
+          {strengthK && (
             <span
               className="mt-0.5 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
@@ -149,7 +153,7 @@ export function HookahListItem({
                       : "#fca5a5",
               }}
             >
-              {strengthLabel}
+              {t(strengthK)}
             </span>
           )}
           <span

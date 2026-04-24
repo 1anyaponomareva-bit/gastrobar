@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { getAssetUrl } from "@/lib/appVersion";
+import { menuItemDisplayDescription, menuItemDisplayName } from "@/lib/menuItemI18n";
+import { useTranslation } from "@/lib/useTranslation";
 
 export function MenuCard({
   item,
@@ -11,6 +13,9 @@ export function MenuCard({
   item: MenuItem;
   index: number;
 }) {
+  const { lang } = useTranslation();
+  const title = menuItemDisplayName(item, lang);
+  const blurb = menuItemDisplayDescription(item, lang);
   const vnd = Number(item.price) || 0;
   const formattedVnd =
     vnd >= 1000
@@ -31,7 +36,7 @@ export function MenuCard({
       <div className="absolute inset-0 h-full w-full">
         <img
           src={getAssetUrl(item.image)}
-          alt={item.name}
+          alt={title}
           className="min-h-full min-w-full h-full w-full object-cover object-center"
           loading="lazy"
         />
@@ -50,10 +55,10 @@ export function MenuCard({
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-2">
             <h3 className="text-xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {item.name}
+              {title}
             </h3>
             <p className="line-clamp-2 text-[15px] leading-snug text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-              {item.description}
+              {blurb}
             </p>
           </div>
           <p className="shrink-0 text-base font-semibold text-[var(--theme-accent)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">

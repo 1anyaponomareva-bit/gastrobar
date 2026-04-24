@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
-import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
-import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
+import { strengthLabelKey } from "@/lib/menuStrengthLabel";
+import { menuItemDisplayName, menuItemDisplayTaste } from "@/lib/menuItemI18n";
+import { useTranslation } from "@/lib/useTranslation";
 import { getAssetUrl } from "@/lib/appVersion";
 
 function formatVnd(price: string): string {
@@ -40,13 +42,15 @@ export function MenuListItem({
   highlightProductId?: string | null;
   onClick: () => void;
 }) {
+  const { t, lang } = useTranslation();
+  const displayName = menuItemDisplayName(item, lang);
   const { isFavorite, toggleFavorite } = useFavorites();
   const liked = isFavorite(item.id);
   const priceFormatted = formatVnd(item.price);
   const isBonusItem = bonusProductId != null && bonusProductId === item.id;
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
   const listImage = getAssetUrl(item.imageList ?? item.image);
-  const strengthLbl = strengthDisplayLabel(item);
+  const strengthKey = strengthLabelKey(item);
   const isTincture = item.barSubcategory === "tincture";
   const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);
   const isSoftDrink = item.barSubcategory === "soft";
@@ -86,9 +90,11 @@ export function MenuListItem({
         {isBonusItem && (
           <div className="mb-2 w-full shrink-0 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/12 to-transparent px-3 py-2">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-400/95">
-              Бесплатно по бонусу
+              {t("free_by_bonus")}
             </p>
-            <p className="mt-0.5 text-[10px] text-white/55">Покажи код бармену · {BONUS_VALIDITY_LABEL}</p>
+            <p className="mt-0.5 text-[10px] text-white/55">
+              {t("show_code_bartender").replace("{hours}", t("bonus_validity_label"))}
+            </p>
           </div>
         )}
 
@@ -103,7 +109,7 @@ export function MenuListItem({
                 aria-hidden
               >
                 <span className="leading-none">🔥</span>
-                <span>Хит</span>
+                <span>{t("hit_badge")}</span>
               </span>
             )}
           </div>
@@ -112,7 +118,7 @@ export function MenuListItem({
             onClick={handleHeartClick}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80"
             style={{ color: liked ? "#D4AF37" : "white" }}
-            aria-label={liked ? "Убрать из избранного" : "В избранное"}
+            aria-label={liked ? t("favorite_remove") : t("favorite_add")}
             whileTap={{ scale: 1.2 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
@@ -126,10 +132,10 @@ export function MenuListItem({
           <h3
             className={`font-bold leading-tight text-white ${isTincture ? "line-clamp-2 text-lg" : "text-lg"}`}
           >
-            {item.name}
+            {displayName}
           </h3>
           {isSpirits && (
-            <p className="text-xs text-white/55">{item.grammage ?? "50 мл"}</p>
+            <p className="text-xs text-white/55">{item.grammage ?? t("unit_vol_short")}</p>
           )}
           {item.abv && !isBarCompact && (
             <span className="inline-flex w-fit shrink-0 rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
@@ -138,17 +144,25 @@ export function MenuListItem({
           )}
           {item.category === "food" && item.pairing && item.pairing.length > 0 && (
             <p className="text-xs text-white/70">
-              {item.pairing.map((p) => (p === "beer" ? "к пиву" : p === "cocktail" ? "к коктейлям" : "к вину")).join(", ")}
+              {item.pairing
+                .map((p) =>
+                  p === "beer"
+                    ? t("pairing_with_beer")
+                    : p === "cocktail"
+                      ? t("pairing_with_cocktail")
+                      : t("pairing_with_wine")
+                )
+                .join(", ")}
             </p>
           )}
           {item.taste && !isBarCompact && (
             <p
               className={`text-white/55 ${isTincture ? "line-clamp-3 text-[11px] leading-snug" : "line-clamp-2 text-xs"}`}
             >
-              {item.taste}
+              {menuItemDisplayTaste(item, lang)}
             </p>
           )}
-          {strengthLbl && !isBarCompact && (
+          {strengthKey && !isBarCompact && (
             <span
               className="mt-0.5 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
@@ -166,7 +180,7 @@ export function MenuListItem({
                       : "#fca5a5",
               }}
             >
-              {strengthLbl}
+              {t(strengthKey)}
             </span>
           )}
           <span
@@ -234,7 +248,7 @@ export function MenuListItem({
           }}
           className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white/70 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
           style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
-          aria-label="Перейти"
+          aria-label={t("aria_open_details")}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />

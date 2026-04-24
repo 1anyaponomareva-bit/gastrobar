@@ -18,14 +18,13 @@ import {
   BONUS_PERIOD,
   isWheelNavBannerType,
 } from "@/services/bonusService";
+import { wheelNavBannerShowTitle } from "@/lib/bonusCopy";
 import {
-  BONUS_VALIDITY_LABEL,
-  barSectionDisplayName,
-  wheelNavBannerScopeLine,
-  wheelNavBannerShowTitle,
-} from "@/lib/bonusCopy";
+  barSectionDisplayNameT,
+  wheelNavBannerScopeLineT,
+} from "@/lib/bonusCopyI18n";
+import { useTranslation } from "@/lib/useTranslation";
 import type { MenuItem } from "@/data/menu";
-import { SOFT_DRINKS_SECTION_INTRO, SPIRITS_SECTION_INTRO } from "@/data/menu";
 
 const HEADER_HEIGHT = 60;
 const TABS_HEIGHT = 58;
@@ -54,6 +53,7 @@ function filterHookahItems(items: MenuItem[], categoryId: HookahCategoryId): Men
 }
 
 export function MenuList({ items }: { items: MenuItem[] }) {
+  const { t } = useTranslation();
   const { period } = useTheme();
   const { favoriteIds } = useFavorites();
   const { highlightProductId, pendingListCategory, clearPendingListCategory } = useHighlightProduct();
@@ -195,9 +195,7 @@ export function MenuList({ items }: { items: MenuItem[] }) {
           >
             {favoriteItems.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
-                <p className="text-lg leading-relaxed text-white/80">
-                  Здесь пока пусто. Добавьте напитки, блюда или кальяны, которые вам понравились!
-                </p>
+                <p className="text-lg leading-relaxed text-white/80">{t("favorites_empty")}</p>
               </div>
             ) : (
               <div
@@ -335,10 +333,14 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                     }}
                   />
                   {barCategory === "soft" && (
-                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">{SOFT_DRINKS_SECTION_INTRO}</p>
+                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">
+                      {t("soft_drinks_section_intro")}
+                    </p>
                   )}
                   {barCategory === "spirits" && (
-                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">{SPIRITS_SECTION_INTRO}</p>
+                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">
+                      {t("spirits_section_intro")}
+                    </p>
                   )}
                   {showWheelNavBanner && activeBonus && (
                     <div
@@ -349,26 +351,40 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       }}
                     >
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-400/95">
-                        По бонусу колеса
+                        {t("bonus_wheel_ribbon")}
                       </p>
                       <p className="mt-2 text-sm font-semibold leading-snug text-white">
-                        {wheelNavBannerScopeLine(activeBonus.type, barSectionDisplayName(barCategory))}
+                        {wheelNavBannerScopeLineT(
+                          t,
+                          activeBonus.type,
+                          barSectionDisplayNameT(t, barCategory)
+                        )}
                       </p>
                       {wheelNavBannerShowTitle(activeBonus.type) && (
                         <p className="mt-1.5 text-base font-bold leading-snug text-amber-100/95">
                           {activeBonus.title}
                         </p>
                       )}
-                      <p className="mt-1 text-xs text-white/50">Действует {BONUS_VALIDITY_LABEL}</p>
+                      <p className="mt-1 text-xs text-white/50">
+                        {t("bonus_valid").replace(
+                          "{hours}",
+                          t("bonus_validity_label")
+                        )}
+                      </p>
                     </div>
                   )}
                   {showLegacyCategoryBanner && activeBonus && (
                     <div className="mb-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent px-4 py-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-500/80">
-                        Акция по бонусу
+                        {t("bonus_legacy_ribbon")}
                       </p>
                       <p className="mt-1 text-sm font-semibold text-white">{activeBonus.title}</p>
-                      <p className="mt-0.5 text-xs text-white/55">Действует {BONUS_VALIDITY_LABEL}</p>
+                      <p className="mt-0.5 text-xs text-white/55">
+                        {t("bonus_valid").replace(
+                          "{hours}",
+                          t("bonus_validity_label")
+                        )}
+                      </p>
                     </div>
                   )}
                   {filtered.map((item, index) => (

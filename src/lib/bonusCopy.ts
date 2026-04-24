@@ -1,5 +1,8 @@
 import { MENU_AND_HOOKAH_ITEMS } from "@/data/menu";
 import type { BarCategoryId } from "@/components/CategoryTabs";
+import type { AppLang } from "@/lib/i18n";
+import { readStoredAppLang } from "@/lib/i18n";
+import { menuItemDisplayName } from "@/lib/menuItemI18n";
 
 export const BONUS_VALIDITY_HOURS = 2;
 export const BONUS_VALIDITY_LABEL = "2 часа";
@@ -27,9 +30,14 @@ export type BonusTypeKey =
   | "wheel_tincture"
   | "wheel_snack";
 
-export function menuProductName(productId: string | null): string | null {
+export function menuProductName(
+  productId: string | null,
+  lang: AppLang = readStoredAppLang()
+): string | null {
   if (!productId) return null;
-  return MENU_AND_HOOKAH_ITEMS.find((i) => i.id === productId)?.name ?? null;
+  const item = MENU_AND_HOOKAH_ITEMS.find((i) => i.id === productId);
+  if (!item) return null;
+  return menuItemDisplayName(item, lang);
 }
 
 /** Подпись кнопки перехода в раздел бара (колесо / «Мои бонусы»). */

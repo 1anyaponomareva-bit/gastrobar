@@ -2,17 +2,20 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/useTranslation";
 
 function GameTableCardActive({
   href,
   variant,
   title,
+  atTable,
   tagline,
   detail,
 }: {
   href: string;
   variant: "durak";
   title: string;
+  atTable: string;
   tagline: string;
   detail: string;
 }) {
@@ -32,7 +35,7 @@ function GameTableCardActive({
           <div className="games-pick-card__content">
             <div className="games-pick-card__text">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/75">
-                За столом сейчас
+                {atTable}
               </p>
               <h2 className="mt-1 text-[1.65rem] font-extrabold leading-[1.05] tracking-[0.04em] text-white sm:text-[1.85rem]">
                 {title}
@@ -52,11 +55,17 @@ function GameTableCardSoon({
   title,
   tagline,
   detail,
+  soon,
+  tablePrep,
+  soonAria,
 }: {
   variant: "durak" | "battleship";
   title: string;
   tagline: string;
   detail: string;
+  soon: string;
+  tablePrep: string;
+  soonAria: string;
 }) {
   return (
     <div className="relative w-full">
@@ -70,15 +79,15 @@ function GameTableCardSoon({
       >
         <span
           className="absolute right-4 top-4 z-[4] rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 sm:right-5 sm:top-5"
-          aria-label="Скоро в баре"
+          aria-label={soonAria}
         >
-          Скоро
+          {soon}
         </span>
         <div className="games-pick-card__bg" aria-hidden />
         <div className="games-pick-card__overlay" aria-hidden />
         <div className="games-pick-card__content">
           <div className="games-pick-card__text">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">Стол готовится</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">{tablePrep}</p>
             <h2 className="mt-1 text-[1.65rem] font-extrabold leading-[1.05] tracking-[0.04em] text-white/55 sm:text-[1.85rem]">
               {title}
             </h2>
@@ -92,14 +101,15 @@ function GameTableCardSoon({
 }
 
 export function GamesSelectionScreen() {
+  const { t } = useTranslation();
   return (
     <div className="relative z-[1] mx-auto w-full max-w-md px-4 pt-4 pb-2 sm:px-6 sm:pt-6">
       <header className="mb-8 text-center sm:mb-10">
         <h1 className="text-balance text-[1.75rem] font-bold leading-tight tracking-tight text-white sm:text-[2rem]">
-          Во что сыграем?
+          {t("games_heading")}
         </h1>
         <p className="mx-auto mt-3 max-w-[22rem] text-pretty text-[0.95rem] leading-relaxed text-white/55 sm:text-base">
-          Выбери игру и займи место за столом
+          {t("games_sub")}
         </p>
       </header>
 
@@ -107,15 +117,19 @@ export function GamesSelectionScreen() {
         <GameTableCardActive
           href="/durak?new=1"
           variant="durak"
-          title="ДУРАК"
-          tagline="Уже играют. Можешь присоединиться"
-          detail="Есть свободные места"
+          title={t("games_durak_title")}
+          atTable={t("games_at_table")}
+          tagline={t("games_durak_sub")}
+          detail={t("games_durak_detail")}
         />
         <GameTableCardSoon
           variant="battleship"
-          title="МОРСКОЙ БОЙ"
-          tagline="Скоро откроем стол"
-          detail="Стол пока закрыт — загляни позже"
+          title={t("games_battleship_title")}
+          tagline={t("games_battleship_sub")}
+          detail={t("games_battleship_detail")}
+          soon={t("games_soon_badge")}
+          tablePrep={t("games_table_prep")}
+          soonAria={t("games_soon_aria")}
         />
       </div>
     </div>

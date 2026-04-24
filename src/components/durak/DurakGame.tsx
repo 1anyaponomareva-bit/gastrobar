@@ -103,6 +103,9 @@ import {
   DURAK_SCENE_PLAYER_HAND_SCALE,
 } from "@/lib/durak/durakSceneLayout";
 import { readDurakSafeChromeInsets } from "@/lib/readSafeAreaInsets";
+import { useTranslation } from "@/lib/useTranslation";
+import { DURAK_I18N_GUEST, DURAK_I18N_OPP } from "@/games/durak/names";
+import { formatDurakEntityName } from "@/lib/durak/durakDisplayNames";
 
 const HUMAN_ID = "human";
 
@@ -111,7 +114,7 @@ const DURAK_OPPONENT_PLACEHOLDER_ID = "__durak_opponent_placeholder__";
 function durakOpponentPlaceholderPlayer(): Player {
   return {
     id: DURAK_OPPONENT_PLACEHOLDER_ID,
-    name: "Соперник",
+    name: DURAK_I18N_OPP,
     type: "remote",
     hand: [],
     seatIndex: 1,
@@ -121,8 +124,7 @@ function durakOpponentPlaceholderPlayer(): Player {
 const PLAYER_NAME_LS = "player_name";
 const ONLINE_TURN_MS = 12_000;
 const ONLINE_TURN_WARN_SEC = 3;
-/** Имя при нажатии «Пропустить» (сохраняется в localStorage, как обычное имя). */
-const GUEST_PLAYER_NAME = "Гость";
+const LEGACY_GUEST_RU = "Гость";
 
 function normalizePlayerNameInput(raw: string): string {
   const t = raw.trim();
@@ -151,33 +153,45 @@ type DurakGameRootProps = {
 };
 
 function TurnDeadlineRing({ progress }: { progress: number }) {
-  const warn = progress <= ONLINE_TURN_WARN_SEC / (ONLINE_TURN_MS / 1000);
+  const p = Number.isFinite(progress)
+    ? Math.min(1, Math.max(0, progress))
+    : 0;
+  const warn = p <= ONLINE_TURN_WARN_SEC / (ONLINE_TURN_MS / 1000);
   const r = 18;
   const c = 2 * Math.PI * r;
-  const offset = c * (1 - progress);
+  const offset = c * (1 - p);
   return (
-    <svg width={44} height={44} viewBox="0 0 44 44" className="shrink-0" aria-hidden>
-      <circle cx="22" cy="22" r={r} fill="none" className="stroke-white/12" strokeWidth="3" />
-      <circle
-        cx="22"
-        cy="22"
-        r={r}
-        fill="none"
-        strokeWidth="3"
-        strokeLinecap="round"
-        className={
-          warn
-            ? "stroke-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.45)]"
-            : "stroke-[#f8d66d]"
-        }
-        style={{
-          strokeDasharray: c,
-          strokeDashoffset: offset,
-          transform: "rotate(-90deg)",
-          transformOrigin: "22px 22px",
-        }}
-      />
-    </svg>
+    <div className="flex h-11 w-11 max-h-11 max-w-11 flex-none shrink-0 items-center justify-center overflow-hidden">
+      <svg
+        width="44"
+        height="44"
+        viewBox="0 0 44 44"
+        className="block h-11 w-11 max-h-[2.75rem] max-w-[2.75rem] shrink-0 [max-height:44px] [max-width:44px]"
+        style={{ minWidth: 0, minHeight: 0 }}
+        aria-hidden
+      >
+        <circle cx="22" cy="22" r={r} fill="none" className="stroke-white/12" strokeWidth="3" />
+        <circle
+          cx="22"
+          cy="22"
+          r={r}
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          className={
+            warn
+              ? "stroke-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.45)]"
+              : "stroke-[#f8d66d]"
+          }
+          style={{
+            strokeDasharray: c,
+            strokeDashoffset: offset,
+            transform: "rotate(-90deg)",
+            transformOrigin: "22px 22px",
+          }}
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -495,6 +509,8 @@ function DeckPile({
   compact,
   /** Козырь под колодой: стопка перекрывает верхнюю треть карты козыря (режим 3 игроков). */
   trumpTuckUnderDeck,
+  trumpExhaustedTitle,
+  trumpSuitA11y,
 }: {
   count: number;
   trumpCard: Card | null;
@@ -503,6 +519,8 @@ function DeckPile({
   /** Меньшая колода у края овального стола */
   compact?: boolean;
   trumpTuckUnderDeck?: boolean;
+  trumpExhaustedTitle: string;
+  trumpSuitA11y: string;
 }) {
   const stackLayers = count > 0 ? Math.min(8, Math.max(2, Math.ceil(count / 5))) : 0;
   const deckBox = compact ? CARD_TABLE_COMPACT_BOX : CARD_BOX_CLASS;
@@ -555,7 +573,7 @@ function DeckPile({
       />
     ) : (
       <div
-        title="Козырь (колода разобрана)"
+        title={trumpExhaustedTitle}
         className={cn(
           "relative flex shrink-0 items-center justify-center overflow-hidden",
           CARD_RADIUS_CLASS,
@@ -572,7 +590,7 @@ function DeckPile({
         >
           {suitLabel(trumpSuit)}
         </span>
-        <span className="sr-only">Козырь: {trumpSuit}</span>
+        <span className="sr-only">{trumpSuitA11y}</span>
       </div>
     );
 
@@ -658,6 +676,7 @@ function DurakNameGate({
   onSubmit: (name: string) => void;
   onSkip: () => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const [showError, setShowError] = useState(false);
 
@@ -692,13 +711,13 @@ function DurakNameGate({
               className="rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f8d66d]/95"
               aria-hidden
             >
-              Подкидной дурак
+              {t("durak_name_badge")}
             </span>
             <h1 className="text-[1.35rem] font-semibold leading-tight tracking-tight text-white sm:text-2xl">
-              Как тебя называть за столом?
+              {t("durak_name_title")}
             </h1>
             <p className="text-[13px] leading-relaxed text-white/50 sm:text-sm">
-              До 12 символов — или зайди как гость и назовись потом в игре.
+              {t("durak_name_sub")}
             </p>
           </div>
 
@@ -708,7 +727,7 @@ function DurakNameGate({
               value={value}
               maxLength={12}
               autoComplete="nickname"
-              placeholder="Например, Аня"
+              placeholder={t("durak_name_ph")}
               onChange={(e) => {
                 setValue(e.target.value);
                 setShowError(false);
@@ -723,7 +742,7 @@ function DurakNameGate({
               )}
             />
             {showError ? (
-              <p className="text-center text-[13px] text-amber-200/90">Введи имя или нажми «Пропустить»</p>
+              <p className="text-center text-[13px] text-amber-200/90">{t("durak_name_err")}</p>
             ) : null}
 
             <button
@@ -735,7 +754,7 @@ function DurakNameGate({
                 "shadow-[0_8px_28px_rgba(248,214,109,0.28)]"
               )}
             >
-              Начать игру
+              {t("durak_name_start")}
             </button>
 
             <button
@@ -743,7 +762,7 @@ function DurakNameGate({
               onClick={onSkip}
               className="w-full rounded-full border border-white/[0.14] bg-white/[0.04] py-3 text-[13px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.07] hover:text-white/90"
             >
-              Пропустить — играть как гость
+              {t("durak_name_skip")}
             </button>
           </div>
         </div>
@@ -753,6 +772,7 @@ function DurakNameGate({
 }
 
 export function DurakGame(props: DurakGameRootProps = {}) {
+  const { t } = useTranslation();
   const standalonePwa = useStandalonePwa();
   const router = useRouter();
   const embedded = props.embedded;
@@ -867,8 +887,9 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(PLAYER_NAME_LS);
-      setPlayerName(normalizePlayerNameInput(raw ?? ""));
+      const raw0 = localStorage.getItem(PLAYER_NAME_LS) ?? "";
+      const raw = raw0 === LEGACY_GUEST_RU ? DURAK_I18N_GUEST : raw0;
+      setPlayerName(normalizePlayerNameInput(raw));
     } finally {
       setNameHydrated(true);
     }
@@ -1072,9 +1093,22 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (wonByForfeit || game.loserId !== localPlayerId) return;
     if (lossResultTitleGameIdRef.current === game.id) return;
     lossResultTitleGameIdRef.current = game.id;
-    const name = (selfPlayer?.name ?? displayName).trim() || "Игрок";
-    setLossResultTitle(getRandomLossResultTitle(name));
-  }, [game, game?.state, game?.id, game?.loserId, localPlayerId, wonByForfeit, selfPlayer?.name, displayName]);
+    const nameForLine = formatDurakEntityName(
+      (selfPlayer?.name ?? displayName).trim() || undefined,
+      t
+    );
+    setLossResultTitle(getRandomLossResultTitle(nameForLine, t));
+  }, [
+    game,
+    game?.state,
+    game?.id,
+    game?.loserId,
+    localPlayerId,
+    wonByForfeit,
+    selfPlayer?.name,
+    displayName,
+    t,
+  ]);
 
   const otherPlayers = useMemo(
     () => (game ? otherPlayersClockwiseFromLocal(game, localPlayerId) : []),
@@ -1211,26 +1245,29 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     el.select();
   }, [nameEditing]);
 
-  const onPlayerNameChosen = useCallback((name: string) => {
-    const n = normalizePlayerNameInput(name);
-    if (!n) return;
-    try {
-      localStorage.setItem(PLAYER_NAME_LS, n);
-    } catch {
-      /* ignore */
-    }
-    setTableGreeting(`За столом: ${n}`);
-    window.setTimeout(() => setTableGreeting(null), 2800);
-    setPlayerName(n);
-  }, []);
+  const onPlayerNameChosen = useCallback(
+    (name: string) => {
+      const n = normalizePlayerNameInput(name);
+      if (!n) return;
+      try {
+        localStorage.setItem(PLAYER_NAME_LS, n);
+      } catch {
+        /* ignore */
+      }
+      setTableGreeting(t("durak_greeting").replace("{name}", n));
+      window.setTimeout(() => setTableGreeting(null), 2800);
+      setPlayerName(n);
+    },
+    [t]
+  );
 
   const onSkipNameAsGuest = useCallback(() => {
     try {
-      localStorage.setItem(PLAYER_NAME_LS, GUEST_PLAYER_NAME);
+      localStorage.setItem(PLAYER_NAME_LS, DURAK_I18N_GUEST);
     } catch {
       /* ignore */
     }
-    setPlayerName(GUEST_PLAYER_NAME);
+    setPlayerName(DURAK_I18N_GUEST);
   }, []);
 
   useEffect(() => {
@@ -1401,9 +1438,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             tablePairs: next.tablePairs.length,
           });
           const banner =
-            actor === localPlayerId
-              ? "Ход выполнен автоматически"
-              : "Соперник не сходил — ход по таймеру";
+            actor === localPlayerId ? "durak_auto_moved" : "durak_auto_opp";
           queueMicrotask(() => {
             setAutoMoveBanner(banner);
             window.setTimeout(() => setAutoMoveBanner(null), 2200);
@@ -1452,9 +1487,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
     if (!game) return;
     if (!effectiveDefenseAttackId) {
       setErr(
-        uncoveredPairs.length > 1
-          ? "Сначала нажмите на атаку на столе"
-          : "Сейчас нечем отбиваться"
+        uncoveredPairs.length > 1 ? "de_tap_attack_first" : "de_nothing_to_beat"
       );
       return;
     }
@@ -1533,42 +1566,64 @@ export function DurakGame(props: DurakGameRootProps = {}) {
 
   const phaseLine = (() => {
     if (!game) return "";
-    const selfName = selfPlayer?.name ?? displayName;
-    const attackerName = game.players[game.attackerIndex]?.name ?? "Игрок";
-    const defenderName = game.players[game.defenderIndex]?.name ?? "Игрок";
-    if (dealing) return "Раздача карт…";
-    if (game.state === "finished") return "Партия окончена";
+    const selfName = formatDurakEntityName(selfPlayer?.name ?? displayName, t);
+    const attackerName = formatDurakEntityName(
+      game.players[game.attackerIndex]?.name,
+      t
+    );
+    const defenderName = formatDurakEntityName(
+      game.players[game.defenderIndex]?.name,
+      t
+    );
+    if (dealing) return t("durak_pl_dealing");
+    if (game.state === "finished") return t("durak_pl_finished");
     if (game.phase === "attack_initial")
-      return selfIsAttacker ? `${selfName}, ваш ход: атака` : `${attackerName} атакует`;
+      return selfIsAttacker
+        ? t("durak_pl_self_attack").replace("{name}", selfName)
+        : t("durak_pl_opp_attacks").replace("{name}", attackerName);
     if (game.phase === "defend")
-      return selfIsDefender ? `${selfName}, ваш ход: отбой или «Взять»` : `${defenderName} отбивается`;
+      return selfIsDefender
+        ? t("durak_pl_self_defend").replace("{name}", selfName)
+        : t("durak_pl_opp_defends").replace("{name}", defenderName);
     if (game.phase === "attack_toss") {
-      if (selfIsDefender)
-        return "Соперник решает — подкинет ещё карты или нажмёт «Бито». Ожидайте.";
+      if (selfIsDefender) return t("durak_pl_toss_def_wait");
       const nonDef = game.players.filter((_, i) => i !== game.defenderIndex);
       const ack = new Set(game.beatAckPlayerIds ?? []);
       const nAck = nonDef.filter((p) => ack.has(p.id)).length;
+      const beatAuto =
+        beatSecLeft != null && beatSecLeft > 0
+          ? t("durak_beat_auto").replace("{sec}", String(beatSecLeft))
+          : "";
       const beatHint =
         beatSecLeft != null
-          ? ` «Бито»: подтвердили ${nAck}/${nonDef.length}${beatSecLeft > 0 ? ` · авто ${beatSecLeft} с` : ""}.`
+          ? t("durak_beat_progress")
+              .replace("{nAck}", String(nAck))
+              .replace("{nAll}", String(nonDef.length))
+              .replace("{auto}", beatAuto)
           : "";
       return selfIsAttacker
-        ? `Подкините по достоинствам на столе или «Бито» (все атакующие или таймер).${beatHint}`
-        : `Можете подкинуть по столу или «Бито» (все атакующие или таймер).${beatHint}`;
+        ? t("durak_toss_1") + beatHint
+        : t("durak_toss_1o") + beatHint;
     }
     if (game.phase === "player_can_throw_more") {
-      if (selfIsDefender)
-        return "Вы не отбиваетесь — ждите: подкидывают карты или согласуют «Бито».";
+      if (selfIsDefender) return t("durak_toss_def_only");
       const nonDef = game.players.filter((_, i) => i !== game.defenderIndex);
       const ack = new Set(game.beatAckPlayerIds ?? []);
       const nAck = nonDef.filter((p) => ack.has(p.id)).length;
+      const beatAuto =
+        beatSecLeft != null && beatSecLeft > 0
+          ? t("durak_beat_auto").replace("{sec}", String(beatSecLeft))
+          : "";
       const beatHint =
         beatSecLeft != null
-          ? ` «Бито»: подтвердили ${nAck}/${nonDef.length}${beatSecLeft > 0 ? ` · авто ${beatSecLeft} с` : ""}.`
+          ? t("durak_beat_progress")
+              .replace("{nAck}", String(nAck))
+              .replace("{nAll}", String(nonDef.length))
+              .replace("{auto}", beatAuto)
           : "";
       return selfIsAttacker
-        ? `Подкините ещё или «Бито» — забирает стол защитник (все не-защитники или таймер).${beatHint}`
-        : `Подкините по столу или «Бито» (все не-защитники или таймер).${beatHint}`;
+        ? t("durak_toss_2") + beatHint
+        : t("durak_toss_2o") + beatHint;
     }
     return "";
   })();
@@ -1608,7 +1663,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50" style={{ color: "rgba(248,250,252,0.55)", fontSize: 14 }}>
-            Загрузка…
+            {t("d_loading")}
           </span>
         </div>
       </div>
@@ -1654,7 +1709,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
       >
         <div className="flex flex-1 items-center justify-center py-20">
           <span className="text-sm text-white/50" style={{ color: "rgba(248,250,252,0.55)", fontSize: 14 }}>
-            Раздаём колоду…
+            {t("durak_distributing")}
           </span>
         </div>
       </div>
@@ -1703,7 +1758,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
             style={{ zIndex: DURAK_Z_GAME_HEADER_BANNERS }}
             role="status"
           >
-            {autoMoveBanner}
+            {t(autoMoveBanner)}
           </motion.div>
         ) : null}
 
@@ -1826,9 +1881,13 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               }}
             >
               <p className="truncate text-[12px] font-medium leading-tight text-white/90 sm:text-[13px]">
-                {pl.oppName?.trim() || "Соперник"}
+                {pl.oppName?.trim()
+                  ? formatDurakEntityName(pl.oppName, t)
+                  : t("durak_label_opponent")}
               </p>
-              <p className="text-[10px] leading-tight text-white/45">{pl.bh.length} карт</p>
+              <p className="text-[10px] leading-tight text-white/45">
+                {t("durak_hand_count").replace("{n}", String(pl.bh.length))}
+              </p>
             </div>
           ))}
         </div>
@@ -1851,6 +1910,11 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 trumpSuit={game.trumpSuit}
                 compact
                 trumpTuckUnderDeck={DURAK_DECK_TRUMP_TUCK_UNDER_DECK}
+                trumpExhaustedTitle={t("durak_trump_empty_title")}
+                trumpSuitA11y={t("durak_trump_a11y").replace(
+                  "{suit}",
+                  String(suitLabel(game.trumpSuit))
+                )}
               />
             </div>
             {game.tablePairs.length === 0 && dealing ? (
@@ -1859,7 +1923,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 style={{ zIndex: DURAK_Z_TABLE_CARDS }}
               >
                 <span className="block text-center text-[10px] text-white/35 sm:text-[11px]">
-                  Карты раздаются…
+                  {t("durak_cards_dealing")}
                 </span>
               </div>
             ) : null}
@@ -1980,7 +2044,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               onClick={restart}
               className="shrink-0 rounded-full border border-white/[0.14] bg-white/[0.06] px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-sm transition hover:border-amber-300/25 hover:bg-white/[0.1] sm:px-3 sm:py-2 sm:text-[11px]"
             >
-              {embedded ? "Стол" : "Меню"}
+              {embedded ? t("durak_btn_table") : t("menu")}
             </button>
           </div>
           <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-x-0.5 sm:gap-x-2">
@@ -1993,7 +2057,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   disabled={!attackInitialValid || game.state !== "playing"}
                   className="shrink-0 rounded-full border border-[#f8d66d]/40 bg-gradient-to-b from-amber-500/25 to-amber-900/35 px-2 py-1.5 text-[10px] font-semibold text-amber-50 shadow-[0_6px_20px_rgba(248,214,109,0.18)] hover:brightness-110 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
-                  Атаковать
+                  {t("durak_btn_attack")}
                 </button>
               ) : null}
               {selfCanTossCards && tossPick.length > 0 ? (
@@ -2003,7 +2067,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   disabled={!tossValid || game.state !== "playing"}
                   className="shrink-0 rounded-full border border-[#f8d66d]/35 bg-amber-900/40 px-1.5 py-1 text-[9px] font-semibold text-amber-50 shadow-sm hover:bg-amber-800/45 disabled:opacity-40 sm:px-2.5 sm:text-[10px]"
                 >
-                  Подкинуть
+                  {t("durak_btn_toss")}
                 </button>
               ) : null}
               {selfShowBitoForToss ? (
@@ -2013,7 +2077,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   disabled={game.state !== "playing"}
                   className="shrink-0 rounded-full border border-emerald-400/50 bg-gradient-to-b from-emerald-600/35 to-emerald-900/45 px-2 py-1.5 text-[10px] font-semibold text-emerald-50 shadow-[0_6px_20px_rgba(16,185,129,0.15)] hover:brightness-110 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
-                  Бито
+                  {t("durak_btn_bito")}
                 </button>
               ) : null}
             </div>
@@ -2025,7 +2089,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   disabled={game.state !== "playing"}
                   className="shrink-0 rounded-full border border-white/25 bg-white/10 px-2 py-1.5 text-[10px] font-medium text-white/90 shadow-md hover:bg-white/15 disabled:opacity-40 sm:px-3 sm:text-[11px]"
                 >
-                  Взять
+                  {t("durak_btn_take")}
                 </button>
               ) : null}
             </div>
@@ -2053,7 +2117,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   : DURAK_Z_STATUS_LINE,
             }}
             role="region"
-            aria-label="Состояние партии"
+            aria-label={t("durak_aria_status")}
           >
             {phaseLine ? (
               <div className="flex w-full min-w-0 flex-col items-center gap-1">
@@ -2098,7 +2162,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 )}
                 role="status"
               >
-                {game.message}
+                {t(game.message)}
               </motion.div>
             ) : null}
           </div>
@@ -2155,7 +2219,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 autoComplete="off"
                 spellCheck={false}
                 className="block w-full max-w-[10rem] rounded-md border border-amber-300/40 bg-black/60 px-2 py-0.5 text-[13px] font-medium text-white outline-none ring-0 placeholder:text-white/35 focus:border-amber-200/70"
-                aria-label="Твоё имя"
+                aria-label={t("durak_aria_your_name")}
               />
             ) : (
               <button
@@ -2163,10 +2227,12 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                 onClick={startNameEdit}
                 className="block max-w-full truncate text-left text-[13px] font-medium text-white/90 underline decoration-white/25 decoration-dotted underline-offset-2 transition hover:text-white hover:decoration-white/55"
               >
-                {selfPlayer?.name ?? playerName}
+                {formatDurakEntityName(selfPlayer?.name ?? playerName, t)}
               </button>
             )}
-            <p className="text-[10px] text-white/45">{humanHand.length} карт</p>
+            <p className="text-[10px] text-white/45">
+              {t("durak_hand_count").replace("{n}", String(humanHand.length))}
+            </p>
           </div>
         <div
           className={cn(
@@ -2335,28 +2401,37 @@ export function DurakGame(props: DurakGameRootProps = {}) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f8d66d]/80">
                 {game.winnerId === localPlayerId
                   ? wonByForfeit
-                    ? "Техническая победа"
-                    : "Партия за тобой"
-                  : "ПАРТИЯ СЫГРАНА"}
+                    ? t("durak_res_tech")
+                    : t("durak_res_win")
+                  : t("durak_res_done")}
               </p>
               <p
                 id="durak-result-title"
                 className="mt-3 text-2xl font-bold leading-tight tracking-tight text-white sm:text-[1.65rem]"
               >
                 {wonByForfeit
-                  ? "Соперник вышел из игры — ты победил! 🥇"
+                  ? t("durak_res_forfeit")
                   : game.winnerId === localPlayerId
-                    ? `${selfPlayer?.name ?? playerName}, блеск!`
+                    ? t("durak_res_great").replace(
+                        "{name}",
+                        formatDurakEntityName(selfPlayer?.name ?? playerName, t)
+                      )
                     : lossResultTitle ||
-                      `${(selfPlayer?.name ?? playerName).trim() || "Игрок"}, следующий раунд твой`}
+                      t("durak_res_next").replace(
+                        "{name}",
+                        formatDurakEntityName(
+                          (selfPlayer?.name ?? playerName).trim() || undefined,
+                          t
+                        )
+                      )}
               </p>
               <p className="mt-4 text-sm leading-relaxed text-white/55">
                 {wonByForfeit
-                  ? "Соперник не выходил на связь больше отведённого времени — стол закрыт."
+                  ? t("durak_sub_forfeit")
                   : game.loserId === localPlayerId
-                    ? "Почти дожала. Соберись и заходи на новый раунд."
+                    ? t("durak_sub_loss")
                     : game.winnerId === localPlayerId
-                      ? "Ты первой сбросила все карты — давай ещё одну партию."
+                      ? t("durak_sub_win")
                       : ""}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -2366,10 +2441,10 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                   className="w-full rounded-full bg-[#f8d66d] px-6 py-3.5 text-sm font-semibold text-[#1a1612] shadow-[0_10px_36px_rgba(248,214,109,0.25)] transition hover:brightness-105 sm:w-auto sm:min-w-[10.5rem]"
                 >
                   {game.loserId === localPlayerId
-                    ? "Новая партия"
+                    ? t("durak_res_new")
                     : embedded
-                      ? "Новая партия"
-                      : "Реванш"}
+                      ? t("durak_res_new")
+                      : t("durak_res_rematch")}
                 </button>
                 {!embedded ? (
                   <button
@@ -2377,7 +2452,7 @@ export function DurakGame(props: DurakGameRootProps = {}) {
                     onClick={() => router.push("/")}
                     className="w-full rounded-full border border-white/18 bg-white/[0.05] px-6 py-3.5 text-sm font-medium text-white/85 transition hover:border-white/28 hover:bg-white/[0.08] sm:w-auto"
                   >
-                    На главную
+                    {t("durak_res_home")}
                   </button>
                 ) : null}
               </div>

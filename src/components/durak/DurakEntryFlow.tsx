@@ -23,7 +23,7 @@ import {
   uniqueFriendTableName,
 } from "@/lib/durak/friendTableNames";
 import { cn } from "@/lib/utils";
-import { DURAK_ONLINE_UNAVAILABLE_BANNER } from "@/lib/durak/userFacingError";
+import { useTranslation } from "@/lib/useTranslation";
 
 type Phase =
   | { k: "choose" }
@@ -42,6 +42,7 @@ type Props = {
 };
 
 export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameStarted, onBackToMenu }: Props) {
+  const { t } = useTranslation();
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [supabaseInitDone, setSupabaseInitDone] = useState(false);
   const [phase, setPhase] = useState<Phase>({ k: "choose" });
@@ -140,7 +141,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     if (!inviteCodeFromUrl || inviteDone) return;
     if (!supabaseInitDone) return;
     if (!supabase) {
-      setError(DURAK_ONLINE_UNAVAILABLE_BANNER);
+      setError(t("durak_online_unavailable"));
       setInviteDone(true);
       return;
     }
@@ -159,7 +160,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           k: "lobby",
           roomId,
           joinCode: r?.join_code ?? inviteCodeFromUrl.toUpperCase(),
-          tableName: (r?.table_name ?? "Стол").trim() || "Стол",
+          tableName: (r?.table_name ?? t("d_table_default")).trim() || t("d_table_default"),
           maxPlayers: r?.max_players ?? 4,
         });
         setInviteDone(true);
@@ -172,13 +173,13 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     return () => {
       cancelled = true;
     };
-  }, [supabase, supabaseInitDone, inviteCodeFromUrl, displayName, inviteDone]);
+  }, [supabase, supabaseInitDone, inviteCodeFromUrl, displayName, inviteDone, t]);
 
   const onCreateTable = async () => {
     if (!supabase) return;
     const raw = createName.trim();
     if (!raw) {
-      setError("Придумайте название стола или нажмите «Другое название».");
+      setError(t("d_name_err"));
       return;
     }
     setBusy(true);
@@ -235,7 +236,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
         k: "lobby",
         roomId,
         joinCode: r?.join_code ?? row.join_code ?? "",
-        tableName: (r?.table_name ?? "Стол").trim() || "Стол",
+        tableName: (r?.table_name ?? t("d_table_default")).trim() || t("d_table_default"),
         maxPlayers: r?.max_players ?? row.max_players,
       });
     } catch (e) {
@@ -280,7 +281,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             }}
             className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-white/90 hover:bg-white/10"
           >
-            Понятно
+            {t("d_ok")}
           </button>
         </div>
       </div>
@@ -290,7 +291,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   if (!supabaseInitDone) {
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center bg-[#14100c] px-4 py-20 text-sm text-white/50">
-        Загрузка…
+        {t("d_loading")}
       </div>
     );
   }
@@ -298,13 +299,13 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   if (phase.k === "quick" && !supabase) {
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 overflow-x-hidden bg-[#14100c] px-4 py-16 text-center text-sm text-amber-200/90">
-        <p className="max-w-sm">{DURAK_ONLINE_UNAVAILABLE_BANNER}</p>
+        <p className="max-w-sm">{t("durak_online_unavailable")}</p>
         <button
           type="button"
           onClick={() => setPhase({ k: "choose" })}
           className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-white/90 hover:bg-white/10"
         >
-          Назад
+          {t("back")}
         </button>
       </div>
     );
@@ -335,22 +336,22 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             onClick={() => setPhase({ k: "friends-menu" })}
             className="self-start text-sm text-white/45 transition hover:text-white/75"
           >
-            ← Назад
+            {t("d_back_arrow")}
           </button>
           <div>
             <h1 className="text-xl font-semibold text-white">{phase.tableName}</h1>
             <p className="mt-1 text-sm text-white/55">
-              Игроки: {humans} / {phase.maxPlayers}
+              {t("d_players_count").replace("{cur}", String(humans)).replace("{max}", String(phase.maxPlayers))}
             </p>
           </div>
           <ul className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
             {lobbyPlayers.length === 0 ? (
-              <li className="text-sm text-white/45">Загрузка списка…</li>
+              <li className="text-sm text-white/45">{t("d_loading_lobby")}</li>
             ) : (
               lobbyPlayers.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 text-sm text-white/85">
-                  <span className="truncate">{p.player_name || "Игрок"}</span>
-                  {p.is_bot ? <span className="shrink-0 text-[10px] text-white/35">бот</span> : null}
+                  <span className="truncate">{p.player_name || t("d_player")}</span>
+                  {p.is_bot ? <span className="shrink-0 text-[10px] text-white/35">{t("d_bot")}</span> : null}
                 </li>
               ))
             )}
@@ -361,7 +362,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               onClick={copyInviteLink}
               className="w-full rounded-full border border-emerald-400/40 bg-emerald-900/35 py-3 text-sm font-medium text-emerald-50 hover:bg-emerald-800/40"
             >
-              Скопировать ссылку
+              {t("d_copy_link")}
             </button>
             {canEarlyStart ? (
               <button
@@ -370,11 +371,11 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
                 onClick={onStartAsHost}
                 className="w-full rounded-full bg-[#f8d66d] py-3.5 text-sm font-semibold text-[#1a1612] shadow-lg hover:brightness-105 disabled:opacity-45"
               >
-                Начать игру
+                {t("d_start_game")}
               </button>
             ) : null}
             {full ? (
-              <p className="text-center text-xs text-white/45">Стол заполнен — сейчас начнём…</p>
+              <p className="text-center text-xs text-white/45">{t("d_table_full")}</p>
             ) : null}
           </div>
           {error ? <p className="text-center text-sm text-amber-200/90">{error}</p> : null}
@@ -392,19 +393,19 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             onClick={() => setPhase({ k: "friends-menu" })}
             className="self-start text-sm text-white/45 transition hover:text-white/75"
           >
-            ← Назад
+            {t("d_back_arrow")}
           </button>
-          <h1 className="text-xl font-semibold text-white">Новый стол</h1>
+          <h1 className="text-xl font-semibold text-white">{t("d_new_table")}</h1>
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-white/55">Название стола</span>
+            <span className="text-xs font-medium text-white/55">{t("d_table_name")}</span>
             <p className="text-[11px] text-white/40">
-              Видно в списке лобби. Если такое имя уже есть, подставим другое (например с хвостиком).
+              {t("d_table_name_hint")}
             </p>
             <input
               value={createName}
               onChange={(e) => setCreateName(e.target.value.slice(0, 40))}
               className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-[#f8d66d]/55"
-              placeholder="Например: По пиву · мохито"
+              placeholder={t("d_table_ph")}
               autoComplete="off"
             />
             <button
@@ -413,12 +414,12 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               onClick={() => void onSuggestTableName()}
               className="mt-1 w-fit max-w-full py-0.5 text-left text-[12px] font-medium text-[#f8d66d]/75 transition hover:text-[#f8d66d] disabled:opacity-40"
             >
-              Сгенерировать другое название
+              {t("d_suggest_name")}
             </button>
           </label>
           <div className="space-y-2">
-            <span className="text-xs font-medium text-white/55">Сколько мест за столом</span>
-            <p className="text-[11px] text-white/40">От 2 до 6 игроков</p>
+            <span className="text-xs font-medium text-white/55">{t("d_seats_title")}</span>
+            <p className="text-[11px] text-white/40">{t("d_seats_hint")}</p>
             <div className="grid grid-cols-5 gap-2">
               {([2, 3, 4, 5, 6] as const).map((n) => (
                 <button
@@ -443,7 +444,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             onClick={onCreateTable}
             className="mt-2 w-full rounded-full bg-[#f8d66d] py-3.5 text-sm font-semibold text-[#1a1612] shadow-lg hover:brightness-105 disabled:opacity-45"
           >
-            Создать стол
+            {t("d_create_table_btn")}
           </button>
           {error ? <p className="text-sm text-amber-200/90">{error}</p> : null}
         </div>
@@ -460,34 +461,34 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             onClick={() => setPhase({ k: "friends-menu" })}
             className="self-start text-sm text-white/45 transition hover:text-white/75"
           >
-            ← Назад
+            {t("d_back_arrow")}
           </button>
-          <h1 className="text-xl font-semibold text-white">Список столов</h1>
-          <p className="text-sm text-white/45">Только те, что ещё набирают игроков</p>
+          <h1 className="text-xl font-semibold text-white">{t("d_list_tables")}</h1>
+          <p className="text-sm text-white/45">{t("d_list_tables_sub")}</p>
           <ul className="flex flex-1 flex-col gap-2 overflow-y-auto">
             {tables.length === 0 ? (
               <li className="rounded-2xl border border-dashed border-white/12 px-4 py-10 text-center text-sm text-white/40">
-                Пока никого. Создайте стол сами — друзья подключатся по ссылке.
+                {t("d_list_empty")}
               </li>
             ) : (
-              tables.map((t) => (
+              tables.map((row) => (
                 <li
-                  key={t.id}
+                  key={row.id}
                   className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-white/90">{t.table_name ?? "Стол"}</p>
+                    <p className="truncate font-medium text-white/90">{row.table_name ?? t("d_table_default")}</p>
                     <p className="text-xs text-white/45">
-                      {t.player_count} / {t.max_players}
+                      {row.player_count} / {row.max_players}
                     </p>
                   </div>
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => onJoinTableRow(t)}
+                    onClick={() => onJoinTableRow(row)}
                     className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-medium text-white/90 hover:bg-white/15 disabled:opacity-45"
                   >
-                    За стол
+                    {t("d_join_table")}
                   </button>
                 </li>
               ))
@@ -509,14 +510,14 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
             onClick={() => setPhase({ k: "choose" })}
             className="self-start text-sm text-white/45 transition hover:text-white/75"
           >
-            ← Назад
+            {t("d_back_arrow")}
           </button>
           {noNet ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-sm text-amber-100/90">
-              {DURAK_ONLINE_UNAVAILABLE_BANNER}
+              {t("durak_online_unavailable")}
             </p>
           ) : null}
-          <h1 className="text-2xl font-semibold text-white">Игра с друзьями</h1>
+          <h1 className="text-2xl font-semibold text-white">{t("d_friends_title")}</h1>
           <div className="flex flex-col gap-3">
             <button
               type="button"
@@ -529,8 +530,8 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               }}
               className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="text-lg">➕ Создать стол</span>
-              <span className="text-sm text-white/50">До 6 мест — ты хозяин, рассылаешь ссылку</span>
+              <span className="text-lg">{t("d_create_title")}</span>
+              <span className="text-sm text-white/50">{t("d_create_sub")}</span>
             </button>
             <button
               type="button"
@@ -543,8 +544,8 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               }}
               className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="text-lg">📋 Список столов</span>
-              <span className="text-sm text-white/50">Столы, которые ждут игроков</span>
+              <span className="text-lg">{t("d_open_list")}</span>
+              <span className="text-sm text-white/50">{t("d_open_list_sub")}</span>
             </button>
           </div>
         </div>
@@ -558,14 +559,14 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 py-10">
         {showInviteLoader ? (
-          <p className="text-center text-sm text-white/55">Открываем стол по ссылке…</p>
+          <p className="text-center text-sm text-white/55">{t("d_invite_open")}</p>
         ) : null}
         {!supabase ? (
           <p className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2.5 text-center text-sm text-amber-100/90">
-            {DURAK_ONLINE_UNAVAILABLE_BANNER}
+            {t("durak_online_unavailable")}
           </p>
         ) : null}
-        <h1 className="text-center text-2xl font-semibold leading-tight text-white">Как будешь играть?</h1>
+        <h1 className="text-center text-2xl font-semibold leading-tight text-white">{t("d_choose_mode")}</h1>
         <div className="flex flex-col gap-4">
           <button
             type="button"
@@ -582,8 +583,8 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               !supabase && "cursor-not-allowed opacity-45",
             )}
           >
-            <span className="text-lg font-semibold">🟢 Быстро найти игру</span>
-            <span className="text-sm font-normal text-[#1a1612]/75">Дуэль: всегда ровно два человека за столом</span>
+            <span className="text-lg font-semibold">{t("d_quick")}</span>
+            <span className="text-sm font-normal text-[#1a1612]/75">{t("d_quick_sub")}</span>
           </button>
           <button
             type="button"
@@ -598,8 +599,8 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
               !supabase && "cursor-not-allowed opacity-45",
             )}
           >
-            <span className="text-lg font-semibold">👥 С друзьями</span>
-            <span className="text-sm text-white/50">Создать или присоединиться к столу</span>
+            <span className="text-lg font-semibold">{t("d_friends_mode")}</span>
+            <span className="text-sm text-white/50">{t("d_friends_mode_sub")}</span>
           </button>
         </div>
         <button
@@ -607,7 +608,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           onClick={onBackToMenu}
           className="mx-auto text-sm text-white/40 underline decoration-white/20 underline-offset-4 hover:text-white/65"
         >
-          На главное меню
+          {t("d_main_menu")}
         </button>
       </div>
     </div>

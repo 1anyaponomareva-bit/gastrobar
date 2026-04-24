@@ -10,6 +10,7 @@ import { useBarHome } from "@/components/BarHomeContext";
 import { CONFIG } from "@/lib/config";
 import { getAssetUrl } from "@/lib/appVersion";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
+import { useTranslation } from "@/lib/useTranslation";
 
 const ICON_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
@@ -46,6 +47,7 @@ function LocationIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
+  const { lang, cycleLang, t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   useTheme();
   const { requestBarHome } = useBarHome();
@@ -81,7 +83,7 @@ export function Header() {
       }}
     >
       {/* Контейнер: Telegram и локация слева, логотип по центру, RU справа */}
-      <div className="relative mx-auto flex h-[60px] min-h-[60px] max-w-md items-center justify-between px-4">
+      <div className="pointer-events-auto relative z-[1000] mx-auto flex h-[60px] min-h-[60px] max-w-md items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <a
             href={CONFIG.telegramUrl}
@@ -97,7 +99,7 @@ export function Header() {
             target="_blank"
             rel="noopener noreferrer"
             className={ICON_BUTTON_CLASS}
-            aria-label="Открыть на карте"
+            aria-label={t("aria_map")}
           >
             <LocationIcon className="h-5 w-5" />
           </a>
@@ -109,7 +111,7 @@ export function Header() {
               href="/"
               onClick={() => abandonDurakStoredRoom()}
               className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
-              aria-label="На главную — GASTROBAR"
+              aria-label={t("aria_home_gastro")}
             >
               <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
                 <Image
@@ -129,7 +131,7 @@ export function Header() {
               type="button"
               onClick={requestBarHome}
               className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
-              aria-label="На главный экран — Бар"
+              aria-label={t("aria_bar_home")}
             >
               <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
                 <Image
@@ -149,9 +151,11 @@ export function Header() {
 
         <button
           type="button"
-          className={ICON_BUTTON_CLASS + " text-xs font-semibold uppercase tracking-[0.16em]"}
+          onClick={() => cycleLang()}
+          className={ICON_BUTTON_CLASS + " relative z-[1001] text-xs font-semibold uppercase tracking-[0.16em] touch-manipulation"}
+          aria-label={`Language: ${lang}`}
         >
-          RU
+          {lang.toUpperCase()}
         </button>
       </div>
     </motion.header>

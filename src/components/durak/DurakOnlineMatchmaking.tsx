@@ -15,6 +15,7 @@ import {
   formatPostgrestError,
 } from "@/lib/durak/online/matchmaking";
 import type { RoomRow } from "@/lib/durak/online/types";
+import { useTranslation } from "@/lib/useTranslation";
 
 type Props = {
   playerName: string;
@@ -22,23 +23,8 @@ type Props = {
   onCancel: () => void;
 };
 
-/** Статусы без секунд — таймер на сервере у всех разный, цифры только путают. */
-const WAITING_STATUS_LINES: { text: string; emoji: string }[] = [
-  { text: "Подбираем партию у бара…", emoji: "🎴" },
-  { text: "Ищем соперника за стойкой…", emoji: "🥃" },
-  { text: "Стол почти свободен…", emoji: "✨" },
-  { text: "Собираем компанию у сукна…", emoji: "🃏" },
-  { text: "Скоро усадим за игру…", emoji: "🪑" },
-];
-
-const WAITING_HINTS: string[] = [
-  "Можешь пока выпить что-нибудь бархатное 🍺",
-  "Закажи джерки к напитку — хватит до первого хода 🥩",
-  "Глянь меню бара у бармена — мы пока мешаем колоду 😉",
-  "Открой барную карту: найди свой вечерний дринк 🍸",
-  "Пока ждём — настройся на музыку и свет зала 🔊",
-  "Колода тасуется, стаканы звенят — остынь и расслабься ✨",
-];
+const MM_STATUS_EMOJI = ["🎴", "🥃", "✨", "🃏", "🪑"] as const;
+const MM_HINT_N = 6;
 
 /**
  * Онлайн-очередь: поиск комнаты + realtime.
@@ -87,6 +73,7 @@ const MATCHMAKING_RPC_AFTER_DEADLINE_MS = 700;
 const MATCHMAKING_RPC_TWO_HUMANS_MS = 450;
 
 export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: Props) {
+  const { t } = useTranslation();
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -126,30 +113,28 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
   }, [roomId, room, playerCount, screenState]);
 
   useEffect(() => {
-    const t = window.setInterval(() => {
-      setStatusIdx((i) => (i + 1) % WAITING_STATUS_LINES.length);
+    const id = window.setInterval(() => {
+      setStatusIdx((i) => (i + 1) % 5);
     }, 4200);
-    return () => window.clearInterval(t);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
-    const t = window.setInterval(() => {
-      setHintIdx((i) => (i + 1) % WAITING_HINTS.length);
+    const id = window.setInterval(() => {
+      setHintIdx((i) => (i + 1) % MM_HINT_N);
     }, 5300);
-    return () => window.clearInterval(t);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
     const c = createSupabaseBrowserClient();
     setSupabase(c);
     if (!c) {
-      setError(
-        "Нет Supabase: задайте NEXT_PUBLIC_SUPABASE_URL и ключ (NEXT_PUBLIC_SUPABASE_ANON_KEY или NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
-      );
+      setError(t("mm_err_no_supabase"));
     } else {
       void durakCloseInactiveFriendRooms(c);
     }
-  }, []);
+  }, [t]);
 
   const tick = useCallback(async () => {
     if (!supabase || !roomId) return;
@@ -380,8 +365,11 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
     }
   }, [room, roomId, playerCount, screenState]);
 
-  const line = WAITING_STATUS_LINES[statusIdx]!;
-  const hint = WAITING_HINTS[hintIdx]!;
+  const si = statusIdx % 5;
+  const hi = hintIdx % MM_HINT_N;
+  const lineEmoji = MM_STATUS_EMOJI[si]!;
+  const lineText = t(`mm_wait_${si}`);
+  const hint = t(`mm_hint_${hi}`);
 
   if (error) {
     return (
@@ -395,7 +383,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
             onClick={onCancel}
             className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-white/90 hover:bg-white/10"
           >
-            Назад
+            {t("back")}
           </button>
         </div>
       </div>
@@ -408,7 +396,7 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
         className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
       >
         <div className="flex flex-1 items-center justify-center py-20 text-sm text-white/50">
-          Подключение…
+          {t("mm_connecting")}
         </div>
       </div>
     );
@@ -419,24 +407,23 @@ export function DurakOnlineMatchmaking({ playerName, onRoomPlaying, onCancel }: 
       className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100"
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 text-center">
-        <p className="text-lg font-medium text-white/95">Ищем пару…</p>
+        <p className="text-lg font-medium text-white/95">{t("mm_finding")}</p>
         <div className="rounded-2xl border border-amber-400/35 bg-amber-950/40 px-6 py-8 sm:px-10">
           <p className="text-4xl leading-none" aria-hidden>
-            {line.emoji}
+            {lineEmoji}
           </p>
-          <p className="mt-4 text-base font-medium leading-snug text-amber-50 sm:text-lg">{line.text}</p>
+          <p className="mt-4 text-base font-medium leading-snug text-amber-50 sm:text-lg">{lineText}</p>
           <p className="mt-5 max-w-[22rem] text-sm leading-relaxed text-amber-100/75">{hint}</p>
         </div>
         <p className="max-w-[20rem] text-sm text-white/55">
-          Уже за столом: <span className="text-white/90">{playerCount}</span>. Подключим к сопернику или начнём партию,
-          как только будет готово.
+          {t("mm_seated").replace("{count}", String(playerCount))}
         </p>
         <button
           type="button"
           onClick={onCancel}
           className="rounded-full border border-white/20 bg-white/5 px-5 py-2.5 text-sm text-white/75 hover:bg-white/10"
         >
-          Отмена
+          {t("cancel")}
         </button>
       </div>
     </div>

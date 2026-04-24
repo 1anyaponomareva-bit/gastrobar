@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
-import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
+import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { hookahDescriptionForCard } from "@/lib/hookahDescriptionTrim";
+import { strengthLabelKey } from "@/lib/menuStrengthLabel";
+import { menuItemDisplayDescription, menuItemDisplayName, menuItemDisplayTaste } from "@/lib/menuItemI18n";
+import { useTranslation } from "@/lib/useTranslation";
 import { getAssetUrl } from "@/lib/appVersion";
 
 function formatVnd(price: string): string {
@@ -27,6 +30,7 @@ export function MenuDetailView({
   initialIndex: number;
   onClose: () => void;
 }) {
+  const { t, lang } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(
     Math.max(0, Math.min(initialIndex, items.length - 1))
   );
@@ -36,7 +40,7 @@ export function MenuDetailView({
   const startY = useRef(0);
 
   const item = items[currentIndex];
-  const strengthLbl = item ? strengthDisplayLabel(item) : null;
+  const strengthKey = item ? strengthLabelKey(item) : null;
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < items.length - 1;
 
@@ -93,6 +97,7 @@ export function MenuDetailView({
 
   if (!item) return null;
 
+  const displayName = menuItemDisplayName(item, lang);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
   const isMinimalBarCard = isSoftDrink || isSpirits;
@@ -122,7 +127,7 @@ export function MenuDetailView({
         type="button"
         onClick={runClose}
         className="absolute left-4 top-[max(18px,calc(env(safe-area-inset-top)+6px))] z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-md hover:bg-black/90"
-        aria-label="Назад"
+        aria-label={t("back")}
       >
         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -154,7 +159,7 @@ export function MenuDetailView({
           >
             <img
               src={getAssetUrl(item.image)}
-              alt={item.name}
+              alt={displayName}
               className={
                 item.category === "hookah"
                   ? "h-full min-h-full w-full min-w-full object-cover object-center"
@@ -199,7 +204,7 @@ export function MenuDetailView({
             {isSoftDrink ? (
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
-                  {item.name}
+                  {displayName}
                 </h2>
                 <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
                   {formatVnd(item.price)} VND
@@ -208,10 +213,10 @@ export function MenuDetailView({
             ) : isSpirits ? (
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
-                  {item.name}
+                  {displayName}
                 </h2>
                 <p className="text-base text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  {item.grammage ?? "50 мл"}
+                  {item.grammage ?? t("unit_vol_short")}
                 </p>
                 <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
                   {formatVnd(item.price)} VND
@@ -225,18 +230,18 @@ export function MenuDetailView({
                   style={{ backgroundColor: "#F59E0B", boxShadow: "0 0 14px rgba(245,158,11,0.5)" }}
                 >
                   <span>🔥</span>
-                  <span>Хит продаж</span>
+                  <span>{t("hit_sales")}</span>
                 </span>
               )}
               <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
-                {item.name}
+                {displayName}
               </h2>
               {item.abv && (
                 <p className="text-base font-semibold tabular-nums text-[#fde68a] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  Алкоголь · {item.abv}
+                  {t("alcohol_label").replace("{abv}", item.abv)}
                 </p>
               )}
-              {strengthLbl && (
+              {strengthKey && (
                 <span
                   className="mt-1.5 inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide"
                   style={{
@@ -254,7 +259,7 @@ export function MenuDetailView({
                           : "#fca5a5",
                   }}
                 >
-                  {strengthLbl}
+                  {t(strengthKey)}
                 </span>
               )}
               <p
@@ -265,27 +270,35 @@ export function MenuDetailView({
                 }
               >
                 {item.category === "hookah"
-                  ? hookahDescriptionForCard(item.description || "")
-                  : item.description || "Описание блюда."}
+                  ? hookahDescriptionForCard(menuItemDisplayDescription(item, lang) || "")
+                  : menuItemDisplayDescription(item, lang) || t("default_food_desc")}
               </p>
               {item.category === "hookah" && item.tobacco && (
                 <p className="text-sm font-medium text-white/85 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  Табак · {item.tobacco}
+                  {t("tobacco_label").replace("{tobacco}", item.tobacco)}
                 </p>
               )}
               {item.category === "hookah" && item.flavor && (
                 <p className="text-sm text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  Вкус · {item.flavor}
+                  {t("flavor_label").replace("{flavor}", item.flavor)}
                 </p>
               )}
               {item.taste && (
                 <p className="text-sm text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  {item.taste}
+                  {menuItemDisplayTaste(item, lang)}
                 </p>
               )}
               {item.category === "food" && item.pairing && item.pairing.length > 0 && (
                 <p className="text-sm text-white/70 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  {item.pairing.map((p) => (p === "beer" ? "к пиву" : p === "cocktail" ? "к коктейлям" : "к вину")).join(", ")}
+                  {item.pairing
+                    .map((p) =>
+                      p === "beer"
+                        ? t("pairing_with_beer")
+                        : p === "cocktail"
+                          ? t("pairing_with_cocktail")
+                          : t("pairing_with_wine")
+                    )
+                    .join(", ")}
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -293,14 +306,14 @@ export function MenuDetailView({
                   {formatVnd(item.price)} VND
                 </p>
                 <p className="text-sm text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
-                  {item.grammage ??
-                    (item.category === "cocktail"
-                      ? item.barSubcategory === "tincture"
-                        ? "50 мл"
-                        : "300 мл"
-                      : item.category === "hookah"
-                        ? "50–60 мин"
-                        : "150 г")}
+                  {item.category === "hookah"
+                    ? t("unit_hookah")
+                    : (item.grammage ??
+                      (item.category === "cocktail"
+                        ? item.barSubcategory === "tincture"
+                          ? t("unit_vol_short")
+                          : t("unit_glass")
+                        : t("unit_food")))}
                 </p>
               </div>
             </div>

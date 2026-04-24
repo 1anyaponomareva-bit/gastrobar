@@ -1,4 +1,5 @@
 import type { Card, GameTable, PlayerType, Rank, Suit, TablePair } from "./types";
+import { DURAK_I18N_BOT, DURAK_I18N_YOU } from "./names";
 import {
   canBeat,
   createDeck36,
@@ -24,8 +25,8 @@ function tableId(): string {
 }
 
 export function createInitialPlayersMvp(names?: { human: string; bot: string }): GameTable["players"] {
-  const humanName = names?.human && names.human.length > 0 ? names.human : "Вы";
-  const botName = names?.bot && names.bot.length > 0 ? names.bot : "Бот";
+  const humanName = names?.human && names.human.length > 0 ? names.human : DURAK_I18N_YOU;
+  const botName = names?.bot && names.bot.length > 0 ? names.bot : DURAK_I18N_BOT;
   return [
     {
       id: "human",
@@ -126,21 +127,21 @@ export function canRegisterBeatAck(
   playerId: string,
 ): { ok: true } | { error: string } {
   if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") {
-    return { error: "«Бито» сейчас недоступно" };
+    return { error: "de_beat_unavailable" };
   }
   const seat = table.players.findIndex((p) => p.id === playerId);
-  if (seat < 0) return { error: "Игрок не найден" };
-  if (seat === table.defenderIndex) return { error: "Защитник не подтверждает «Бито»" };
+  if (seat < 0) return { error: "de_player_not_found" };
+  if (seat === table.defenderIndex) return { error: "de_defender_no_bito_ack" };
 
   if (table.phase === "attack_toss" && !table.tablePairs.every((tp) => tp.defense !== null)) {
-    return { error: "Не всё отбито" };
+    return { error: "de_not_all_beaten" };
   }
 
   const tossFirst = firstSeatThatMustThrow(table);
 
   if (tossFirst != null) {
     if (seat !== tossFirst) {
-      return { error: "Дождитесь очереди подкидывания" };
+      return { error: "de_wait_throw_order" };
     }
     /** Подкид не обязателен — «Бито» закрывает раунд без подкида. */
     return { ok: true };
@@ -148,7 +149,7 @@ export function canRegisterBeatAck(
 
   if (table.phase === "attack_toss" && table.players.length < 3) {
     if (seat !== table.attackerIndex) {
-      return { error: "Не ваш ход" };
+      return { error: "de_not_your_turn_bito" };
     }
   }
 
@@ -336,7 +337,7 @@ export function newGameForPlayers(
 ): GameTable {
   const n = slots.length;
   if (n < 2) {
-    throw new Error("Нужно минимум 2 игрока");
+    throw new Error("de_need_two_players");
   }
   const deckShuffled =
     opts?.deckSeed != null && opts.deckSeed.length > 0
@@ -396,26 +397,26 @@ export function attackInitial(
   cardIds: string[]
 ): { table: GameTable } | { error: string } {
   if (table.state !== "playing" || table.phase !== "attack_initial") {
-    return { error: "Сейчас нельзя атаковать" };
+    return { error: "de_cannot_attack_now" };
   }
   const attacker = table.players[table.attackerIndex];
   if (attacker.id !== attackerId) {
-    return { error: "Не ваш ход (атака)" };
+    return { error: "de_not_your_turn_attack" };
   }
   if (cardIds.length === 0) {
-    return { error: "Выберите карты для атаки" };
+    return { error: "de_select_attack_cards" };
   }
 
   const cards = cardIds
     .map((id) => attacker.hand.find((c) => c.id === id))
     .filter((c): c is Card => c != null);
   if (cards.length !== cardIds.length) {
-    return { error: "Карты не найдены в руке" };
+    return { error: "de_cards_missing_in_hand" };
   }
 
   const rank = cards[0]!.rank;
   if (!cards.every((c) => c.rank === rank)) {
-    return { error: "Все карты атаки должны быть одного достоинства" };
+    return { error: "de_attack_same_rank_only" };
   }
 
   const defender = table.players[table.defenderIndex]!;
@@ -447,26 +448,26 @@ export function defendPlay(
   defenseCardId: string
 ): { table: GameTable } | { error: string } {
   if (table.phase !== "defend") {
-    return { error: "Сейчас не защита" };
+    return { error: "de_not_defense_phase" };
   }
   const defender = table.players[table.defenderIndex];
   if (defender.id !== defenderId) {
-    return { error: "Не ваш ход (защита)" };
+    return { error: "de_not_your_turn_defense" };
   }
 
   const pair = table.tablePairs.find(
     (p) => p.attack.id === attackCardId && p.defense === null
   );
   if (!pair) {
-    return { error: "Нет непокрытой атаки с этой картой" };
+    return { error: "de_no_uncovered_attack" };
   }
 
   const defCard = defender.hand.find((c) => c.id === defenseCardId);
   if (!defCard) {
-    return { error: "Карта не в руке" };
+    return { error: "de_card_not_in_hand" };
   }
   if (!canBeat(pair.attack, defCard, table.trumpSuit)) {
-    return { error: "Этой картой нельзя побить" };
+    return { error: "de_cannot_beat" };
   }
 
   const newPlayers = table.players.map((p, i) => {
@@ -505,14 +506,14 @@ export function defenderCannotBeat(
   defenderId: string
 ): { table: GameTable } | { error: string } {
   if (table.phase !== "defend") {
-    return { error: "Сейчас не защита" };
+    return { error: "de_not_defense_phase" };
   }
   const defender = table.players[table.defenderIndex];
   if (defender.id !== defenderId) {
-    return { error: "Только защитник отказывается от отбоя" };
+    return { error: "de_only_defender_folds" };
   }
   if (!table.tablePairs.some((tp) => tp.defense === null)) {
-    return { error: "Всё уже отбито" };
+    return { error: "de_all_beaten_already" };
   }
   return {
     table: {
@@ -530,11 +531,11 @@ export function defenderTake(table: GameTable, defenderId: string): { table: Gam
     table.phase !== "attack_toss" &&
     table.phase !== "player_can_throw_more"
   ) {
-    return { error: "Нельзя взять сейчас" };
+    return { error: "de_cannot_take_now" };
   }
   const defender = table.players[table.defenderIndex];
   if (defender.id !== defenderId) {
-    return { error: "Только защитник берёт" };
+    return { error: "de_only_defender_takes" };
   }
 
   const taken: Card[] = [];
@@ -580,14 +581,14 @@ export function attackToss(
   cardIds: string[]
 ): { table: GameTable } | { error: string } {
   if (table.phase !== "attack_toss" && table.phase !== "player_can_throw_more") {
-    return { error: "Сейчас не фаза подкидывания" };
+    return { error: "de_not_throw_phase" };
   }
   const actorIndex = table.players.findIndex((p) => p.id === attackerId);
   if (actorIndex < 0) {
-    return { error: "Игрок не найден" };
+    return { error: "de_player_not_found" };
   }
   if (actorIndex === table.defenderIndex) {
-    return { error: "Защитник не подкидывает" };
+    return { error: "de_defender_no_toss" };
   }
 
   const actor = table.players[actorIndex]!;
@@ -602,14 +603,14 @@ export function attackToss(
     .map((id) => actor.hand.find((c) => c.id === id))
     .filter((c): c is Card => c != null);
   if (cards.length !== cardIds.length) {
-    return { error: "Карты не найдены" };
+    return { error: "de_cards_missing" };
   }
   if (!cards.every((c) => ranksOnTable.has(c.rank))) {
-    return { error: "Можно подкидывать только по достоинствам на столе" };
+    return { error: "de_throw_match_table_ranks" };
   }
 
   if (table.tablePairs.length + cards.length > table.roundDefenderInitialHand) {
-    return { error: "Превышен лимит карт для подкидывания" };
+    return { error: "de_throw_limit" };
   }
 
   const newPlayers = table.players.map((p, i) => {

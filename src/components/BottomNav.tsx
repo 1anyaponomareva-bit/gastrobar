@@ -8,15 +8,17 @@ import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { getAssetUrl } from "@/lib/appVersion";
+import { useTranslation } from "@/lib/useTranslation";
 
-const TABS: { id: MenuPeriod; label: string }[] = [
-  { id: "bar", label: "Бар" },
-  { id: "hookahs", label: "Кальяны" },
-  { id: "promo", label: "Акции" },
-  { id: "favorites", label: "Любимое" },
+const TABS: { id: MenuPeriod; tkey: string }[] = [
+  { id: "bar", tkey: "bar" },
+  { id: "hookahs", tkey: "hookah" },
+  { id: "promo", tkey: "tab_promo" },
+  { id: "favorites", tkey: "favorites" },
 ];
 
 export function BottomNav() {
+  const { t } = useTranslation();
   const { period, setPeriod } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -42,6 +44,7 @@ export function BottomNav() {
       <div className="pointer-events-auto mx-auto flex w-[min(24.5rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(26rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">
         {TABS.map((tab) => {
           const active = !onGames && tab.id === period;
+          const label = t(tab.tkey);
           return (
             <button
               key={tab.id}
@@ -112,7 +115,7 @@ export function BottomNav() {
                 {tab.id === "favorites" && "❤️"}
               </motion.span>
               <span className="max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]">
-                {tab.label}
+                {label}
               </span>
             </button>
           );
@@ -130,7 +133,7 @@ export function BottomNav() {
             🎯
           </span>
           <span className="text-center text-[9px] leading-tight sm:text-[10px] sm:whitespace-nowrap">
-            Игры
+            {t("games")}
           </span>
         </Link>
       </div>
