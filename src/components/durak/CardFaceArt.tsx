@@ -5,6 +5,7 @@ import type { Card } from "@/games/durak/types";
 import { rankLabel, suitLabel } from "@/games/durak/cards";
 import { CARD_RADIUS_CLASS, GAME_CARD_FACE_CLASS } from "@/lib/durak/cardChrome";
 import { getCardImagePath } from "@/lib/durak/cardPng";
+import { getAssetUrl } from "@/lib/appVersion";
 import { cn } from "@/lib/utils";
 
 /** Fallback: прежняя текстовая карта, если PNG не загрузился. */
@@ -123,7 +124,7 @@ export function CardFaceArt({
   compact?: boolean;
 }) {
   const [useFallback, setUseFallback] = useState(false);
-  const src = getCardImagePath(card.rank, card.suit);
+  const src = getAssetUrl(getCardImagePath(card.rank, card.suit));
 
   useEffect(() => {
     setUseFallback(false);

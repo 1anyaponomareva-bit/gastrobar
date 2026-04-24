@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { BonusRibbonTimer } from "@/components/BonusRibbonTimer";
+import { getAssetUrl } from "@/lib/appVersion";
 
 /** Иконка колеса справа: `public/fab-wheel-reference.png` */
 const FAB_WHEEL_SRC = "/fab-wheel-reference.png";
@@ -64,7 +65,7 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
                 aria-hidden
               >
                 <Image
-                  src={FAB_WHEEL_SRC}
+                  src={getAssetUrl(FAB_WHEEL_SRC)}
                   alt=""
                   width={128}
                   height={128}

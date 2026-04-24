@@ -31,6 +31,7 @@ import {
 } from "@/games/durak/autoMove";
 import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
+import { getAssetUrl } from "@/lib/appVersion";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
 import { useStandalonePwa } from "@/hooks/useStandalonePwa";
@@ -371,7 +372,7 @@ function BrandedCardBack({
   disabled?: boolean;
   className?: string;
 }) {
-  const [src, setSrc] = useState(CARD_BACK_PNG_PATH);
+  const [src, setSrc] = useState(() => getAssetUrl(CARD_BACK_PNG_PATH));
 
   return (
     <img
@@ -392,7 +393,7 @@ function BrandedCardBack({
         WebkitBackfaceVisibility: "hidden",
         backfaceVisibility: "hidden",
       }}
-      onError={() => setSrc(CARD_BACK_URL)}
+      onError={() => setSrc(getAssetUrl(CARD_BACK_URL))}
     />
   );
 }

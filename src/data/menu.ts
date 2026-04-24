@@ -56,6 +56,7 @@ export const MENU_ITEMS: MenuItem[] = [
     category: "cocktail",
     price: "135000",
     barSubcategory: "cocktail",
+    badge: "hit",
     taste: "кисло-сладкий, виски, лимон, мёд",
     strength: "strong",
   },

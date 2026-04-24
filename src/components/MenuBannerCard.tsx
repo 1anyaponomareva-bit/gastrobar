@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
+import { getAssetUrl } from "@/lib/appVersion";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -33,7 +34,7 @@ export function MenuBannerCard({
     >
       {/* Фото на весь фон */}
       <img
-        src={item.image}
+        src={getAssetUrl(item.image)}
         alt=""
         className="absolute inset-0 h-full w-full object-cover object-center"
       />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PROMOS, type PromoItem } from "@/data/promos";
+import { getAssetUrl } from "@/lib/appVersion";
 import { useBarHome } from "@/components/BarHomeContext";
 
 const CENTER_SCALE = 1;
@@ -51,7 +52,7 @@ function PromoSlide({
     >
       <div className="relative flex-1 overflow-hidden bg-[#111]">
         <img
-          src={promo.image}
+          src={getAssetUrl(promo.image)}
           alt=""
           className={`h-full w-full ${promo.imageFit === "contain" ? "object-contain" : "object-cover"}`}
           style={{ opacity: isCenter ? 1 : 0.72 }}

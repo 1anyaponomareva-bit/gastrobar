@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
+import { getAssetUrl } from "@/lib/appVersion";
 import { motion } from "framer-motion";
 import { CONFIG } from "@/lib/config";
 
@@ -129,7 +130,7 @@ export function PromoBanner() {
           aria-label="Открыть Telegram-группу GASTROBAR"
         >
           <img
-            src={PROMO_IMAGE}
+            src={getAssetUrl(PROMO_IMAGE)}
             alt="Подписка на Telegram-группу GASTROBAR"
             className="h-auto max-h-[min(72vh,520px)] w-full object-contain"
           />

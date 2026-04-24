@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useBarHome } from "@/components/BarHomeContext";
 import { CONFIG } from "@/lib/config";
+import { getAssetUrl } from "@/lib/appVersion";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 
 const ICON_BUTTON_CLASS =
@@ -112,7 +113,7 @@ export function Header() {
             >
               <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
                 <Image
-                  src={CONFIG.logoSrc}
+                  src={getAssetUrl(CONFIG.logoSrc)}
                   alt="GASTROBAR"
                   fill
                   sizes="160px"
@@ -132,7 +133,7 @@ export function Header() {
             >
               <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
                 <Image
-                  src={CONFIG.logoSrc}
+                  src={getAssetUrl(CONFIG.logoSrc)}
                   alt="GASTROBAR"
                   fill
                   sizes="160px"

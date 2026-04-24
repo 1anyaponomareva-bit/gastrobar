@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
+import { getAssetUrl } from "@/lib/appVersion";
 import { strengthDisplayLabel } from "@/data/menu";
 
 function formatVnd(price: string): string {
@@ -43,7 +44,7 @@ export function HookahListItem({
   const liked = isFavorite(item.id);
   const priceFormatted = formatVnd(item.price);
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
-  const listImage = item.imageList ?? item.image;
+  const listImage = getAssetUrl(item.imageList ?? item.image);
   const strengthLabel = strengthDisplayLabel(item);
 
   const handleHeartClick = (e: React.MouseEvent) => {

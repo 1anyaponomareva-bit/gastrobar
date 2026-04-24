@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
+import { getAssetUrl } from "@/lib/appVersion";
 
 export function MenuGrid({
   items,
@@ -24,13 +25,13 @@ export function MenuGrid({
             style={{ aspectRatio: "1 / 1" }}
         >
           <img
-            src={item.image}
+            src={getAssetUrl(item.image)}
             alt=""
             className="block h-full w-full object-cover object-center"
             style={{ width: "100%", height: "100%", aspectRatio: "1 / 1", objectFit: "cover" }}
             loading="lazy"
             onError={(e) => {
-              const src = (e.target as HTMLImageElement)?.src ?? item.image;
+              const src = (e.target as HTMLImageElement)?.src ?? getAssetUrl(item.image);
               console.error("[MenuGrid] Ошибка загрузки изображения:", src, "id:", item.id);
             }}
           />

@@ -23,6 +23,6 @@ export const config = {
     /* Главная: паттерн ниже иногда не матчит «/» в path-to-regexp — явно. */
     "/",
     /* supabase-proxy: без лишнего edge-hop перед Node Route Handler (меньше сбоев fetch). */
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|supabase-proxy|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|sw.js|supabase-proxy|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

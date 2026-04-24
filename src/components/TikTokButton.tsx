@@ -8,6 +8,7 @@ import {
   liveUrl,
   profileUrl,
 } from "@/lib/tiktokLive";
+import { getAssetUrl } from "@/lib/appVersion";
 
 /** См. `--fab-bottom-nav-stack` в globals.css (над BottomNav) */
 const FAB_BOTTOM = "var(--fab-bottom-nav-stack)";
@@ -89,7 +90,7 @@ export function TikTokButton() {
           aria-label={live ? "TikTok — смотреть эфир LIVE" : "TikTok — открыть профиль"}
         >
           <Image
-            src="/images/tiktok-icon.png"
+            src={getAssetUrl("/images/tiktok-icon.png")}
             alt=""
             width={112}
             height={112}

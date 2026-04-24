@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, animate } from "framer-motion";
+import { getAssetUrl } from "@/lib/appVersion";
 import {
   BONUS_WHEEL_FULL_TURNS,
   computeRotationTargetDegrees,
@@ -161,7 +162,7 @@ export function WheelOfFortune({
                 <WheelImageFallback />
               ) : (
                 <Image
-                  src={WHEEL_IMAGE_SRC}
+                  src={getAssetUrl(WHEEL_IMAGE_SRC)}
                   alt="Колесо удачи"
                   fill
                   unoptimized

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { hookahDescriptionForCard } from "@/lib/hookahDescriptionTrim";
+import { getAssetUrl } from "@/lib/appVersion";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -152,7 +153,7 @@ export function MenuDetailView({
             className={`absolute inset-0 overflow-hidden ${item.category === "hookah" ? "bg-gradient-to-b from-zinc-900 via-black to-black" : ""}`}
           >
             <img
-              src={item.image}
+              src={getAssetUrl(item.image)}
               alt={item.name}
               className={
                 item.category === "hookah"

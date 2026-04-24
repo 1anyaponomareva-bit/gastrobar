@@ -7,6 +7,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { getAssetUrl } from "@/lib/appVersion";
 
 const TABS: { id: MenuPeriod; label: string }[] = [
   { id: "bar", label: "Бар" },
@@ -95,7 +96,7 @@ export function BottomNav() {
                 {tab.id === "bar" && "🍸"}
                 {tab.id === "hookahs" && (
                   <img
-                    src="/hookah/emojie.png"
+                    src={getAssetUrl("/hookah/emojie.png")}
                     alt=""
                     width={28}
                     height={28}

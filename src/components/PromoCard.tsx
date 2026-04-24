@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 
+import { getAssetUrl } from "@/lib/appVersion";
+
 const PROMO_IMAGE = "/menu/promo_happy_hour_ultra.png";
 const PROMO_TITLE = "HAPPY HOURS";
 const PROMO_DESCRIPTION =
@@ -18,7 +20,7 @@ export function PromoCard() {
     >
       <div className="absolute inset-0 h-full w-full">
         <img
-          src={PROMO_IMAGE}
+          src={getAssetUrl(PROMO_IMAGE)}
           alt={PROMO_TITLE}
           className="min-h-full min-w-full h-full w-full object-cover object-center"
           loading="eager"

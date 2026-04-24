@@ -8,6 +8,9 @@ import { BarHomeProvider } from "@/components/BarHomeContext";
 import { AppWithSplash } from "@/components/AppWithSplash";
 import { BonusScreenProvider } from "@/components/BonusScreenContext";
 import { PromoBanner } from "@/components/PromoBanner";
+import { DailyCacheVersionScript } from "@/components/DailyCacheVersionScript";
+import { GastrobarGamesCardBgVersionStyle } from "@/components/GastrobarGamesCardBgVersionStyle";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
@@ -54,6 +57,9 @@ export default function RootLayout({
         className={`${montserrat.className} app min-h-screen bg-black pb-28 pt-0 text-white`}
         style={{ backgroundColor: "#000", color: "#fff", minHeight: "100dvh" }}
       >
+        <GastrobarGamesCardBgVersionStyle />
+        <DailyCacheVersionScript />
+        <ServiceWorkerRegister />
         <ThemeProvider initialPeriod="bar">
           <FavoritesProvider>
             <HighlightProductProvider>

@@ -5,6 +5,7 @@ import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { strengthDisplayLabel, TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { BONUS_VALIDITY_LABEL } from "@/lib/bonusCopy";
+import { getAssetUrl } from "@/lib/appVersion";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -44,7 +45,7 @@ export function MenuListItem({
   const priceFormatted = formatVnd(item.price);
   const isBonusItem = bonusProductId != null && bonusProductId === item.id;
   const isHighlighted = highlightProductId != null && highlightProductId === item.id;
-  const listImage = item.imageList ?? item.image;
+  const listImage = getAssetUrl(item.imageList ?? item.image);
   const strengthLbl = strengthDisplayLabel(item);
   const isTincture = item.barSubcategory === "tincture";
   const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);

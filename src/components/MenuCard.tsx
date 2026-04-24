@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
+import { getAssetUrl } from "@/lib/appVersion";
 
 export function MenuCard({
   item,
@@ -29,7 +30,7 @@ export function MenuCard({
       {/* Фото на весь экран */}
       <div className="absolute inset-0 h-full w-full">
         <img
-          src={item.image}
+          src={getAssetUrl(item.image)}
           alt={item.name}
           className="min-h-full min-w-full h-full w-full object-cover object-center"
           loading="lazy"

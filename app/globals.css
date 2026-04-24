@@ -306,13 +306,7 @@ html[data-durak-route="1"] body {
   min-width: 0;
 }
 
-.games-pick-card--durak .games-pick-card__bg {
-  background-image: url("/durak.png");
-}
-
-.games-pick-card--battleship .games-pick-card__bg {
-  background-image: url("/morskboi.png");
-}
+/* Фон карточек /games: url в `GastrobarGamesCardBgVersionStyle` (суточный ?v=). */
 
 a:hover .games-pick-card:not(.games-pick-card--soon) .games-pick-card__bg,
 .games-pick-card--interactive:hover .games-pick-card__bg {
