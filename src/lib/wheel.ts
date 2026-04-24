@@ -4,15 +4,11 @@
  */
 
 import type { BarCategoryId } from "@/components/CategoryTabs";
-import {
-  createBonus,
-  clearCurrentBonus,
-  type Bonus,
-  type BonusType,
-} from "@/services/bonusService";
+import { createBonus, type Bonus, type BonusType } from "@/services/bonusService";
 
-export const IS_TEST_MODE = true;
 export const WHEEL_STORAGE_KEY = "gastrobar_wheel";
+/** Интервал между вращениями (16 ч). */
+export const WHEEL_SPIN_COOLDOWN_MS = 16 * 60 * 60 * 1000;
 export const HAS_PLAYED_BEFORE_KEY = "hasPlayedBefore";
 
 const WIN_EXPIRY_MIN = 120;
@@ -239,8 +235,6 @@ export type WheelStorage = {
   consecutiveWinsSinceLoss?: number;
 };
 
-const SPIN_COOLDOWN_MS = IS_TEST_MODE ? 8000 : 24 * 60 * 60 * 1000;
-
 export function getStorage(): WheelStorage {
   if (typeof window === "undefined") return { lastSpinAt: 0 };
   try {
@@ -275,9 +269,27 @@ function setStorage(data: WheelStorage): void {
   } catch {}
 }
 
-export function canSpin(): boolean {
+/** Сколько ждать до следующего вращения (0 — можно крутить). */
+export function getMsUntilNextSpin(): number {
+  if (typeof window === "undefined") return 0;
   const { lastSpinAt } = getStorage();
-  return Date.now() - lastSpinAt >= SPIN_COOLDOWN_MS;
+  if (lastSpinAt <= 0) return 0;
+  const end = lastSpinAt + WHEEL_SPIN_COOLDOWN_MS;
+  return Math.max(0, end - Date.now());
+}
+
+export function canSpin(): boolean {
+  return getMsUntilNextSpin() === 0;
+}
+
+/** Оставшееся время кулдауна как `H:MM:SS` (для таймера). */
+export function formatWheelCooldownRemaining(totalMs: number): string {
+  if (totalMs <= 0) return "0:00:00";
+  const totalSec = Math.max(0, Math.ceil(totalMs / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 /** Бонусы «пиво / настойка / снек» — на весь раздел, без привязки к одной карточке */
@@ -313,13 +325,3 @@ export function saveSpinOutcome(outcome: SpinOutcome): Bonus | null {
   return createBonus(outcome.bonusType, expiresAt, productId, navBarCategory);
 }
 
-export function resetWheelForTest(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(WHEEL_STORAGE_KEY);
-    localStorage.removeItem(HAS_PLAYED_BEFORE_KEY);
-    clearCurrentBonus();
-  } catch {
-    /* ignore */
-  }
-}

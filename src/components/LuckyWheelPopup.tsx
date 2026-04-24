@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WheelOfFortune } from "@/components/WheelOfFortune";
 import { WheelResultView } from "@/components/WheelResultView";
@@ -12,8 +12,8 @@ import {
   hasPlayedWheelBefore,
   getWheelSegments,
   WHEEL_SEGMENTS,
-  IS_TEST_MODE,
-  resetWheelForTest,
+  getMsUntilNextSpin,
+  formatWheelCooldownRemaining,
   type SpinOutcome,
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
@@ -34,11 +34,21 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
   const [spinSession, setSpinSession] = useState<{ id: number; outcome: SpinOutcome } | null>(null);
   const [spinActive, setSpinActive] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
+  const [cooldownTick, setCooldownTick] = useState(0);
   const sessionIdRef = useRef(0);
 
   const isFirstWheel = !hasPlayedWheelBefore();
   const segments = getWheelSegments(isFirstWheel);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setInterval(() => setCooldownTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [isOpen]);
+
+  void cooldownTick;
+  const allowedToSpin = canSpin();
+  const msUntilNext = allowedToSpin ? 0 : getMsUntilNextSpin();
 
   const handleClose = useCallback(() => {
     setView("wheel");
@@ -76,22 +86,12 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
     setIsSpinning(true);
   }, [isSpinning]);
 
-  const handleReset = useCallback(() => {
-    resetWheelForTest();
-    setResetKey((k) => k + 1);
-    setSpinSession(null);
-    setSpinActive(false);
-    setIsSpinning(false);
-  }, []);
-
   if (!isOpen) return null;
-
-  const allowedToSpin = canSpin();
 
   return (
     <AnimatePresence>
       <motion.div
-        key={resetKey}
+        key="wheel-popup"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -141,10 +141,11 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
             >
               <div className="mb-4 max-w-[min(92vw,24rem)] text-center">
                 <h2 className="text-lg font-semibold tracking-wide text-white/95">
-                  Крути колесо - получи бонус
+                  Крути колесо — получи бонус
                 </h2>
+                <p className="mt-1.5 text-xs text-white/50">Одно вращение раз в 16 часов</p>
                 <p className="mt-2 text-sm font-medium uppercase tracking-[0.12em] text-amber-400/95">
-                  Нажми на кнопку КРУТИТЬ
+                  Нажми на колесо, чтобы крутить
                 </p>
               </div>
               <WheelOfFortune
@@ -157,18 +158,17 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
                 isSpinning={isSpinning}
               />
               {!isSpinning && !allowedToSpin && (
-                <p className="mt-4 text-center text-xs text-white/50">
-                  {IS_TEST_MODE ? "Крутить можно через 8 сек" : "Крутить можно раз в 24 часа"}
-                </p>
-              )}
-              {!isSpinning && IS_TEST_MODE && (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="mt-3 text-center text-xs text-white/40 underline underline-offset-2"
-                >
-                  Reset (вкл. первый спин)
-                </button>
+                <div className="mt-5 w-full max-w-sm text-center">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
+                    Следующее вращение
+                  </p>
+                  <p
+                    className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-amber-300/95"
+                    aria-live="polite"
+                  >
+                    {formatWheelCooldownRemaining(msUntilNext)}
+                  </p>
+                </div>
               )}
               {isSpinning && (
                 <p className="mt-4 text-center text-xs text-white/50">Выбор сектора…</p>
