@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseRestBaseForBrowserRpc } from "@/lib/supabase/browser";
 import type { PublicFriendTableRow, RoomPlayerRow, RoomRow, RoomStatePayload } from "./types";
 
 const EMPTY_ERROR_HINT =
@@ -118,14 +119,17 @@ function parseJoinQueueResult(data: unknown): {
   return { roomId, searchDeadline, rejoined };
 }
 
-type ClientKeys = { supabaseUrl: string; supabaseKey: string };
-
-function getClientKeys(client: SupabaseClient): ClientKeys {
-  return client as unknown as ClientKeys;
-}
-
 /** Смени число при следующем изменении текста ошибок — по нему видно, что задеплоена свежая сборка. */
-const DURAK_NET_HINT_REV = 4;
+const DURAK_NET_HINT_REV = 5;
+
+/** WebKit: «TypeError: Load failed» / «The network connection was lost» и т.п. */
+function formatNetworkFetchError(e: unknown): string {
+  const raw = formatPostgrestError(e);
+  if (/load failed|failed to fetch|networkerror|network request failed|loaderror|connection was lost/i.test(raw)) {
+    return "Нет соединения с сервером игры. Проверьте интернет и обновите страницу.";
+  }
+  return raw;
+}
 
 /** Прямой POST к PostgREST RPC — в ошибке всегда есть HTTP status и сырое тело (client.rpc часто даёт { message: "" }). */
 function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
@@ -160,12 +164,19 @@ function formatRpcHttpFailure(status: number, statusText: string, body: string):
 }
 
 async function rpcPost(
-  client: SupabaseClient,
+  _client: SupabaseClient,
   fn: string,
   args: Record<string, unknown>
 ): Promise<{ data: unknown } | { error: string }> {
-  const { supabaseUrl, supabaseKey } = getClientKeys(client);
-  const url = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${encodeURIComponent(fn)}`;
+  const conf = getSupabaseRestBaseForBrowserRpc();
+  if (!conf) {
+    return {
+      error:
+        "Онлайн-игра недоступна: проверьте NEXT_PUBLIC_SUPABASE_URL и ключ API в настройках сайта.",
+    };
+  }
+  const { base, apiKey } = conf;
+  const url = `${base.replace(/\/$/, "")}/rest/v1/rpc/${encodeURIComponent(fn)}`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -173,15 +184,15 @@ async function rpcPost(
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
+        apikey: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         Prefer: "return=representation",
       },
       body: JSON.stringify(args),
     });
   } catch (e) {
     return {
-      error: formatPostgrestError(e),
+      error: formatNetworkFetchError(e),
     };
   }
   const text = await res.text();

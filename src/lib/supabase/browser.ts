@@ -20,6 +20,22 @@ const memoryAuthStorage = {
 };
 
 /**
+ * База PostgREST и ключ для ручного `fetch` к `/rest/v1/rpc/…` (должны совпадать с `createSupabaseBrowserClient`).
+ * Публичный `SupabaseClient` не гарантирует поля `supabaseUrl` / ключа — при неверном URL Safari даёт TypeError: Load failed.
+ */
+export function getSupabaseRestBaseForBrowserRpc(): { base: string; apiKey: string } | null {
+  const apiKey = getSupabasePublicApiKey();
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!apiKey || !rawUrl) return null;
+  if (typeof window === "undefined") {
+    return { base: rawUrl.replace(/\/+$/, ""), apiKey };
+  }
+  const bypass = process.env.NEXT_PUBLIC_SUPABASE_BYPASS_PROXY === "1";
+  const base = bypass ? rawUrl.replace(/\/+$/, "") : `${window.location.origin}/supabase-proxy`;
+  return { base, apiKey };
+}
+
+/**
  * Один экземпляр Supabase JS на вкладку (через globalThis — на случай дублирования модуля в разных чанках).
  * По умолчанию: запросы на `/supabase-proxy` → Route Handler → Supabase.
  * Диагностика 502: `NEXT_PUBLIC_SUPABASE_BYPASS_PROXY=1` — прямой PostgREST URL (тот же, что в Dashboard).
