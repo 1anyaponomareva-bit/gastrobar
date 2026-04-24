@@ -19,10 +19,42 @@ const memoryAuthStorage = {
   removeItem: (_key: string) => undefined,
 };
 
+function requestUrlString(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  if (input instanceof Request) return input.url;
+  return String(input);
+}
+
+/**
+ * Второй хост для PostgREST: same-origin `/supabase-proxy` ↔ прямой `*.supabase.co`
+ * (если один путь стабильно падает в WebKit — пробуем другой).
+ */
+function alternatePostgrestUrl(
+  requestUrl: string,
+  directBase: string,
+  proxyPrefix: string
+): string | null {
+  try {
+    const u = new URL(requestUrl, window.location.origin);
+    const directOrigin = new URL(directBase).origin;
+    if (u.origin === directOrigin) {
+      return `${proxyPrefix.replace(/\/$/, "")}${u.pathname}${u.search}`;
+    }
+    if (u.origin === window.location.origin && u.pathname.startsWith("/supabase-proxy")) {
+      const tail = u.pathname.slice("/supabase-proxy".length) + u.search;
+      return `${directOrigin}${tail.startsWith("/") ? tail : `/${tail}`}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /**
  * Один экземпляр Supabase JS на вкладку (через globalThis — на случай дублирования модуля в разных чанках).
- * По умолчанию: прямой `NEXT_PUBLIC_SUPABASE_URL` (PostgREST) — CORS на стороне Supabase; без лишнего hop через Vercel.
- * Прокси на сайт: `NEXT_PUBLIC_SUPABASE_USE_PROXY=1` → `${origin}/supabase-proxy` (только при необходимости).
+ * По умолчанию: `/supabase-proxy` (тот же сайт, без cross-origin к Supabase — меньше сбоев в Safari/PWA).
+ * Прямой PostgREST: `NEXT_PUBLIC_SUPABASE_USE_DIRECT=1` (отладка / если прокси режет на хостинге).
  */
 export function createSupabaseBrowserClient(): SupabaseClient | null {
   if (typeof window === "undefined") return null;
@@ -37,29 +69,55 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
     b.client = null;
     return null;
   }
-  const direct = rawUrl.replace(/\/+$/, "");
-  const useProxy = process.env.NEXT_PUBLIC_SUPABASE_USE_PROXY === "1";
-  const url = useProxy ? `${window.location.origin}/supabase-proxy` : direct;
-  if (process.env.NODE_ENV === "development" && !useProxy) {
-    try {
-      console.log("[gastrobar] Supabase: direct", new URL(direct).host);
-    } catch {
-      /* ignore */
-    }
+  const directBase = rawUrl.replace(/\/+$/, "");
+  const proxyPrefix = `${window.location.origin}/supabase-proxy`;
+  const useDirect = process.env.NEXT_PUBLIC_SUPABASE_USE_DIRECT === "1";
+  const url = useDirect ? directBase : proxyPrefix;
+  if (process.env.NODE_ENV === "development") {
+    console.log("[gastrobar] Supabase:", useDirect ? `direct ${new URL(directBase).host}` : "same-site proxy");
   }
 
-  /** Один повтор при TypeError: Failed to fetch (обрыв / холодный прокси / моб. сети). */
+  /**
+   * supabase-js при POST часто передаёт `Request` с телом. Повтор `fetch(тот же Request)` без clone()
+   * даёт TypeError: Failed to fetch / Load failed (тело прочитано один раз).
+   */
   const fetchResilient: typeof fetch = async (input, init) => {
-    const nextInit = { ...init, cache: "no-store" as const };
+    const nextInit: RequestInit = { ...init, cache: "no-store" };
+
+    const run = (inp: RequestInfo | URL) => fetch(inp, nextInit);
+
     try {
-      return await fetch(input, nextInit);
+      return await run(input);
     } catch (e) {
-      if (e instanceof TypeError) {
-        await new Promise((r) => setTimeout(r, 200));
-        return await fetch(input, nextInit);
-      }
-      throw e;
+      if (!(e instanceof TypeError)) throw e;
     }
+    await new Promise((r) => setTimeout(r, 200));
+    const second = input instanceof Request ? input.clone() : input;
+    try {
+      return await run(second);
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e;
+    }
+    const href = requestUrlString(input);
+    const alt = alternatePostgrestUrl(href, directBase, proxyPrefix);
+    if (!alt) throw new TypeError("Failed to fetch");
+    await new Promise((r) => setTimeout(r, 150));
+    if (input instanceof Request) {
+      const cloned = input.clone();
+      return await fetch(alt, {
+        method: cloned.method,
+        headers: cloned.headers,
+        body: cloned.body,
+        cache: "no-store",
+        redirect: cloned.redirect,
+        integrity: cloned.integrity,
+        keepalive: cloned.keepalive,
+        mode: cloned.mode,
+        referrer: cloned.referrer,
+        signal: nextInit.signal ?? cloned.signal,
+      });
+    }
+    return await fetch(alt, nextInit);
   };
 
   b.client = createClient(url, key, {
