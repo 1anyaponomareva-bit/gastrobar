@@ -21,8 +21,8 @@ const memoryAuthStorage = {
 
 /**
  * Один экземпляр Supabase JS на вкладку (через globalThis — на случай дублирования модуля в разных чанках).
- * По умолчанию: запросы на `/supabase-proxy` → Route Handler → Supabase.
- * Диагностика 502: `NEXT_PUBLIC_SUPABASE_BYPASS_PROXY=1` — прямой PostgREST URL (тот же, что в Dashboard).
+ * По умолчанию: прямой `NEXT_PUBLIC_SUPABASE_URL` (PostgREST) — CORS на стороне Supabase; без лишнего hop через Vercel.
+ * Прокси на сайт: `NEXT_PUBLIC_SUPABASE_USE_PROXY=1` → `${origin}/supabase-proxy` (только при необходимости).
  */
 export function createSupabaseBrowserClient(): SupabaseClient | null {
   if (typeof window === "undefined") return null;
@@ -37,15 +37,30 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
     b.client = null;
     return null;
   }
-  const bypass =
-    typeof process !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_BYPASS_PROXY === "1";
-  const url = bypass ? rawUrl.replace(/\/+$/, "") : `${window.location.origin}/supabase-proxy`;
-  if (bypass && typeof window !== "undefined") {
-    console.log("[gastrobar] Supabase client: DIRECT URL (proxy bypass)", url);
+  const direct = rawUrl.replace(/\/+$/, "");
+  const useProxy = process.env.NEXT_PUBLIC_SUPABASE_USE_PROXY === "1";
+  const url = useProxy ? `${window.location.origin}/supabase-proxy` : direct;
+  if (process.env.NODE_ENV === "development" && !useProxy) {
+    try {
+      console.log("[gastrobar] Supabase: direct", new URL(direct).host);
+    } catch {
+      /* ignore */
+    }
   }
 
-  const fetchNoStore: typeof fetch = (input, init) =>
-    fetch(input, { ...init, cache: "no-store" });
+  /** Один повтор при TypeError: Failed to fetch (обрыв / холодный прокси / моб. сети). */
+  const fetchResilient: typeof fetch = async (input, init) => {
+    const nextInit = { ...init, cache: "no-store" as const };
+    try {
+      return await fetch(input, nextInit);
+    } catch (e) {
+      if (e instanceof TypeError) {
+        await new Promise((r) => setTimeout(r, 200));
+        return await fetch(input, nextInit);
+      }
+      throw e;
+    }
+  };
 
   b.client = createClient(url, key, {
     auth: {
@@ -56,7 +71,7 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
       storageKey: "gastrobar-durak-memory",
     },
     db: { timeout: 30_000 },
-    global: { fetch: fetchNoStore },
+    global: { fetch: fetchResilient },
   });
   return b.client;
 }
