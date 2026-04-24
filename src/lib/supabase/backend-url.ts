@@ -1,6 +1,8 @@
 /**
- * Реальный URL Supabase для серверного прокси (rewrites на Vercel edge иногда дают DNS_HOSTNAME_NOT_FOUND).
- * Сначала SUPABASE_URL (только сервер), иначе NEXT_PUBLIC_SUPABASE_URL.
+ * URL PostgREST для серверного прокси.
+ * Сначала `NEXT_PUBLIC_SUPABASE_URL` — тот же хост, что в браузере. Иначе `SUPABASE_URL` (только сервер).
+ * Важно: на Vercel нередко пишут оба; опечатка **только** в `SUPABASE_URL` раньше затирала публичный URL и
+ * давала `getaddrinfo ENOTFOUND` у прокси при рабочем клиенте.
  */
 export function normalizeSupabaseBackendUrl(raw: string | undefined): string | null {
   if (!raw) return null;
@@ -19,7 +21,7 @@ export function normalizeSupabaseBackendUrl(raw: string | undefined): string | n
 
 export function getSupabaseBackendUrl(): string | null {
   return (
-    normalizeSupabaseBackendUrl(process.env.SUPABASE_URL) ??
-    normalizeSupabaseBackendUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)
+    normalizeSupabaseBackendUrl(process.env.NEXT_PUBLIC_SUPABASE_URL) ??
+    normalizeSupabaseBackendUrl(process.env.SUPABASE_URL)
   );
 }

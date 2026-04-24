@@ -205,10 +205,16 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
           : cause != null
             ? String(cause)
             : undefined;
+      const netHint =
+        causeStr && /getaddrinfo|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(causeStr + msg);
+      const notFoundHint = /ENOTFOUND|getaddrinfo/i.test(causeStr + msg)
+        ? "Часто: в Vercel в `SUPABASE_URL` опечатка или старый проект — в таком случае удалите переменную или вставьте **тот же** URL, что в Supabase → Settings → API (Project URL), как у `NEXT_PUBLIC_SUPABASE_URL`. "
+        : "";
       const hint =
-        (causeStr && /getaddrinfo|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(causeStr + msg)
-          ? "Сеть: проверьте DNS/IPv6, регион Vercel и что проект Supabase не на паузе. В .env: SUPABASE_URL и NEXT_PUBLIC_SUPABASE_URL = https://<ref>.supabase.co (без /supabase-proxy). "
-          : "") + "Сборка: убедитесь, что в Vercel заданы SUPABASE_URL (или NEXT_PUBLIC_SUPABASE_URL) и SUPABASE_ANON_KEY (или NEXT_PUBLIC_SUPABASE_ANON_KEY).";
+        (netHint
+          ? `Сеть/хост: проверьте проект (не на паузе) и URL. ${notFoundHint}`
+          : "") +
+        "Keys: Vercel: `NEXT_PUBLIC_SUPABASE_URL` (или `SUPABASE_URL`) + anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY` или `SUPABASE_ANON_KEY`).";
       console.warn("[supabase-proxy] fetch threw after retries", {
         method: req.method,
         target: target.href,
