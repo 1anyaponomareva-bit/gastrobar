@@ -79,7 +79,7 @@ function isProxyRateLimitError(message: string): boolean {
   return /429|PROXY_RATE_LIMIT|Too Many Requests/i.test(message);
 }
 
-/** Не чаще: иначе упираемся в POST-лимит /supabase-proxy на одного клиента. */
+/** Не чаще: иначе упираемся в rate limit прокси/PostgREST на одного клиента. */
 const MATCHMAKING_RPC_MIN_INTERVAL_MS = 2200;
 /** После server search_deadline чаще дергаем finalize — партия с ботом должна стартовать сразу. */
 const MATCHMAKING_RPC_AFTER_DEADLINE_MS = 700;

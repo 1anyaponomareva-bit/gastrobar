@@ -1,4 +1,4 @@
-/** Legacy anon JWT или новый Publishable key (`sb_publishable_…`) — оба подходят для клиента. */
+/** Anon JWT или publishable key (`sb_publishable_…`) — из тех же env, что и URL. */
 export function getSupabasePublicApiKey(): string {
   return (
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||

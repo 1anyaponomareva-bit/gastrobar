@@ -7,10 +7,7 @@ const extraDevOrigins =
     .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
-  /**
-   * Supabase: браузер → /supabase-proxy → `app/supabase-proxy/[[...path]]/route.ts` (Node).
-   * Внешние rewrites на Vercel edge давали DNS_HOSTNAME_NOT_FOUND к *.supabase.co.
-   */
+  /** PostgREST прокси (если кто-то бьёт в `/supabase-proxy`): `app/supabase-proxy/[[...path]]/route.ts`. */
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos", pathname: "/**" },

@@ -1,11 +1,6 @@
 import dns from "node:dns";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
-
-/* Vercel/Node: undici к *.supabase.co иногда падает на IPv6 (fetch failed) — сначала A-запись. */
-if (typeof dns.setDefaultResultOrder === "function") {
-  dns.setDefaultResultOrder("ipv4first");
-}
 import {
   assertBodySizeAllowed,
   getClientIp,
@@ -14,6 +9,10 @@ import {
   rateLimitOrPass,
 } from "@/lib/supabase/proxy-guards";
 import { getSupabaseServerAnonKey } from "@/lib/supabase/server-anon-key";
+
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 export const runtime = "nodejs";
 
@@ -80,13 +79,11 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
   const pubUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const backend = getSupabaseBackendUrl();
   if (!pubUrl?.trim()) {
-    console.warn(
-      "[supabase-proxy] NEXT_PUBLIC_SUPABASE_URL is undefined (браузерный клиент без неё не создаётся; для прокси на сервере можно задать только SUPABASE_URL)",
-    );
+    console.warn("[supabase-proxy] NEXT_PUBLIC_SUPABASE_URL is not set");
   }
   if (!backend) {
     return NextResponse.json(
-      { error: "Supabase URL not configured (SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL)" },
+      { error: "Supabase URL not configured (set NEXT_PUBLIC_SUPABASE_URL in Vercel)" },
       { status: 503 },
     );
   }
@@ -94,7 +91,9 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
   const serverKey = getSupabaseServerAnonKey();
   if (!serverKey) {
     return NextResponse.json(
-      { error: "Supabase anon key missing (SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY)" },
+      {
+        error: "Supabase public key not configured (NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
+      },
       { status: 503 },
     );
   }
@@ -210,11 +209,9 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
       const isEnoNotFound = /ENOTFOUND|NXDOMAIN|Non-existent|getaddrinfo/i.test(causeStr + msg);
       const badHost = target.host;
       const notFoundHint = isEnoNotFound
-        ? `**ENOTFOUND** для \`${badHost}\`: такого субдомена нет в DNS (в мире, не «пауза»). Скопируйте **Project URL** в Supabase → Settings → API и **полностью** замените \`NEXT_PUBLIC_SUPABASE_URL\` в Vercel (и \`SUPABASE_URL\` если задан) — ref в URL должен **буквально** совпадать с дашбордом. Redeploy. Опция: снимите \`NEXT_PUBLIC_SUPABASE_USE_PROXY\` (прямой \`fetch\` к тому же URL). `
-        : "Часто: в Vercel в `SUPABASE_URL` не тот URL — удалите или выровняйте с `NEXT_PUBLIC_SUPABASE_URL` (оба = Project URL). ";
-      const hint =
-        (netHint ? `Сеть/хост. ${notFoundHint}` : "") +
-        "Keys: `NEXT_PUBLIC_SUPABASE_ANON_KEY` (или `SUPABASE_ANON_KEY`) с той же страницы API.";
+        ? `ENOTFOUND: ${badHost} — проверьте Project URL (Settings → API) и \`NEXT_PUBLIC_SUPABASE_URL\` в Vercel, Redeploy.`
+        : "Проверьте `NEXT_PUBLIC_SUPABASE_URL` в Vercel. ";
+      const hint = (netHint ? `Сеть/хост. ${notFoundHint}` : "") + "Keys: `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.";
       console.warn("[supabase-proxy] fetch threw after retries", {
         method: req.method,
         target: target.href,

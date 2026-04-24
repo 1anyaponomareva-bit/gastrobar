@@ -12,12 +12,7 @@ async function insertSpinRow(row: { user_id: string; result: string }): Promise<
       "missing NEXT_PUBLIC_SUPABASE_URL and public API key (NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)",
     );
   }
-  const base =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/supabase-proxy`
-      : backend;
-
-  const res = await fetch(`${base}/rest/v1/spins`, {
+  const res = await fetch(`${backend}/rest/v1/spins`, {
     method: "POST",
     cache: "no-store",
     headers: {

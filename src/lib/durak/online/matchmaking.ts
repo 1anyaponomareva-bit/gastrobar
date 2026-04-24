@@ -119,7 +119,7 @@ function parseJoinQueueResult(data: unknown): {
 }
 
 /**
- * Вызов RPC через клиент Supabase (тот же путь, что `client.from` → `/supabase-proxy`).
+ * Вызов RPC через `client.rpc` (тот же базовый URL, что в `createClient`).
  * Ручной `fetch` к `/rest/v1/rpc/…` в части Safari давал `TypeError: Load failed` при нормальной сети.
  */
 async function rpcPost(
