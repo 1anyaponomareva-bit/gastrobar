@@ -63,11 +63,6 @@ export function PromoBanner() {
     setIsVisible(false);
   }, []);
 
-  const goToChannel = useCallback(() => {
-    window.open(CONFIG.telegramUrl, "_blank", "noopener,noreferrer");
-    setIsVisible(false);
-  }, []);
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -122,17 +117,17 @@ export function PromoBanner() {
           href={CONFIG.telegramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => {
-            e.preventDefault();
-            goToChannel();
+          onClick={() => {
+            close();
           }}
-          className="block overflow-hidden rounded-xl bg-black"
+          className="block cursor-pointer touch-manipulation overflow-hidden rounded-xl bg-black outline-none ring-offset-0 transition-opacity active:opacity-95"
           aria-label="Открыть Telegram-группу GASTROBAR"
         >
           <img
             src={getAssetUrl(PROMO_IMAGE)}
             alt="Подписка на Telegram-группу GASTROBAR"
-            className="h-auto max-h-[min(72vh,520px)] w-full object-contain"
+            className="pointer-events-none h-auto max-h-[min(72vh,520px)] w-full object-contain select-none"
+            draggable={false}
           />
         </a>
 
