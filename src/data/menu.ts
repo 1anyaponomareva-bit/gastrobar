@@ -48,19 +48,6 @@ export const TINCTURE_RIM_FOCUS_IDS = new Set<string>([
 export const MENU_ITEMS: MenuItem[] = [
   // БАР: коктейли → вино → пиво → настойки → шоты → безалкогольные → снеки
   {
-    id: "b52",
-    name: "Б-52",
-    description: "Легендарный слоистый шот из кофейного ликера, сливочного крема и апельсинового трипл-сек.",
-    image: "/menu/cocktail_b52_ultra.png",
-    imageList: "/menu/cocktail-b52-horizontal-hero.png",
-    category: "cocktail",
-    price: "95000",
-    barSubcategory: "cocktail",
-    badge: "hit",
-    taste: "сладкий, кофе, сливки, апельсин",
-    strength: "strong",
-  },
-  {
     id: "whisky-sour",
     name: "Виски Сауэр",
     description: "Баланс выдержанного бурбона, лимона и нежной пенки.",
@@ -89,7 +76,7 @@ export const MENU_ITEMS: MenuItem[] = [
     name: "Лонг Айленд",
     description: "Мощный микс пяти видов крепкого алкоголя.",
     image: "/menu/cocktail_long_island_ultra.png",
-    imageList: "/menu/cocktail-long-island-horizontal-hero.png",
+    imageList: "/menu/cocktail_long_island_ultra.png",
     category: "cocktail",
     price: "175000",
     barSubcategory: "cocktail",
@@ -393,6 +380,20 @@ export const MENU_ITEMS: MenuItem[] = [
     strength: "medium",
   },
   // Крепкий алкоголь / шоты (50 мл)
+  {
+    id: "b52",
+    name: "Б-52",
+    description: "Легендарный слоистый шот из кофейного ликера, сливочного крема и апельсинового трипл-сек.",
+    image: "/menu/cocktail_b52_ultra.png",
+    imageList: "/menu/cocktail-b52-horizontal-hero.png",
+    category: "cocktail",
+    price: "95000",
+    grammage: "50 мл",
+    barSubcategory: "spirits",
+    badge: "hit",
+    taste: "сладкий, кофе, сливки, апельсин",
+    strength: "strong",
+  },
   {
     id: "gordons-gin",
     name: "Джин Gordon's",
