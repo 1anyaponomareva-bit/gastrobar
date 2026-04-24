@@ -207,14 +207,14 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
             : undefined;
       const netHint =
         causeStr && /getaddrinfo|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(causeStr + msg);
-      const notFoundHint = /ENOTFOUND|getaddrinfo/i.test(causeStr + msg)
-        ? "Часто: в Vercel в `SUPABASE_URL` опечатка или старый проект — в таком случае удалите переменную или вставьте **тот же** URL, что в Supabase → Settings → API (Project URL), как у `NEXT_PUBLIC_SUPABASE_URL`. "
-        : "";
+      const isEnoNotFound = /ENOTFOUND|NXDOMAIN|Non-existent|getaddrinfo/i.test(causeStr + msg);
+      const badHost = target.host;
+      const notFoundHint = isEnoNotFound
+        ? `**ENOTFOUND** для \`${badHost}\`: такого субдомена нет в DNS (в мире, не «пауза»). Скопируйте **Project URL** в Supabase → Settings → API и **полностью** замените \`NEXT_PUBLIC_SUPABASE_URL\` в Vercel (и \`SUPABASE_URL\` если задан) — ref в URL должен **буквально** совпадать с дашбордом. Redeploy. Опция: снимите \`NEXT_PUBLIC_SUPABASE_USE_PROXY\` (прямой \`fetch\` к тому же URL). `
+        : "Часто: в Vercel в `SUPABASE_URL` не тот URL — удалите или выровняйте с `NEXT_PUBLIC_SUPABASE_URL` (оба = Project URL). ";
       const hint =
-        (netHint
-          ? `Сеть/хост: проверьте проект (не на паузе) и URL. ${notFoundHint}`
-          : "") +
-        "Keys: Vercel: `NEXT_PUBLIC_SUPABASE_URL` (или `SUPABASE_URL`) + anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY` или `SUPABASE_ANON_KEY`).";
+        (netHint ? `Сеть/хост. ${notFoundHint}` : "") +
+        "Keys: `NEXT_PUBLIC_SUPABASE_ANON_KEY` (или `SUPABASE_ANON_KEY`) с той же страницы API.";
       console.warn("[supabase-proxy] fetch threw after retries", {
         method: req.method,
         target: target.href,
