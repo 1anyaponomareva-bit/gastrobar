@@ -54,19 +54,31 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
     }
     await new Promise((r) => setTimeout(r, 200));
     const second = input instanceof Request ? input.clone() : input;
-    return run(second);
+    try {
+      return await run(second);
+    } catch (e2) {
+      if (e2 instanceof TypeError) {
+        throw new TypeError("NETWORK_UNAVAILABLE");
+      }
+      throw e2;
+    }
   };
 
-  b.client = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      storage: memoryAuthStorage,
-      storageKey: "gastrobar-durak-memory",
-    },
-    db: { timeout: 30_000 },
-    global: { fetch: fetchResilient },
-  });
+  try {
+    b.client = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storage: memoryAuthStorage,
+        storageKey: "gastrobar-durak-memory",
+      },
+      db: { timeout: 30_000 },
+      global: { fetch: fetchResilient },
+    });
+  } catch {
+    b.client = null;
+    return null;
+  }
   return b.client;
 }

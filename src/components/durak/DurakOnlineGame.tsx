@@ -667,13 +667,17 @@ export function DurakOnlineGame({ roomId, playerName, onLeave, renderGame }: Pro
     const tickMs = tableHydrated ? (game?.state === "playing" ? 650 : 1500) : 450;
     const id = window.setInterval(() => {
       void (async () => {
-        const { data, error } = await supabase
-          .from("room_state")
-          .select("state, updated_at")
-          .eq("room_id", roomId)
-          .maybeSingle();
-        if (error) return;
-        applyRemoteRow(data, "poll");
+        try {
+          const { data, error } = await supabase
+            .from("room_state")
+            .select("state, updated_at")
+            .eq("room_id", roomId)
+            .maybeSingle();
+          if (error) return;
+          applyRemoteRow(data, "poll");
+        } catch {
+          /* сеть: не бросаем вверх, не роняем React */
+        }
       })();
     }, tickMs);
     return () => window.clearInterval(id);

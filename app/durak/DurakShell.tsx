@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { formatErrorForUserBoundary } from "@/lib/durak/userFacingError";
 import DurakPageClient from "./DurakPageClient";
 
 class DurakRouteErrorBoundary extends Component<
@@ -39,10 +40,7 @@ class DurakRouteErrorBoundary extends Component<
           <p className="text-base font-semibold text-white" style={{ color: "#f8fafc", fontWeight: 600 }}>
             Ошибка при отображении игры
           </p>
-          <p className="max-w-sm text-sm text-white/60" style={{ maxWidth: "24rem", color: "rgba(248,250,252,0.65)" }}>
-            {msg ||
-              "Попробуйте обновить страницу. Если заходите с телефона по Wi‑Fi — откройте тот же адрес, что в `npm run dev` (см. allowedDevOrigins в next.config)."}
-          </p>
+          <p className="max-w-sm text-sm text-white/60" style={{ maxWidth: "24rem", color: "rgba(248,250,252,0.65)" }}>{msg}</p>
           <button
             type="button"
             className="rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm text-white hover:bg-white/15"

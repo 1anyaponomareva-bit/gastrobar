@@ -23,6 +23,7 @@ import {
   uniqueFriendTableName,
 } from "@/lib/durak/friendTableNames";
 import { cn } from "@/lib/utils";
+import { DURAK_ONLINE_UNAVAILABLE_BANNER } from "@/lib/durak/userFacingError";
 
 type Phase =
   | { k: "choose" }
@@ -42,6 +43,7 @@ type Props = {
 
 export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameStarted, onBackToMenu }: Props) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [supabaseInitDone, setSupabaseInitDone] = useState(false);
   const [phase, setPhase] = useState<Phase>({ k: "choose" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,25 +56,36 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   const [lobbyPlayers, setLobbyPlayers] = useState<RoomPlayerRow[]>([]);
 
   useEffect(() => {
-    const c = createSupabaseBrowserClient();
-    setSupabase(c);
-    if (!c) {
-      setError(
-        "Нет подключения к серверу. Проверьте настройки приложения."
-      );
+    try {
+      setSupabase(createSupabaseBrowserClient());
+    } catch {
+      setSupabase(null);
+    } finally {
+      setSupabaseInitDone(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!supabaseInitDone || supabase) return;
+    if (phase.k === "choose" || phase.k === "friends-menu") return;
+    setPhase({ k: "choose" });
+    setError(null);
+  }, [supabaseInitDone, supabase, phase.k]);
 
   /** Столы друзей без активности 20 мин — finished; без этого висят, пока кто-то не откроет список. */
   useEffect(() => {
     if (!supabase) return;
-    void durakCloseInactiveFriendRooms(supabase);
+    void durakCloseInactiveFriendRooms(supabase).catch(() => {});
   }, [supabase]);
 
   const loadTables = useCallback(async () => {
     if (!supabase) return;
-    const rows = await fetchPublicFriendTables(supabase);
-    setTables(rows);
+    try {
+      const rows = await fetchPublicFriendTables(supabase);
+      setTables(rows);
+    } catch {
+      setTables([]);
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -124,7 +137,13 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   }, [supabase, phase, onOnlineGameStarted]);
 
   useEffect(() => {
-    if (!supabase || !inviteCodeFromUrl || inviteDone) return;
+    if (!inviteCodeFromUrl || inviteDone) return;
+    if (!supabaseInitDone) return;
+    if (!supabase) {
+      setError(DURAK_ONLINE_UNAVAILABLE_BANNER);
+      setInviteDone(true);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -153,7 +172,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     return () => {
       cancelled = true;
     };
-  }, [supabase, inviteCodeFromUrl, displayName, inviteDone]);
+  }, [supabase, supabaseInitDone, inviteCodeFromUrl, displayName, inviteDone]);
 
   const onCreateTable = async () => {
     if (!supabase) return;
@@ -268,10 +287,25 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
     );
   }
 
-  if (!supabase) {
+  if (!supabaseInitDone) {
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center bg-[#14100c] px-4 py-20 text-sm text-white/50">
-        Подключение…
+        Загрузка…
+      </div>
+    );
+  }
+
+  if (phase.k === "quick" && !supabase) {
+    return (
+      <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4 overflow-x-hidden bg-[#14100c] px-4 py-16 text-center text-sm text-amber-200/90">
+        <p className="max-w-sm">{DURAK_ONLINE_UNAVAILABLE_BANNER}</p>
+        <button
+          type="button"
+          onClick={() => setPhase({ k: "choose" })}
+          className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-white/90 hover:bg-white/10"
+        >
+          Назад
+        </button>
       </div>
     );
   }
@@ -466,6 +500,7 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
   }
 
   if (phase.k === "friends-menu") {
+    const noNet = !supabase;
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-[#14100c] px-4 pb-[max(6.25rem,calc(env(safe-area-inset-bottom,0px)+5.75rem))] text-slate-100">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 py-10">
@@ -476,28 +511,37 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           >
             ← Назад
           </button>
+          {noNet ? (
+            <p className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-sm text-amber-100/90">
+              {DURAK_ONLINE_UNAVAILABLE_BANNER}
+            </p>
+          ) : null}
           <h1 className="text-2xl font-semibold text-white">Игра с друзьями</h1>
           <div className="flex flex-col gap-3">
             <button
               type="button"
+              disabled={noNet}
               onClick={() => {
+                if (noNet) return;
                 setError(null);
                 setCreateName("");
                 setPhase({ k: "create" });
               }}
-              className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09]"
+              className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="text-lg">➕ Создать стол</span>
               <span className="text-sm text-white/50">До 6 мест — ты хозяин, рассылаешь ссылку</span>
             </button>
             <button
               type="button"
+              disabled={noNet}
               onClick={() => {
+                if (noNet) return;
                 setError(null);
                 void loadTables();
                 setPhase({ k: "list" });
               }}
-              className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09]"
+              className="flex w-full flex-col items-start gap-1 rounded-2xl border border-white/14 bg-white/[0.06] px-5 py-4 text-left transition hover:border-white/25 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="text-lg">📋 Список столов</span>
               <span className="text-sm text-white/50">Столы, которые ждут игроков</span>
@@ -516,18 +560,26 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
         {showInviteLoader ? (
           <p className="text-center text-sm text-white/55">Открываем стол по ссылке…</p>
         ) : null}
+        {!supabase ? (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2.5 text-center text-sm text-amber-100/90">
+            {DURAK_ONLINE_UNAVAILABLE_BANNER}
+          </p>
+        ) : null}
         <h1 className="text-center text-2xl font-semibold leading-tight text-white">Как будешь играть?</h1>
         <div className="flex flex-col gap-4">
           <button
             type="button"
+            disabled={!supabase}
             onClick={() => {
+              if (!supabase) return;
               setError(null);
               setPhase({ k: "quick" });
             }}
             className={cn(
               "flex w-full flex-col items-center gap-1 rounded-2xl px-5 py-5 text-center shadow-lg transition active:scale-[0.99]",
               "bg-[#f8d66d] text-[#1a1612] hover:brightness-105",
-              "shadow-[0_12px_40px_rgba(248,214,109,0.25)]"
+              "shadow-[0_12px_40px_rgba(248,214,109,0.25)]",
+              !supabase && "cursor-not-allowed opacity-45",
             )}
           >
             <span className="text-lg font-semibold">🟢 Быстро найти игру</span>
@@ -535,11 +587,16 @@ export function DurakEntryFlow({ displayName, inviteCodeFromUrl, onOnlineGameSta
           </button>
           <button
             type="button"
+            disabled={!supabase}
             onClick={() => {
+              if (!supabase) return;
               setError(null);
               setPhase({ k: "friends-menu" });
             }}
-            className="flex w-full flex-col items-center gap-1 rounded-2xl border border-white/18 bg-white/[0.05] px-5 py-5 text-center text-white/90 transition hover:border-white/28 hover:bg-white/[0.08]"
+            className={cn(
+              "flex w-full flex-col items-center gap-1 rounded-2xl border border-white/18 bg-white/[0.05] px-5 py-5 text-center text-white/90 transition hover:border-white/28 hover:bg-white/[0.08]",
+              !supabase && "cursor-not-allowed opacity-45",
+            )}
           >
             <span className="text-lg font-semibold">👥 С друзьями</span>
             <span className="text-sm text-white/50">Создать или присоединиться к столу</span>

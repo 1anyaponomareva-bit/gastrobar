@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { userFacingNetworkMessage } from "@/lib/durak/userFacingError";
 import type { PublicFriendTableRow, RoomPlayerRow, RoomRow, RoomStatePayload } from "./types";
 
 const EMPTY_ERROR_HINT =
@@ -22,8 +23,16 @@ function isEmptyErrorPayload(o: Record<string, unknown>): boolean {
 
 /** Текст ошибки PostgREST / Supabase / сети для UI (без «[object Object]» и {\"message\":\"\"}). */
 export function formatPostgrestError(err: unknown): string {
+  const net = userFacingNetworkMessage(err);
+  if (net) return net;
   if (err == null) return "Неизвестная ошибка";
-  if (typeof err === "string") return err.trim() || EMPTY_ERROR_HINT;
+  if (typeof err === "string") {
+    const t = err.trim();
+    if (!t) return EMPTY_ERROR_HINT;
+    const netS = userFacingNetworkMessage(t);
+    if (netS) return netS;
+    return t;
+  }
   if (typeof err === "number" || typeof err === "boolean") return String(err);
 
   if (err instanceof Error) {
