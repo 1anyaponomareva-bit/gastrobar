@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseRestBaseForBrowserRpc } from "@/lib/supabase/browser";
 import type { PublicFriendTableRow, RoomPlayerRow, RoomRow, RoomStatePayload } from "./types";
 
 const EMPTY_ERROR_HINT =
@@ -119,95 +118,23 @@ function parseJoinQueueResult(data: unknown): {
   return { roomId, searchDeadline, rejoined };
 }
 
-/** Смени число при следующем изменении текста ошибок — по нему видно, что задеплоена свежая сборка. */
-const DURAK_NET_HINT_REV = 5;
-
-/** WebKit: «TypeError: Load failed» / «The network connection was lost» и т.п. */
-function formatNetworkFetchError(e: unknown): string {
-  const raw = formatPostgrestError(e);
-  if (/load failed|failed to fetch|networkerror|network request failed|loaderror|connection was lost/i.test(raw)) {
-    return "Нет соединения с сервером игры. Проверьте интернет и обновите страницу.";
-  }
-  return raw;
-}
-
-/** Прямой POST к PostgREST RPC — в ошибке всегда есть HTTP status и сырое тело (client.rpc часто даёт { message: "" }). */
-function formatRpcHttpFailure(status: number, statusText: string, body: string): string {
-  const head = `HTTP ${status} ${statusText}`;
-  const t = body.trim();
-  const emptyHint =
-    `[durak-net-v${DURAK_NET_HINT_REV}] ${head}, тело ответа пустое. ` +
-    `1) SQL: supabase/sql/durak_grant_schema_only.sql затем целиком supabase/sql/durak_queue_functions_only.sql. ` +
-    `2) Проверка: supabase/sql/durak_debug_test_rpc.sql. ` +
-    `3) Supabase → Logs → Postgres. ` +
-    `4) Запушь этот репозиторий и сделай Redeploy на Vercel, на телефоне открой сайт в приватном окне (иначе старый JS). ` +
-    `Если в ошибке НЕТ префикса [durak-net-v${DURAK_NET_HINT_REV}] — ты всё ещё на старой версии сайта.`;
-
-  if (t) {
-    try {
-      const j = JSON.parse(t) as Record<string, unknown>;
-      const parts: string[] = [head];
-      if (hasMeaningfulString(j.message)) parts.push(String(j.message));
-      if (typeof j.error === "string" && j.error.trim()) parts.push(j.error.trim());
-      const code = j.code;
-      if (typeof code === "string" && code) parts.push(`[${code}]`);
-      else if (typeof code === "number") parts.push(`[${code}]`);
-      if (hasMeaningfulString(j.details)) parts.push(String(j.details));
-      if (hasMeaningfulString(j.hint)) parts.push(String(j.hint));
-      if (parts.length > 1) return parts.join(" — ");
-      return `${head} — ${t.slice(0, 500)}`;
-    } catch {
-      return `${head}: ${t.slice(0, 500)}`;
-    }
-  }
-  return emptyHint;
-}
-
+/**
+ * Вызов RPC через клиент Supabase (тот же путь, что `client.from` → `/supabase-proxy`).
+ * Ручной `fetch` к `/rest/v1/rpc/…` в части Safari давал `TypeError: Load failed` при нормальной сети.
+ */
 async function rpcPost(
-  _client: SupabaseClient,
+  client: SupabaseClient,
   fn: string,
   args: Record<string, unknown>
 ): Promise<{ data: unknown } | { error: string }> {
-  const conf = getSupabaseRestBaseForBrowserRpc();
-  if (!conf) {
-    return {
-      error:
-        "Онлайн-игра недоступна: проверьте NEXT_PUBLIC_SUPABASE_URL и ключ API в настройках сайта.",
-    };
-  }
-  const { base, apiKey } = conf;
-  const url = `${base.replace(/\/$/, "")}/rest/v1/rpc/${encodeURIComponent(fn)}`;
-  let res: Response;
   try {
-    res = await fetch(url, {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: apiKey,
-        Authorization: `Bearer ${apiKey}`,
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify(args),
-    });
+    const { data, error } = await client.rpc(fn, args as object);
+    if (error) {
+      return { error: formatPostgrestError(error) };
+    }
+    return { data: data as unknown };
   } catch (e) {
-    return {
-      error: formatNetworkFetchError(e),
-    };
-  }
-  const text = await res.text();
-  if (!res.ok) {
-    return { error: formatRpcHttpFailure(res.status, res.statusText, text) };
-  }
-  if (!text.trim()) {
-    return { data: null };
-  }
-  try {
-    return { data: JSON.parse(text) as unknown };
-  } catch {
-    return {
-      error: `Некорректный JSON ответа: ${text.slice(0, 200)}`,
-    };
+    return { error: formatPostgrestError(e) };
   }
 }
 
