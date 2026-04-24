@@ -1,5 +1,11 @@
+import dns from "node:dns";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
+
+/* Vercel/Node: undici к *.supabase.co иногда падает на IPv6 (fetch failed) — сначала A-запись. */
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 import {
   assertBodySizeAllowed,
   getClientIp,
@@ -165,34 +171,60 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
     body = raw;
   }
 
-  let upstream: Response;
-  try {
-    console.log("SUPABASE URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log("TARGET URL:", target?.href);
+  const init: RequestInit = {
+    method: req.method,
+    headers: buildUpstreamRequestHeaders(req.headers, serverKey),
+    body: hasBody ? body : undefined,
+    redirect: "manual",
+  };
 
-    upstream = await fetch(target, {
-      method: req.method,
-      headers: buildUpstreamRequestHeaders(req.headers, serverKey),
-      body: hasBody ? body : undefined,
-      redirect: "manual",
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn("[supabase-proxy] fetch threw", {
-      method: req.method,
-      target: target.href,
-      pathTail: tail,
-      error: msg,
-      cause: e instanceof Error && "cause" in e ? String((e as Error & { cause?: unknown }).cause) : undefined,
-    });
-    return NextResponse.json(
-      {
-        message: `Proxy fetch failed: ${msg}`,
-        hint: "Проверьте NEXT_PUBLIC_SUPABASE_URL и доступность проекта Supabase.",
-        code: "PROXY_FETCH_ERROR",
-      },
-      { status: 502 },
-    );
+  let upstream!: Response;
+  const attempts = 3;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 200 * attempt));
+    }
+    try {
+      upstream = await fetch(target, init);
+      break;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (attempt < attempts - 1) {
+        console.warn("[supabase-proxy] fetch retry", {
+          attempt: attempt + 1,
+          nextInMs: 200 * (attempt + 1),
+          pathTail: tail,
+          err: msg,
+        });
+        continue;
+      }
+      const cause = e instanceof Error && "cause" in e ? (e as Error & { cause?: unknown }).cause : undefined;
+      const causeStr =
+        cause instanceof Error
+          ? `${cause.name}: ${cause.message}`
+          : cause != null
+            ? String(cause)
+            : undefined;
+      const hint =
+        (causeStr && /getaddrinfo|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(causeStr + msg)
+          ? "Сеть: проверьте DNS/IPv6, регион Vercel и что проект Supabase не на паузе. В .env: SUPABASE_URL и NEXT_PUBLIC_SUPABASE_URL = https://<ref>.supabase.co (без /supabase-proxy). "
+          : "") + "Сборка: убедитесь, что в Vercel заданы SUPABASE_URL (или NEXT_PUBLIC_SUPABASE_URL) и SUPABASE_ANON_KEY (или NEXT_PUBLIC_SUPABASE_ANON_KEY).";
+      console.warn("[supabase-proxy] fetch threw after retries", {
+        method: req.method,
+        target: target.href,
+        pathTail: tail,
+        error: msg,
+        cause: causeStr,
+      });
+      return NextResponse.json(
+        {
+          message: `Proxy fetch failed: ${msg}${causeStr ? ` (${causeStr})` : ""}`,
+          hint,
+          code: "PROXY_FETCH_ERROR",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const resHeaders = forwardResponseHeaders(upstream.headers);

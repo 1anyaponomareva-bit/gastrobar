@@ -13,11 +13,13 @@ const DAILY_CACHE_BUST = `(function(){
     var s = localStorage.getItem(key);
     if (s && s !== v) {
       if (sessionStorage.getItem(bustOnce) === "1") {
+        /* Вторая загрузка после смены дня: кеши уже сбрасывали, фиксируем дату. */
         sessionStorage.removeItem(bustOnce);
         try { localStorage.setItem(key, v); } catch (e) {}
         return;
       }
-      try { localStorage.setItem(key, v); } catch (e) { return; }
+      /* Важно: НЕ писать key=v до reload — иначе после перезагрузки s===v и
+         ветка «смена дня» больше не отработает; при сбое async — «зависшая» дата. */
       sessionStorage.setItem(bustOnce, "1");
       function reload() { location.reload(); }
       function afterCaches() {

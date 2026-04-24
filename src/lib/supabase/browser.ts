@@ -53,8 +53,8 @@ function alternatePostgrestUrl(
 
 /**
  * Один экземпляр Supabase JS на вкладку (через globalThis — на случай дублирования модуля в разных чанках).
- * По умолчанию: `/supabase-proxy` (тот же сайт, без cross-origin к Supabase — меньше сбоев в Safari/PWA).
- * Прямой PostgREST: `NEXT_PUBLIC_SUPABASE_USE_DIRECT=1` (отладка / если прокси режет на хостинге).
+ * По умолчанию: прямой `*.supabase.co` (CORS на стороне Supabase). Same-origin: `NEXT_PUBLIC_SUPABASE_USE_PROXY=1`
+ * (обходит CORS-риски, но требует рабочий `/supabase-proxy` на сервере).
  */
 export function createSupabaseBrowserClient(): SupabaseClient | null {
   if (typeof window === "undefined") return null;
@@ -71,10 +71,10 @@ export function createSupabaseBrowserClient(): SupabaseClient | null {
   }
   const directBase = rawUrl.replace(/\/+$/, "");
   const proxyPrefix = `${window.location.origin}/supabase-proxy`;
-  const useDirect = process.env.NEXT_PUBLIC_SUPABASE_USE_DIRECT === "1";
-  const url = useDirect ? directBase : proxyPrefix;
+  const useProxy = process.env.NEXT_PUBLIC_SUPABASE_USE_PROXY === "1";
+  const url = useProxy ? proxyPrefix : directBase;
   if (process.env.NODE_ENV === "development") {
-    console.log("[gastrobar] Supabase:", useDirect ? `direct ${new URL(directBase).host}` : "same-site proxy");
+    console.log("[gastrobar] Supabase:", useProxy ? "same-site proxy" : `direct ${new URL(directBase).host}`);
   }
 
   /**
