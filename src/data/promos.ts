@@ -19,7 +19,7 @@ export const PROMOS: PromoItem[] = [
   {
     id: "combo-nastoiki-5",
     title: "Комбо: 5 настоек",
-    price: "300.000 VND",
+    price: "250.000 VND",
     image: "/menu/promo_nastoika.png",
     imageFit: "contain",
     description:

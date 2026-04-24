@@ -20,11 +20,22 @@ const DAILY_CACHE_BUST = `(function(){
       try { localStorage.setItem(key, v); } catch (e) { return; }
       sessionStorage.setItem(bustOnce, "1");
       function reload() { location.reload(); }
-      if ("caches" in window && window.caches && window.caches.keys) {
-        window.caches.keys().then(function(keys) {
-          return Promise.all(keys.map(function(k) { return window.caches.delete(k); }));
-        }).then(reload, reload);
-      } else { reload(); }
+      function afterCaches() {
+        if ("caches" in window && window.caches && window.caches.keys) {
+          return window.caches.keys().then(function(keys) {
+            return Promise.all(keys.map(function(k) { return window.caches.delete(k); }));
+          }).then(reload, reload);
+        }
+        reload();
+        return null;
+      }
+      if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          return Promise.all(regs.map(function(r) { return r.unregister(); }));
+        }).then(afterCaches, afterCaches);
+      } else {
+        void afterCaches();
+      }
       return;
     }
     if (!s) { try { localStorage.setItem(key, v); } catch (e) {} }

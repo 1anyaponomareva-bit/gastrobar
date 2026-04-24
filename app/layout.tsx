@@ -10,7 +10,7 @@ import { BonusScreenProvider } from "@/components/BonusScreenContext";
 import { PromoBanner } from "@/components/PromoBanner";
 import { DailyCacheVersionScript } from "@/components/DailyCacheVersionScript";
 import { GastrobarGamesCardBgVersionStyle } from "@/components/GastrobarGamesCardBgVersionStyle";
-import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
 
 const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
@@ -59,7 +59,7 @@ export default function RootLayout({
       >
         <GastrobarGamesCardBgVersionStyle />
         <DailyCacheVersionScript />
-        <ServiceWorkerRegister />
+        <ServiceWorkerCleanup />
         <ThemeProvider initialPeriod="bar">
           <FavoritesProvider>
             <HighlightProductProvider>

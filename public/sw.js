@@ -1,25 +1,25 @@
-/* GASTROBAR: свежий контент для PWA / «На экран «Домой»; не кешируем fetch; на activate сносим старые Cache Storage. */
+/* GASTROBAR: оставляем файл для старых установок, но fetch не перехватываем.
+   Регистрация с сайта снята; без обработчика fetch запросы идут в сеть по умолчанию. */
 self.addEventListener("install", function (event) {
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", function (event) {
   event.waitUntil(
-    caches
-      .keys()
-      .then(function (keys) {
-        return Promise.all(
+    (async function () {
+      if (self.caches && self.caches.keys) {
+        const keys = await self.caches.keys();
+        await Promise.all(
           keys.map(function (k) {
-            return caches.delete(k);
+            return self.caches.delete(k);
           })
         );
-      })
-      .then(function () {
-        return self.clients.claim();
-      })
+      }
+      if (self.clients && self.clients.claim) {
+        await self.clients.claim();
+      }
+    })()
   );
 });
 
-self.addEventListener("fetch", function (event) {
-  event.respondWith(fetch(event.request));
-});
+// Намеренно НЕТ fetch: перехват ломал навигацию/чанки Next в Safari при сбоях сети.
