@@ -11,6 +11,7 @@ import { PromoBanner } from "@/components/PromoBanner";
 import { DailyCacheVersionScript } from "@/components/DailyCacheVersionScript";
 import { GastrobarGamesCardBgVersionStyle } from "@/components/GastrobarGamesCardBgVersionStyle";
 import { ServiceWorkerCleanup } from "@/components/ServiceWorkerCleanup";
+import { DevChunkLoadRecovery } from "@/components/DevChunkLoadRecovery";
 import { I18nProvider } from "@/lib/useTranslation";
 import { I18nDocumentTitle } from "@/components/I18nDocumentTitle";
 
@@ -62,6 +63,7 @@ export default function RootLayout({
         <GastrobarGamesCardBgVersionStyle />
         <DailyCacheVersionScript />
         <ServiceWorkerCleanup />
+        <DevChunkLoadRecovery />
         <I18nProvider>
           <I18nDocumentTitle />
           <ThemeProvider initialPeriod="bar">

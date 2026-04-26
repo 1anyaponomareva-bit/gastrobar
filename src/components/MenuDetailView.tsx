@@ -100,7 +100,11 @@ export function MenuDetailView({
   const displayName = menuItemDisplayName(item, lang);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
+  const isBeer = item.barSubcategory === "beer";
+  const isFuzzyBeer = item.id === "fuzzy-ipa-thunderslap" || item.id === "fuzzy-lager";
   const isMinimalBarCard = isSoftDrink || isSpirits;
+  /** Пиво — целиком в кадре, без кропа как у коктейлей с object-cover */
+  const detailImageContain = isMinimalBarCard || isBeer;
   const tinctureDetailRimFocus =
     item.barSubcategory === "tincture" && TINCTURE_RIM_FOCUS_IDS.has(item.id);
 
@@ -167,8 +171,10 @@ export function MenuDetailView({
                     ? `h-full w-full origin-center scale-[1.08] object-contain will-change-transform ${
                         tinctureDetailRimFocus ? "object-[50%_42%]" : "object-center"
                       }`
-                    : isMinimalBarCard
-                      ? "h-full w-full object-contain object-center"
+                    : detailImageContain
+                      ? isFuzzyBeer
+                        ? "h-full w-full origin-center object-contain object-[58%_50%] scale-110 will-change-transform"
+                        : "h-full w-full object-contain object-center"
                       : "h-full w-full object-cover object-center"
               }
             />
@@ -206,6 +212,9 @@ export function MenuDetailView({
                 <h2 className="text-2xl font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl">
                   {displayName}
                 </h2>
+                {item.grammage && (
+                  <p className="text-base text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">{item.grammage}</p>
+                )}
                 <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
                   {formatVnd(item.price)} VND
                 </p>

@@ -5,15 +5,28 @@ const DESCS_EN: Record<string, string> = {
   "whisky-sour":
     "A balance of aged bourbon, lemon and a silky foam top.",
   boulevardier: "Bourbon, Campari and sweet vermouth. An elegant classic.",
-  "long-island": "A serious mix of five base spirits in one long drink.",
+  "long-island":
+    "Long drink: tequila, gin, rum, vodka, lemon, cola and triple sec.",
   "whisky-cola": "A classic highball with deep woody character.",
   "gin-tonic": "Clean juniper and lime in a long, refreshing serve.",
   aperol: "Sparkling prosecco, Aperol bitter and a dash of soda.",
-  negroni: "Gin, Campari and red vermouth. Bitter-sweet and iconic.",
-  "white-wine": "A crisp pick with light fruit and a refreshing, mineral line.",
-  "red-wine": "Full-bodied red with a rich dark-berry profile.",
+  negroni: "Gin, Campari and red vermouth. A bar icon.",
+  "b52":
+    "60 ml layered shot: coffee liqueur, cream liqueur, triple sec.",
+  "passion-cabernet-sauvignon":
+    "Passion Wine of Chile — Central Valley Cabernet, 13.5%: deep ruby, blackcurrant, soft oak—great with red meat.",
+  "passion-sweet-wine":
+    "Passion Wine of Chile: sweet wine from Cabernet Sauvignon grapes, 11%: vivid color, fruit and floral notes—warm and inviting.",
+  "passion-classic-red-wine":
+    "Passion Wine of Chile: a blend of red varieties from the Central Valley, 13%—fresh red-berry fruit, easy-drinking. Great for easy evenings and get-togethers.",
+  "passion-white-wine-sauvignon-blanc":
+    "Passion Wine of Chile: made from Sauvignon Blanc grapes, 12.5%—soft, rich and easy drinking from one of Chile’s finest winemakers. A perfect Sauvignon Blanc when you want a glass of uncomplicated, satisfying Chilean white.",
+  "chateau-dalat-sparkling-white":
+    "Chateau Dalat sparkling white: sweet balanced finish, passion fruit notes—light, festive, easy to love.",
   "beer-light": "Crisp, fresh Sapporo on tap—easy-drinking and bright.",
   "beer-dark": "Dark lager with caramel and malt notes on tap.",
+  "fuzzy-ipa-thunderslap": "Bold hops, citrus zest, dry finish.",
+  "fuzzy-lager": "Clean and smooth: malt, easy-drinking.",
   "pineapple-ginger-honey": "Sweet pineapple, spicy ginger and soft honey.",
   limoncello: "Zesty lemon and peel—like Italy, in a pour from our own batch.",
   "pineapple-vanilla": "Tropics and creamy vanilla—warm and easy-going.",
@@ -28,17 +41,16 @@ const DESCS_EN: Record<string, string> = {
   blueberry: "Forest berry with a deep, rounded sweetness.",
   "cherry-chocolate": "Cherry and cocoa in a rich, short pour.",
   "strawberry-cream": "Strawberry and cream in a truly dessert forward shot.",
-  b52: "The classic layer shot: coffee liqueur, cream liqueur and orange triple-sec.",
-  "gordons-gin": "Single 50 ml pour at the bar.",
   kahlua: "Single 50 ml pour at the bar.",
   "sambuca-vaccari": "Single 50 ml pour at the bar.",
-  "havana-club-rum": "Single 50 ml pour at the bar.",
+  "rhum-chauvet": "Single 50 ml pour at the bar.",
   jameson: "Single 50 ml pour at the bar.",
   "absolut-vodka": "Single 50 ml pour at the bar.",
   baileys: "Single 50 ml pour at the bar.",
   "jose-cuervo-tequila": "Single 50 ml pour at the bar.",
   jagermeister: "Single 50 ml pour at the bar.",
   "bombay-sapphire-gin": "Single 50 ml pour at the bar.",
+  "gin-harpoon": "Single 50 ml pour at the bar.",
   "hennessy-vs": "Single 50 ml pour at the bar.",
   "jim-beam-apple": "Single 50 ml pour at the bar.",
   "jim-beam": "Single 50 ml pour at the bar.",
@@ -49,6 +61,7 @@ const DESCS_EN: Record<string, string> = {
   "schweppes-red": "Chilled can from the fridge.",
   "schweppes-tonic-yellow": "Indian tonic—crisp, bitter-sweet, chilled.",
   "schweppes-soda-grey": "Soda water—bubbles, no sugar.",
+  "water-350": "Still drinking water, chilled.",
   "chicken-jerky": "Spicy air-dried chicken jerky—made for a cold beer.",
   "beef-jerky": "Cured beef with spices—hearty, meaty, beer-friendly.",
   pistachios: "Roasted salted pistachios for beer and mixed drinks.",
@@ -98,15 +111,25 @@ const DESCS_VN: Record<string, string> = {
   "whisky-sour":
     "Cân bằng giữa bourbon, chanh và lớp bọt mỏng.",
   boulevardier: "Bourbon, Campari và vermouth ngọt. Classic thanh lịch.",
-  "long-island": "Pha cả năm loại rượu mạnh trong một ly dài.",
+  "long-island": "Long drink: tequila, gin, rum, vodka, chanh, cola và triple sec.",
   "whisky-cola": "Cặp đôi quen: whiskey và cola, hương gỗ sâu.",
   "gin-tonic": "Bạch đậu khấu, chanh tươi, ly dài, sảng khoái.",
   aperol: "Prosecco, Aperol và soda — như Aperol Spritz bản chuẩn.",
-  negroni: "Gin, Campari, vermouth đỏ — đắng-ngọt, biểu tượng.",
-  "white-wine": "Vang trắng: trái cây thanh, khoáng, dễ uống.",
-  "red-wine": "Vang đỏ đậm, hương quả mọng tối.",
+  negroni: "Gin, Campari, vermouth đỏ — biểu tượng quầy bar.",
+  "passion-cabernet-sauvignon":
+    "Passion Wine of Chile — vang đỏ thung lũng trung tâm, 13,5%: màu hồng ngọc, nho đen, gỗ sồi—hợp thịt đỏ.",
+  "passion-sweet-wine":
+    "Passion Wine of Chile: rượu ngọt từ nho Cabernet Sauvignon, 11%: màu rực, hương trái cây và hoa, ấm, dễ mến.",
+  "passion-classic-red-wine":
+    "Passion Wine of Chile: cơ phối rượu đỏ, thung lũng trung tâm Chile, 13%—mùi quả mọng tươi, mềm, dễ uống, hợp bữa gia đình.",
+  "passion-white-wine-sauvignon-blanc":
+    "Passion Wine of Chile: nho Sauvignon Blanc, 12,5%: mềm, đậm, dễ uống, hương trái cây, vang trắng Chile",
+  "chateau-dalat-sparkling-white":
+    "Chateau Dalat, có ga: hậu vị ngọt cân bằng, gợi chanh dây",
   "beer-light": "Bia tươi Sapporo nhạt — mát, dễ uống.",
   "beer-dark": "Bia tươi Sapporo đen — caramel, mạch nha.",
+  "fuzzy-ipa-thunderslap": "Hoa bia, cam chanh, hậu vị khô.",
+  "fuzzy-lager": "Sáng, mạch nha sạch, dễ uống.",
   "pineapple-ginger-honey": "Dứa ngọt, gừng, mật ong ấm.",
   limoncello: "Chanh, vỏ — chuẩn kiểu Ý, bản rót tại quán.",
   "pineapple-vanilla": "Nhiệt đới, vani kem — mềm, dễ chịu.",
@@ -121,17 +144,17 @@ const DESCS_VN: Record<string, string> = {
   blueberry: "Việt tím, vị sâu, ngọt tròn.",
   "cherry-chocolate": "Anh đào và ca cao, đậm.",
   "strawberry-cream": "Dâu, kem, kiểu tráng miệng.",
-  b52: "Lớp tách: cà phê, kem, cam — B-52 kinh điển.",
-  "gordons-gin": "Một phần 50 ml tại quầy bar.",
+  b52: "60 ml, tách lớp: cà phê, kem, triple sec.",
   kahlua: "Một phần 50 ml tại quầy bar.",
   "sambuca-vaccari": "Một phần 50 ml tại quầy bar.",
-  "havana-club-rum": "Một phần 50 ml tại quầy bar.",
+  "rhum-chauvet": "Một phần 50 ml tại quầy bar.",
   jameson: "Một phần 50 ml tại quầy bar.",
   "absolut-vodka": "Một phần 50 ml tại quầy bar.",
   baileys: "Một phần 50 ml tại quầy bar.",
   "jose-cuervo-tequila": "Một phần 50 ml tại quầy bar.",
   jagermeister: "Một phần 50 ml tại quầy bar.",
   "bombay-sapphire-gin": "Một phần 50 ml tại quầy bar.",
+  "gin-harpoon": "Một phần 50 ml tại quầy bar.",
   "hennessy-vs": "Một phần 50 ml tại quầy bar.",
   "jim-beam-apple": "Một phần 50 ml tại quầy bar.",
   "jim-beam": "Một phần 50 ml tại quầy bar.",
@@ -142,6 +165,7 @@ const DESCS_VN: Record<string, string> = {
   "schweppes-red": "Lon lạnh từ tủ.",
   "schweppes-tonic-yellow": "Tonic Schweppes — lạnh, đắng dịu, sảng.",
   "schweppes-soda-grey": "Soda — bong bóng, không đường.",
+  "water-350": "Nước uống đóng chai, 350 ml, lạnh.",
   "chicken-jerky": "Jerky gà cay — ăn kèm bia.",
   "beef-jerky": "Thịt bò sấy thơm, đậm — hợp bia.",
   pistachios: "Hạt dẻ cười rang muối, kèm bia/cocktail.",
@@ -183,16 +207,36 @@ const DESCS_VN: Record<string, string> = {
     "Trà đào mát, nhẹ, không sệt; Overdose — Burley, nặng hơn trung bình.",
 };
 
+/** Одна короткая строка в главном списке (вина); совпадает с `wineListLine` (RU) по смыслу. */
+const WINE_LIST_EN: Record<string, string> = {
+  "passion-cabernet-sauvignon": "Red wine, blackcurrant and oak",
+  "passion-sweet-wine": "Sweet wine, Cabernet, fruit and florals",
+  "passion-classic-red-wine": "Red wine blend, forest berries, mellow",
+  "passion-white-wine-sauvignon-blanc": "White wine, Sauvignon blanc, soft and full",
+  "chateau-dalat-sparkling-white": "Sparkling white, passion fruit, sweet balanced finish",
+};
+
+const WINE_LIST_VN: Record<string, string> = {
+  "passion-cabernet-sauvignon": "Rượu vang đỏ, nho đen và gỗ sồi",
+  "passion-sweet-wine": "Rượu vang ngọt, cabernet, trái và hoa",
+  "passion-classic-red-wine": "Cơ phối vang đỏ, mọng rừng, mềm",
+  "passion-white-wine-sauvignon-blanc": "Rượu vang trắng, sauvignon, mềm đậm",
+  "chateau-dalat-sparkling-white": "Chateau Dalat, có ga, chanh dây, hậu vị ngọt cân bằng",
+};
+
 const TASTE_EN: Record<string, string> = {
-  "whisky-sour": "Sour-sweet, whisky, lemon, honey",
+  "whisky-sour": "Sour-sweet, whisky, lemon",
   boulevardier: "Bitter edge, bourbon, Campari, vermouth",
-  "long-island": "Boozy, lemon, cola, tequila, gin, rum, vodka",
+  "long-island": "Lemon, cola, tequila, gin, rum, vodka, triple sec",
   "whisky-cola": "Whisky, cola, light sweetness",
-  "gin-tonic": "Fresh, gin, tonic, lime, juniper",
+  "gin-tonic": "Gin, tonic, lime, juniper",
   aperol: "Bitter-sweet, Aperol, prosecco, orange",
-  negroni: "Bitter, gin, Campari, vermouth",
-  "white-wine": "Light, fruity, mineral",
-  "red-wine": "Full, berry, astringent",
+  negroni: "Gin, Campari, vermouth",
+  "passion-cabernet-sauvignon": "Blackcurrant, oak",
+  "passion-sweet-wine": "Sweet, fruit, flowers",
+  "passion-classic-red-wine": "Red berries, soft tannins",
+  "passion-white-wine-sauvignon-blanc": "Sauvignon Blanc, soft, rich, easy",
+  "chateau-dalat-sparkling-white": "Passion fruit, sweet, balanced",
   "beer-light": "Light, easy, hoppy",
   "beer-dark": "Dark, caramel, malt",
   "pineapple-ginger-honey": "Tropical, spice, honey",
@@ -209,21 +253,26 @@ const TASTE_EN: Record<string, string> = {
   blueberry: "Blueberry, berry",
   "cherry-chocolate": "Cherry, cocoa",
   "strawberry-cream": "Strawberry, cream",
-  b52: "Sweet, coffee, cream, orange",
+  b52: "60 ml: coffee liqueur, cream liqueur, triple sec",
 };
 
 const TASTE_VN: Record<string, string> = {
-  "whisky-sour": "Chua-ngọt, whiskey, chanh, mật ong",
+  "whisky-sour": "Chua-ngọt, whiskey, chanh",
   boulevardier: "Hơi đắng, bourbon, campari, vermouth",
-  "long-island": "Mạnh, chanh, cola, tequila, gin, rượu rum, vodka",
+  "long-island": "Chanh, cola, tequila, gin, rum, vodka, triple sec",
   "whisky-cola": "Whisky, cola, ngọt vừa",
-  "gin-tonic": "Tươi, gin, tonic, chanh, bạch đậu khấu",
+  "gin-tonic": "Gin, tonic, chanh, bạch đậu khấu",
   aperol: "Ngọt-đắng, Aperol, prosecco, cam",
-  negroni: "Đắng, gin, campari, vermouth",
-  "white-wine": "Nhẹ, trái cây, khoáng",
-  "red-wine": "Đậm, mọng, chát",
+  negroni: "Gin, campari, vermouth",
+  "passion-cabernet-sauvignon": "Lý chua đen, gỗ sồi",
+  "passion-sweet-wine": "Ngọt, trái, hoa",
+  "passion-classic-red-wine": "Mọng đỏ, tanin mềm",
+  "passion-white-wine-sauvignon-blanc": "Sauvignon blanc, mềm, đậm, dễ uống",
+  "chateau-dalat-sparkling-white": "Chanh dây, ngọt, cân bằng",
   "beer-light": "Nhạt, mát, mùa hoa bia",
   "beer-dark": "Đen, caramel, mạch nha",
+  "fuzzy-ipa-thunderslap": "Hoa bia, cam",
+  "fuzzy-lager": "Mạch nha, nhẹ",
   "pineapple-ginger-honey": "Dứa, gừng, mật ong",
   limoncello: "Chanh, vỏ, ngọt",
   "pineapple-vanilla": "Dứa, vani",
@@ -238,7 +287,7 @@ const TASTE_VN: Record<string, string> = {
   blueberry: "Việt, mọng",
   "cherry-chocolate": "Anh đào, sô cô la",
   "strawberry-cream": "Dâu, kem",
-  b52: "Ngọt, cà phê, kem, cam",
+  b52: "60 ml: cà phê, kem, triple sec",
 };
 
 export function menuItemDisplayDescription(item: MenuItem, lang: AppLang): string {
@@ -246,6 +295,17 @@ export function menuItemDisplayDescription(item: MenuItem, lang: AppLang): strin
   if (lang === "en") return DESCS_EN[item.id] ?? item.description;
   if (lang === "vn") return DESCS_VN[item.id] ?? DESCS_EN[item.id] ?? item.description;
   return item.description;
+}
+
+/** Короткая одна строка в списке у вин с `wineListLine` / переводом; иначе полное описание. */
+export function menuItemWineListLine(item: MenuItem, lang: AppLang): string {
+  if (item.barSubcategory !== "wine" || !item.wineListLine) {
+    return menuItemDisplayDescription(item, lang);
+  }
+  if (lang === "ru") return item.wineListLine;
+  if (lang === "en") return WINE_LIST_EN[item.id] ?? item.wineListLine;
+  if (lang === "vn") return WINE_LIST_VN[item.id] ?? WINE_LIST_EN[item.id] ?? item.wineListLine;
+  return item.wineListLine;
 }
 
 export function menuItemDisplayTaste(item: MenuItem, lang: AppLang): string | undefined {

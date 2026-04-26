@@ -5,7 +5,11 @@ import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { strengthLabelKey } from "@/lib/menuStrengthLabel";
-import { menuItemDisplayName, menuItemDisplayTaste } from "@/lib/menuItemI18n";
+import {
+  menuItemDisplayName,
+  menuItemDisplayTaste,
+  menuItemWineListLine,
+} from "@/lib/menuItemI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import { getAssetUrl } from "@/lib/appVersion";
 
@@ -55,6 +59,8 @@ export function MenuListItem({
   const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
+  const isFuzzyBeer = item.id === "fuzzy-ipa-thunderslap" || item.id === "fuzzy-lager";
+  const isWine = item.barSubcategory === "wine";
   /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
   const isBarCompact = isSoftDrink || isSpirits;
   /** Одна высота для всех карточек настоек; отступ под шапку/вкладки */
@@ -77,11 +83,15 @@ export function MenuListItem({
           onClick();
         }
       }}
-      className={`relative flex w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isTincture ? "" : "min-h-[120px]"} ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
+      className={`relative flex w-full cursor-pointer items-stretch rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isTincture ? "" : "min-h-[120px]"} ${
+        isWine ? "overflow-x-hidden overflow-y-visible" : "overflow-hidden"
+      } ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
       style={
         isTincture
           ? { height: tinctureCardH, minHeight: tinctureCardH, maxHeight: tinctureCardH }
-          : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
+          : isWine
+            ? { minHeight: "max(128px, 22dvh)" }
+            : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
       }
     >
       <div
@@ -134,8 +144,10 @@ export function MenuListItem({
           >
             {displayName}
           </h3>
-          {isSpirits && (
-            <p className="text-xs text-white/55">{item.grammage ?? t("unit_vol_short")}</p>
+          {(isSpirits || (isSoftDrink && item.grammage)) && (
+            <p className="text-xs text-white/55">
+              {isSpirits ? item.grammage ?? t("unit_vol_short") : item.grammage}
+            </p>
           )}
           {item.abv && !isBarCompact && (
             <span className="inline-flex w-fit shrink-0 rounded-full border border-[#f8d66d]/35 bg-[#f8d66d]/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[#fde68a]">
@@ -155,7 +167,12 @@ export function MenuListItem({
                 .join(", ")}
             </p>
           )}
-          {item.taste && !isBarCompact && (
+          {isWine && !isBarCompact && (
+            <p className="min-w-0 shrink-0 break-words text-xs leading-[1.4] text-white/60">
+              {menuItemWineListLine(item, lang)}
+            </p>
+          )}
+          {item.taste && !isBarCompact && !isWine && (
             <p
               className={`text-white/55 ${isTincture ? "line-clamp-3 text-[11px] leading-snug" : "line-clamp-2 text-xs"}`}
             >
@@ -207,7 +224,9 @@ export function MenuListItem({
               ? `h-full w-full origin-center scale-[1.12] object-cover will-change-transform ${
                   tinctureListRimFocus ? "object-[50%_40%]" : "object-center"
                 }`
-              : "h-full min-h-[120px] w-full object-contain object-center"
+              : isFuzzyBeer
+                ? "h-full min-h-[120px] w-full origin-center object-contain object-[58%_50%] scale-[1.2] will-change-transform"
+                : "h-full min-h-[120px] w-full object-contain object-center"
           }
           style={
             isTincture

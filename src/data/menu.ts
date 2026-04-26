@@ -20,7 +20,7 @@ export type MenuItem = {
   menuSubcategory?: MenuSubcategory; // тип снека (закуски / сосиски / пельмени)
   /** Бейдж «Хит продаж» / рекомендация (огонёк) */
   badge?: "hit";
-  /** Вкус: короткая строка под напитком, напр. "кисло-сладкий, виски, лимон, мёд" */
+  /** Вкус: короткая строка под напитком, напр. "кисло-сладкий, виски, лимон" */
   taste?: string;
   /** Для кальяна: бренд табака (показывается на карточке) */
   tobacco?: string;
@@ -34,6 +34,8 @@ export type MenuItem = {
   abv?: string;
   /** Пометки для снеков: к пиву, к коктейлям, к вину (можно несколько) */
   pairing?: ("beer" | "cocktail" | "wine")[];
+  /** Вино: одна короткая строка в списке (полное `description` — в карточке) */
+  wineListLine?: string;
 };
 
 /** Настойки с рюмкой в верхней части кадра: без сдвига object-position верх рюмки режется (cover + scale). */
@@ -54,10 +56,10 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_whisky_sour_ultra.png",
     imageList: "/menu/cocktail-whisky-sour-horizontal-hero.png",
     category: "cocktail",
-    price: "135000",
+    price: "160000",
     barSubcategory: "cocktail",
     badge: "hit",
-    taste: "кисло-сладкий, виски, лимон, мёд",
+    taste: "кисло-сладкий, виски, лимон",
     strength: "strong",
   },
   {
@@ -67,22 +69,33 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_boulevardier_ultra.png",
     imageList: "/menu/cocktail-boulevardier-horizontal-hero.png",
     category: "cocktail",
-    price: "155000",
+    price: "180000",
     barSubcategory: "cocktail",
     taste: "горьковатый, бурбон, кампари, вермут",
     strength: "strong",
   },
   {
+    id: "negroni",
+    name: "Негрони",
+    description: "Джин, кампари и красный вермут. Классика бара.",
+    image: "/menu/cocktail-negroni-horizontal-hero.png",
+    imageList: "/menu/cocktail-negroni-horizontal-hero.png",
+    category: "cocktail",
+    price: "130000",
+    barSubcategory: "cocktail",
+    taste: "джин, кампари, вермут",
+    strength: "strong",
+  },
+  {
     id: "long-island",
     name: "Лонг Айленд",
-    description: "Мощный микс пяти видов крепкого алкоголя.",
+    description: "Микс пяти крепких спиртных, кола, лимон, трипл сек.",
     image: "/menu/cocktail_long_island_ultra.png",
     imageList: "/menu/cocktail_long_island_ultra.png",
     category: "cocktail",
-    price: "175000",
+    price: "180000",
     barSubcategory: "cocktail",
-    taste: "крепкий, лимон, кола, текила, джин, ром, водка",
-    strength: "strong",
+    taste: "лимон, кола, текила, джин, ром, водка, трипл сек",
   },
   {
     id: "whisky-cola",
@@ -91,7 +104,7 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_whisky_cola_ultra.png",
     imageList: "/menu/cocktail-whisky-cola-horizontal-hero.png",
     category: "cocktail",
-    price: "115000",
+    price: "150000",
     barSubcategory: "cocktail",
     taste: "виски, кола, лёгкая сладость",
     strength: "strong",
@@ -103,9 +116,9 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_gin_tonic_ultra.png",
     imageList: "/menu/cocktail-gin-tonic-horizontal-hero.png",
     category: "cocktail",
-    price: "125000",
+    price: "130000",
     barSubcategory: "cocktail",
-    taste: "свежий, джин, тоник, лайм, можжевельник",
+    taste: "джин, тоник, лайм, можжевельник",
     strength: "medium",
   },
   {
@@ -115,46 +128,85 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_aperol_ultra.png",
     imageList: "/menu/cocktail-aperol-spritz-horizontal-hero.png",
     category: "cocktail",
-    price: "145000",
+    price: "180000",
     barSubcategory: "cocktail",
     taste: "горьковато-сладкий, апероль, просекко, апельсин",
     strength: "weak",
   },
   {
-    id: "negroni",
-    name: "Негрони",
-    description: "Джин, кампари и красный вермут. Горьковатая классика.",
-    image: "/menu/cocktail_negroni_ultra.png",
-    imageList: "/menu/cocktail-negroni-horizontal-hero.png",
-    category: "cocktail",
-    price: "155000",
-    barSubcategory: "cocktail",
-    taste: "горький, джин, кампари, вермут",
-    strength: "strong",
-  },
-  {
-    id: "white-wine",
-    name: "Белое вино",
-    description: "Элегантный выбор с тонкими фруктовыми нотами и освежающей минеральностью.",
-    image: "/menu/cocktail_white_wine_ultra.png",
-    imageList: "/menu/cocktail-white-wine-horizontal-hero.png",
+    id: "passion-cabernet-sauvignon",
+    name: "Вино · Passion Wine of Chile · Cabernet Sauvignon",
+    description:
+      "Чилийское красное, Центральная долина, 13,5%: рубиновый цвет, смородина и дуб. Под мясо.",
+    wineListLine: "Красное вино, смородина, дуб",
+    image: "/menu/PassionCabernetSauvignon.png",
+    imageList: "/menu/PassionCabernetSauvignon.png",
     category: "cocktail",
     price: "120000",
     barSubcategory: "wine",
-    taste: "лёгкое, фруктовое, минеральное",
+    abv: "13,5%",
+    taste: "смородина, дуб",
+    strength: "medium",
+  },
+  {
+    id: "passion-sweet-wine",
+    name: "Вино · Passion Wine of Chile · Sweet Wine",
+    description:
+      "Сладкое вино из винограда Каберне Совиньон, 11%: насыщенный цвет, аромат фруктов и цветов, сочно и по-домашнему уютно.",
+    wineListLine: "Сладкое вино, каберне, фрукты и цветы",
+    image: "/menu/PassionSweetwine.png",
+    imageList: "/menu/PassionSweetwine.png",
+    category: "cocktail",
+    price: "120000",
+    barSubcategory: "wine",
+    abv: "11%",
+    taste: "сладкое, фрукты, цветы",
     strength: "weak",
   },
   {
-    id: "red-wine",
-    name: "Красное вино",
-    description: "Полнотелое вино с богатым букетом темных ягод.",
-    image: "/menu/cocktail_red_wine_ultra.png",
-    imageList: "/menu/cocktail-red-wine-horizontal-hero.png",
+    id: "passion-classic-red-wine",
+    name: "Вино · Passion Wine of Chile · Classic Red Wine",
+    description:
+      "Купаж отборных красных сортов, Центральная долина, Чили, 13%: свежий аромат лесных ягод, ровная кислотность и танины, мягкий вкус, удобно для первого знакомства, к уютной беседе.",
+    wineListLine: "Купаж красного вина, лесные ягоды, мягкий вкус",
+    image: "/menu/PassionClassicRedWine.png",
+    imageList: "/menu/PassionClassicRedWine.png",
     category: "cocktail",
     price: "120000",
     barSubcategory: "wine",
-    taste: "полнотелое, ягодное, терпкое",
+    abv: "13%",
+    taste: "лесные ягоды, мягкие танины",
     strength: "medium",
+  },
+  {
+    id: "passion-white-wine-sauvignon-blanc",
+    name: "Вино · Passion Wine of Chile · White Wine Sauvignon Blanc",
+    description:
+      "Из винограда Совиньон блан, 12,5%: мягкое, сочное белое, когда хочется простого и душевного бокала.",
+    wineListLine: "Белое вино, совиньон блан, мягкое и сочное",
+    image: "/menu/PassionWhiteWineSauvignonBlanc.png",
+    imageList: "/menu/PassionWhiteWineSauvignonBlanc.png",
+    category: "cocktail",
+    price: "120000",
+    barSubcategory: "wine",
+    abv: "12,5%",
+    taste: "Совиньон блан, мягкое, сочное, лёгкое",
+    strength: "weak",
+  },
+  {
+    id: "chateau-dalat-sparkling-white",
+    name: "Шампанское Chateau Dalat · Sparkling White",
+    description:
+      "Игристое белое Chateau Dalat: сладкое сбалансированное послевкусие и ноты маракуйи.",
+    wineListLine: "Игристое белое, маракуйя, сладкое послевкусие",
+    image: "/menu/ChateauDalat.png",
+    imageList: "/menu/ChateauDalat.png",
+    category: "cocktail",
+    price: "120000",
+    barSubcategory: "wine",
+    abv: "10,5%",
+    taste: "маракуйя, сладкое, сбалансированное",
+    strength: "weak",
   },
   {
     id: "beer-light",
@@ -163,7 +215,7 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_light_beer_ultra.png",
     imageList: "/menu/cocktail-light-beer-horizontal-hero.png",
     category: "cocktail",
-    price: "75000",
+    price: "50000",
     barSubcategory: "beer",
     taste: "светлое, лёгкое, хмельное",
     strength: "weak",
@@ -175,9 +227,33 @@ export const MENU_ITEMS: MenuItem[] = [
     image: "/menu/cocktail_dark_beer_ultra.png",
     imageList: "/menu/cocktail-dark-beer-horizontal-hero.png",
     category: "cocktail",
-    price: "85000",
+    price: "60000",
     barSubcategory: "beer",
     taste: "тёмное, карамель, солод",
+    strength: "weak",
+  },
+  {
+    id: "fuzzy-ipa-thunderslap",
+    name: "FUZZY IPA Thunderslap",
+    description: "Выразительный хмель, цитрус и сухое послевкусие.",
+    image: "/menu/FUZZY.png",
+    imageList: "/menu/FUZZY.png",
+    category: "cocktail",
+    price: "60000",
+    barSubcategory: "beer",
+    taste: "хмель, цитрус",
+    strength: "weak",
+  },
+  {
+    id: "fuzzy-lager",
+    name: "FUZZY Lager",
+    description: "Светлое: чистый солод, лёгкое питьё.",
+    image: "/menu/FUZZY.png",
+    imageList: "/menu/FUZZY.png",
+    category: "cocktail",
+    price: "60000",
+    barSubcategory: "beer",
+    taste: "солод, лёгкий",
     strength: "weak",
   },
   {
@@ -380,31 +456,20 @@ export const MENU_ITEMS: MenuItem[] = [
     taste: "клубника, сливки",
     strength: "medium",
   },
-  // Крепкий алкоголь / шоты (50 мл)
+  // Крепкий алкоголь / шоты (Б-52 — 60 мл, остальные 50 мл)
   {
     id: "b52",
     name: "Б-52",
-    description: "Легендарный слоистый шот из кофейного ликера, сливочного крема и апельсинового трипл-сек.",
+    description: "Слой: кофейный ликёр, сливочный ликёр, трипл сек. Порция 60 мл.",
     image: "/menu/cocktail_b52_ultra.png",
     imageList: "/menu/cocktail-b52-horizontal-hero.png",
     category: "cocktail",
-    price: "95000",
-    grammage: "50 мл",
+    price: "130000",
+    grammage: "60 мл",
     barSubcategory: "spirits",
     badge: "hit",
-    taste: "сладкий, кофе, сливки, апельсин",
+    taste: "60 мл: кофейный ликёр, сливочный ликёр, трипл сек",
     strength: "strong",
-  },
-  {
-    id: "gordons-gin",
-    name: "Джин Gordon's",
-    description: "Шот.",
-    image: "/menu/gordons-gin.png",
-    imageList: "/menu/gordons-gin.png",
-    category: "cocktail",
-    price: "90000",
-    grammage: "50 мл",
-    barSubcategory: "spirits",
   },
   {
     id: "kahlua",
@@ -429,13 +494,13 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "spirits",
   },
   {
-    id: "havana-club-rum",
-    name: "Ром Havana Club",
+    id: "rhum-chauvet",
+    name: "Ром Rhum Chauvet",
     description: "Шот.",
-    image: "/menu/havana-club-rum.png",
-    imageList: "/menu/havana-club-rum.png",
+    image: "/menu/RHUM-CHAUVET.png",
+    imageList: "/menu/RHUM-CHAUVET.png",
     category: "cocktail",
-    price: "90000",
+    price: "70000",
     grammage: "50 мл",
     barSubcategory: "spirits",
   },
@@ -502,6 +567,17 @@ export const MENU_ITEMS: MenuItem[] = [
     imageList: "/menu/bombay-sapphire-gin.png",
     category: "cocktail",
     price: "90000",
+    grammage: "50 мл",
+    barSubcategory: "spirits",
+  },
+  {
+    id: "gin-harpoon",
+    name: "Джин Harpoon",
+    description: "Шот.",
+    image: "/menu/Harpoon.png",
+    imageList: "/menu/Harpoon.png",
+    category: "cocktail",
+    price: "70000",
     grammage: "50 мл",
     barSubcategory: "spirits",
   },
@@ -608,6 +684,17 @@ export const MENU_ITEMS: MenuItem[] = [
     imageList: "/menu/schweppes-soda-grey.png",
     category: "cocktail",
     price: "30000",
+    barSubcategory: "soft",
+  },
+  {
+    id: "water-350",
+    name: "Вода",
+    description: "Питьевая вода.",
+    image: "/menu/water.png",
+    imageList: "/menu/water.png",
+    category: "cocktail",
+    price: "15000",
+    grammage: "350 мл",
     barSubcategory: "soft",
   },
   // СНЕКИ в общем списке «Бар» после напитков
@@ -965,14 +1052,6 @@ export const HOOKAH_MENU_ITEMS: MenuItem[] = [
 
 /** Бар + кальяны — для списка избранного и общих ссылок по id. */
 export const MENU_AND_HOOKAH_ITEMS: MenuItem[] = [...MENU_ITEMS, ...HOOKAH_MENU_ITEMS];
-
-/** Одна строка над списком во вкладке «Безалкогольные». */
-export const SOFT_DRINKS_SECTION_INTRO =
-  "Прохладные банки из холодильника — как в баре у стойки, без лишних слов.";
-
-/** Одна строка над списком во вкладке «Крепкий алкоголь / шоты». */
-export const SPIRITS_SECTION_INTRO =
-  "Классика у стойки — наливаем ровно пятьдесят, без лишних слов.";
 
 export function strengthDisplayLabel(item: MenuItem): string | null {
   if (item.abv) return null;

@@ -332,16 +332,6 @@ export function MenuList({ items }: { items: MenuItem[] }) {
                       minHeight: `calc(${BAR_LIST_TOP}px + env(safe-area-inset-top, 0px))`,
                     }}
                   />
-                  {barCategory === "soft" && (
-                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">
-                      {t("soft_drinks_section_intro")}
-                    </p>
-                  )}
-                  {barCategory === "spirits" && (
-                    <p className="mb-1 text-[13px] leading-relaxed text-white/72">
-                      {t("spirits_section_intro")}
-                    </p>
-                  )}
                   {showWheelNavBanner && activeBonus && (
                     <div
                       className="mb-3 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-br from-amber-500/[0.12] to-transparent px-4 py-3.5"

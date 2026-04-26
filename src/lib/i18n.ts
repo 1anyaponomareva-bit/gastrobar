@@ -75,9 +75,6 @@ export const translations: Record<AppLang, Record<string, string>> = {
     hookah_herbal: "Травянистые",
     favorites_empty:
       "Здесь пока пусто. Добавьте напитки, блюда или кальяны, которые вам понравились!",
-    soft_drinks_section_intro:
-      "Прохладные банки из холодильника — как в баре у стойки, без лишних слов.",
-    spirits_section_intro: "Классика у стойки — наливаем ровно пятьдесят, без лишних слов.",
     strength_bar_weak: "Слабый",
     strength_bar_medium: "Средний",
     strength_bar_strong: "Крепкий",
@@ -468,8 +465,6 @@ export const translations: Record<AppLang, Record<string, string>> = {
     hookah_fresh: "Fresh",
     hookah_herbal: "Herbal",
     favorites_empty: "Nothing here yet. Add drinks, dishes, or shisha you like!",
-    soft_drinks_section_intro: "Chilled cans from the fridge—like at the bar, no fuss.",
-    spirits_section_intro: "Bar classics—50 ml pours, straight to the point.",
     strength_bar_weak: "Light",
     strength_bar_medium: "Medium",
     strength_bar_strong: "Strong",
@@ -842,8 +837,6 @@ export const translations: Record<AppLang, Record<string, string>> = {
     hookah_fresh: "Tươi mát",
     hookah_herbal: "Thảo mộc",
     favorites_empty: "Chưa có món nào. Hãy thêm đồ uống, món ăn hoặc shisha bạn thích!",
-    soft_drinks_section_intro: "Lon lạnh từ tủ—như ở quầy bar, gọn lỏn.",
-    spirits_section_intro: "Kiểu quầy bar—50ml, đúng chất.",
     strength_bar_weak: "Nhẹ",
     strength_bar_medium: "Vừa",
     strength_bar_strong: "Mạnh",
