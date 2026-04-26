@@ -64,8 +64,11 @@ export function MenuListItem({
   const isWine = item.barSubcategory === "wine";
   /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
   const isBarCompact = isSoftDrink || isSpirits;
-  /** Одна высота для всех карточек настоек; отступ под шапку/вкладки */
-  const tinctureCardH = "min(188px, calc((100dvh - 196px) / 3))";
+  /**
+   * Высота карточки настоек: на низких экранах старый min(188px, calc/3) давал около 150px — мало на
+   * две строки названия и метаданные; низ букв обрезался. Нижняя граница 172px, верхняя 200px.
+   */
+  const tinctureCardH = "max(172px, min(200px, calc((100dvh - 196px) / 3)))";
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,14 +92,18 @@ export function MenuListItem({
       } ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
       style={
         isTincture
-          ? { height: tinctureCardH, minHeight: tinctureCardH, maxHeight: tinctureCardH }
+          ? {
+              height: tinctureCardH,
+              minHeight: tinctureCardH,
+              maxHeight: tinctureCardH,
+            }
           : isWine
             ? { minHeight: "max(128px, 22dvh)" }
             : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
       }
     >
       <div
-        className={`relative z-10 flex min-w-0 flex-1 flex-col pl-4 pr-2 ${isTincture ? "min-h-0 py-2.5" : "py-3"}`}
+        className={`relative z-10 flex min-w-0 flex-1 flex-col pl-4 pr-2 ${isTincture ? "min-h-0 py-2" : "py-3"}`}
       >
         {isBonusItem && (
           <div className="mb-2 w-full shrink-0 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/12 to-transparent px-3 py-2">
@@ -141,7 +148,7 @@ export function MenuListItem({
           className={`flex min-h-0 flex-1 flex-col gap-1 text-left ${isTincture ? "justify-start" : "justify-end"}`}
         >
           <h3
-            className={`font-bold leading-tight text-white ${isTincture ? "line-clamp-2 text-lg" : "text-lg"}`}
+            className={`font-bold text-white ${isTincture ? "line-clamp-2 shrink-0 break-words text-lg leading-[1.35] pb-0.5" : "text-lg leading-tight"}`}
           >
             {displayName}
           </h3>

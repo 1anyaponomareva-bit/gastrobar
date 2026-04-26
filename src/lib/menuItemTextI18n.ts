@@ -1,6 +1,21 @@
 import type { MenuItem } from "@/data/menu";
 import type { AppLang } from "./i18n";
 
+/** RU: явные подписи к позициям (для пива — не полагаться только на `menu.ts`, чтобы не показывать EN при ru). */
+const DESCS_RU: Record<string, string> = {
+  "beer-light": "Свежее светлое пиво разливное.",
+  "beer-dark": "Тёмное пиво с карамельными нотами.",
+  "fuzzy-ipa-thunderslap": "Выразительный хмель, цитрус и сухое послевкусие.",
+  "fuzzy-lager": "Светлое: чистый солод, лёгкое питьё.",
+};
+
+const TASTE_RU: Record<string, string> = {
+  "beer-light": "светлое, лёгкое, хмельное",
+  "beer-dark": "тёмное, карамель, солод",
+  "fuzzy-ipa-thunderslap": "хмель, цитрус",
+  "fuzzy-lager": "солод, лёгкий",
+};
+
 const DESCS_EN: Record<string, string> = {
   "whisky-sour":
     "A balance of aged bourbon, lemon and a silky foam top.",
@@ -239,6 +254,8 @@ const TASTE_EN: Record<string, string> = {
   "chateau-dalat-sparkling-white": "Passion fruit, sweet, balanced",
   "beer-light": "Light, easy, hoppy",
   "beer-dark": "Dark, caramel, malt",
+  "fuzzy-ipa-thunderslap": "Hops, citrus",
+  "fuzzy-lager": "Malt, light",
   "pineapple-ginger-honey": "Tropical, spice, honey",
   limoncello: "Lemon, peel, sweetness",
   "pineapple-vanilla": "Pineapple, vanilla",
@@ -291,7 +308,7 @@ const TASTE_VN: Record<string, string> = {
 };
 
 export function menuItemDisplayDescription(item: MenuItem, lang: AppLang): string {
-  if (lang === "ru") return item.description;
+  if (lang === "ru") return DESCS_RU[item.id] ?? item.description;
   if (lang === "en") return DESCS_EN[item.id] ?? item.description;
   if (lang === "vn") return DESCS_VN[item.id] ?? DESCS_EN[item.id] ?? item.description;
   return item.description;
@@ -310,7 +327,7 @@ export function menuItemWineListLine(item: MenuItem, lang: AppLang): string {
 
 export function menuItemDisplayTaste(item: MenuItem, lang: AppLang): string | undefined {
   if (!item.taste) return undefined;
-  if (lang === "ru") return item.taste;
+  if (lang === "ru") return TASTE_RU[item.id] ?? item.taste;
   if (lang === "en") return TASTE_EN[item.id] ?? item.taste;
   if (lang === "vn") return TASTE_VN[item.id] ?? TASTE_EN[item.id] ?? item.taste;
   return item.taste;

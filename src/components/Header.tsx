@@ -11,6 +11,7 @@ import { CONFIG } from "@/lib/config";
 import { getAssetUrl } from "@/lib/appVersion";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import { useTranslation } from "@/lib/useTranslation";
+import { LanguageMenu } from "@/components/LanguageMenu";
 
 const ICON_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
@@ -47,7 +48,7 @@ function LocationIcon({ className }: { className?: string }) {
 }
 
 export function Header() {
-  const { lang, cycleLang, t } = useTranslation();
+  const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   useTheme();
   const { requestBarHome } = useBarHome();
@@ -149,14 +150,7 @@ export function Header() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => cycleLang()}
-          className={ICON_BUTTON_CLASS + " relative z-[1001] text-xs font-semibold uppercase tracking-[0.16em] touch-manipulation"}
-          aria-label={`Language: ${lang}`}
-        >
-          {lang.toUpperCase()}
-        </button>
+        <LanguageMenu />
       </div>
     </motion.header>
   );

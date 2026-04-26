@@ -163,8 +163,16 @@ const TITLES_VN: Record<string, string> = {
   "hookah-overdose-peach-iced-tea": "Trà đào lạnh",
 };
 
+/** RU-названия пива — если в `menu.ts` вдруг окажется EN, в русской локали остаётся RU. */
+const TITLES_RU: Partial<Record<string, string>> = {
+  "beer-light": "Светлое пиво Sapporo",
+  "beer-dark": "Тёмное пиво Sapporo",
+  "fuzzy-ipa-thunderslap": "Пиво FUZZY IPA Thunderslap",
+  "fuzzy-lager": "Пиво FUZZY Lager",
+};
+
 export function menuItemDisplayName(item: MenuItem, lang: AppLang): string {
-  if (lang === "ru") return item.name;
+  if (lang === "ru") return TITLES_RU[item.id] ?? item.name;
   if (lang === "en") return TITLES_EN[item.id] ?? item.name;
   if (lang === "vn") return TITLES_VN[item.id] ?? TITLES_EN[item.id] ?? item.name;
   return item.name;
