@@ -9,6 +9,7 @@ import { strengthLabelKey } from "@/lib/menuStrengthLabel";
 import { menuItemDisplayDescription, menuItemDisplayName, menuItemDisplayTaste } from "@/lib/menuItemI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -161,7 +162,7 @@ export function MenuDetailView({
           <div
             className={`absolute inset-0 overflow-hidden ${item.category === "hookah" ? "bg-gradient-to-b from-zinc-900 via-black to-black" : ""}`}
           >
-            <img
+            <SmartImage
               src={getAssetUrl(item.image)}
               alt={displayName}
               className={

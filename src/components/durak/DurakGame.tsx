@@ -32,6 +32,7 @@ import {
 import { canBeat, suitLabel } from "@/games/durak/cards";
 import { CARD_BACK_URL } from "@/lib/durak/cardAssets";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { CardFaceArt } from "@/components/durak/CardFaceArt";
 import { cn } from "@/lib/utils";
 import { useStandalonePwa } from "@/hooks/useStandalonePwa";
@@ -389,7 +390,7 @@ function BrandedCardBack({
   const [src, setSrc] = useState(() => getAssetUrl(CARD_BACK_PNG_PATH));
 
   return (
-    <img
+    <SmartImage
       src={src}
       alt=""
       draggable={false}

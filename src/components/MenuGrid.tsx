@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 
 export function MenuGrid({
   items,
@@ -24,7 +25,7 @@ export function MenuGrid({
             className="relative w-full overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-[#121212]"
             style={{ aspectRatio: "1 / 1" }}
         >
-          <img
+          <SmartImage
             src={getAssetUrl(item.image)}
             alt=""
             className="block h-full w-full object-cover object-center"

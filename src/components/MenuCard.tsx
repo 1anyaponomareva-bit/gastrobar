@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { menuItemDisplayDescription, menuItemDisplayName } from "@/lib/menuItemI18n";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -34,7 +35,7 @@ export function MenuCard({
     >
       {/* Фото на весь экран */}
       <div className="absolute inset-0 h-full w-full">
-        <img
+        <SmartImage
           src={getAssetUrl(item.image)}
           alt={title}
           className="min-h-full min-w-full h-full w-full object-cover object-center"

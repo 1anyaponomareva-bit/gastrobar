@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { useTranslation } from "@/lib/useTranslation";
 
 const PROMO_IMAGE = "/menu/promo_happy_hour_ultra.png";
@@ -18,7 +19,7 @@ export function PromoCard() {
       className="relative h-[100dvh] w-full overflow-hidden bg-black"
     >
       <div className="absolute inset-0 h-full w-full">
-        <img
+        <SmartImage
           src={getAssetUrl(PROMO_IMAGE)}
           alt={t("promo_happy_hours_title")}
           className="min-h-full min-w-full h-full w-full object-cover object-center"

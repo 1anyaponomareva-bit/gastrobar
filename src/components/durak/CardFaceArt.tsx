@@ -6,6 +6,7 @@ import { rankLabel, suitLabel } from "@/games/durak/cards";
 import { CARD_RADIUS_CLASS, GAME_CARD_FACE_CLASS } from "@/lib/durak/cardChrome";
 import { getCardImagePath } from "@/lib/durak/cardPng";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { cn } from "@/lib/utils";
 
 /** Fallback: прежняя текстовая карта, если PNG не загрузился. */
@@ -135,7 +136,7 @@ export function CardFaceArt({
   }
 
   return (
-    <img
+    <SmartImage
       src={src}
       alt=""
       draggable={false}

@@ -8,6 +8,7 @@ import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { useTranslation } from "@/lib/useTranslation";
 
 const TABS: { id: MenuPeriod; tkey: string }[] = [
@@ -98,7 +99,7 @@ export function BottomNav() {
               >
                 {tab.id === "bar" && "🍸"}
                 {tab.id === "hookahs" && (
-                  <img
+                  <SmartImage
                     src={getAssetUrl("/hookah/emojie.png")}
                     alt=""
                     width={28}

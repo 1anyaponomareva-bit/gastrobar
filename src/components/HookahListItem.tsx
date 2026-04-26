@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { strengthLabelKey } from "@/lib/menuStrengthLabel";
 import { menuItemDisplayName } from "@/lib/menuItemI18n";
 import { useTranslation } from "@/lib/useTranslation";
@@ -72,7 +73,7 @@ export function HookahListItem({
       style={{ minHeight: "max(128px, 28dvh)", maxHeight: "min(240px, 40dvh)" }}
     >
       <div className="relative h-auto min-h-[128px] w-[50%] min-w-[104px] max-w-[200px] shrink-0 overflow-hidden rounded-l-2xl bg-[#030303]">
-        <img
+        <SmartImage
           src={listImage}
           alt=""
           className="h-full min-h-[128px] w-full object-cover object-center"

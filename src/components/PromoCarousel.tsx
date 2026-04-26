@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PROMOS, type PromoItem } from "@/data/promos";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { useBarHome } from "@/components/BarHomeContext";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -58,7 +59,7 @@ function PromoSlide({
       }}
     >
       <div className="relative flex-1 overflow-hidden bg-[#111]">
-        <img
+        <SmartImage
           src={getAssetUrl(promo.image)}
           alt=""
           className={`h-full w-full ${promo.imageFit === "contain" ? "object-contain" : "object-cover"}`}

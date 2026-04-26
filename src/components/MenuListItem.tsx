@@ -12,6 +12,7 @@ import {
 } from "@/lib/menuItemI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 
 function formatVnd(price: string): string {
   const vnd = Number(price) || 0;
@@ -216,7 +217,7 @@ export function MenuListItem({
             : "relative h-auto min-h-[120px] w-[42%] min-w-[90px] max-w-[160px] shrink-0 overflow-hidden rounded-r-2xl bg-[#030303]"
         }
       >
-        <img
+        <SmartImage
           src={listImage}
           alt=""
           className={

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { BonusRibbonTimer } from "@/components/BonusRibbonTimer";
 import { getAssetUrl } from "@/lib/appVersion";
+import { useTranslation } from "@/lib/useTranslation";
 
 /** Иконка колеса справа: `public/fab-wheel-reference.png` */
 const FAB_WHEEL_SRC = "/fab-wheel-reference.png";
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
+  const { t } = useTranslation();
   const [baseError, setBaseError] = useState(false);
 
   const showFallbackGradient = baseError;
@@ -38,9 +40,9 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
       aria-label={
         hasBonus
           ? remainingTime
-            ? `Открыть бонус. Осталось ${remainingTime}`
-            : "Открыть бонус"
-          : "Крутить колесо"
+            ? t("wheel_fab_aria_open_bonus_left").replace("{time}", remainingTime)
+            : t("wheel_fab_aria_open_bonus")
+          : t("wheel_fab_aria_spin")
       }
     >
       <div className="flex flex-col items-center">

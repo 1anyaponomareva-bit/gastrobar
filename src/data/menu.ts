@@ -234,7 +234,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "fuzzy-ipa-thunderslap",
-    name: "FUZZY IPA Thunderslap",
+    name: "Пиво FUZZY IPA Thunderslap",
     description: "Выразительный хмель, цитрус и сухое послевкусие.",
     image: "/menu/FUZZY.png",
     imageList: "/menu/FUZZY.png",
@@ -246,7 +246,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "fuzzy-lager",
-    name: "FUZZY Lager",
+    name: "Пиво FUZZY Lager",
     description: "Светлое: чистый солод, лёгкое питьё.",
     image: "/menu/FUZZY.png",
     imageList: "/menu/FUZZY.png",

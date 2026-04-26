@@ -11,6 +11,7 @@ import {
   type SpinOutcome,
   type WheelSegmentData,
 } from "@/lib/wheel";
+import { useTranslation } from "@/lib/useTranslation";
 
 /** Диск колеса в попапе (с текстом секторов): `public/koleso.png`. */
 const WHEEL_IMAGE_SRC = "/koleso.png" as const;
@@ -38,7 +39,10 @@ type Props = {
   isSpinning: boolean;
 };
 
-function WheelImageFallback() {
+const WHEEL_PNG_PATH = "public/koleso.png" as const;
+
+function WheelImageFallback({ devHint }: { devHint: string }) {
+  const [line1, line2] = devHint.split("\n");
   return (
     <div
       className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#1a0a0f] p-6 text-center"
@@ -48,9 +52,13 @@ function WheelImageFallback() {
       }}
     >
       <p className="text-[11px] font-semibold uppercase leading-tight text-white/90 drop-shadow">
-        Добавьте файл
-        <br />
-        <span className="font-mono text-amber-200/90">public/koleso.png</span>
+        {line1}
+        {line2 ? (
+          <>
+            <br />
+            <span className="font-mono text-amber-200/90">{line2}</span>
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -65,6 +73,8 @@ export function WheelOfFortune({
   allowedToSpin,
   isSpinning,
 }: Props) {
+  const { t } = useTranslation();
+  const devFallbackHint = t("wheel_dev_fallback").replace("{path}", WHEEL_PNG_PATH);
   const sectorCount = segments.length;
   const rotation = useMotionValue(0);
   const lastRotationRef = useRef(0);
@@ -159,11 +169,11 @@ export function WheelOfFortune({
               }}
             >
               {imageFailed ? (
-                <WheelImageFallback />
+                <WheelImageFallback devHint={devFallbackHint} />
               ) : (
                 <Image
                   src={getAssetUrl(WHEEL_IMAGE_SRC)}
-                  alt="Колесо удачи"
+                  alt={t("wheel_img_alt")}
                   fill
                   unoptimized
                   priority
@@ -187,7 +197,7 @@ export function WheelOfFortune({
                 ? "cursor-not-allowed"
                 : "cursor-pointer"
             }`}
-            aria-label="Крутить колесо"
+            aria-label={t("wheel_fab_aria_spin")}
           />
         </div>
 

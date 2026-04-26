@@ -20,6 +20,7 @@ import {
 } from "@/lib/bonusCopyI18n";
 import type { BonusTypeKey } from "@/lib/bonusCopy";
 import { useTranslation } from "@/lib/useTranslation";
+import { wheelSegmentWinTitleT } from "@/lib/wheelCopyI18n";
 
 function formatLeft(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -195,7 +196,7 @@ export function WheelResultView({
   if (!isLose && !bonus) {
     const winTitle = outcome.bonusType
       ? bonusDisplayTitleT(t, outcome.bonusType as BonusTypeKey, null, lang)
-      : (WHEEL_SEGMENTS[outcome.segmentIndex]?.line1 ?? t("wheel_generic_win"));
+      : wheelSegmentWinTitleT(t, WHEEL_SEGMENTS[outcome.segmentIndex]?.id);
     return (
       <div
         className="flex max-h-[min(85dvh,640px)] flex-col gap-4 px-5 py-6 text-center"

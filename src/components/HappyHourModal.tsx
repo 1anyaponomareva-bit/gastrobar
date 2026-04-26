@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 
 const STORAGE_KEY = "gastrobar_happy_hour_dismissed";
 const DELAY_MS = 10_000;
@@ -63,7 +64,7 @@ export function HappyHourModal() {
 
             <div className="space-y-3 pt-2">
               <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-black/40">
-                <img
+                <SmartImage
                   src={getAssetUrl("/menu/promo_happy_hour_ultra.png")}
                   alt="Happy Hours в GASTROBAR"
                   className="h-28 w-full object-cover"

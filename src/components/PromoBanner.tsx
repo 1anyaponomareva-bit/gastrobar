@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { getAssetUrl } from "@/lib/appVersion";
+import { SmartImage } from "@/components/SmartImage";
 import { motion } from "framer-motion";
 import { CONFIG } from "@/lib/config";
 import { useTranslation } from "@/lib/useTranslation";
@@ -125,7 +126,7 @@ export function PromoBanner() {
           className="block cursor-pointer touch-manipulation overflow-hidden rounded-xl bg-black outline-none ring-offset-0 transition-opacity active:opacity-95"
           aria-label={t("aria_tg_group")}
         >
-          <img
+          <SmartImage
             src={getAssetUrl(PROMO_IMAGE)}
             alt={t("promo_tg_img_alt")}
             className="pointer-events-none h-auto max-h-[min(72vh,520px)] w-full object-contain select-none"

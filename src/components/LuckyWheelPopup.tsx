@@ -18,6 +18,7 @@ import {
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
 import { sendSpin } from "@/lib/sendWheelSpin";
+import { useTranslation } from "@/lib/useTranslation";
 
 type View = "wheel" | "result";
 
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function LuckyWheelPopup({ isOpen, onClose }: Props) {
+  const { t } = useTranslation();
   const { openBonusScreen } = useBonusScreen();
   const [view, setView] = useState<View>("wheel");
   const [resultOutcome, setResultOutcome] = useState<SpinOutcome | null>(null);
@@ -66,7 +68,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
       bonus = saveSpinOutcome(outcome);
     }
     const spinResult =
-      WHEEL_SEGMENTS[outcome.segmentIndex]?.line1 ?? outcome.segmentId;
+      WHEEL_SEGMENTS[outcome.segmentIndex]?.id ?? String(outcome.segmentId);
     void sendSpin(spinResult);
 
     setResultOutcome(outcome);
@@ -106,7 +108,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
             type="button"
             onClick={handleClose}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-amber-500/50 bg-white/10 text-amber-400"
-            aria-label="Назад"
+            aria-label={t("back")}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -141,11 +143,11 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
             >
               <div className="mb-4 max-w-[min(92vw,24rem)] text-center">
                 <h2 className="text-lg font-semibold tracking-wide text-white/95">
-                  Крути колесо — получи бонус
+                  {t("wheel_popup_title")}
                 </h2>
-                <p className="mt-1.5 text-xs text-white/50">Одно вращение раз в 16 часов</p>
+                <p className="mt-1.5 text-xs text-white/50">{t("wheel_popup_cooldown_rule")}</p>
                 <p className="mt-2 text-sm font-medium uppercase tracking-[0.12em] text-amber-400/95">
-                  Нажми на колесо, чтобы крутить
+                  {t("wheel_popup_tap_to_spin")}
                 </p>
               </div>
               <WheelOfFortune
@@ -160,7 +162,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
               {!isSpinning && !allowedToSpin && (
                 <div className="mt-5 w-full max-w-sm text-center">
                   <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-                    Следующее вращение
+                    {t("wheel_popup_next_spin")}
                   </p>
                   <p
                     className="mt-1.5 font-mono text-2xl font-semibold tabular-nums text-amber-300/95"
@@ -171,7 +173,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
                 </div>
               )}
               {isSpinning && (
-                <p className="mt-4 text-center text-xs text-white/50">Выбор сектора…</p>
+                <p className="mt-4 text-center text-xs text-white/50">{t("wheel_popup_selecting")}</p>
               )}
             </motion.div>
           )}
