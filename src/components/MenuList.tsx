@@ -27,8 +27,9 @@ import { useTranslation } from "@/lib/useTranslation";
 import type { MenuItem } from "@/data/menu";
 
 const HEADER_HEIGHT = 60;
-const TABS_HEIGHT = 58;
-const TOP_BUFFER = 24;
+/** Реальная высота панели вкладок: py-2.5, кнопки, `max-h-[72px]` — 58px занижало отступ, первая карточка залезала под табы. */
+const TABS_HEIGHT = 72;
+const TOP_BUFFER = 28;
 const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
 const HOOKAH_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
@@ -247,7 +248,9 @@ export function MenuList({ items }: { items: MenuItem[] }) {
             >
               <div
                 className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
-                style={{ top: HEADER_HEIGHT }}
+                style={{
+                  top: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                }}
               >
                 <HookahCategoryTabs value={hookahCategory} onChange={setHookahCategory} />
               </div>
@@ -255,6 +258,9 @@ export function MenuList({ items }: { items: MenuItem[] }) {
               <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
+                style={{
+                  scrollPaddingTop: `calc(${HEADER_HEIGHT + TABS_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                }}
               >
                 <div
                   className="flex flex-col"
@@ -307,7 +313,9 @@ export function MenuList({ items }: { items: MenuItem[] }) {
             >
               <div
                 className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
-                style={{ top: HEADER_HEIGHT }}
+                style={{
+                  top: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                }}
               >
                 <CategoryTabs value={barCategory} onChange={setBarCategory} />
               </div>
@@ -315,6 +323,9 @@ export function MenuList({ items }: { items: MenuItem[] }) {
               <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
+                style={{
+                  scrollPaddingTop: `calc(${HEADER_HEIGHT + TABS_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                }}
               >
                 <div
                   className="flex flex-col"

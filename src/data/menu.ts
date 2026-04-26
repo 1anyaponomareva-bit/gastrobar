@@ -71,7 +71,7 @@ export const MENU_ITEMS: MenuItem[] = [
     category: "cocktail",
     price: "180000",
     barSubcategory: "cocktail",
-    taste: "горьковатый, бурбон, кампари, вермут",
+    taste: "бурбон, кампари, вермут",
     strength: "strong",
   },
   {
@@ -460,7 +460,8 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: "b52",
     name: "Б-52",
-    description: "Слой: кофейный ликёр, сливочный ликёр, трипл сек. Порция 60 мл.",
+    description:
+      "Классический шот Б-52: три слоя — кофейный ликёр, сливочный ликёр и трипл сек. Подаётся в стопке, порция 60 мл.",
     image: "/menu/cocktail_b52_ultra.png",
     imageList: "/menu/cocktail-b52-horizontal-hero.png",
     category: "cocktail",
@@ -468,7 +469,7 @@ export const MENU_ITEMS: MenuItem[] = [
     grammage: "60 мл",
     barSubcategory: "spirits",
     badge: "hit",
-    taste: "60 мл: кофейный ликёр, сливочный ликёр, трипл сек",
+    taste: "60 мл · кофейный ликёр, сливочный ликёр, трипл сек",
     strength: "strong",
   },
   {

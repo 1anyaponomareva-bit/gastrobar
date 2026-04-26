@@ -7,6 +7,7 @@ const DESCS_RU: Record<string, string> = {
   "beer-dark": "Тёмное пиво с карамельными нотами.",
   "fuzzy-ipa-thunderslap": "Выразительный хмель, цитрус и сухое послевкусие.",
   "fuzzy-lager": "Светлое: чистый солод, лёгкое питьё.",
+  b52: "Классический шот Б-52: три слоя — кофейный ликёр, сливочный ликёр и трипл сек. Подаётся в стопке, порция 60 мл.",
 };
 
 const TASTE_RU: Record<string, string> = {
@@ -14,6 +15,7 @@ const TASTE_RU: Record<string, string> = {
   "beer-dark": "тёмное, карамель, солод",
   "fuzzy-ipa-thunderslap": "хмель, цитрус",
   "fuzzy-lager": "солод, лёгкий",
+  b52: "60 мл · кофейный ликёр, сливочный ликёр, трипл сек",
 };
 
 const DESCS_EN: Record<string, string> = {
@@ -27,7 +29,7 @@ const DESCS_EN: Record<string, string> = {
   aperol: "Sparkling prosecco, Aperol bitter and a dash of soda.",
   negroni: "Gin, Campari and red vermouth. A bar icon.",
   "b52":
-    "60 ml layered shot: coffee liqueur, cream liqueur, triple sec.",
+    "The classic B-52: a layered shot of coffee liqueur, cream liqueur and triple sec, stacked in a shooter glass. 60 ml pour.",
   "passion-cabernet-sauvignon":
     "Passion Wine of Chile — Central Valley Cabernet, 13.5%: deep ruby, blackcurrant, soft oak—great with red meat.",
   "passion-sweet-wine":
@@ -159,7 +161,8 @@ const DESCS_VN: Record<string, string> = {
   blueberry: "Việt tím, vị sâu, ngọt tròn.",
   "cherry-chocolate": "Anh đào và ca cao, đậm.",
   "strawberry-cream": "Dâu, kem, kiểu tráng miệng.",
-  b52: "60 ml, tách lớp: cà phê, kem, triple sec.",
+  b52:
+    "B-52 kinh điển: ba lớp — rượu cà phê, rượu kem và triple sec, rót chồng trong ly shot. Khẩu phần 60 ml.",
   kahlua: "Một phần 50 ml tại quầy bar.",
   "sambuca-vaccari": "Một phần 50 ml tại quầy bar.",
   "rhum-chauvet": "Một phần 50 ml tại quầy bar.",
@@ -241,7 +244,7 @@ const WINE_LIST_VN: Record<string, string> = {
 
 const TASTE_EN: Record<string, string> = {
   "whisky-sour": "Sour-sweet, whisky, lemon",
-  boulevardier: "Bitter edge, bourbon, Campari, vermouth",
+  boulevardier: "Bourbon, Campari, vermouth",
   "long-island": "Lemon, cola, tequila, gin, rum, vodka, triple sec",
   "whisky-cola": "Whisky, cola, light sweetness",
   "gin-tonic": "Gin, tonic, lime, juniper",
@@ -270,12 +273,12 @@ const TASTE_EN: Record<string, string> = {
   blueberry: "Blueberry, berry",
   "cherry-chocolate": "Cherry, cocoa",
   "strawberry-cream": "Strawberry, cream",
-  b52: "60 ml: coffee liqueur, cream liqueur, triple sec",
+  b52: "60 ml · coffee liqueur, cream liqueur, triple sec",
 };
 
 const TASTE_VN: Record<string, string> = {
   "whisky-sour": "Chua-ngọt, whiskey, chanh",
-  boulevardier: "Hơi đắng, bourbon, campari, vermouth",
+  boulevardier: "Bourbon, campari, vermouth",
   "long-island": "Chanh, cola, tequila, gin, rum, vodka, triple sec",
   "whisky-cola": "Whisky, cola, ngọt vừa",
   "gin-tonic": "Gin, tonic, chanh, bạch đậu khấu",
@@ -304,7 +307,7 @@ const TASTE_VN: Record<string, string> = {
   blueberry: "Việt, mọng",
   "cherry-chocolate": "Anh đào, sô cô la",
   "strawberry-cream": "Dâu, kem",
-  b52: "60 ml: cà phê, kem, triple sec",
+  b52: "60 ml · cà phê, kem, triple sec",
 };
 
 export function menuItemDisplayDescription(item: MenuItem, lang: AppLang): string {
