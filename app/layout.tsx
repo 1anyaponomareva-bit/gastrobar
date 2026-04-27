@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FavoritesProvider } from "@/components/FavoritesProvider";
@@ -56,6 +57,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-FTR2SGKNGG"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-FTR2SGKNGG');
+          `}
+        </Script>
+      </head>
       <body
         className={`${montserrat.className} app min-h-screen bg-black pb-28 pt-0 text-white`}
         style={{ backgroundColor: "#000", color: "#fff", minHeight: "100dvh" }}
