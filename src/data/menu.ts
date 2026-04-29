@@ -638,6 +638,16 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "soft",
   },
   {
+    id: "coca-cola-zero",
+    name: "Coca-Cola Zero",
+    description: "Газированный напиток без сахара.",
+    image: "/menu/CocaColaZERO.png",
+    imageList: "/menu/CocaColaZERO.png",
+    category: "cocktail",
+    price: "30000",
+    barSubcategory: "soft",
+  },
+  {
     id: "sprite-can",
     name: "Sprite",
     description: "Газированный напиток.",
