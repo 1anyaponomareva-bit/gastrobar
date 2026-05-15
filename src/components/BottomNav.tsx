@@ -10,13 +10,16 @@ import { cn } from "@/lib/utils";
 import { getAssetUrl } from "@/lib/appVersion";
 import { SmartImage } from "@/components/SmartImage";
 import { useTranslation } from "@/lib/useTranslation";
+import { HOOKAH_MENU_ENABLED } from "@/lib/menuFeatures";
 
-const TABS: { id: MenuPeriod; tkey: string }[] = [
+const ALL_TABS: { id: MenuPeriod; tkey: string }[] = [
   { id: "bar", tkey: "bar" },
   { id: "hookahs", tkey: "hookah" },
   { id: "promo", tkey: "tab_promo" },
   { id: "favorites", tkey: "favorites" },
 ];
+
+const TABS = ALL_TABS.filter((tab) => tab.id !== "hookahs" || HOOKAH_MENU_ENABLED);
 
 export function BottomNav() {
   const { t } = useTranslation();

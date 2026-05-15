@@ -70,7 +70,12 @@ export function HookahListItem({
         }
       }}
       className={`relative flex min-h-[120px] w-full cursor-pointer items-stretch overflow-hidden rounded-2xl bg-[#030303] transition-opacity active:opacity-95 ${isHighlighted ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_24px_rgba(212,175,55,0.35)]" : ""}`}
-      style={{ minHeight: "max(128px, 28dvh)", maxHeight: "min(240px, 40dvh)" }}
+      style={{
+        minHeight: "max(128px, 28dvh)",
+        maxHeight: "min(240px, 40dvh)",
+        contentVisibility: "auto",
+        containIntrinsicSize: "180px",
+      }}
     >
       <div className="relative h-auto min-h-[128px] w-[50%] min-w-[104px] max-w-[200px] shrink-0 overflow-hidden rounded-l-2xl bg-[#030303]">
         <SmartImage

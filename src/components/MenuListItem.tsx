@@ -96,10 +96,21 @@ export function MenuListItem({
               height: tinctureCardH,
               minHeight: tinctureCardH,
               maxHeight: tinctureCardH,
+              contentVisibility: "auto",
+              containIntrinsicSize: "188px",
             }
           : isWine
-            ? { minHeight: "max(128px, 22dvh)" }
-            : { minHeight: "max(120px, 24dvh)", maxHeight: "190px" }
+            ? {
+                minHeight: "max(128px, 22dvh)",
+                contentVisibility: "auto",
+                containIntrinsicSize: "156px",
+              }
+            : {
+                minHeight: "max(120px, 24dvh)",
+                maxHeight: "190px",
+                contentVisibility: "auto",
+                containIntrinsicSize: "160px",
+              }
       }
     >
       <div

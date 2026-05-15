@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { MenuPeriod } from "@/lib/utils";
+import { HOOKAH_MENU_ENABLED } from "@/lib/menuFeatures";
 
 type ThemeContextValue = {
   period: MenuPeriod;
@@ -24,12 +25,13 @@ export function ThemeProvider({
   }, [period]);
 
   const setPeriod = (p: MenuPeriod) => {
+    const next = p === "hookahs" && !HOOKAH_MENU_ENABLED ? "bar" : p;
     if (typeof document === "undefined") {
-      setPeriodState(p);
+      setPeriodState(next);
       return;
     }
-    document.documentElement.setAttribute("data-period", p);
-    setPeriodState(p);
+    document.documentElement.setAttribute("data-period", next);
+    setPeriodState(next);
   };
 
   return (
