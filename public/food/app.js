@@ -1,5 +1,5 @@
 const TELEGRAM_URL = "https://t.me/gastrobar_oceanus";
-const IMG = (file) => `menu/${file}`;
+const IMG = (file) => `/food/menu/${file}`;
 
 const CATEGORIES = [
   { id: "all", label: "Все" },
