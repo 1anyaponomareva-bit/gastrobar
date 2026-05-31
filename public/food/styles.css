@@ -1,7 +1,7 @@
 :root {
-  --app-header-bar: 78px;
+  --app-header-bar: 96px;
   --app-tabs-height: 72px;
-  --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 28px);
+  --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 8px);
   --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
   --app-tabs-top: var(--app-main-padding-top);
   --theme-bg: #000;
@@ -119,9 +119,9 @@ a {
 }
 
 .header-logo__img {
-  width: 240px;
-  max-width: calc(100vw - 8rem);
-  height: 78px;
+  width: 300px;
+  max-width: calc(100vw - 7rem);
+  height: 98px;
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 2px 24px rgba(0, 0, 0, 0.75));
