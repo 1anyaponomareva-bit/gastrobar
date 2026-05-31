@@ -356,10 +356,66 @@ function bindDetailControls() {
   });
 }
 
+const FLAG_SRC = {
+  ru: "/flags/ru.svg",
+  en: "/flags/gb.svg",
+  vn: "/flags/vn.svg",
+};
+
+function bindLangMenu() {
+  const root = document.getElementById("lang-menu");
+  const trigger = document.getElementById("lang-menu-trigger");
+  const dropdown = document.getElementById("lang-menu-list");
+  if (!root || !trigger || !dropdown) return;
+
+  const triggerFlag = trigger.querySelector(".lang-menu__flag");
+  const options = dropdown.querySelectorAll(".lang-menu__option");
+
+  const setOpen = (open) => {
+    root.classList.toggle("is-open", open);
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    dropdown.classList.toggle("is-hidden", !open);
+  };
+
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(!root.classList.contains("is-open"));
+  });
+
+  options.forEach((option) => {
+    option.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const lang = option.getAttribute("data-lang");
+      if (!lang || !FLAG_SRC[lang]) return;
+
+      options.forEach((item) => {
+        const active = item === option;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-selected", active ? "true" : "false");
+      });
+
+      if (triggerFlag) {
+        triggerFlag.src = FLAG_SRC[lang];
+      }
+
+      setOpen(false);
+    });
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!root.contains(event.target)) setOpen(false);
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
+}
+
 function init() {
   renderCategoryTabs();
   renderMenuList();
   bindDetailControls();
+  bindLangMenu();
 }
 
 if (document.readyState === "loading") {

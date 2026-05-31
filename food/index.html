@@ -57,7 +57,43 @@
           />
         </div>
 
-        <div class="header-side header-side--right" aria-hidden="true"></div>
+        <div class="header-side header-side--right">
+          <div class="lang-menu" id="lang-menu">
+            <button
+              type="button"
+              class="lang-menu__trigger"
+              id="lang-menu-trigger"
+              aria-label="Язык"
+              aria-expanded="false"
+              aria-haspopup="listbox"
+              aria-controls="lang-menu-list"
+            >
+              <span class="lang-menu__flag-wrap">
+                <img src="/flags/ru.svg" alt="" class="lang-menu__flag" width="30" height="20" draggable="false" />
+              </span>
+              <svg class="lang-menu__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="lang-menu__dropdown is-hidden" id="lang-menu-list" role="listbox" aria-label="Языки">
+              <button type="button" class="lang-menu__option is-active" role="option" aria-selected="true" data-lang="ru">
+                <span class="lang-menu__flag-wrap lang-menu__flag-wrap--lg">
+                  <img src="/flags/ru.svg" alt="" class="lang-menu__flag" width="44" height="30" draggable="false" />
+                </span>
+              </button>
+              <button type="button" class="lang-menu__option" role="option" aria-selected="false" data-lang="en">
+                <span class="lang-menu__flag-wrap lang-menu__flag-wrap--lg">
+                  <img src="/flags/gb.svg" alt="" class="lang-menu__flag" width="44" height="30" draggable="false" />
+                </span>
+              </button>
+              <button type="button" class="lang-menu__option" role="option" aria-selected="false" data-lang="vn">
+                <span class="lang-menu__flag-wrap lang-menu__flag-wrap--lg">
+                  <img src="/flags/vn.svg" alt="" class="lang-menu__flag" width="44" height="30" draggable="false" />
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
