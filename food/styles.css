@@ -1,5 +1,5 @@
 :root {
-  --app-header-bar: 60px;
+  --app-header-bar: 78px;
   --app-tabs-height: 72px;
   --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 28px);
   --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
@@ -119,9 +119,9 @@ a {
 }
 
 .header-logo__img {
-  width: 160px;
-  max-width: calc(100vw - 9rem);
-  height: 52px;
+  width: 240px;
+  max-width: calc(100vw - 8rem);
+  height: 78px;
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 2px 24px rgba(0, 0, 0, 0.75));
