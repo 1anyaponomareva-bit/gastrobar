@@ -332,6 +332,16 @@ a {
   object-position: center;
 }
 
+.menu-card__media--large {
+  width: 46%;
+  max-width: 180px;
+}
+
+.menu-card__media--large img {
+  transform: scale(1.32);
+  transform-origin: center center;
+}
+
 .menu-card__open {
   position: absolute;
   top: 0.5rem;
@@ -430,6 +440,11 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.detail-image-wrap--large img {
+  transform: scale(1.18);
+  transform-origin: center center;
 }
 
 .detail-gradient {
