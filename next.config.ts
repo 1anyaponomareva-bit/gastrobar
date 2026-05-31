@@ -7,9 +7,9 @@ const extraDevOrigins =
     .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
-  /** Gastrofood: редирект на /food/, иначе относительные CSS/JS ломаются на /food без слэша. */
-  async redirects() {
-    return [{ source: "/food", destination: "/food/", permanent: true }];
+  /** Gastrofood: отдаём index.html по /food (ассеты — абсолютные пути /food/…). */
+  async rewrites() {
+    return [{ source: "/food", destination: "/food/index.html" }];
   },
   /** PostgREST прокси (если кто-то бьёт в `/supabase-proxy`): `app/supabase-proxy/[[...path]]/route.ts`. */
   images: {
