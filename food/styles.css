@@ -487,32 +487,11 @@ a {
 }
 
 .detail-info__price {
-  margin: 0 0 1rem;
+  margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #d4af37;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
-}
-
-.detail-order {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 24rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #000;
-  background: var(--theme-accent);
-  box-shadow: 0 4px 24px rgba(248, 214, 109, 0.25);
-  transition: transform 0.15s ease;
-}
-
-.detail-order:active {
-  transform: scale(0.98);
 }
 
 /* Empty state */

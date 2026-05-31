@@ -1,4 +1,3 @@
-const TELEGRAM_URL = "https://t.me/gastrobar_oceanus";
 const IMG = (file) => `/food/menu/${file}`;
 
 const CATEGORIES = [
@@ -185,11 +184,6 @@ function getVisibleItems() {
   return MENU_ITEMS.filter((item) => item.category === activeCategory);
 }
 
-function orderUrl(item) {
-  const text = `Заказ Gastrofood: ${item.name}`;
-  return `${TELEGRAM_URL}?text=${encodeURIComponent(text)}`;
-}
-
 function renderCategoryTabs() {
   const root = document.getElementById("category-tabs");
   if (!root) return;
@@ -291,9 +285,6 @@ function renderDetailContent(item) {
       <h2 class="detail-info__title">${item.name}</h2>
       <p class="detail-info__desc">${item.description || ""}</p>
       <p class="detail-info__price">${priceLabel}</p>
-      <a href="${orderUrl(item)}" target="_blank" rel="noopener noreferrer" class="detail-order">
-        Заказать
-      </a>
     </div>
   `;
 }
