@@ -225,7 +225,7 @@ function isBoxItem(item) {
 
 function boxImageStyle(item) {
   if (!isBoxItem(item) || item.boxScale == null) return "";
-  return ` style="transform: scale(${item.boxScale}); transform-origin: center center;"`;
+  return ` style="transform: scale(${item.boxScale}); transform-origin: top center;"`;
 }
 
 function renderMenuCard(item, index) {
@@ -235,13 +235,13 @@ function renderMenuCard(item, index) {
   return `
     <button
       type="button"
-      class="menu-card"
+      class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}"
       role="listitem"
       data-index="${index}"
       style="animation-delay: ${index * 0.03}s"
     >
       <div class="menu-card__body">
-        <div class="menu-card__top">${hitHtml}</div>
+        ${item.badge === "hit" ? `<div class="menu-card__top">${hitHtml}</div>` : ""}
         <div class="menu-card__content">
           <h3 class="menu-card__name">${item.name}</h3>
           <p class="menu-card__desc">${item.description || ""}</p>
@@ -249,9 +249,11 @@ function renderMenuCard(item, index) {
         </div>
       </div>
       <div class="menu-card__media${isBoxItem(item) ? " menu-card__media--box" : ""}">
-        <div class="menu-card__box-frame">
-          <img src="${item.image}" alt="" loading="lazy"${boxImageStyle(item)} />
-        </div>
+        ${
+          isBoxItem(item)
+            ? `<div class="menu-card__box-frame"><img src="${item.image}" alt="" loading="lazy"${boxImageStyle(item)} /></div>`
+            : `<img src="${item.image}" alt="" loading="lazy" />`
+        }
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
     </button>

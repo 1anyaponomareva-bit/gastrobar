@@ -339,16 +339,23 @@ a {
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  justify-content: flex-start;
   padding: 0.75rem 0.5rem 0.75rem 1rem;
 }
 
 .menu-card__top {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  min-height: 28px;
+  margin: 0;
+  min-height: 0;
+}
+
+.menu-card--has-hit .menu-card__content {
+  padding-top: 1.75rem;
 }
 
 .hit-badge {
@@ -373,7 +380,7 @@ a {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.25rem;
 }
 
@@ -400,7 +407,7 @@ a {
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  margin-top: 0.5rem;
+  margin-top: 0.375rem;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.875rem;
@@ -411,7 +418,11 @@ a {
 
 .menu-card__media {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   flex-shrink: 0;
+  align-self: stretch;
   width: 42%;
   min-width: 90px;
   max-width: 160px;
@@ -421,17 +432,16 @@ a {
   background: var(--theme-surface);
 }
 
-.menu-card__media img {
+.menu-card__media > img {
   width: 100%;
   height: 100%;
-  min-height: 120px;
   object-fit: contain;
-  object-position: center;
+  object-position: top center;
 }
 
 .menu-card__media--box {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 44%;
   min-width: 100px;
@@ -440,24 +450,19 @@ a {
 
 .menu-card__box-frame {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 132px;
   height: 132px;
   overflow: hidden;
 }
 
-.menu-card__media--box .menu-card__box-frame img,
-.menu-card__media:not(.menu-card__media--box) img {
+.menu-card__media--box .menu-card__box-frame img {
   width: 100%;
   height: 100%;
-  min-height: 120px;
-  object-fit: contain;
-  object-position: center;
-}
-
-.menu-card__media--box .menu-card__box-frame img {
   min-height: 0;
+  object-fit: contain;
+  object-position: top center;
 }
 
 .menu-card__open {
