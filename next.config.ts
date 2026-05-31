@@ -7,6 +7,10 @@ const extraDevOrigins =
     .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
+  /** Статический мини-сайт Gastrofood из `public/food/`. */
+  async rewrites() {
+    return [{ source: "/food", destination: "/food/index.html" }];
+  },
   /** PostgREST прокси (если кто-то бьёт в `/supabase-proxy`): `app/supabase-proxy/[[...path]]/route.ts`. */
   images: {
     remotePatterns: [

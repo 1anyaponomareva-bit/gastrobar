@@ -1,0 +1,358 @@
+const TELEGRAM_URL = "https://t.me/gastrobar_oceanus";
+const IMG = (file) => `menu/${file}`;
+
+const CATEGORIES = [
+  { id: "all", label: "Все" },
+  { id: "burgers", label: "Бургеры" },
+  { id: "hot-dogs", label: "Хот-доги" },
+  { id: "fries-snacks", label: "Фри и закуски" },
+  { id: "dumplings", label: "Пельмени и вареники" },
+  { id: "kids", label: "Детское меню" },
+];
+
+const CATEGORY_ORDER = ["burgers", "hot-dogs", "fries-snacks", "dumplings", "kids"];
+
+const MENU_ITEMS = [
+  {
+    id: "burger-classic",
+    name: "Классический бургер",
+    description: "Говяжья котлета, свежие овощи и фирменный соус в мягкой булочке",
+    price: 89000,
+    category: "burgers",
+    image: IMG("burger-classic.png"),
+  },
+  {
+    id: "cheeseburger",
+    name: "Чизбургер",
+    description: "Сочная котлета, расплавленный сыр, свежие овощи и фирменный соус",
+    price: 99000,
+    category: "burgers",
+    image: IMG("CHEESEBURGER.png"),
+  },
+  {
+    id: "gastroburger",
+    name: "Гастробургер",
+    description: "Фирменный бургер Gastrofood — насыщенный вкус и авторская подача",
+    price: 119000,
+    category: "burgers",
+    image: IMG("GASTROBURGER.png"),
+    badge: "hit",
+  },
+  {
+    id: "classic-hot-dog",
+    name: "Классический хот-дог",
+    description: "Сочная сосиска, горячий багет и фирменные топпинги",
+    price: 69000,
+    category: "hot-dogs",
+    image: IMG("CLASSIC-HOT-DOG.png"),
+    badge: "hit",
+  },
+  {
+    id: "french-fries",
+    name: "Картофель фри",
+    description: "Хрустящий картофель фри — идеальная закуска к бургеру или хот-догу",
+    price: 45000,
+    category: "fries-snacks",
+    image: IMG("FRENCH-FRIES.png"),
+  },
+  {
+    id: "potato-wedges",
+    name: "Картофельные дольки",
+    description: "Запечённые дольки картофеля с золотистой корочкой",
+    price: 55000,
+    category: "fries-snacks",
+    image: IMG("POTATO-WEDGES.png"),
+  },
+  {
+    id: "nuggets",
+    name: "Наггетсы",
+    description: "Куриные наггетсы — хрустящие снаружи, нежные внутри",
+    price: 65000,
+    category: "fries-snacks",
+    image: IMG("NUGGETS.png"),
+  },
+  {
+    id: "fish-bites",
+    name: "Рыбные кусочки",
+    description: "Кусочки рыбы в хрустящей панировке с соусом на выбор",
+    price: 75000,
+    category: "fries-snacks",
+    image: IMG("FISH-BITES.png"),
+  },
+  {
+    id: "potato-dumplings",
+    name: "Вареники с картофелем",
+    description: "Домашние вареники с картофельной начинкой",
+    price: 75000,
+    category: "dumplings",
+    image: IMG("POTATO-DUMPLINGS.png"),
+  },
+  {
+    id: "potato-mushroom-dumplings",
+    name: "Вареники с картофелем и грибами",
+    description: "Нежные вареники с картофелем и ароматными грибами",
+    price: 79000,
+    category: "dumplings",
+    image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
+  },
+  {
+    id: "pork-beef-dumplings",
+    name: "Пельмени свинина и говядина",
+    description: "Сочные пельмени с начинкой из свинины и говядины",
+    price: 89000,
+    category: "dumplings",
+    image: IMG("PORK-BEEF-DUMPLINGS.png"),
+  },
+  {
+    id: "chicken-dumplings",
+    name: "Пельмени с курицей",
+    description: "Нежные пельмени с сочной куриной начинкой",
+    price: 85000,
+    category: "dumplings",
+    image: IMG("CHICKEN-DUMPLINGS.png"),
+  },
+  {
+    id: "fried-pork-beef-dumplings",
+    name: "Жареные пельмени свинина и говядина",
+    description: "Обжаренные пельмени с мясной начинкой — хрустящая корочка",
+    price: 95000,
+    category: "dumplings",
+    image: IMG("FRIED-PORK-BEEF-DUMPLINGS.png"),
+  },
+  {
+    id: "fried-chicken-dumplings",
+    name: "Жареные пельмени с курицей",
+    description: "Обжаренные пельмени с курицей — золотистые и ароматные",
+    price: 92000,
+    category: "dumplings",
+    image: IMG("FRIED-CHICKEN-DUMPLINGS.png"),
+  },
+  {
+    id: "kids-combo-sausage",
+    name: "Детский сет с сосиской",
+    description: "Сосиска, гарнир и напиток — порция для маленьких гостей",
+    price: 79000,
+    category: "kids",
+    image: IMG("KIDS-COMBO-SAUSAGE.png"),
+    badge: "hit",
+  },
+  {
+    id: "kids-combo-nuggets",
+    name: "Детский сет с наггетсами",
+    description: "Наггетсы, гарнир и напиток — порция для маленьких гостей",
+    price: 85000,
+    category: "kids",
+    image: IMG("KIDS-COMBO-NUGGETS.png"),
+    badge: "hit",
+  },
+];
+
+let activeCategory = "all";
+let visibleItems = [];
+let detailIndex = -1;
+
+const ARROW_ICON = `
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H7M17 7v10" />
+  </svg>
+`;
+
+function formatVnd(price) {
+  if (price == null || price === "") return "—";
+  const vnd = Number(price) || 0;
+  if (vnd >= 1000) {
+    const k = Math.round(vnd / 1000);
+    return `${k.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}.000`;
+  }
+  return vnd.toString();
+}
+
+function hitBadgeHtml(label) {
+  return `
+    <span class="hit-badge" aria-hidden="true">
+      <span class="hit-badge__icon">🔥</span>
+      <span>${label}</span>
+    </span>
+  `;
+}
+
+function getVisibleItems() {
+  if (activeCategory === "all") {
+    return CATEGORY_ORDER.flatMap((catId) =>
+      MENU_ITEMS.filter((item) => item.category === catId),
+    );
+  }
+  return MENU_ITEMS.filter((item) => item.category === activeCategory);
+}
+
+function orderUrl(item) {
+  const text = `Заказ Gastrofood: ${item.name}`;
+  return `${TELEGRAM_URL}?text=${encodeURIComponent(text)}`;
+}
+
+function renderCategoryTabs() {
+  const root = document.getElementById("category-tabs");
+  if (!root) return;
+
+  root.innerHTML = CATEGORIES.map(
+    (cat) => `
+      <button
+        type="button"
+        class="category-tab${cat.id === activeCategory ? " is-active" : ""}"
+        role="tab"
+        aria-selected="${cat.id === activeCategory}"
+        data-category="${cat.id}"
+      >
+        ${cat.label}
+      </button>
+    `,
+  ).join("");
+
+  root.querySelectorAll("[data-category]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeCategory = btn.getAttribute("data-category") || "all";
+      renderCategoryTabs();
+      renderMenuList();
+      document.getElementById("menu-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+}
+
+function renderMenuCard(item, index) {
+  const priceLabel = `${formatVnd(item.price)} VND`;
+  const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
+
+  return `
+    <button
+      type="button"
+      class="menu-card"
+      role="listitem"
+      data-index="${index}"
+      style="animation-delay: ${index * 0.03}s"
+    >
+      <div class="menu-card__body">
+        <div class="menu-card__top">${hitHtml}</div>
+        <div class="menu-card__content">
+          <h3 class="menu-card__name">${item.name}</h3>
+          <p class="menu-card__desc">${item.description || ""}</p>
+          <span class="menu-card__price">${priceLabel}</span>
+        </div>
+      </div>
+      <div class="menu-card__media">
+        <img src="${item.image}" alt="" loading="lazy" />
+        <span class="menu-card__open">${ARROW_ICON}</span>
+      </div>
+    </button>
+  `;
+}
+
+function renderMenuList() {
+  const list = document.getElementById("menu-list");
+  const empty = document.getElementById("menu-empty");
+  if (!list || !empty) return;
+
+  visibleItems = getVisibleItems();
+
+  if (visibleItems.length === 0) {
+    list.innerHTML = '<div class="menu-list__spacer" aria-hidden="true"></div>';
+    list.classList.add("is-hidden");
+    empty.classList.remove("is-hidden");
+    return;
+  }
+
+  empty.classList.add("is-hidden");
+  list.classList.remove("is-hidden");
+  list.innerHTML =
+    '<div class="menu-list__spacer" aria-hidden="true"></div>' +
+    visibleItems.map(renderMenuCard).join("");
+
+  list.querySelectorAll(".menu-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const index = Number(card.getAttribute("data-index"));
+      openDetail(index);
+    });
+  });
+}
+
+function renderDetailContent(item) {
+  const priceLabel = `${formatVnd(item.price)} VND`;
+  const hitHtml =
+    item.badge === "hit"
+      ? `<div class="detail-info__hit">${hitBadgeHtml("Хит продаж")}</div>`
+      : "";
+
+  return `
+    <div class="detail-image-wrap">
+      <img src="${item.image}" alt="${item.name}" />
+    </div>
+    <div class="detail-gradient" aria-hidden="true"></div>
+    <div class="detail-info">
+      ${hitHtml}
+      <h2 class="detail-info__title">${item.name}</h2>
+      <p class="detail-info__desc">${item.description || ""}</p>
+      <p class="detail-info__price">${priceLabel}</p>
+      <a href="${orderUrl(item)}" target="_blank" rel="noopener noreferrer" class="detail-order">
+        Заказать
+      </a>
+    </div>
+  `;
+}
+
+function openDetail(index) {
+  const overlay = document.getElementById("detail-overlay");
+  const stage = document.getElementById("detail-stage");
+  const counter = document.getElementById("detail-counter");
+  const item = visibleItems[index];
+  if (!overlay || !stage || !item) return;
+
+  detailIndex = index;
+  stage.innerHTML = renderDetailContent(item);
+  overlay.classList.remove("is-hidden", "is-closing");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+
+  if (visibleItems.length > 1 && counter) {
+    counter.textContent = `${index + 1} / ${visibleItems.length}`;
+    counter.classList.remove("is-hidden");
+  } else if (counter) {
+    counter.classList.add("is-hidden");
+  }
+}
+
+function closeDetail() {
+  const overlay = document.getElementById("detail-overlay");
+  if (!overlay || overlay.classList.contains("is-hidden")) return;
+
+  overlay.classList.add("is-closing");
+  window.setTimeout(() => {
+    overlay.classList.add("is-hidden");
+    overlay.classList.remove("is-closing");
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    detailIndex = -1;
+  }, 280);
+}
+
+function bindDetailControls() {
+  document.getElementById("detail-back")?.addEventListener("click", closeDetail);
+
+  document.getElementById("detail-overlay")?.addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeDetail();
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeDetail();
+  });
+}
+
+function init() {
+  renderCategoryTabs();
+  renderMenuList();
+  bindDetailControls();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
