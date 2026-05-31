@@ -86,6 +86,7 @@ const MENU_ITEMS = [
     price: 75000,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
+    boxScale: 1.62,
   },
   {
     id: "potato-mushroom-dumplings",
@@ -94,6 +95,7 @@ const MENU_ITEMS = [
     price: 79000,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
+    boxScale: 1.36,
   },
   {
     id: "pork-beef-dumplings",
@@ -102,6 +104,7 @@ const MENU_ITEMS = [
     price: 89000,
     category: "dumplings",
     image: IMG("PORK-BEEF-DUMPLINGS.png"),
+    boxScale: 0.9,
   },
   {
     id: "chicken-dumplings",
@@ -110,6 +113,7 @@ const MENU_ITEMS = [
     price: 85000,
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
+    boxScale: 0.9,
   },
   {
     id: "fried-pork-beef-dumplings",
@@ -118,6 +122,7 @@ const MENU_ITEMS = [
     price: 95000,
     category: "dumplings",
     image: IMG("FRIED-PORK-BEEF-DUMPLINGS.png"),
+    boxScale: 0.9,
   },
   {
     id: "fried-chicken-dumplings",
@@ -126,6 +131,7 @@ const MENU_ITEMS = [
     price: 92000,
     category: "dumplings",
     image: IMG("FRIED-CHICKEN-DUMPLINGS.png"),
+    boxScale: 0.9,
   },
   {
     id: "kids-combo-sausage",
@@ -217,6 +223,11 @@ function isBoxItem(item) {
   return item.category === "dumplings";
 }
 
+function boxImageStyle(item) {
+  if (!isBoxItem(item) || item.boxScale == null) return "";
+  return ` style="transform: scale(${item.boxScale}); transform-origin: center center;"`;
+}
+
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
@@ -238,7 +249,9 @@ function renderMenuCard(item, index) {
         </div>
       </div>
       <div class="menu-card__media${isBoxItem(item) ? " menu-card__media--box" : ""}">
-        <img src="${item.image}" alt="" loading="lazy" />
+        <div class="menu-card__box-frame">
+          <img src="${item.image}" alt="" loading="lazy"${boxImageStyle(item)} />
+        </div>
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
     </button>
@@ -282,7 +295,9 @@ function renderDetailContent(item) {
 
   return `
     <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">
-      <img src="${item.image}" alt="${item.name}" />
+      <div class="detail-box-frame">
+        <img src="${item.image}" alt="${item.name}"${boxImageStyle(item)} />
+      </div>
     </div>
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
