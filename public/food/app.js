@@ -104,7 +104,7 @@ const MENU_ITEMS = [
     price: 89000,
     category: "dumplings",
     image: IMG("PORK-BEEF-DUMPLINGS.png"),
-    boxScale: 0.9,
+    boxScale: 1.05,
   },
   {
     id: "chicken-dumplings",
@@ -113,7 +113,7 @@ const MENU_ITEMS = [
     price: 85000,
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
-    boxScale: 0.9,
+    boxScale: 1.05,
   },
   {
     id: "fried-pork-beef-dumplings",
@@ -122,7 +122,7 @@ const MENU_ITEMS = [
     price: 95000,
     category: "dumplings",
     image: IMG("FRIED-PORK-BEEF-DUMPLINGS.png"),
-    boxScale: 0.9,
+    boxScale: 1.05,
   },
   {
     id: "fried-chicken-dumplings",
@@ -131,7 +131,7 @@ const MENU_ITEMS = [
     price: 92000,
     category: "dumplings",
     image: IMG("FRIED-CHICKEN-DUMPLINGS.png"),
-    boxScale: 0.9,
+    boxScale: 1.05,
   },
   {
     id: "kids-combo-sausage",
