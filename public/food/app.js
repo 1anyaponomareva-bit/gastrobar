@@ -86,7 +86,6 @@ const MENU_ITEMS = [
     price: 75000,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    largeImage: true,
   },
   {
     id: "potato-mushroom-dumplings",
@@ -95,7 +94,6 @@ const MENU_ITEMS = [
     price: 79000,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    largeImage: true,
   },
   {
     id: "pork-beef-dumplings",
@@ -215,6 +213,10 @@ function renderCategoryTabs() {
   });
 }
 
+function isBoxItem(item) {
+  return item.category === "dumplings";
+}
+
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
@@ -235,7 +237,7 @@ function renderMenuCard(item, index) {
           <span class="menu-card__price">${priceLabel}</span>
         </div>
       </div>
-      <div class="menu-card__media${item.largeImage ? " menu-card__media--large" : ""}">
+      <div class="menu-card__media${isBoxItem(item) ? " menu-card__media--box" : ""}">
         <img src="${item.image}" alt="" loading="lazy" />
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
@@ -279,7 +281,7 @@ function renderDetailContent(item) {
       : "";
 
   return `
-    <div class="detail-image-wrap${item.largeImage ? " detail-image-wrap--large" : ""}">
+    <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">
       <img src="${item.image}" alt="${item.name}" />
     </div>
     <div class="detail-gradient" aria-hidden="true"></div>
