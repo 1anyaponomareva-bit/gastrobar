@@ -554,11 +554,14 @@ a {
 .detail-image-wrap {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: #000;
 }
 
-.detail-image-wrap img {
+.detail-image-wrap > img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -566,7 +569,6 @@ a {
 }
 
 .detail-image-wrap--box {
-  display: flex;
   align-items: center;
   justify-content: center;
 }

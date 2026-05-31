@@ -223,9 +223,10 @@ function isBoxItem(item) {
   return item.category === "dumplings";
 }
 
-function boxImageStyle(item) {
+function boxImageStyle(item, context = "list") {
   if (!isBoxItem(item) || item.boxScale == null) return "";
-  return ` style="transform: scale(${item.boxScale}); transform-origin: top center;"`;
+  const origin = context === "detail" ? "center center" : "top center";
+  return ` style="transform: scale(${item.boxScale}); transform-origin: ${origin};"`;
 }
 
 function renderMenuCard(item, index) {
@@ -295,11 +296,13 @@ function renderDetailContent(item) {
       ? `<div class="detail-info__hit">${hitBadgeHtml("Хит продаж")}</div>`
       : "";
 
+  const imageHtml = isBoxItem(item)
+    ? `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`
+    : `<img src="${item.image}" alt="${item.name}" />`;
+
   return `
     <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">
-      <div class="detail-box-frame">
-        <img src="${item.image}" alt="${item.name}"${boxImageStyle(item)} />
-      </div>
+      ${imageHtml}
     </div>
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
