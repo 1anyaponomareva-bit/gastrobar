@@ -511,9 +511,9 @@ a {
 }
 
 /* Плавное растворение краёв изображений в фон */
-.menu-card__media > img,
-.menu-card__media--box .menu-card__box-frame img,
-.menu-card__media .menu-card__scale-frame img {
+.menu-card__media:not(.menu-card__media--sharp) > img,
+.menu-card__media:not(.menu-card__media--sharp) .menu-card__box-frame img,
+.menu-card__media:not(.menu-card__media--sharp) .menu-card__scale-frame img {
   -webkit-mask-image:
     linear-gradient(
       to right,
@@ -665,9 +665,9 @@ a {
   transform-origin: center center;
 }
 
-.detail-image-wrap > img,
-.detail-image-wrap--box .detail-box-frame img,
-.detail-image-wrap .detail-scale-frame img {
+.detail-image-wrap:not(.detail-image-wrap--sharp) > img,
+.detail-image-wrap:not(.detail-image-wrap--sharp) .detail-box-frame img,
+.detail-image-wrap:not(.detail-image-wrap--sharp) .detail-scale-frame img {
   -webkit-mask-image:
     linear-gradient(
       to right,

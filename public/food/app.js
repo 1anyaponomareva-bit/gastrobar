@@ -46,7 +46,7 @@ const MENU_ITEMS = [
     price: null,
     category: "burgers",
     image: IMG("fishburger.png"),
-    imageScale: 1.52,
+    imageScale: 1.68,
   },
   {
     id: "classic-hot-dog",
@@ -56,6 +56,7 @@ const MENU_ITEMS = [
     category: "hot-dogs",
     image: IMG("CLASSIC-HOT-DOG.png"),
     badge: "hit",
+    edgeFade: false,
   },
   {
     id: "french-fries",
@@ -97,7 +98,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("shrimp-tempura.png"),
-    imageScale: 1.48,
+    imageScale: 1.56,
   },
   {
     id: "cheese-sticks",
@@ -106,7 +107,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("cheese-sticks.png"),
-    imageScale: 1.48,
+    imageScale: 1.56,
   },
   {
     id: "potato-dumplings",
@@ -263,6 +264,24 @@ function imageScaleFrameStyle(item) {
   return ` style="--item-scale: ${item.imageScale}"`;
 }
 
+function hasEdgeFade(item) {
+  return item.edgeFade !== false;
+}
+
+function menuMediaClass(item) {
+  let cls = "menu-card__media";
+  if (isBoxItem(item)) cls += " menu-card__media--box";
+  if (!hasEdgeFade(item)) cls += " menu-card__media--sharp";
+  return cls;
+}
+
+function detailImageWrapClass(item) {
+  let cls = "detail-image-wrap";
+  if (isBoxItem(item)) cls += " detail-image-wrap--box";
+  if (!hasEdgeFade(item)) cls += " detail-image-wrap--sharp";
+  return cls;
+}
+
 function renderListImage(item) {
   const imgAttrs = `src="${item.image}" alt="" loading="lazy"`;
   if (isBoxItem(item)) {
@@ -304,7 +323,7 @@ function renderMenuCard(item, index) {
           <span class="menu-card__price">${priceLabel}</span>
         </div>
       </div>
-      <div class="menu-card__media${isBoxItem(item) ? " menu-card__media--box" : ""}">
+      <div class="${menuMediaClass(item)}">
         ${renderListImage(item)}
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
@@ -350,7 +369,7 @@ function renderDetailContent(item) {
   const imageHtml = renderDetailImage(item);
 
   return `
-    <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">
+    <div class="${detailImageWrapClass(item)}">
       ${imageHtml}
     </div>
     <div class="detail-gradient" aria-hidden="true"></div>
