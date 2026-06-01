@@ -46,7 +46,7 @@ const MENU_ITEMS = [
     price: null,
     category: "burgers",
     image: IMG("fishburger.png"),
-    imageScale: 1.68,
+    imageScale: 2.12,
   },
   {
     id: "classic-hot-dog",
