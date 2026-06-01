@@ -5,11 +5,12 @@ const CATEGORIES = [
   { id: "burgers", label: "Бургеры" },
   { id: "hot-dogs", label: "Хот-доги" },
   { id: "fries-snacks", label: "Фри и закуски" },
+  { id: "snacks", label: "Закуски" },
   { id: "dumplings", label: "Пельмени и вареники" },
   { id: "kids", label: "Детское меню" },
 ];
 
-const CATEGORY_ORDER = ["burgers", "hot-dogs", "fries-snacks", "dumplings", "kids"];
+const CATEGORY_ORDER = ["burgers", "hot-dogs", "fries-snacks", "snacks", "dumplings", "kids"];
 
 const MENU_ITEMS = [
   {
@@ -78,6 +79,22 @@ const MENU_ITEMS = [
     category: "fries-snacks",
     image: IMG("FISH-BITES.png"),
     badge: "hit",
+  },
+  {
+    id: "shrimp-tempura",
+    name: "Креветки Темпура",
+    description: "Хрустящие креветки в темпурном кляре — подаются с соусом",
+    price: null,
+    category: "snacks",
+    image: IMG("shrimp-tempura.png"),
+  },
+  {
+    id: "cheese-sticks",
+    name: "Сырные Палочки",
+    description: "Запечённые сырные палочки с хрустящей корочкой",
+    price: null,
+    category: "snacks",
+    image: IMG("cheese-sticks.png"),
   },
   {
     id: "potato-dumplings",
