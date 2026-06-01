@@ -97,6 +97,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("shrimp-tempura.png"),
+    imageScale: 1.48,
   },
   {
     id: "cheese-sticks",
