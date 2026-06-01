@@ -39,6 +39,15 @@ const MENU_ITEMS = [
     badge: "hit",
   },
   {
+    id: "fishburger",
+    name: "Фишбургер",
+    description:
+      "Булочка бриошь с кунжутом, рыбная котлета в хрустящей золотистой панировке, соус тартар, лист салата, свежий помидор, маринованные огурцы и красный лук.",
+    price: null,
+    category: "burgers",
+    image: IMG("fishburger.png"),
+  },
+  {
     id: "classic-hot-dog",
     name: "Классический хот-дог",
     description: "Сочная сосиска, горячий багет и фирменные топпинги",
