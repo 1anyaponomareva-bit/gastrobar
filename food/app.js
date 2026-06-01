@@ -258,10 +258,30 @@ function boxImageStyle(item, context = "list") {
   return ` style="transform: scale(${item.boxScale}); transform-origin: ${origin};"`;
 }
 
-function imageScaleStyle(item, context = "list") {
+function imageScaleFrameStyle(item) {
   if (item.imageScale == null) return "";
-  const origin = context === "detail" ? "center center" : "top center";
-  return ` style="transform: scale(${item.imageScale}); transform-origin: ${origin};"`;
+  return ` style="--item-scale: ${item.imageScale}"`;
+}
+
+function renderListImage(item) {
+  const imgAttrs = `src="${item.image}" alt="" loading="lazy"`;
+  if (isBoxItem(item)) {
+    return `<div class="menu-card__box-frame"><img ${imgAttrs}${boxImageStyle(item)} /></div>`;
+  }
+  if (item.imageScale != null) {
+    return `<div class="menu-card__scale-frame"${imageScaleFrameStyle(item)}><img ${imgAttrs} /></div>`;
+  }
+  return `<img ${imgAttrs} />`;
+}
+
+function renderDetailImage(item) {
+  if (isBoxItem(item)) {
+    return `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`;
+  }
+  if (item.imageScale != null) {
+    return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${item.name}" /></div>`;
+  }
+  return `<img src="${item.image}" alt="${item.name}" />`;
 }
 
 function renderMenuCard(item, index) {
@@ -285,11 +305,7 @@ function renderMenuCard(item, index) {
         </div>
       </div>
       <div class="menu-card__media${isBoxItem(item) ? " menu-card__media--box" : ""}">
-        ${
-          isBoxItem(item)
-            ? `<div class="menu-card__box-frame"><img src="${item.image}" alt="" loading="lazy"${boxImageStyle(item)} /></div>`
-            : `<img src="${item.image}" alt="" loading="lazy"${imageScaleStyle(item)} />`
-        }
+        ${renderListImage(item)}
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
     </button>
@@ -331,9 +347,7 @@ function renderDetailContent(item) {
       ? `<div class="detail-info__hit">${hitBadgeHtml("Хит продаж")}</div>`
       : "";
 
-  const imageHtml = isBoxItem(item)
-    ? `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`
-    : `<img src="${item.image}" alt="${item.name}"${imageScaleStyle(item, "detail")} />`;
+  const imageHtml = renderDetailImage(item);
 
   return `
     <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">

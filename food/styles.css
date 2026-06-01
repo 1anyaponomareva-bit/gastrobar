@@ -469,6 +469,23 @@ a {
   object-position: top center;
 }
 
+.menu-card__scale-frame {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: calc(100% / var(--item-scale));
+  height: calc(100% / var(--item-scale));
+}
+
+.menu-card__scale-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top center;
+  transform: scale(var(--item-scale));
+  transform-origin: top center;
+}
+
 .menu-card__open {
   position: absolute;
   top: 0.5rem;
@@ -495,7 +512,8 @@ a {
 
 /* Плавное растворение краёв изображений в фон */
 .menu-card__media > img,
-.menu-card__media--box .menu-card__box-frame img {
+.menu-card__media--box .menu-card__box-frame img,
+.menu-card__media .menu-card__scale-frame img {
   -webkit-mask-image:
     linear-gradient(
       to right,
@@ -630,8 +648,26 @@ a {
   object-position: center;
 }
 
+.detail-scale-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% / var(--item-scale));
+  height: calc(100% / var(--item-scale));
+}
+
+.detail-scale-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(var(--item-scale));
+  transform-origin: center center;
+}
+
 .detail-image-wrap > img,
-.detail-image-wrap--box .detail-box-frame img {
+.detail-image-wrap--box .detail-box-frame img,
+.detail-image-wrap .detail-scale-frame img {
   -webkit-mask-image:
     linear-gradient(
       to right,
