@@ -4,13 +4,13 @@ const CATEGORIES = [
   { id: "all", label: "Все" },
   { id: "burgers", label: "Бургеры" },
   { id: "hot-dogs", label: "Хот-доги" },
-  { id: "fries-snacks", label: "Фри и закуски" },
+  { id: "grill", label: "Гриль" },
   { id: "snacks", label: "Закуски" },
-  { id: "dumplings", label: "Пельмени и вареники" },
+  { id: "dumplings", label: "Пельмени/вареники" },
   { id: "kids", label: "Детское меню" },
 ];
 
-const CATEGORY_ORDER = ["burgers", "hot-dogs", "fries-snacks", "snacks", "dumplings", "kids"];
+const CATEGORY_ORDER = ["burgers", "hot-dogs", "grill", "snacks", "dumplings", "kids"];
 
 const MENU_ITEMS = [
   {
@@ -62,7 +62,7 @@ const MENU_ITEMS = [
     name: "Картофель фри",
     description: "Хрустящий картофель фри — идеальная закуска к бургеру или хот-догу",
     price: 45000,
-    category: "fries-snacks",
+    category: "snacks",
     image: IMG("FRENCH-FRIES.png"),
   },
   {
@@ -70,7 +70,7 @@ const MENU_ITEMS = [
     name: "Картофельные дольки",
     description: "Запечённые дольки картофеля с золотистой корочкой",
     price: 55000,
-    category: "fries-snacks",
+    category: "snacks",
     image: IMG("POTATO-WEDGES.png"),
   },
   {
@@ -78,7 +78,7 @@ const MENU_ITEMS = [
     name: "Наггетсы",
     description: "Куриные наггетсы — хрустящие снаружи, нежные внутри",
     price: 65000,
-    category: "fries-snacks",
+    category: "snacks",
     image: IMG("NUGGETS.png"),
   },
   {
@@ -86,7 +86,7 @@ const MENU_ITEMS = [
     name: "Рыбные кусочки",
     description: "Кусочки рыбы в хрустящей панировке с соусом на выбор",
     price: 75000,
-    category: "fries-snacks",
+    category: "snacks",
     image: IMG("FISH-BITES.png"),
     badge: "hit",
   },
