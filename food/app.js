@@ -105,6 +105,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("cheese-sticks.png"),
+    imageScale: 1.48,
   },
   {
     id: "potato-dumplings",
