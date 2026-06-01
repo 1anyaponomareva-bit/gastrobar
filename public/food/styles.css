@@ -10,6 +10,10 @@
   --theme-text: #f5f5f5;
   --theme-text-muted: #a3a3a3;
   --max-width: 28rem;
+  --image-edge-fade-x: 18%;
+  --image-edge-fade-y: 14%;
+  --detail-image-edge-fade-x: 16%;
+  --detail-image-edge-fade-y: 14%;
 }
 
 *,
@@ -489,6 +493,43 @@ a {
   height: 1.25rem;
 }
 
+/* Плавное растворение краёв изображений в фон */
+.menu-card__media > img,
+.menu-card__media--box .menu-card__box-frame img {
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--image-edge-fade-x),
+      #000 calc(100% - var(--image-edge-fade-x)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--image-edge-fade-y),
+      #000 calc(100% - var(--image-edge-fade-y)),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--image-edge-fade-x),
+      #000 calc(100% - var(--image-edge-fade-x)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--image-edge-fade-y),
+      #000 calc(100% - var(--image-edge-fade-y)),
+      transparent 100%
+    );
+  mask-composite: intersect;
+}
+
 /* Detail — как MenuDetailView */
 .detail-overlay {
   position: fixed;
@@ -587,6 +628,42 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.detail-image-wrap > img,
+.detail-image-wrap--box .detail-box-frame img {
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--detail-image-edge-fade-x),
+      #000 calc(100% - var(--detail-image-edge-fade-x)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--detail-image-edge-fade-y),
+      #000 calc(100% - var(--detail-image-edge-fade-y)),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--detail-image-edge-fade-x),
+      #000 calc(100% - var(--detail-image-edge-fade-x)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--detail-image-edge-fade-y),
+      #000 calc(100% - var(--detail-image-edge-fade-y)),
+      transparent 100%
+    );
+  mask-composite: intersect;
 }
 
 .detail-gradient {
