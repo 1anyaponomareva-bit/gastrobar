@@ -46,6 +46,7 @@ const MENU_ITEMS = [
     price: null,
     category: "burgers",
     image: IMG("fishburger.png"),
+    imageScale: 1.32,
   },
   {
     id: "classic-hot-dog",
@@ -255,6 +256,12 @@ function boxImageStyle(item, context = "list") {
   return ` style="transform: scale(${item.boxScale}); transform-origin: ${origin};"`;
 }
 
+function imageScaleStyle(item, context = "list") {
+  if (item.imageScale == null) return "";
+  const origin = context === "detail" ? "center center" : "top center";
+  return ` style="transform: scale(${item.imageScale}); transform-origin: ${origin};"`;
+}
+
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
@@ -279,7 +286,7 @@ function renderMenuCard(item, index) {
         ${
           isBoxItem(item)
             ? `<div class="menu-card__box-frame"><img src="${item.image}" alt="" loading="lazy"${boxImageStyle(item)} /></div>`
-            : `<img src="${item.image}" alt="" loading="lazy" />`
+            : `<img src="${item.image}" alt="" loading="lazy"${imageScaleStyle(item)} />`
         }
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
@@ -324,7 +331,7 @@ function renderDetailContent(item) {
 
   const imageHtml = isBoxItem(item)
     ? `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`
-    : `<img src="${item.image}" alt="${item.name}" />`;
+    : `<img src="${item.image}" alt="${item.name}"${imageScaleStyle(item, "detail")} />`;
 
   return `
     <div class="detail-image-wrap${isBoxItem(item) ? " detail-image-wrap--box" : ""}">
