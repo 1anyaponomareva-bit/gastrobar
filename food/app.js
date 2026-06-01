@@ -97,7 +97,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("shrimp-tempura.png"),
-    imageScale: 1.56,
+    imageScale: 1.74,
   },
   {
     id: "cheese-sticks",
@@ -106,7 +106,7 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("cheese-sticks.png"),
-    imageScale: 1.56,
+    imageScale: 1.74,
   },
   {
     id: "potato-dumplings",
