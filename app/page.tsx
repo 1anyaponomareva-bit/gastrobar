@@ -1,7 +1,6 @@
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { MenuList } from "@/components/MenuList";
-import { LuckyWheelWidget } from "@/components/LuckyWheelWidget";
 import { TikTokButton } from "@/components/TikTokButton";
 import { MENU_AND_HOOKAH_ITEMS, MENU_ITEMS } from "@/data/menu";
 import { HOOKAH_MENU_ENABLED } from "@/lib/menuFeatures";
@@ -17,7 +16,6 @@ export default async function HomePage() {
       </main>
       <BottomNav />
       <TikTokButton />
-      <LuckyWheelWidget />
     </>
   );
 }
