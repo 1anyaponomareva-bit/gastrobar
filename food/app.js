@@ -458,6 +458,61 @@ function toggleFavorite(id) {
   saveFavorites(favoriteIds);
 }
 
+function favoriteButtonHtml(id, liked = isFavorite(id)) {
+  return `
+    <button
+      type="button"
+      class="menu-card__fav${liked ? " is-liked" : ""}"
+      data-favorite="${id}"
+      aria-label="${liked ? "Убрать из избранного" : "Добавить в избранное"}"
+    >
+      ${liked ? HEART_FILLED : HEART_OUTLINE}
+    </button>
+  `;
+}
+
+function updateDetailFavoriteButton(item) {
+  const btn = document.getElementById("detail-favorite");
+  if (!btn || !item) return;
+
+  const liked = isFavorite(item.id);
+  btn.classList.toggle("is-liked", liked);
+  btn.setAttribute(
+    "aria-label",
+    liked ? "Убрать из избранного" : "Добавить в избранное",
+  );
+  btn.innerHTML = liked ? HEART_FILLED : HEART_OUTLINE;
+}
+
+function bindDetailFavorite(item) {
+  const btn = document.getElementById("detail-favorite");
+  if (!btn || !item) return;
+
+  updateDetailFavoriteButton(item);
+
+  btn.onclick = (event) => {
+    event.stopPropagation();
+    toggleFavorite(item.id);
+    updateDetailFavoriteButton(item);
+
+    if (activeSection === "favorites" && !isFavorite(item.id)) {
+      visibleItems = getVisibleItems();
+      if (visibleItems.length === 0) {
+        closeDetail();
+        renderMenuList();
+        return;
+      }
+      if (detailIndex >= visibleItems.length) {
+        detailIndex = visibleItems.length - 1;
+      }
+      openDetail(detailIndex);
+      return;
+    }
+
+    renderMenuList();
+  };
+}
+
 function getSectionCategories() {
   if (activeSection === "combo") return COMBO_CATEGORIES;
   return FOOD_CATEGORIES;
@@ -676,29 +731,21 @@ function renderHotDogSausageListNote() {
   `;
 }
 
-function renderFavoriteButton(item) {
-  const liked = isFavorite(item.id);
-  return `
-    <button
-      type="button"
-      class="menu-card__fav${liked ? " is-liked" : ""}"
-      data-favorite="${item.id}"
-      aria-label="${liked ? "Убрать из избранного" : "Добавить в избранное"}"
-    >
-      ${liked ? HEART_FILLED : HEART_OUTLINE}
-    </button>
-  `;
-}
-
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
     item.category === "hot-dogs" ? renderHotDogSausageListNote() : "";
-  const headerHtml =
+  const badgeSlot =
     item.badge === "hit"
-      ? `<div class="menu-card__header"><div class="menu-card__top">${hitHtml}</div>${renderFavoriteButton(item)}</div>`
-      : `<div class="menu-card__header"><div></div>${renderFavoriteButton(item)}</div>`;
+      ? `<div class="menu-card__header-badge">${hitHtml}</div>`
+      : `<div class="menu-card__header-badge" aria-hidden="true"></div>`;
+  const headerHtml = `
+    <div class="menu-card__header">
+      ${badgeSlot}
+      ${favoriteButtonHtml(item.id)}
+    </div>
+  `;
 
   return `
     <article
@@ -763,7 +810,8 @@ function renderMenuList() {
   });
 
   list.querySelectorAll(".menu-card").forEach((card) => {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("[data-favorite]")) return;
       const index = Number(card.getAttribute("data-index"));
       openDetail(index);
     });
@@ -867,6 +915,7 @@ function openDetail(index) {
   detailIndex = index;
   stage.innerHTML = renderDetailContent(item);
   bindHotDogSausagePicker();
+  bindDetailFavorite(item);
   overlay.classList.remove("is-hidden", "is-closing");
   overlay.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";

@@ -356,17 +356,6 @@ a {
   padding: 0.75rem 0.5rem 0.75rem 1rem;
 }
 
-.menu-card__top {
-  position: absolute;
-  top: 0.75rem;
-  left: 1rem;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  margin: 0;
-  min-height: 0;
-}
-
 .menu-card--has-hit .menu-card__content {
   padding-top: 0;
 }
@@ -666,11 +655,17 @@ a {
   height: 1.5rem;
 }
 
-.detail-counter {
+.detail-top-actions {
   position: absolute;
   top: max(18px, calc(env(safe-area-inset-top, 0px) + 6px));
   right: 1rem;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-counter {
   padding: 0.375rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.875rem;
@@ -679,6 +674,42 @@ a {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+}
+
+.detail-favorite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.detail-favorite:hover {
+  opacity: 0.85;
+}
+
+.detail-favorite:active {
+  transform: scale(1.12);
+}
+
+.detail-favorite.is-liked {
+  color: #d4af37;
+}
+
+.detail-favorite svg {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .detail-stage {
@@ -1049,11 +1080,15 @@ a {
   color: #fff;
   background: transparent;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: transform 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .menu-card__fav:hover {
   opacity: 0.8;
+}
+
+.menu-card__fav:active {
+  transform: scale(1.15);
 }
 
 .menu-card__fav.is-liked {
@@ -1074,7 +1109,10 @@ a {
   min-height: 1.75rem;
 }
 
-.menu-card__header .menu-card__top {
-  position: static;
-  margin: 0;
+.menu-card__header-badge {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  min-height: 1.75rem;
 }
