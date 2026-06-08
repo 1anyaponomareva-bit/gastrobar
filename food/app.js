@@ -301,6 +301,14 @@ const MENU_ITEMS = [
     image: IMG("phillycheesesteak.png"),
   },
   {
+    id: "classic-wrap",
+    name: "Классический рап",
+    description: "Курица на гриле, свежие овощи и фирменный соус в тортилье.",
+    price: null,
+    category: "wraps",
+    image: IMG("wrap_kur_classic.png"),
+  },
+  {
     id: "chicken-caesar-wrap",
     name: "Цезарь-рап",
     description: "Курица на гриле, салат, пармезан и соус Цезарь.",
