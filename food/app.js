@@ -128,9 +128,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxFrameW: 256,
-    boxFrameH: 192,
     boxFocusY: 58,
+    pierogiZoom: 1.34,
   },
   {
     id: "potato-mushroom-pierogi",
@@ -139,9 +138,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    boxFrameW: 224,
-    boxFrameH: 168,
     boxFocusY: 57,
+    pierogiZoom: 1.22,
   },
   {
     id: "chicken-dumplings",
@@ -728,7 +726,8 @@ function boxFrameStyle(item) {
   const detailW = item.boxDetailW ?? Math.min(360, Math.round(frameW * 1.58));
   const detailH = item.boxDetailH ?? Math.min(360, Math.round(frameH * 1.58));
   const mediaW = item.boxMediaW ?? frameW + 8;
-  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-media-w: ${mediaW}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px;"`;
+  const pierogiZoom = item.pierogiZoom ?? 1;
+  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-media-w: ${mediaW}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px; --pierogi-zoom: ${pierogiZoom};"`;
 }
 
 function imageScaleFrameStyle(item) {
@@ -757,6 +756,7 @@ function detailImageWrapClass(item) {
   let cls = "detail-image-wrap";
   if (!item.image) cls += " detail-image-wrap--no-photo";
   if (isBoxItem(item)) cls += " detail-image-wrap--box";
+  if (isPierogiItem(item)) cls += " detail-image-wrap--pierogi";
   if (!hasEdgeFade(item)) cls += " detail-image-wrap--sharp";
   return cls;
 }

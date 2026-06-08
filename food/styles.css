@@ -347,8 +347,8 @@ a {
 }
 
 .menu-card--box {
-  min-height: max(200px, 28dvh);
-  max-height: 248px;
+  min-height: max(168px, 24dvh);
+  max-height: 210px;
 }
 
 .menu-card--box:not(.menu-card--has-hit) .menu-card__header {
@@ -553,6 +553,11 @@ a {
   min-height: 0;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
+}
+
+.menu-card--pierogi .menu-card__box-scale img {
+  transform: scale(var(--pierogi-zoom, 1));
+  transform-origin: center var(--box-focus-y, 50%);
 }
 
 .menu-card__scale-frame {
@@ -818,6 +823,11 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
+}
+
+.detail-image-wrap--pierogi .detail-box-scale img {
+  transform: scale(var(--pierogi-zoom, 1));
+  transform-origin: center var(--box-focus-y, 50%);
 }
 
 .detail-scale-frame {
