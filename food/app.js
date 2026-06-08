@@ -701,8 +701,7 @@ function isBoxItem(item) {
 
 function boxImageStyle(item, context = "list") {
   if (!isBoxItem(item) || item.boxScale == null) return "";
-  const origin = context === "detail" ? "center center" : "top center";
-  return ` style="transform: scale(${item.boxScale}); transform-origin: ${origin};"`;
+  return ` style="transform: scale(${item.boxScale}); transform-origin: center center;"`;
 }
 
 function imageScaleFrameStyle(item) {
@@ -792,7 +791,7 @@ function renderMenuCard(item, index) {
     <article
       class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
         item.category === "hot-dogs" ? " menu-card--hot-dog" : ""
-      }"
+      }${isBoxItem(item) ? " menu-card--box" : ""}"
       role="listitem button"
       tabindex="0"
       data-index="${index}"
