@@ -382,7 +382,7 @@ const MENU_ITEMS = [
     description: "Классический бургер или чизбургер, картофель фри и напиток.",
     price: null,
     category: "combos",
-    image: null,
+    image: IMG("combo_burger.png"),
   },
   {
     id: "hot-dog-combo",
@@ -390,7 +390,7 @@ const MENU_ITEMS = [
     description: "Любой классический хот-дог, картофель фри и напиток.",
     price: null,
     category: "combos",
-    image: null,
+    image: IMG("hot-dog_combo.png"),
   },
   {
     id: "wings-combo",
@@ -398,7 +398,7 @@ const MENU_ITEMS = [
     description: "Куриные крылья, картофель фри и напиток.",
     price: null,
     category: "combos",
-    image: null,
+    image: IMG("wings_combo.png"),
   },
   {
     id: "sausage-plate-combo",
@@ -407,7 +407,7 @@ const MENU_ITEMS = [
       "Любая крафтовая колбаска, картофель фри, тушёная квашеная капуста и напиток.",
     price: null,
     category: "combos",
-    image: null,
+    image: IMG("combo_sos.png"),
   },
 ];
 
