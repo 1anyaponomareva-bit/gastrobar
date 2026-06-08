@@ -811,6 +811,15 @@ a {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
+.detail-info__sausage {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(212, 175, 55, 0.92);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
 .detail-info__hit {
   margin-bottom: 0.75rem;
 }

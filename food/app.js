@@ -239,7 +239,7 @@ const MENU_ITEMS = [
   },
   {
     id: "original-wings",
-    name: "Куриные крылья — Классические",
+    name: "Куриные крылья, классические",
     description:
       "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
     price: null,
@@ -248,7 +248,7 @@ const MENU_ITEMS = [
   },
   {
     id: "bbq-wings",
-    name: "Куриные крылья — Барбекю",
+    name: "Куриные крылья, барбекю",
     description: "Куриные крылья, маринованные в пиве и покрытые соусом BBQ.",
     price: null,
     category: "grill",
@@ -256,7 +256,7 @@ const MENU_ITEMS = [
   },
   {
     id: "spicy-wings",
-    name: "Куриные крылья — Острые",
+    name: "Куриные крылья, острые",
     description: "Куриные крылья в пивном маринаде с острой глазурью чили.",
     price: null,
     category: "grill",
@@ -614,14 +614,12 @@ function renderDetailContent(item) {
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
       ${hitHtml}
-      <h2 class="detail-info__title">
-        ${item.name}
-        ${
-          isHotDog
-            ? ` — <span id="detail-hotdog-sausage-label">${defaultSausageLabel}</span>`
-            : ""
-        }
-      </h2>
+      <h2 class="detail-info__title">${item.name}</h2>
+      ${
+        isHotDog
+          ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>`
+          : ""
+      }
       <p class="detail-info__desc">${item.description || ""}</p>
       ${sausagePickerHtml}
       <p class="detail-info__price">${priceLabel}</p>
