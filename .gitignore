@@ -7,6 +7,8 @@
 # build / cache
 /.next/
 /out/
+# Gastrofood — копия food/ при prebuild (scripts/sync-food-public.mjs)
+/public/food/
 
 # env (секреты не в git)
 .env

@@ -12,9 +12,10 @@ export const PROMOS: PromoItem[] = [
   {
     id: "happy-hours",
     title: "Happy Hours",
-    price: "—",
+    price: "40.000 VND",
     image: "/menu/promo_happy_hour_ultra.png",
-    description: "Ежедневно с 19:00 до 20:00 специальная цена на коктейльную карту.",
+    description:
+      "Ежедневно с 19:00 до 20:00 коктейли по специальной цене — 40.000 VND.",
   },
   {
     id: "combo-nastoiki-5",

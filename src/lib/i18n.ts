@@ -223,7 +223,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     promo_pager_aria: "Акция {current} из {total}",
     promo_happy_hours_title: "Happy Hours",
     promo_happy_hours_desc:
-      "Ежедневно с 19:00 до 20:00 специальная цена на коктейльную карту.",
+      "Ежедневно с 19:00 до 20:00 коктейли по специальной цене — 40.000 VND.",
     promo_combo_nastoiki_5_title: "Комбо: 5 настоек",
     promo_combo_nastoiki_5_desc:
       "Набор из пяти настоек по специальной цене. Покажите офер бармену.",
@@ -1016,7 +1016,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     promo_pager_aria: "Ưu đãi {current} / {total}",
     promo_happy_hours_title: "Happy Hours",
     promo_happy_hours_desc:
-      "Hằng ngày 19:00–20:00: giá đặc biệt cho toàn bộ thực đơn cocktail.",
+      "Hằng ngày 19:00–20:00: cocktail giá ưu đãi — 40.000 VND.",
     promo_combo_nastoiki_5_title: "Combo 5 rượu ngâm",
     promo_combo_nastoiki_5_desc: "Bộ 5 rượu ngâm với giá ưu đãi. Cho nhân viên xem ưu đãi.",
     games_heading: "Chơi gì?",

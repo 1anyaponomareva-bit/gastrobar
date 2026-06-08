@@ -78,7 +78,7 @@ export function HappyHourModal() {
                   HAPPY HOURS
                 </p>
                 <p className="text-sm font-semibold text-white">
-                  Ежедневно с 19:00 до 20:00 специальная цена на коктейльную карту.
+                  Ежедневно с 19:00 до 20:00 коктейли по специальной цене — 40.000 VND.
                 </p>
               </div>
             </div>
