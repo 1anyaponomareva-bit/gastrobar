@@ -13,17 +13,16 @@ import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import { useTranslation } from "@/lib/useTranslation";
 import { LanguageMenu } from "@/components/LanguageMenu";
 import {
-  BRAND_LOGO_HEIGHT_PX,
-  BRAND_LOGO_MAX_WIDTH,
-  BRAND_LOGO_WIDTH_PX,
-  GASTROBAR_LOGO_LETTER_SCALE,
+  GASTROBAR_LOGO_HEIGHT_PX,
+  GASTROBAR_LOGO_MAX_WIDTH,
+  GASTROBAR_LOGO_WIDTH_PX,
 } from "@/lib/appShellLayout";
 
 const ICON_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
 
 const LOGO_IMG_CLASS =
-  "pointer-events-none h-[98px] w-[300px] max-w-[calc(100vw-7rem)] object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]";
+  "pointer-events-none object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]";
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -126,15 +125,15 @@ export function Header() {
               <Image
                 src={getAssetUrl(CONFIG.logoSrc)}
                 alt="GASTROBAR"
-                width={BRAND_LOGO_WIDTH_PX}
-                height={BRAND_LOGO_HEIGHT_PX}
+                width={GASTROBAR_LOGO_WIDTH_PX}
+                height={GASTROBAR_LOGO_HEIGHT_PX}
                 priority
                 unoptimized
                 className={LOGO_IMG_CLASS}
                 style={{
-                  maxWidth: BRAND_LOGO_MAX_WIDTH,
-                  transform: `scale(${GASTROBAR_LOGO_LETTER_SCALE})`,
-                  transformOrigin: "center center",
+                  height: GASTROBAR_LOGO_HEIGHT_PX,
+                  width: "auto",
+                  maxWidth: GASTROBAR_LOGO_MAX_WIDTH,
                 }}
                 draggable={false}
               />
@@ -149,15 +148,15 @@ export function Header() {
               <Image
                 src={getAssetUrl(CONFIG.logoSrc)}
                 alt="GASTROBAR"
-                width={BRAND_LOGO_WIDTH_PX}
-                height={BRAND_LOGO_HEIGHT_PX}
+                width={GASTROBAR_LOGO_WIDTH_PX}
+                height={GASTROBAR_LOGO_HEIGHT_PX}
                 priority
                 unoptimized
                 className={LOGO_IMG_CLASS}
                 style={{
-                  maxWidth: BRAND_LOGO_MAX_WIDTH,
-                  transform: `scale(${GASTROBAR_LOGO_LETTER_SCALE})`,
-                  transformOrigin: "center center",
+                  height: GASTROBAR_LOGO_HEIGHT_PX,
+                  width: "auto",
+                  maxWidth: GASTROBAR_LOGO_MAX_WIDTH,
                 }}
                 draggable={false}
               />
