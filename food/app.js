@@ -701,6 +701,13 @@ function renderCategoryTabs() {
   });
 }
 
+function itemDisplayName(item) {
+  if (item.category === "hot-dogs") {
+    return `Хот-дог ${item.name}`;
+  }
+  return item.name;
+}
+
 function isBoxItem(item) {
   return item.category === "dumplings";
 }
@@ -769,12 +776,12 @@ function renderDetailImage(item) {
     return `<div class="detail-no-image">${NO_IMAGE_LABEL}</div>`;
   }
   if (isBoxItem(item)) {
-    return `<div class="detail-box-frame"${boxFrameStyle(item)}><div class="detail-box-scale"><img src="${item.image}" alt="${item.name}" /></div></div>`;
+    return `<div class="detail-box-frame"${boxFrameStyle(item)}><div class="detail-box-scale"><img src="${item.image}" alt="${itemDisplayName(item)}" /></div></div>`;
   }
   if (item.imageScale != null) {
-    return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${item.name}" /></div>`;
+    return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${itemDisplayName(item)}" /></div>`;
   }
-  return `<img src="${item.image}" alt="${item.name}" />`;
+  return `<img src="${item.image}" alt="${itemDisplayName(item)}" />`;
 }
 
 function renderHotDogSausageListNote() {
@@ -821,7 +828,7 @@ function renderMenuCard(item, index) {
       <div class="menu-card__body">
         ${headerHtml}
         <div class="menu-card__content">
-          <h3 class="menu-card__name">${item.name}</h3>
+          <h3 class="menu-card__name">${itemDisplayName(item)}</h3>
           <p class="menu-card__desc">${item.description || ""}</p>
           ${sausageNoteHtml}
           <span class="menu-card__price">${priceLabel}</span>
@@ -923,7 +930,7 @@ function renderDetailContent(item) {
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
       ${hitHtml}
-      <h2 class="detail-info__title">${item.name}</h2>
+      <h2 class="detail-info__title">${itemDisplayName(item)}</h2>
       ${
         isHotDog
           ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>`
