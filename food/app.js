@@ -88,6 +88,7 @@ const MENU_ITEMS = [
     description: "Хрустящие наггетсы из куриного бедра.",
     price: null,
     category: "snacks",
+    badge: "hit",
     image: IMG("NUGGETS.png"),
   },
   {
@@ -97,6 +98,7 @@ const MENU_ITEMS = [
       "Хрустящие кусочки рыбы Баса в панировке, подаются с соусом тартар.",
     price: null,
     category: "snacks",
+    badge: "hit",
     image: IMG("FISH-BITES.png"),
   },
   {
@@ -173,6 +175,7 @@ const MENU_ITEMS = [
       "Горчица, кетчуп, майонез, маринованные огурцы и жареный лук.",
     price: null,
     category: "hot-dogs",
+    badge: "hit",
     image: IMG("CLASSIC-HOT-DOG.png"),
     edgeFade: false,
   },
@@ -191,6 +194,7 @@ const MENU_ITEMS = [
     description: "Сырный соус, перец халапеньо и жареный лук.",
     price: null,
     category: "hot-dogs",
+    badge: "hit",
     image: IMG("HOT-DOG_halapen.png"),
     edgeFade: false,
   },
@@ -222,6 +226,7 @@ const MENU_ITEMS = [
       "Говяжья котлета, салат, томат, лук, маринованные огурцы и фирменный соус.",
     price: null,
     category: "burgers",
+    badge: "hit",
     image: IMG("burger-classic.png"),
   },
   {
@@ -231,6 +236,7 @@ const MENU_ITEMS = [
       "Говяжья котлета, сыр чеддер, салат, томат, лук, маринованные огурцы и фирменный соус.",
     price: null,
     category: "burgers",
+    badge: "hit",
     image: IMG("CHEESEBURGER.png"),
   },
   {
@@ -240,6 +246,7 @@ const MENU_ITEMS = [
       "Говяжья котлета, сырный соус, соус BBQ, маринованные огурцы, хрустящий бекон, жареный лук и грибы.",
     price: null,
     category: "burgers",
+    badge: "hit",
     image: IMG("GASTROBURGER.png"),
   },
   {
@@ -329,6 +336,7 @@ const MENU_ITEMS = [
       "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
     price: null,
     category: "wraps",
+    badge: "hit",
     image: IMG("phillycheesesteak.png"),
   },
   {
@@ -364,6 +372,7 @@ const MENU_ITEMS = [
       "Наггетсы, картофель фри, сок или напиток и игрушка-сюрприз.",
     price: null,
     category: "kids",
+    badge: "hit",
     image: IMG("KIDS-COMBO-NUGGETS.png"),
   },
   {
@@ -373,6 +382,7 @@ const MENU_ITEMS = [
       "Стандартная сосиска, картофель фри, сок или напиток и игрушка-сюрприз.",
     price: null,
     category: "kids",
+    badge: "hit",
     image: IMG("KIDS-COMBO-SAUSAGE.png"),
   },
 
@@ -383,6 +393,7 @@ const MENU_ITEMS = [
     description: "Классический бургер или чизбургер, картофель фри и напиток.",
     price: null,
     category: "combos",
+    badge: "hit",
     image: IMG("combo_burger.png"),
   },
   {
@@ -391,6 +402,7 @@ const MENU_ITEMS = [
     description: "Любой классический хот-дог, картофель фри и напиток.",
     price: null,
     category: "combos",
+    badge: "hit",
     image: IMG("hot-dog_combo.png"),
   },
   {
@@ -399,6 +411,7 @@ const MENU_ITEMS = [
     description: "Куриные крылья, картофель фри и напиток.",
     price: null,
     category: "combos",
+    badge: "hit",
     image: IMG("wings_combo.png"),
   },
   {
@@ -408,6 +421,7 @@ const MENU_ITEMS = [
       "Любая крафтовая колбаска, картофель фри, тушёная квашеная капуста и напиток.",
     price: null,
     category: "combos",
+    badge: "hit",
     image: IMG("combo_sos.png"),
   },
 ];
