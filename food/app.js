@@ -278,7 +278,7 @@ const MENU_ITEMS = [
       "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
     price: null,
     category: "grill",
-    image: null,
+    image: IMG("Cheddar Jalapeño Sausage.png"),
   },
   {
     id: "grilled-chicken-sausage",
