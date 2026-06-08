@@ -163,7 +163,7 @@ const MENU_ITEMS = [
       "Хрустящие жареные пельмени с начинкой на выбор: курица или свинина с говядиной.",
     price: null,
     category: "dumplings",
-    image: IMG("FRIED-PORK-BEEF-DUMPLINGS.png"),
+    image: IMG("FRIED-DUMPLINGS.png"),
     boxScale: 1.05,
   },
 
