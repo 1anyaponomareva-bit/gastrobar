@@ -300,7 +300,7 @@ a {
 .menu-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 0 16px calc(7rem + env(safe-area-inset-bottom, 0px));
 }
 
@@ -310,13 +310,14 @@ a {
   background: var(--theme-surface);
 }
 
-/* Карточка — компактная высота по контенту (без 24dvh, иначе на телефоне «дыры» между строками) */
+/* Карточка — как MenuListItem на главной Gastrobar */
 .menu-card {
   position: relative;
   display: flex;
   align-items: stretch;
   width: 100%;
-  min-height: 104px;
+  min-height: max(120px, 24dvh);
+  max-height: 190px;
   overflow: hidden;
   border: none;
   border-radius: 1rem;
@@ -332,7 +333,8 @@ a {
 }
 
 .menu-card--hot-dog {
-  min-height: 118px;
+  min-height: max(140px, 28dvh);
+  max-height: 220px;
 }
 
 .menu-card--hot-dog .menu-card__desc {
@@ -351,7 +353,7 @@ a {
   flex: 1;
   flex-direction: column;
   justify-content: flex-start;
-  padding: 0.625rem 0.5rem 0.625rem 0.875rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
 }
 
 .menu-card__top {
@@ -467,10 +469,10 @@ a {
   justify-content: center;
   flex-shrink: 0;
   align-self: stretch;
-  width: 40%;
-  min-width: 84px;
-  max-width: 148px;
-  min-height: 0;
+  width: 42%;
+  min-width: 90px;
+  max-width: 160px;
+  min-height: 120px;
   overflow: hidden;
   border-radius: 0 1rem 1rem 0;
   background: var(--theme-surface);
@@ -479,6 +481,7 @@ a {
 .menu-card__media > img {
   width: 100%;
   height: 100%;
+  min-height: 120px;
   object-fit: contain;
   object-position: top center;
 }
