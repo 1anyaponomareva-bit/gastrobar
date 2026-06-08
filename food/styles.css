@@ -272,21 +272,26 @@ a {
 .category-tab {
   flex-shrink: 0;
   padding: 0.625rem 1rem;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
 }
 
 .category-tab:hover {
+  border-color: rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.2);
 }
 
 .category-tab.is-active {
+  border-color: transparent;
   background: #fff;
   color: #000;
 }
