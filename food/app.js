@@ -2,16 +2,45 @@ const IMG = (file) => (file ? `/food/menu/${encodeURI(file)}` : null);
 
 const NO_IMAGE_LABEL = "нет изображения";
 
-const CATEGORIES = [
+const FAVORITES_STORAGE_KEY = "gastrofood-favorites";
+
+const FOOD_CATEGORY_IDS = [
+  "snacks",
+  "dumplings",
+  "hot-dogs",
+  "burgers",
+  "grill",
+  "wraps",
+];
+
+const COMBO_CATEGORY_IDS = ["kids", "combos"];
+
+const CATEGORY_LABELS = {
+  snacks: "Закуски",
+  dumplings: "Пельмени и вареники",
+  "hot-dogs": "Хот-доги",
+  burgers: "Бургеры",
+  grill: "Гриль",
+  wraps: "Сэндвичи и рапы",
+  kids: "Детские комбо",
+  combos: "Комбо наборы",
+};
+
+const FOOD_CATEGORIES = [
   { id: "all", label: "Все" },
-  { id: "snacks", label: "Закуски" },
-  { id: "dumplings", label: "Пельмени и вареники" },
-  { id: "hot-dogs", label: "Хот-доги" },
-  { id: "burgers", label: "Бургеры" },
-  { id: "grill", label: "Гриль" },
-  { id: "wraps", label: "Сэндвичи и рапы" },
-  { id: "kids", label: "Детские комбо" },
-  { id: "combos", label: "Комбо наборы" },
+  ...FOOD_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
+];
+
+const COMBO_CATEGORIES = [
+  { id: "all", label: "Все" },
+  ...COMBO_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
+];
+
+const BOTTOM_NAV = [
+  { id: "food", label: "Еда", icon: "🍔" },
+  { id: "bar", label: "Бар", icon: "🍸", href: "/" },
+  { id: "combo", label: "Комбо", icon: "🎁" },
+  { id: "favorites", label: "Любимое", icon: "❤️" },
 ];
 
 const CATEGORY_ORDER = [
@@ -381,9 +410,63 @@ const MENU_ITEMS = [
   },
 ];
 
+let activeSection = "food";
 let activeCategory = "all";
+let favoriteIds = [];
 let visibleItems = [];
 let detailIndex = -1;
+
+const HEART_OUTLINE = `
+  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+  </svg>
+`;
+
+const HEART_FILLED = `
+  <svg fill="currentColor" viewBox="0 0 24 24" stroke="none" aria-hidden="true">
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+  </svg>
+`;
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every((id) => typeof id === "string")
+      ? parsed
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(ids) {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(ids));
+  } catch {}
+}
+
+function isFavorite(id) {
+  return favoriteIds.includes(id);
+}
+
+function toggleFavorite(id) {
+  favoriteIds = isFavorite(id)
+    ? favoriteIds.filter((itemId) => itemId !== id)
+    : [...favoriteIds, id];
+  saveFavorites(favoriteIds);
+}
+
+function getSectionCategories() {
+  if (activeSection === "combo") return COMBO_CATEGORIES;
+  return FOOD_CATEGORIES;
+}
+
+function getSectionCategoryOrder() {
+  if (activeSection === "combo") return COMBO_CATEGORY_IDS;
+  return FOOD_CATEGORY_IDS;
+}
 
 const ARROW_ICON = `
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -411,19 +494,88 @@ function hitBadgeHtml(label) {
 }
 
 function getVisibleItems() {
+  if (activeSection === "favorites") {
+    return MENU_ITEMS.filter((item) => favoriteIds.includes(item.id));
+  }
+
+  const sectionOrder = getSectionCategoryOrder();
+
   if (activeCategory === "all") {
-    return CATEGORY_ORDER.flatMap((catId) =>
+    return sectionOrder.flatMap((catId) =>
       MENU_ITEMS.filter((item) => item.category === catId),
     );
   }
+
   return MENU_ITEMS.filter((item) => item.category === activeCategory);
+}
+
+function updateCategoryTabsVisibility() {
+  const wrap = document.querySelector(".category-tabs-wrap");
+  if (!wrap) return;
+  wrap.classList.toggle("is-hidden", activeSection === "favorites");
+}
+
+function getEmptyStateCopy() {
+  if (activeSection === "favorites") {
+    return {
+      text: "Пока ничего в избранном",
+      sub: "Нажмите на сердечко у блюда, чтобы сохранить его здесь",
+    };
+  }
+  return {
+    text: "Скоро здесь появятся блюда",
+    sub: "Следите за обновлениями в Telegram",
+  };
+}
+
+function renderBottomNav() {
+  const root = document.getElementById("bottom-nav-pill");
+  if (!root) return;
+
+  root.innerHTML = BOTTOM_NAV.map((tab) => {
+    const active = tab.id === activeSection;
+    const classes = `bottom-nav__btn${active ? " is-active" : ""}`;
+    const inner = `
+      <span class="bottom-nav__icon" aria-hidden="true">${tab.icon}</span>
+      <span class="bottom-nav__label">${tab.label}</span>
+    `;
+
+    if (tab.href) {
+      return `<a href="${tab.href}" class="${classes}">${inner}</a>`;
+    }
+
+    return `
+      <button type="button" class="${classes}" data-section="${tab.id}">
+        ${inner}
+      </button>
+    `;
+  }).join("");
+
+  root.querySelectorAll("[data-section]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const section = btn.getAttribute("data-section");
+      if (!section || section === activeSection) return;
+      activeSection = section;
+      activeCategory = "all";
+      renderBottomNav();
+      updateCategoryTabsVisibility();
+      renderCategoryTabs();
+      renderMenuList();
+      document.getElementById("menu-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 }
 
 function renderCategoryTabs() {
   const root = document.getElementById("category-tabs");
   if (!root) return;
 
-  root.innerHTML = CATEGORIES.map(
+  if (activeSection === "favorites") {
+    root.innerHTML = "";
+    return;
+  }
+
+  root.innerHTML = getSectionCategories().map(
     (cat) => `
       <button
         type="button"
@@ -524,24 +676,42 @@ function renderHotDogSausageListNote() {
   `;
 }
 
+function renderFavoriteButton(item) {
+  const liked = isFavorite(item.id);
+  return `
+    <button
+      type="button"
+      class="menu-card__fav${liked ? " is-liked" : ""}"
+      data-favorite="${item.id}"
+      aria-label="${liked ? "Убрать из избранного" : "Добавить в избранное"}"
+    >
+      ${liked ? HEART_FILLED : HEART_OUTLINE}
+    </button>
+  `;
+}
+
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
     item.category === "hot-dogs" ? renderHotDogSausageListNote() : "";
+  const headerHtml =
+    item.badge === "hit"
+      ? `<div class="menu-card__header"><div class="menu-card__top">${hitHtml}</div>${renderFavoriteButton(item)}</div>`
+      : `<div class="menu-card__header"><div></div>${renderFavoriteButton(item)}</div>`;
 
   return `
-    <button
-      type="button"
+    <article
       class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
         item.category === "hot-dogs" ? " menu-card--hot-dog" : ""
       }"
-      role="listitem"
+      role="listitem button"
+      tabindex="0"
       data-index="${index}"
       style="animation-delay: ${index * 0.03}s"
     >
       <div class="menu-card__body">
-        ${item.badge === "hit" ? `<div class="menu-card__top">${hitHtml}</div>` : ""}
+        ${headerHtml}
         <div class="menu-card__content">
           <h3 class="menu-card__name">${item.name}</h3>
           <p class="menu-card__desc">${item.description || ""}</p>
@@ -553,7 +723,7 @@ function renderMenuCard(item, index) {
         ${renderListImage(item)}
         <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
-    </button>
+    </article>
   `;
 }
 
@@ -563,6 +733,11 @@ function renderMenuList() {
   if (!list || !empty) return;
 
   visibleItems = getVisibleItems();
+  const emptyCopy = getEmptyStateCopy();
+  const emptyText = empty.querySelector(".menu-empty__text");
+  const emptySub = empty.querySelector(".menu-empty__sub");
+  if (emptyText) emptyText.textContent = emptyCopy.text;
+  if (emptySub) emptySub.textContent = emptyCopy.sub;
 
   if (visibleItems.length === 0) {
     list.innerHTML = '<div class="menu-list__spacer" aria-hidden="true"></div>';
@@ -577,10 +752,27 @@ function renderMenuList() {
     '<div class="menu-list__spacer" aria-hidden="true"></div>' +
     visibleItems.map(renderMenuCard).join("");
 
+  list.querySelectorAll("[data-favorite]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const id = btn.getAttribute("data-favorite");
+      if (!id) return;
+      toggleFavorite(id);
+      renderMenuList();
+    });
+  });
+
   list.querySelectorAll(".menu-card").forEach((card) => {
     card.addEventListener("click", () => {
       const index = Number(card.getAttribute("data-index"));
       openDetail(index);
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const index = Number(card.getAttribute("data-index"));
+        openDetail(index);
+      }
     });
   });
 }
@@ -769,6 +961,9 @@ function bindLangMenu() {
 }
 
 function init() {
+  favoriteIds = loadFavorites();
+  renderBottomNav();
+  updateCategoryTabsVisibility();
   renderCategoryTabs();
   renderMenuList();
   bindDetailControls();
