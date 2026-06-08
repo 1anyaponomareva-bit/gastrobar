@@ -13,7 +13,7 @@ const FOOD_CATEGORY_IDS = [
   "wraps",
 ];
 
-const COMBO_CATEGORY_IDS = ["kids", "combos"];
+const COMBO_CATEGORY_IDS = ["combos", "kids"];
 
 const CATEGORY_LABELS = {
   snacks: "Закуски",
@@ -52,8 +52,8 @@ const CATEGORY_ORDER = [
   "burgers",
   "grill",
   "wraps",
-  "kids",
   "combos",
+  "kids",
 ];
 
 const HOT_DOG_SAUSAGE_OPTIONS = [
@@ -370,28 +370,6 @@ const MENU_ITEMS = [
     image: IMG("wrap.png"),
   },
 
-  // ——— ДЕТСКИЕ КОМБО ———
-  {
-    id: "kids-nuggets-combo",
-    name: "Детский комбо с наггетсами",
-    description:
-      "Наггетсы, картофель фри, сок или напиток и игрушка-сюрприз.",
-    price: null,
-    category: "kids",
-    badge: "hit",
-    image: IMG("KIDS-COMBO-NUGGETS.png"),
-  },
-  {
-    id: "kids-sausage-combo",
-    name: "Детский комбо с сосиской",
-    description:
-      "Стандартная сосиска, картофель фри, сок или напиток и игрушка-сюрприз.",
-    price: null,
-    category: "kids",
-    badge: "hit",
-    image: IMG("KIDS-COMBO-SAUSAGE.png"),
-  },
-
   // ——— КОМБО НАБОРЫ ———
   {
     id: "burger-combo",
@@ -429,6 +407,28 @@ const MENU_ITEMS = [
     category: "combos",
     badge: "hit",
     image: IMG("combo_sos.png"),
+  },
+
+  // ——— ДЕТСКИЕ КОМБО ———
+  {
+    id: "kids-nuggets-combo",
+    name: "Детский комбо с наггетсами",
+    description:
+      "Наггетсы, картофель фри, сок или напиток и игрушка-сюрприз.",
+    price: null,
+    category: "kids",
+    badge: "hit",
+    image: IMG("KIDS-COMBO-NUGGETS.png"),
+  },
+  {
+    id: "kids-sausage-combo",
+    name: "Детский комбо с сосиской",
+    description:
+      "Стандартная сосиска, картофель фри, сок или напиток и игрушка-сюрприз.",
+    price: null,
+    category: "kids",
+    badge: "hit",
+    image: IMG("KIDS-COMBO-SAUSAGE.png"),
   },
 ];
 
