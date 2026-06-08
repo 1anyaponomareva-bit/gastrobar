@@ -7,19 +7,22 @@ import { useTheme } from "@/components/ThemeProvider";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { getAssetUrl } from "@/lib/appVersion";
-import { SmartImage } from "@/components/SmartImage";
 import { useTranslation } from "@/lib/useTranslation";
-import { HOOKAH_MENU_ENABLED } from "@/lib/menuFeatures";
 
-const ALL_TABS: { id: MenuPeriod; tkey: string }[] = [
-  { id: "bar", tkey: "bar" },
-  { id: "hookahs", tkey: "hookah" },
-  { id: "promo", tkey: "tab_promo" },
-  { id: "favorites", tkey: "favorites" },
+type NavTab =
+  | { id: "food"; tkey: "tab_food"; icon: string; href: string }
+  | { id: "combo"; tkey: "tab_combo"; icon: string; href: string }
+  | { id: "bar"; tkey: "bar"; icon: string; period: MenuPeriod }
+  | { id: "favorites"; tkey: "favorites"; icon: string; period: MenuPeriod }
+  | { id: "games"; tkey: "tab_games"; icon: string; href: string };
+
+const NAV_TABS: NavTab[] = [
+  { id: "food", tkey: "tab_food", icon: "🍔", href: "/food" },
+  { id: "combo", tkey: "tab_combo", icon: "🍱", href: "/food?section=combo" },
+  { id: "bar", tkey: "bar", icon: "🍸", period: "bar" },
+  { id: "favorites", tkey: "favorites", icon: "❤️", period: "favorites" },
+  { id: "games", tkey: "tab_games", icon: "🎯", href: "/games" },
 ];
-
-const TABS = ALL_TABS.filter((tab) => tab.id !== "hookahs" || HOOKAH_MENU_ENABLED);
 
 export function BottomNav() {
   const { t } = useTranslation();
@@ -35,6 +38,43 @@ export function BottomNav() {
     if (path !== "/") router.push("/");
   };
 
+  const tabClass = (active: boolean, games = false) =>
+    cn(
+      "relative flex flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-[12px] font-medium transition-all sm:px-1 sm:py-2",
+      games
+        ? "min-w-[3.25rem] shrink-0 sm:min-w-[3.5rem]"
+        : "min-w-[2.85rem] flex-1 sm:min-w-0",
+      active ? "bg-white text-black shadow-sm" : "text-white/70 hover:text-white",
+    );
+
+  const labelClass = "max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]";
+
+  const iconMotion = (tabId: NavTab["id"], active: boolean) => (
+    <motion.span
+      className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]"
+      animate={
+        active
+          ? tabId === "bar"
+            ? { scale: [1, 1.35, 1], rotate: [0, -10, 10, 0], y: [0, -2, 0] }
+            : tabId === "favorites"
+              ? { scale: [1, 1.2, 1] }
+              : { scale: [1, 1.25, 1], y: [0, -3, 0] }
+          : { scale: 1, rotate: 0, y: 0, opacity: 1 }
+      }
+      transition={
+        active
+          ? {
+              duration: tabId === "bar" ? 0.9 : tabId === "favorites" ? 0.6 : 0.7,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }
+          : { duration: 0.2 }
+      }
+    >
+      {NAV_TABS.find((tab) => tab.id === tabId)?.icon}
+    </motion.span>
+  );
+
   return (
     <motion.nav
       initial={{ opacity: 1, y: 0 }}
@@ -45,101 +85,43 @@ export function BottomNav() {
         onGames ? "z-[1180]" : "z-40",
       )}
     >
-      <div className="pointer-events-auto mx-auto flex w-[min(24.5rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(26rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">
-        {TABS.map((tab) => {
-          const active = !onGames && tab.id === period;
+      <div className="pointer-events-auto mx-auto flex w-[min(28rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(30rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">
+        {NAV_TABS.map((tab) => {
           const label = t(tab.tkey);
+          const active =
+            tab.id === "games"
+              ? onGames
+              : tab.id === "bar"
+                ? !onGames && period === "bar"
+                : tab.id === "favorites"
+                  ? !onGames && period === "favorites"
+                  : false;
+
+          if ("href" in tab) {
+            return (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={tabClass(active, tab.id === "games")}
+              >
+                {iconMotion(tab.id, active)}
+                <span className={labelClass}>{label}</span>
+              </Link>
+            );
+          }
+
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => goPeriod(tab.id)}
-              className={cn(
-                "relative flex min-w-[2.85rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-[12px] font-medium transition-all sm:min-w-0 sm:px-1 sm:py-2",
-                active
-                  ? "bg-white text-black shadow-sm"
-                  : "text-white/70 hover:text-white"
-              )}
+              onClick={() => goPeriod(tab.period)}
+              className={tabClass(active)}
             >
-              <motion.span
-                className={cn(
-                  "inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]",
-                  tab.id === "hookahs" && "min-h-[1.75rem] min-w-[1.75rem]",
-                )}
-                animate={
-                  active
-                    ? tab.id === "bar"
-                      ? {
-                          scale: [1, 1.35, 1],
-                          rotate: [0, -10, 10, 0],
-                          y: [0, -2, 0],
-                        }
-                      : tab.id === "hookahs"
-                        ? {
-                            scale: [1, 1.15, 1],
-                            y: [0, -4, -1, -3, 0],
-                            rotate: [0, -4, 4, -2, 0],
-                            opacity: [1, 0.92, 1, 0.95, 1],
-                          }
-                        : tab.id === "favorites"
-                          ? { scale: [1, 1.2, 1] }
-                          : {
-                              scale: [1, 1.25, 1],
-                              y: [0, -3, 0],
-                            }
-                    : { scale: 1, rotate: 0, y: 0, opacity: 1 }
-                }
-                transition={
-                  active
-                    ? {
-                        duration:
-                          tab.id === "bar" ? 0.9 : tab.id === "hookahs" ? 1.05 : tab.id === "favorites" ? 0.6 : 0.7,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }
-                    : { duration: 0.2 }
-                }
-              >
-                {tab.id === "bar" && "🍸"}
-                {tab.id === "hookahs" && (
-                  <SmartImage
-                    src={getAssetUrl("/hookah/emojie.png")}
-                    alt=""
-                    width={28}
-                    height={28}
-                    draggable={false}
-                    className={cn(
-                      "pointer-events-none h-7 w-7 max-h-[1.75rem] max-w-[1.75rem] select-none object-contain",
-                      /* На тёмной кнопке «убираем» чёрный мат в PNG/JPG; на активной белой — обычное наложение */
-                      active ? "mix-blend-normal" : "mix-blend-screen",
-                    )}
-                  />
-                )}
-                {tab.id === "promo" && "🎉"}
-                {tab.id === "favorites" && "❤️"}
-              </motion.span>
-              <span className="max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]">
-                {label}
-              </span>
+              {iconMotion(tab.id, active)}
+              <span className={labelClass}>{label}</span>
             </button>
           );
         })}
-        <Link
-          href="/games"
-          className={cn(
-            "relative flex min-w-[3.4rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:min-w-[3.5rem] sm:px-2 sm:py-2",
-            onGames
-              ? "bg-white text-black shadow-sm"
-              : "text-white/70 hover:text-white"
-          )}
-        >
-          <span className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]" aria-hidden>
-            🎯
-          </span>
-          <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
-            {t("tab_games")}
-          </span>
-        </Link>
       </div>
     </motion.nav>
   );

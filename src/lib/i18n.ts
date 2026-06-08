@@ -47,6 +47,8 @@ export const translations: Record<AppLang, Record<string, string>> = {
   ru: {
     menu: "Меню",
     bar: "Бар",
+    tab_food: "Еда",
+    tab_combo: "Комбо",
     hookah: "Кальяны",
     /** Нижняя навигация — вкладка «Акции» (отд. ключ, чтобы гарантированно попадал в t()). */
     tab_promo: "Акции",
@@ -457,6 +459,8 @@ export const translations: Record<AppLang, Record<string, string>> = {
   en: {
     menu: "Menu",
     bar: "Bar",
+    tab_food: "Food",
+    tab_combo: "Combo",
     hookah: "Hookah",
     tab_promo: "Promo",
     promotions: "Promotions",
@@ -846,6 +850,8 @@ export const translations: Record<AppLang, Record<string, string>> = {
   vn: {
     menu: "Menu",
     bar: "Quầy bar",
+    tab_food: "Đồ ăn",
+    tab_combo: "Combo",
     hookah: "Shisha",
     tab_promo: "Ưu đãi",
     promotions: "Khuyến mãi",

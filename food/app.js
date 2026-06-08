@@ -29,6 +29,7 @@ const CATEGORY_LABELS = {
 const FOOD_CATEGORIES = [
   { id: "all", label: "Все" },
   ...FOOD_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
+  ...COMBO_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
 ];
 
 const COMBO_CATEGORIES = [
@@ -38,8 +39,8 @@ const COMBO_CATEGORIES = [
 
 const BOTTOM_NAV = [
   { id: "food", label: "Еда", icon: "🍔" },
+  { id: "combo", label: "Комбо", icon: "🍱" },
   { id: "bar", label: "Бар", icon: "🍸", href: "/" },
-  { id: "combo", label: "Комбо", icon: "🎁" },
   { id: "favorites", label: "Любимое", icon: "❤️" },
   { id: "games", label: "Игры", icon: "🎯", href: "/games" },
 ];
@@ -521,7 +522,29 @@ function getSectionCategories() {
 
 function getSectionCategoryOrder() {
   if (activeSection === "combo") return COMBO_CATEGORY_IDS;
-  return FOOD_CATEGORY_IDS;
+  if (activeCategory === "all") {
+    return [...FOOD_CATEGORY_IDS, ...COMBO_CATEGORY_IDS];
+  }
+  return [activeCategory];
+}
+
+function readSectionFromUrl() {
+  const section = new URLSearchParams(window.location.search).get("section");
+  if (section === "combo" || section === "favorites") {
+    activeSection = section;
+  } else {
+    activeSection = "food";
+  }
+}
+
+function syncSectionToUrl() {
+  const url = new URL(window.location.href);
+  if (activeSection === "food") {
+    url.searchParams.delete("section");
+  } else {
+    url.searchParams.set("section", activeSection);
+  }
+  window.history.replaceState({}, "", url);
 }
 
 const ARROW_ICON = `
@@ -615,6 +638,7 @@ function renderBottomNav() {
       if (!section || section === activeSection) return;
       activeSection = section;
       activeCategory = "all";
+      syncSectionToUrl();
       renderBottomNav();
       updateCategoryTabsVisibility();
       renderCategoryTabs();
@@ -1016,6 +1040,7 @@ function bindLangMenu() {
 
 function init() {
   favoriteIds = loadFavorites();
+  readSectionFromUrl();
   renderBottomNav();
   updateCategoryTabsVisibility();
   renderCategoryTabs();
