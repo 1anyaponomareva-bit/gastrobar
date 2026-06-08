@@ -124,7 +124,7 @@ const MENU_ITEMS = [
   {
     id: "potato-onion-pierogi",
     name: "Вареники с картофелем и луком",
-    description: "Традиционные вареники с картофелем и жареным луком.",
+    description: "Традиционные вареники с картофелем и луком.",
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
