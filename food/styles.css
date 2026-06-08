@@ -545,8 +545,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  width: calc(100% / var(--box-image-scale, 1));
+  height: calc(100% / var(--box-image-scale, 1));
 }
 
 .menu-card__media--box .menu-card__box-scale img {
@@ -555,6 +555,8 @@ a {
   min-height: 0;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
+  transform: scale(var(--box-image-scale, 1));
+  transform-origin: center center;
 }
 
 .menu-card__scale-frame {
@@ -811,8 +813,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  width: calc(100% / var(--box-image-scale, 1));
+  height: calc(100% / var(--box-image-scale, 1));
 }
 
 .detail-image-wrap--box .detail-box-scale img {
@@ -820,6 +822,8 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
+  transform: scale(var(--box-image-scale, 1));
+  transform-origin: center center;
 }
 
 .detail-scale-frame {
