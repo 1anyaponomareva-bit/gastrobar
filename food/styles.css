@@ -347,8 +347,8 @@ a {
 }
 
 .menu-card--box {
-  min-height: max(168px, 32dvh);
-  max-height: 248px;
+  min-height: max(172px, 24dvh);
+  max-height: 210px;
 }
 
 .menu-card--box:not(.menu-card--has-hit) .menu-card__header {
