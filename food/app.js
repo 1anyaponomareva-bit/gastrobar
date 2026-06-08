@@ -1,184 +1,373 @@
-const IMG = (file) => `/food/menu/${file}`;
+const IMG = (file) => (file ? `/food/menu/${encodeURI(file)}` : null);
+
+const NO_IMAGE_LABEL = "нет изображения";
 
 const CATEGORIES = [
   { id: "all", label: "Все" },
-  { id: "burgers", label: "Бургеры" },
-  { id: "hot-dogs", label: "Хот-доги" },
-  { id: "grill", label: "Гриль" },
   { id: "snacks", label: "Закуски" },
-  { id: "dumplings", label: "Пельмени/вареники" },
-  { id: "kids", label: "Детское меню" },
+  { id: "dumplings", label: "Пельмени и вареники" },
+  { id: "hot-dogs", label: "Хот-доги" },
+  { id: "burgers", label: "Бургеры" },
+  { id: "grill", label: "Гриль" },
+  { id: "wraps", label: "Сэндвичи и рапы" },
+  { id: "kids", label: "Детские комбо" },
+  { id: "combos", label: "Комбо наборы" },
 ];
 
-const CATEGORY_ORDER = ["burgers", "hot-dogs", "grill", "snacks", "dumplings", "kids"];
+const CATEGORY_ORDER = [
+  "snacks",
+  "dumplings",
+  "hot-dogs",
+  "burgers",
+  "grill",
+  "wraps",
+  "kids",
+  "combos",
+];
+
+const HOT_DOG_SAUSAGE_NOTE =
+  " Сосиска на выбор: стандартная или крафтовая колбаска собственного производства.";
 
 const MENU_ITEMS = [
+  // ——— ЗАКУСКИ ———
   {
-    id: "burger-classic",
-    name: "Классический бургер",
-    description: "Говяжья котлета, свежие овощи и фирменный соус в мягкой булочке",
-    price: 105000,
-    category: "burgers",
-    image: IMG("burger-classic.png"),
-  },
-  {
-    id: "cheeseburger",
-    name: "Чизбургер",
-    description: "Сочная котлета, расплавленный сыр, свежие овощи и фирменный соус",
-    price: 140000,
-    category: "burgers",
-    image: IMG("CHEESEBURGER.png"),
-  },
-  {
-    id: "gastroburger",
-    name: "Гастробургер",
-    description: "Фирменный бургер Gastrofood — насыщенный вкус и авторская подача",
-    price: 180000,
-    category: "burgers",
-    image: IMG("GASTROBURGER.png"),
-    badge: "hit",
-  },
-  {
-    id: "fishburger",
-    name: "Фишбургер",
+    id: "mozzarella-sticks",
+    name: "Сырные палочки",
     description:
-      "Булочка бриошь с кунжутом, рыбная котлета в хрустящей золотистой панировке, соус тартар, лист салата, свежий помидор, маринованные огурцы и красный лук.",
-    price: null,
-    category: "burgers",
-    image: IMG("fishburger.png"),
-  },
-  {
-    id: "classic-hot-dog",
-    name: "Классический хот-дог",
-    description: "Сочная сосиска, горячий багет и фирменные топпинги",
-    price: 69000,
-    category: "hot-dogs",
-    image: IMG("CLASSIC-HOT-DOG.png"),
-    badge: "hit",
-    edgeFade: false,
-  },
-  {
-    id: "french-fries",
-    name: "Картофель фри",
-    description: "Хрустящий картофель фри — идеальная закуска к бургеру или хот-догу",
-    price: 45000,
-    category: "snacks",
-    image: IMG("FRENCH-FRIES.png"),
-  },
-  {
-    id: "potato-wedges",
-    name: "Картофельные дольки",
-    description: "Запечённые дольки картофеля с золотистой корочкой",
-    price: 55000,
-    category: "snacks",
-    image: IMG("POTATO-WEDGES.png"),
-  },
-  {
-    id: "nuggets",
-    name: "Наггетсы",
-    description: "Куриные наггетсы — хрустящие снаружи, нежные внутри",
-    price: 65000,
-    category: "snacks",
-    image: IMG("NUGGETS.png"),
-  },
-  {
-    id: "fish-bites",
-    name: "Рыбные кусочки",
-    description: "Кусочки рыбы в хрустящей панировке с соусом на выбор",
-    price: 75000,
-    category: "snacks",
-    image: IMG("FISH-BITES.png"),
-    badge: "hit",
-  },
-  {
-    id: "shrimp-tempura",
-    name: "Креветки Темпура",
-    description: "Хрустящие креветки в темпурном кляре — подаются с соусом",
-    price: null,
-    category: "snacks",
-    image: IMG("shrimp-tempura.png"),
-    imageScale: 1.74,
-  },
-  {
-    id: "cheese-sticks",
-    name: "Сырные Палочки",
-    description: "Запечённые сырные палочки с хрустящей корочкой",
+      "Обжаренные до золотистой корочки палочки из моцареллы с томатным соусом.",
     price: null,
     category: "snacks",
     image: IMG("cheese-sticks.png"),
     imageScale: 1.74,
   },
   {
-    id: "potato-dumplings",
-    name: "Вареники с картофелем",
-    description: "Домашние вареники с картофельной начинкой",
-    price: 75000,
+    id: "shrimp-tempura",
+    name: "Креветки темпура",
+    description: "Хрустящие креветки в темпуре с соусом сладкий чили.",
+    price: null,
+    category: "snacks",
+    image: IMG("shrimp-tempura.png"),
+    imageScale: 1.74,
+  },
+  {
+    id: "chicken-nuggets",
+    name: "Наггетсы",
+    description: "Хрустящие наггетсы из куриного бедра.",
+    price: null,
+    category: "snacks",
+    image: IMG("NUGGETS.png"),
+  },
+  {
+    id: "crispy-fish-bites",
+    name: "Хрустящие рыбные кусочки",
+    description:
+      "Хрустящие кусочки рыбы Баса в панировке, подаются с соусом тартар.",
+    price: null,
+    category: "snacks",
+    image: IMG("FISH-BITES.png"),
+  },
+  {
+    id: "french-fries",
+    name: "Картофель фри",
+    description: "Хрустящий картофель фри.",
+    price: null,
+    category: "snacks",
+    image: IMG("FRENCH-FRIES.png"),
+  },
+  {
+    id: "creamy-chicken-soup",
+    name: "Куриный суп",
+    description:
+      "Нежный куриный суп с вермишелью и бархатистым бульоном на основе йогурта.",
+    price: null,
+    category: "snacks",
+    image: IMG("Creamy Chicken Soup.png"),
+  },
+
+  // ——— ПЕЛЬМЕНИ И ВАРЕНИКИ ———
+  {
+    id: "potato-onion-pierogi",
+    name: "Вареники с картофелем и луком",
+    description: "Традиционные вареники с картофелем и жареным луком.",
+    price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
     boxScale: 1.62,
   },
   {
-    id: "potato-mushroom-dumplings",
+    id: "potato-mushroom-pierogi",
     name: "Вареники с картофелем и грибами",
-    description: "Нежные вареники с картофелем и ароматными грибами",
-    price: 79000,
+    description: "Вареники с картофелем и грибами.",
+    price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
     boxScale: 1.36,
   },
   {
-    id: "pork-beef-dumplings",
-    name: "Пельмени свинина и говядина",
-    description: "Сочные пельмени с начинкой из свинины и говядины",
-    price: 89000,
-    category: "dumplings",
-    image: IMG("PORK-BEEF-DUMPLINGS.png"),
-    boxScale: 1.05,
-  },
-  {
     id: "chicken-dumplings",
-    name: "Пельмени с курицей",
-    description: "Нежные пельмени с сочной куриной начинкой",
-    price: 85000,
+    name: "Куриные пельмени",
+    description: "Сочные куриные пельмени.",
+    price: null,
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
     boxScale: 1.05,
   },
   {
-    id: "fried-pork-beef-dumplings",
-    name: "Жареные пельмени свинина и говядина",
-    description: "Обжаренные пельмени с мясной начинкой — хрустящая корочка",
-    price: 95000,
+    id: "pork-beef-dumplings",
+    name: "Пельмени со свининой и говядиной",
+    description: "Традиционные пельмени со свининой и говядиной.",
+    price: null,
+    category: "dumplings",
+    image: IMG("PORK-BEEF-DUMPLINGS.png"),
+    boxScale: 1.05,
+  },
+  {
+    id: "pan-fried-dumplings",
+    name: "Жареные пельмени",
+    description:
+      "Хрустящие жареные пельмени с начинкой на выбор: курица или свинина с говядиной.",
+    price: null,
     category: "dumplings",
     image: IMG("FRIED-PORK-BEEF-DUMPLINGS.png"),
     boxScale: 1.05,
   },
+
+  // ——— ХОТ-ДОГИ ———
   {
-    id: "fried-chicken-dumplings",
-    name: "Жареные пельмени с курицей",
-    description: "Обжаренные пельмени с курицей — золотистые и ароматные",
-    price: 92000,
-    category: "dumplings",
-    image: IMG("FRIED-CHICKEN-DUMPLINGS.png"),
-    boxScale: 1.05,
+    id: "classic-hot-dog",
+    name: "Классик",
+    description:
+      "Горчица, кетчуп, майонез, маринованные огурцы и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    price: null,
+    category: "hot-dogs",
+    image: IMG("CLASSIC-HOT-DOG.png"),
+    edgeFade: false,
   },
   {
-    id: "kids-combo-sausage",
-    name: "Детский сет с сосиской",
-    description: "Сосиска, гарнир и напиток — порция для маленьких гостей",
-    price: 79000,
-    category: "kids",
-    image: IMG("KIDS-COMBO-SAUSAGE.png"),
-    badge: "hit",
+    id: "cheddar-bacon-dog",
+    name: "Чеддер Бекон",
+    description: "Сырный соус, бекон и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    price: null,
+    category: "hot-dogs",
+    image: IMG("HOT-DOG_becon.png"),
+    edgeFade: false,
   },
   {
-    id: "kids-combo-nuggets",
-    name: "Детский сет с наггетсами",
-    description: "Наггетсы, гарнир и напиток — порция для маленьких гостей",
-    price: 85000,
+    id: "jalapeno-cheddar-dog",
+    name: "Халапеньо Чеддер",
+    description: "Сырный соус, перец халапеньо и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    price: null,
+    category: "hot-dogs",
+    image: IMG("HOT-DOG_halapen.png"),
+    edgeFade: false,
+  },
+  {
+    id: "bavarian-dog",
+    name: "Баварский",
+    description: "Тушеная квашеная капуста, горчица и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    price: null,
+    category: "hot-dogs",
+    image: IMG("HOT-DOG_bov.png"),
+    edgeFade: false,
+  },
+  {
+    id: "bbq-bacon-dog",
+    name: "BBQ Бекон",
+    description:
+      "Соус BBQ, маринованные огурцы, бекон и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    price: null,
+    category: "hot-dogs",
+    image: IMG("HOT-DOG_bbq.png"),
+    edgeFade: false,
+  },
+
+  // ——— БУРГЕРЫ ———
+  {
+    id: "classic-burger",
+    name: "Классик Бургер",
+    description:
+      "Говяжья котлета, салат, томат, лук, маринованные огурцы и фирменный соус.",
+    price: null,
+    category: "burgers",
+    image: IMG("burger-classic.png"),
+  },
+  {
+    id: "cheeseburger",
+    name: "Чизбургер",
+    description:
+      "Говяжья котлета, сыр чеддер, салат, томат, лук, маринованные огурцы и фирменный соус.",
+    price: null,
+    category: "burgers",
+    image: IMG("CHEESEBURGER.png"),
+  },
+  {
+    id: "signature-burger",
+    name: "Гастро Бургер",
+    description:
+      "Говяжья котлета, сырный соус, соус BBQ, маринованные огурцы, хрустящий бекон, жареный лук и грибы.",
+    price: null,
+    category: "burgers",
+    image: IMG("GASTROBURGER.png"),
+  },
+  {
+    id: "fish-burger",
+    name: "Фишбургер",
+    description: "Хрустящее рыбное филе, салат, томат, лук и соус тартар.",
+    price: null,
+    category: "burgers",
+    image: IMG("fishburger.png"),
+  },
+
+  // ——— ГРИЛЬ ———
+  {
+    id: "chicken-kebab",
+    name: "Куриный шашлык",
+    description: "Маринованный куриный шашлык на гриле с томатным соусом.",
+    price: null,
+    category: "grill",
+    image: null,
+  },
+  {
+    id: "pork-kebab",
+    name: "Свиной шашлык",
+    description: "Сочный маринованный шашлык из свинины с томатным соусом.",
+    price: null,
+    category: "grill",
+    image: null,
+  },
+  {
+    id: "original-wings",
+    name: "Куриные крылья — Классические",
+    description:
+      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
+    price: null,
+    category: "grill",
+    image: IMG("Original Wings .png"),
+  },
+  {
+    id: "bbq-wings",
+    name: "Куриные крылья — Барбекю",
+    description: "Куриные крылья, маринованные в пиве и покрытые соусом BBQ.",
+    price: null,
+    category: "grill",
+    image: IMG("BBQ Wings.png"),
+  },
+  {
+    id: "spicy-wings",
+    name: "Куриные крылья — Острые",
+    description: "Куриные крылья в пивном маринаде с острой глазурью чили.",
+    price: null,
+    category: "grill",
+    image: IMG("Spicy Wings.png"),
+  },
+  {
+    id: "bavarian-sausage",
+    name: "Баварская колбаска",
+    description:
+      "Свиная колбаска на гриле с картофелем фри, тушеной квашеной капустой и томатным соусом.",
+    price: null,
+    category: "grill",
+    image: IMG("Bavarian Sausage.png"),
+  },
+  {
+    id: "cheddar-jalapeno-sausage",
+    name: "Колбаска Чеддер и Халапеньо",
+    description:
+      "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
+    price: null,
+    category: "grill",
+    image: null,
+  },
+  {
+    id: "grilled-chicken-sausage",
+    name: "Куриная гриль-колбаска",
+    description:
+      "Куриная колбаска на гриле с картофелем фри, тушёной квашеной капустой и томатным соусом.",
+    price: null,
+    category: "grill",
+    image: IMG("Grilled Chicken Sausage.png"),
+  },
+
+  // ——— СЭНДВИЧИ И РАПЫ ———
+  {
+    id: "philly-cheesesteak",
+    name: "Фили Чизстейк",
+    description:
+      "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
+    price: null,
+    category: "wraps",
+    image: IMG("phillycheesesteak.png"),
+  },
+  {
+    id: "chicken-caesar-wrap",
+    name: "Цезарь-рап",
+    description: "Курица на гриле, салат, пармезан и соус Цезарь.",
+    price: null,
+    category: "wraps",
+    image: IMG("wrap_kur.png"),
+  },
+  {
+    id: "crispy-fish-wrap",
+    name: "Рап с хрустящей рыбой",
+    description: "Хрустящая рыба Баса, свежие овощи и соус тартар.",
+    price: null,
+    category: "wraps",
+    image: IMG("wrap.png"),
+  },
+
+  // ——— ДЕТСКИЕ КОМБО ———
+  {
+    id: "kids-nuggets-combo",
+    name: "Детский комбо с наггетсами",
+    description:
+      "Наггетсы, картофель фри, сок или напиток и игрушка-сюрприз.",
+    price: null,
     category: "kids",
     image: IMG("KIDS-COMBO-NUGGETS.png"),
-    badge: "hit",
+  },
+  {
+    id: "kids-sausage-combo",
+    name: "Детский комбо с сосиской",
+    description:
+      "Стандартная сосиска, картофель фри, сок или напиток и игрушка-сюрприз.",
+    price: null,
+    category: "kids",
+    image: IMG("KIDS-COMBO-SAUSAGE.png"),
+  },
+
+  // ——— КОМБО НАБОРЫ ———
+  {
+    id: "burger-combo",
+    name: "Бургер Комбо",
+    description: "Классический бургер или чизбургер, картофель фри и напиток.",
+    price: null,
+    category: "combos",
+    image: null,
+  },
+  {
+    id: "hot-dog-combo",
+    name: "Хот-Дог Комбо",
+    description: "Любой классический хот-дог, картофель фри и напиток.",
+    price: null,
+    category: "combos",
+    image: null,
+  },
+  {
+    id: "wings-combo",
+    name: "Комбо с крыльями",
+    description: "Куриные крылья, картофель фри и напиток.",
+    price: null,
+    category: "combos",
+    image: null,
+  },
+  {
+    id: "sausage-plate-combo",
+    name: "Комбо с колбасками",
+    description:
+      "Любая крафтовая колбаска, картофель фри, тушёная квашеная капуста и напиток.",
+    price: null,
+    category: "combos",
+    image: null,
   },
 ];
 
@@ -269,6 +458,7 @@ function hasEdgeFade(item) {
 
 function menuMediaClass(item) {
   let cls = "menu-card__media";
+  if (!item.image) cls += " menu-card__media--no-photo";
   if (isBoxItem(item)) cls += " menu-card__media--box";
   if (!hasEdgeFade(item)) cls += " menu-card__media--sharp";
   return cls;
@@ -276,12 +466,18 @@ function menuMediaClass(item) {
 
 function detailImageWrapClass(item) {
   let cls = "detail-image-wrap";
+  if (!item.image) cls += " detail-image-wrap--no-photo";
   if (isBoxItem(item)) cls += " detail-image-wrap--box";
   if (!hasEdgeFade(item)) cls += " detail-image-wrap--sharp";
   return cls;
 }
 
+function renderNoImage(label = NO_IMAGE_LABEL) {
+  return `<div class="menu-card__no-image" aria-hidden="true">${label}</div>`;
+}
+
 function renderListImage(item) {
+  if (!item.image) return renderNoImage();
   const imgAttrs = `src="${item.image}" alt="" loading="lazy"`;
   if (isBoxItem(item)) {
     return `<div class="menu-card__box-frame"><img ${imgAttrs}${boxImageStyle(item)} /></div>`;
@@ -293,6 +489,9 @@ function renderListImage(item) {
 }
 
 function renderDetailImage(item) {
+  if (!item.image) {
+    return `<div class="detail-no-image">${NO_IMAGE_LABEL}</div>`;
+  }
   if (isBoxItem(item)) {
     return `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`;
   }

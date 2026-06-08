@@ -510,6 +510,39 @@ a {
   height: 1.25rem;
 }
 
+.menu-card__no-image,
+.detail-no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.menu-card__media--no-photo {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.detail-image-wrap--no-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42vh;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.detail-no-image {
+  min-height: 42vh;
+  font-size: 0.875rem;
+}
+
 /* Плавное растворение краёв изображений в фон */
 .menu-card__media:not(.menu-card__media--sharp) > img,
 .menu-card__media:not(.menu-card__media--sharp) .menu-card__box-frame img,
