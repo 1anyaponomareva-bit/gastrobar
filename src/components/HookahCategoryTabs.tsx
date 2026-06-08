@@ -1,7 +1,11 @@
 "use client";
 
 import type { HookahFlavorCategory } from "@/data/menu";
-import { cn } from "@/lib/utils";
+import {
+  CATEGORY_TABS_ROW_CLASS,
+  CATEGORY_TABS_SHELL_CLASS,
+  categoryTabButtonClass,
+} from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
 
 const HOOKAH_IDS: ("all" | HookahFlavorCategory)[] = ["all", "sweet", "sour", "fresh", "herbal"];
@@ -25,19 +29,14 @@ export function HookahCategoryTabs({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="shrink-0 overflow-x-auto overflow-y-hidden bg-[#030303] px-3 py-2.5">
-      <div className="flex gap-2">
+    <div className={CATEGORY_TABS_SHELL_CLASS}>
+      <div className={CATEGORY_TABS_ROW_CLASS}>
         {HOOKAH_IDS.map((id) => (
           <button
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={cn(
-              "shrink-0 rounded-full px-4 py-2.5 text-sm font-medium transition-colors",
-              value === id
-                ? "bg-white text-black"
-                : "bg-white/12 text-white/90 hover:bg-white/20"
-            )}
+            className={categoryTabButtonClass(value === id)}
           >
             {t(HOOKAH_KEYS[id])}
           </button>

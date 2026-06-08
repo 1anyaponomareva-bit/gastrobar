@@ -12,9 +12,18 @@ import { getAssetUrl } from "@/lib/appVersion";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import { useTranslation } from "@/lib/useTranslation";
 import { LanguageMenu } from "@/components/LanguageMenu";
+import {
+  BRAND_LOGO_HEIGHT_PX,
+  BRAND_LOGO_MAX_WIDTH,
+  BRAND_LOGO_WIDTH_PX,
+  GASTROBAR_LOGO_LETTER_SCALE,
+} from "@/lib/appShellLayout";
 
 const ICON_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
+
+const LOGO_IMG_CLASS =
+  "pointer-events-none h-[98px] w-[300px] max-w-[calc(100vw-7rem)] object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]";
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -78,14 +87,14 @@ export function Header() {
         width: "100%",
         zIndex: 1000,
         background: "#000",
-        /* Один раз: вырез/status bar; полоса контента ровно 60px ниже (box-sizing: content-box). */
+        /* Один раз: вырез/status bar; полоса контента 96px — как Gastrofood. */
         paddingTop: "env(safe-area-inset-top, 0px)",
         boxSizing: "content-box",
       }}
     >
       {/* Контейнер: Telegram и локация слева, логотип по центру, RU справа */}
-      <div className="pointer-events-auto relative z-[1000] mx-auto flex h-[60px] min-h-[60px] max-w-md items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+      <div className="pointer-events-auto relative z-[1000] mx-auto flex h-[96px] min-h-[96px] max-w-md items-center justify-between px-4">
+        <div className="flex w-[5.5rem] shrink-0 items-center gap-2">
           <a
             href={CONFIG.telegramUrl}
             target="_blank"
@@ -106,51 +115,59 @@ export function Header() {
           </a>
         </div>
 
-        <div className="flex flex-1 items-center justify-center bg-transparent">
+        <div className="flex min-w-0 flex-1 items-center justify-center bg-transparent">
           {isGameRoute ? (
             <Link
               href="/"
               onClick={() => abandonDurakStoredRoom()}
-              className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
+              className="pointer-events-auto flex items-center justify-center bg-transparent transition-opacity hover:opacity-90 active:opacity-80"
               aria-label={t("aria_home_gastro")}
             >
-              <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
-                <Image
-                  src={getAssetUrl(CONFIG.logoSrc)}
-                  alt="GASTROBAR"
-                  fill
-                  sizes="160px"
-                  priority
-                  unoptimized
-                  className="object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]"
-                  draggable={false}
-                />
-              </span>
+              <Image
+                src={getAssetUrl(CONFIG.logoSrc)}
+                alt="GASTROBAR"
+                width={BRAND_LOGO_WIDTH_PX}
+                height={BRAND_LOGO_HEIGHT_PX}
+                priority
+                unoptimized
+                className={LOGO_IMG_CLASS}
+                style={{
+                  maxWidth: BRAND_LOGO_MAX_WIDTH,
+                  transform: `scale(${GASTROBAR_LOGO_LETTER_SCALE})`,
+                  transformOrigin: "center center",
+                }}
+                draggable={false}
+              />
             </Link>
           ) : (
             <button
               type="button"
               onClick={requestBarHome}
-              className="pointer-events-auto flex items-center justify-center rounded-2xl bg-transparent p-1 transition-opacity hover:opacity-90 active:opacity-80"
+              className="pointer-events-auto flex items-center justify-center bg-transparent transition-opacity hover:opacity-90 active:opacity-80"
               aria-label={t("aria_bar_home")}
             >
-              <span className="relative block h-[52px] w-[160px] max-w-[calc(100vw-9rem)] shrink-0">
-                <Image
-                  src={getAssetUrl(CONFIG.logoSrc)}
-                  alt="GASTROBAR"
-                  fill
-                  sizes="160px"
-                  priority
-                  unoptimized
-                  className="object-contain object-center drop-shadow-[0_2px_24px_rgba(0,0,0,0.75)]"
-                  draggable={false}
-                />
-              </span>
+              <Image
+                src={getAssetUrl(CONFIG.logoSrc)}
+                alt="GASTROBAR"
+                width={BRAND_LOGO_WIDTH_PX}
+                height={BRAND_LOGO_HEIGHT_PX}
+                priority
+                unoptimized
+                className={LOGO_IMG_CLASS}
+                style={{
+                  maxWidth: BRAND_LOGO_MAX_WIDTH,
+                  transform: `scale(${GASTROBAR_LOGO_LETTER_SCALE})`,
+                  transformOrigin: "center center",
+                }}
+                draggable={false}
+              />
             </button>
           )}
         </div>
 
-        <LanguageMenu />
+        <div className="flex w-[5.5rem] shrink-0 justify-end">
+          <LanguageMenu />
+        </div>
       </div>
     </motion.header>
   );

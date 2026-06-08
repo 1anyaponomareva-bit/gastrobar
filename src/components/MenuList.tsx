@@ -25,13 +25,16 @@ import {
 } from "@/lib/bonusCopyI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import type { MenuItem } from "@/data/menu";
+import {
+  APP_HEADER_BAR_PX,
+  APP_LIST_TOP_PX,
+  APP_TABS_HEIGHT_PX,
+} from "@/lib/appShellLayout";
 
-const HEADER_HEIGHT = 60;
-/** Реальная высота панели вкладок: py-2.5, кнопки, `max-h-[72px]` — 58px занижало отступ, первая карточка залезала под табы. */
-const TABS_HEIGHT = 72;
-const TOP_BUFFER = 28;
-const BAR_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
-const HOOKAH_LIST_TOP = HEADER_HEIGHT + TABS_HEIGHT + TOP_BUFFER;
+const HEADER_HEIGHT = APP_HEADER_BAR_PX;
+const TABS_HEIGHT = APP_TABS_HEIGHT_PX;
+const BAR_LIST_TOP = APP_LIST_TOP_PX;
+const HOOKAH_LIST_TOP = APP_LIST_TOP_PX;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
 /** Напитки, затем снеки — как в MENU_ITEMS */
