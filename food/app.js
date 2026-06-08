@@ -503,14 +503,31 @@ function renderDetailImage(item) {
   return `<img src="${item.image}" alt="${item.name}" />`;
 }
 
+function renderHotDogSausageListNote() {
+  return `
+    <div class="menu-card__sausage" aria-label="Сосиска на выбор">
+      <span class="menu-card__sausage-label">Сосиска на выбор</span>
+      <span class="menu-card__sausage-options">
+        ${HOT_DOG_SAUSAGE_OPTIONS.map(
+          (o) => `<span class="menu-card__sausage-chip">${o.label}</span>`,
+        ).join("")}
+      </span>
+    </div>
+  `;
+}
+
 function renderMenuCard(item, index) {
   const priceLabel = `${formatVnd(item.price)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
+  const sausageNoteHtml =
+    item.category === "hot-dogs" ? renderHotDogSausageListNote() : "";
 
   return `
     <button
       type="button"
-      class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}"
+      class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
+        item.category === "hot-dogs" ? " menu-card--hot-dog" : ""
+      }"
       role="listitem"
       data-index="${index}"
       style="animation-delay: ${index * 0.03}s"
@@ -520,6 +537,7 @@ function renderMenuCard(item, index) {
         <div class="menu-card__content">
           <h3 class="menu-card__name">${item.name}</h3>
           <p class="menu-card__desc">${item.description || ""}</p>
+          ${sausageNoteHtml}
           <span class="menu-card__price">${priceLabel}</span>
         </div>
       </div>

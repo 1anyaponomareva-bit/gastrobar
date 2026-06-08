@@ -332,6 +332,15 @@ a {
   opacity: 0.95;
 }
 
+.menu-card--hot-dog {
+  min-height: max(136px, 26dvh);
+  max-height: 220px;
+}
+
+.menu-card--hot-dog .menu-card__desc {
+  -webkit-line-clamp: 2;
+}
+
 .menu-card--test {
   opacity: 0.72;
 }
@@ -405,6 +414,39 @@ a {
   font-size: 0.75rem;
   line-height: 1.4;
   color: rgba(255, 255, 255, 0.55);
+}
+
+.menu-card__sausage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.125rem;
+}
+
+.menu-card__sausage-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(212, 175, 55, 0.85);
+}
+
+.menu-card__sausage-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.menu-card__sausage-chip {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: rgba(212, 175, 55, 0.08);
+  font-size: 0.625rem;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .menu-card__price {
