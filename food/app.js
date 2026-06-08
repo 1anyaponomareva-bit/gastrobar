@@ -41,6 +41,7 @@ const BOTTOM_NAV = [
   { id: "bar", label: "Бар", icon: "🍸", href: "/" },
   { id: "combo", label: "Комбо", icon: "🎁" },
   { id: "favorites", label: "Любимое", icon: "❤️" },
+  { id: "games", label: "Игры", icon: "🎯", href: "/games" },
 ];
 
 const CATEGORY_ORDER = [
@@ -588,8 +589,10 @@ function renderBottomNav() {
   if (!root) return;
 
   root.innerHTML = BOTTOM_NAV.map((tab) => {
-    const active = tab.id === activeSection;
-    const classes = `bottom-nav__btn${active ? " is-active" : ""}`;
+    const active = !tab.href && tab.id === activeSection;
+    const classes = `bottom-nav__btn${tab.id === "games" ? " bottom-nav__btn--games" : ""}${
+      active ? " is-active" : ""
+    }`;
     const inner = `
       <span class="bottom-nav__icon" aria-hidden="true">${tab.icon}</span>
       <span class="bottom-nav__label">${tab.label}</span>
