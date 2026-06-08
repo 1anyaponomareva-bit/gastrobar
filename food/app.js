@@ -127,7 +127,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxImageScale: 2.65,
+    boxFrameW: 238,
+    boxFrameH: 178,
     boxFocusY: 58,
   },
   {
@@ -137,7 +138,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    boxImageScale: 2.05,
+    boxFrameW: 212,
+    boxFrameH: 158,
     boxFocusY: 57,
   },
   {
@@ -710,8 +712,7 @@ function boxFrameStyle(item) {
   const frameH = item.boxFrameH ?? 148;
   const detailW = item.boxDetailW ?? Math.min(360, Math.round(frameW * 1.58));
   const detailH = item.boxDetailH ?? Math.min(360, Math.round(frameH * 1.58));
-  const imageScale = item.boxImageScale ?? 1;
-  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px; --box-image-scale: ${imageScale};"`;
+  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px;"`;
 }
 
 function imageScaleFrameStyle(item) {

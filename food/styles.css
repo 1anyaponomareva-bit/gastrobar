@@ -347,8 +347,8 @@ a {
 }
 
 .menu-card--box {
-  min-height: max(172px, 24dvh);
-  max-height: 210px;
+  min-height: max(200px, 28dvh);
+  max-height: 248px;
 }
 
 .menu-card--box:not(.menu-card--has-hit) .menu-card__header {
@@ -371,7 +371,9 @@ a {
 }
 
 .menu-card--box .menu-card__desc {
-  display: none;
+  flex-shrink: 1;
+  min-height: 0;
+  -webkit-line-clamp: 2;
 }
 
 .menu-card--box .menu-card__price {
@@ -518,9 +520,9 @@ a {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: 50%;
+  width: 52%;
   min-width: 140px;
-  max-width: 200px;
+  max-width: 244px;
   padding-bottom: 0.5rem;
   overflow: visible;
 }
@@ -531,10 +533,9 @@ a {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: min(100%, var(--box-frame-w, 196px));
-  height: min(100%, var(--box-frame-h, 148px));
-  min-width: min(100%, calc(var(--box-frame-w, 196px) * 0.86));
-  min-height: calc(var(--box-frame-h, 148px) * 0.86);
+  width: var(--box-frame-w, 196px);
+  height: var(--box-frame-h, 148px);
+  max-width: 100%;
   overflow: visible;
 }
 
@@ -542,8 +543,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% / var(--box-image-scale, 1));
-  height: calc(100% / var(--box-image-scale, 1));
+  width: 100%;
+  height: 100%;
 }
 
 .menu-card__media--box .menu-card__box-scale img {
@@ -552,8 +553,6 @@ a {
   min-height: 0;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
-  transform: scale(var(--box-image-scale, 1));
-  transform-origin: center center;
 }
 
 .menu-card__scale-frame {
@@ -810,8 +809,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% / var(--box-image-scale, 1));
-  height: calc(100% / var(--box-image-scale, 1));
+  width: 100%;
+  height: 100%;
 }
 
 .detail-image-wrap--box .detail-box-scale img {
@@ -819,8 +818,6 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
-  transform: scale(var(--box-image-scale, 1));
-  transform-origin: center center;
 }
 
 .detail-scale-frame {
