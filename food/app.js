@@ -145,7 +145,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
-    boxScale: 1.05,
+    boxScale: 1.52,
+    boxFocusY: 58,
   },
   {
     id: "pork-beef-dumplings",
@@ -154,7 +155,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("PORK-BEEF-DUMPLINGS.png"),
-    boxScale: 1.05,
+    boxScale: 1.52,
+    boxFocusY: 58,
   },
   {
     id: "pan-fried-dumplings",
@@ -164,7 +166,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("FRIED-DUMPLINGS.png"),
-    boxScale: 1.05,
+    boxScale: 1.38,
+    boxFocusY: 52,
   },
 
   // ——— ХОТ-ДОГИ ———
@@ -699,9 +702,16 @@ function isBoxItem(item) {
   return item.category === "dumplings";
 }
 
-function boxImageStyle(item, context = "list") {
-  if (!isBoxItem(item) || item.boxScale == null) return "";
-  return ` style="transform: scale(${item.boxScale}); transform-origin: center center;"`;
+function boxImageStyle(item) {
+  if (!isBoxItem(item)) return "";
+  const styles = [];
+  if (item.boxScale != null) {
+    styles.push(`transform: scale(${item.boxScale})`);
+    styles.push("transform-origin: center center");
+  }
+  const focusY = item.boxFocusY ?? 50;
+  styles.push(`object-position: center ${focusY}%`);
+  return styles.length ? ` style="${styles.join("; ")};"` : "";
 }
 
 function imageScaleFrameStyle(item) {
@@ -750,7 +760,7 @@ function renderDetailImage(item) {
     return `<div class="detail-no-image">${NO_IMAGE_LABEL}</div>`;
   }
   if (isBoxItem(item)) {
-    return `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item, "detail")} /></div>`;
+    return `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item)} /></div>`;
   }
   if (item.imageScale != null) {
     return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${item.name}" /></div>`;

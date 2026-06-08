@@ -521,10 +521,12 @@ a {
 
 .menu-card__media--box {
   display: flex;
+  align-items: flex-end;
   justify-content: center;
   width: 44%;
   min-width: 100px;
   max-width: 168px;
+  padding-bottom: 0.75rem;
 }
 
 .menu-card__box-frame {
@@ -532,10 +534,9 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  max-width: 128px;
-  max-height: 128px;
+  flex-shrink: 0;
+  width: 128px;
+  height: 128px;
   overflow: hidden;
 }
 
