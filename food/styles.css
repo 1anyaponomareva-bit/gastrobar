@@ -365,16 +365,13 @@ a {
 }
 
 .menu-card--box .menu-card__name {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  line-height: 1.2;
 }
 
 .menu-card--box .menu-card__desc {
-  flex-shrink: 1;
-  min-height: 0;
-  -webkit-line-clamp: 2;
+  display: none;
 }
 
 .menu-card--box .menu-card__price {

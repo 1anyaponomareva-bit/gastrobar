@@ -127,7 +127,7 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxImageScale: 2.35,
+    boxImageScale: 2.65,
     boxFocusY: 58,
   },
   {
