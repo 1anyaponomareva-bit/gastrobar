@@ -349,8 +349,8 @@ a {
 }
 
 .menu-card--box {
-  min-height: max(136px, 26dvh);
-  max-height: 210px;
+  min-height: max(168px, 32dvh);
+  max-height: 248px;
 }
 
 .menu-card--box:not(.menu-card--has-hit) .menu-card__header {
@@ -523,10 +523,11 @@ a {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: 44%;
-  min-width: 100px;
-  max-width: 168px;
-  padding-bottom: 0.75rem;
+  width: 50%;
+  min-width: 140px;
+  max-width: 200px;
+  padding-bottom: 0.5rem;
+  overflow: visible;
 }
 
 .menu-card__box-frame {
@@ -535,8 +536,10 @@ a {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 128px;
-  height: 128px;
+  width: min(100%, 196px);
+  height: min(100%, 148px);
+  min-width: 168px;
+  min-height: 128px;
   overflow: visible;
 }
 
@@ -544,8 +547,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% / var(--box-scale, 1));
-  height: calc(100% / var(--box-scale, 1));
+  width: 100%;
+  height: 100%;
 }
 
 .menu-card__media--box .menu-card__box-scale img {
@@ -554,8 +557,6 @@ a {
   min-height: 0;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
-  transform: scale(var(--box-scale, 1));
-  transform-origin: center center;
 }
 
 .menu-card__scale-frame {
@@ -801,8 +802,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(72vw, 300px);
-  height: min(72vw, 300px);
+  width: min(84vw, 360px);
+  height: min(84vw, 360px);
   overflow: visible;
 }
 
@@ -810,8 +811,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% / var(--box-scale, 1));
-  height: calc(100% / var(--box-scale, 1));
+  width: 100%;
+  height: 100%;
 }
 
 .detail-image-wrap--box .detail-box-scale img {
@@ -819,8 +820,6 @@ a {
   height: 100%;
   object-fit: contain;
   object-position: center var(--box-focus-y, 50%);
-  transform: scale(var(--box-scale, 1));
-  transform-origin: center center;
 }
 
 .detail-scale-frame {

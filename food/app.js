@@ -127,7 +127,6 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxScale: 1.85,
   },
   {
     id: "potato-mushroom-pierogi",
@@ -136,7 +135,6 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    boxScale: 1.6,
   },
   {
     id: "chicken-dumplings",
@@ -145,8 +143,7 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
-    boxScale: 1.52,
-    boxFocusY: 58,
+    boxFocusY: 54,
   },
   {
     id: "pork-beef-dumplings",
@@ -155,8 +152,7 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("PORK-BEEF-DUMPLINGS.png"),
-    boxScale: 1.52,
-    boxFocusY: 58,
+    boxFocusY: 54,
   },
   {
     id: "pan-fried-dumplings",
@@ -166,8 +162,7 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("FRIED-DUMPLINGS.png"),
-    boxScale: 1.38,
-    boxFocusY: 52,
+    boxFocusY: 50,
   },
 
   // ——— ХОТ-ДОГИ ———
@@ -704,9 +699,8 @@ function isBoxItem(item) {
 
 function boxFrameStyle(item) {
   if (!isBoxItem(item)) return "";
-  const scale = item.boxScale ?? 1;
   const focusY = item.boxFocusY ?? 50;
-  return ` style="--box-scale: ${scale}; --box-focus-y: ${focusY}%;"`;
+  return ` style="--box-focus-y: ${focusY}%;"`;
 }
 
 function imageScaleFrameStyle(item) {
