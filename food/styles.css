@@ -220,13 +220,11 @@ a {
 }
 
 .header-logo__img {
-  width: 300px;
-  max-width: calc(100vw - 7rem);
-  height: 98px;
+  width: auto;
+  max-width: min(188px, calc(100vw - 7rem));
+  height: 60px;
   object-fit: contain;
   object-position: center;
-  transform: scale(1);
-  transform-origin: center center;
   filter: drop-shadow(0 2px 24px rgba(0, 0, 0, 0.75));
 }
 

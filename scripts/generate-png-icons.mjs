@@ -1,6 +1,6 @@
 /**
  * PNG для вкладки, «Добавить на экран», manifest.
- * Если есть public/menu/logo_gastrobar.png — берём его (квадрат, contain на тёмном фоне).
+ * Если есть public/menu/Logo.png (или logo_gastrobar.png) — берём его (квадрат, contain на тёмном фоне).
  * Иначе — public/icon.svg.
  */
 import sharp from "sharp";
@@ -10,7 +10,10 @@ import { fileURLToPath } from "url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const svgPath = join(root, "public", "icon.svg");
-const logoPath = join(root, "public", "menu", "logo_gastrobar.png");
+const logoCandidates = [
+  join(root, "public", "menu", "Logo.png"),
+  join(root, "public", "menu", "logo_gastrobar.png"),
+];
 const BG = "#12121a";
 
 async function exists(p) {
@@ -22,7 +25,7 @@ async function exists(p) {
   }
 }
 
-async function rasterFromLogo(size) {
+async function rasterFromLogo(logoPath, size) {
   return sharp(logoPath)
     .resize(size, size, { fit: "contain", background: BG })
     .flatten({ background: BG })
@@ -35,15 +38,21 @@ async function rasterFromSvg(size) {
 }
 
 async function main() {
-  const useLogo = await exists(logoPath);
-  if (useLogo) {
+  let logoPath = null;
+  for (const candidate of logoCandidates) {
+    if (await exists(candidate)) {
+      logoPath = candidate;
+      break;
+    }
+  }
+  if (logoPath) {
     console.log("Using", logoPath);
   } else {
     console.log("Logo not found, using", svgPath);
   }
 
   async function pipelineFor(size) {
-    if (useLogo) return rasterFromLogo(size);
+    if (logoPath) return rasterFromLogo(logoPath, size);
     return rasterFromSvg(size);
   }
 
