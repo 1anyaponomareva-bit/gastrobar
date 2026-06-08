@@ -84,6 +84,20 @@ export function HookahListItem({
           className="h-full min-h-[128px] w-full object-cover object-center"
           loading="lazy"
         />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="absolute right-1 top-1 z-20 flex h-7 w-7 items-center justify-center rounded-full text-white/75 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
+          style={{ backgroundColor: "rgba(0,0,0,0.32)" }}
+          aria-label={t("aria_open_details")}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
+          </svg>
+        </button>
       </div>
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col py-3 pl-3 pr-4">
@@ -148,28 +162,12 @@ export function HookahListItem({
               {t(strengthK)}
             </span>
           )}
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <span
-              className="inline-flex w-fit max-w-full min-w-0 shrink rounded-full px-3 py-1 text-sm font-medium text-white/90"
-              style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-            >
-              {priceFormatted} VND
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 transition-transform hover:scale-105 hover:text-white active:scale-95"
-              style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
-              aria-label={t("aria_open_details")}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
-              </svg>
-            </button>
-          </div>
+          <span
+            className="mt-2 inline-flex w-fit max-w-full rounded-full px-3 py-1 text-sm font-medium text-white/90"
+            style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+          >
+            {priceFormatted} VND
+          </span>
         </div>
       </div>
     </article>
