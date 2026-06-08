@@ -127,8 +127,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxFrameW: 238,
-    boxFrameH: 178,
+    boxFrameW: 256,
+    boxFrameH: 192,
     boxFocusY: 58,
   },
   {
@@ -138,8 +138,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    boxFrameW: 212,
-    boxFrameH: 158,
+    boxFrameW: 224,
+    boxFrameH: 168,
     boxFocusY: 57,
   },
   {
@@ -705,6 +705,13 @@ function isBoxItem(item) {
   return item.category === "dumplings";
 }
 
+function isPierogiItem(item) {
+  return (
+    item.id === "potato-onion-pierogi" ||
+    item.id === "potato-mushroom-pierogi"
+  );
+}
+
 function boxFrameStyle(item) {
   if (!isBoxItem(item)) return "";
   const focusY = item.boxFocusY ?? 50;
@@ -712,7 +719,8 @@ function boxFrameStyle(item) {
   const frameH = item.boxFrameH ?? 148;
   const detailW = item.boxDetailW ?? Math.min(360, Math.round(frameW * 1.58));
   const detailH = item.boxDetailH ?? Math.min(360, Math.round(frameH * 1.58));
-  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px;"`;
+  const mediaW = item.boxMediaW ?? frameW + 8;
+  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-media-w: ${mediaW}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px;"`;
 }
 
 function imageScaleFrameStyle(item) {
@@ -802,7 +810,9 @@ function renderMenuCard(item, index) {
     <article
       class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
         item.category === "hot-dogs" ? " menu-card--hot-dog" : ""
-      }${isBoxItem(item) ? " menu-card--box" : ""}"
+      }${isBoxItem(item) ? " menu-card--box" : ""}${
+        isPierogiItem(item) ? " menu-card--pierogi" : ""
+      }"
       role="listitem button"
       tabindex="0"
       data-index="${index}"

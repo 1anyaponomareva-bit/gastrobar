@@ -520,9 +520,10 @@ a {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: 52%;
-  min-width: 140px;
-  max-width: 244px;
+  flex: 0 0 var(--box-media-w, 204px);
+  width: var(--box-media-w, 204px);
+  min-width: var(--box-media-w, 204px);
+  max-width: none;
   padding-bottom: 0.5rem;
   overflow: visible;
 }
@@ -535,7 +536,6 @@ a {
   flex-shrink: 0;
   width: var(--box-frame-w, 196px);
   height: var(--box-frame-h, 148px);
-  max-width: 100%;
   overflow: visible;
 }
 
