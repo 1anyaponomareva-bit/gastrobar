@@ -127,6 +127,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
+    boxFrameW: 228,
+    boxFrameH: 168,
   },
   {
     id: "potato-mushroom-pierogi",
@@ -135,6 +137,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
+    boxFrameW: 228,
+    boxFrameH: 168,
   },
   {
     id: "chicken-dumplings",
@@ -163,6 +167,8 @@ const MENU_ITEMS = [
     category: "dumplings",
     image: IMG("FRIED-DUMPLINGS.png"),
     boxFocusY: 50,
+    boxFrameW: 176,
+    boxFrameH: 132,
   },
 
   // ——— ХОТ-ДОГИ ———
@@ -700,7 +706,11 @@ function isBoxItem(item) {
 function boxFrameStyle(item) {
   if (!isBoxItem(item)) return "";
   const focusY = item.boxFocusY ?? 50;
-  return ` style="--box-focus-y: ${focusY}%;"`;
+  const frameW = item.boxFrameW ?? 196;
+  const frameH = item.boxFrameH ?? 148;
+  const detailW = item.boxDetailW ?? Math.min(360, Math.round(frameW * 1.58));
+  const detailH = item.boxDetailH ?? Math.min(360, Math.round(frameH * 1.58));
+  return ` style="--box-focus-y: ${focusY}%; --box-frame-w: ${frameW}px; --box-frame-h: ${frameH}px; --box-detail-w: ${detailW}px; --box-detail-h: ${detailH}px;"`;
 }
 
 function imageScaleFrameStyle(item) {
