@@ -127,7 +127,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
-    boxImageScale: 1.28,
+    boxImageScale: 1.85,
+    boxFocusY: 56,
   },
   {
     id: "potato-mushroom-pierogi",
@@ -136,7 +137,8 @@ const MENU_ITEMS = [
     price: null,
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
-    boxImageScale: 1.1,
+    boxImageScale: 1.75,
+    boxFocusY: 56,
   },
   {
     id: "chicken-dumplings",
