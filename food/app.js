@@ -227,7 +227,7 @@ const MENU_ITEMS = [
     description: "Маринованный куриный шашлык на гриле с томатным соусом.",
     price: null,
     category: "grill",
-    image: null,
+    image: IMG("Chicken_kebab.png"),
   },
   {
     id: "pork-kebab",
@@ -235,7 +235,7 @@ const MENU_ITEMS = [
     description: "Сочный маринованный шашлык из свинины с томатным соусом.",
     price: null,
     category: "grill",
-    image: null,
+    image: IMG("pork_kebab.png"),
   },
   {
     id: "original-wings",
