@@ -797,6 +797,50 @@ a {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 
+/* Hot-dog: выбор типа сосиски в детальной карточке */
+.detail-sausage-picker {
+  margin: 0 0 0.75rem;
+}
+
+.detail-sausage-picker__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.detail-sausage-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.detail-sausage-option {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.45rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.detail-sausage-option:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.detail-sausage-option.is-active {
+  border-color: rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.18);
+  color: #fffef5;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.15);
+}
+
 /* Empty state */
 .menu-empty {
   display: flex;

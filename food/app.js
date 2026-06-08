@@ -25,8 +25,10 @@ const CATEGORY_ORDER = [
   "combos",
 ];
 
-const HOT_DOG_SAUSAGE_NOTE =
-  " Сосиска на выбор: стандартная или крафтовая колбаска собственного производства.";
+const HOT_DOG_SAUSAGE_OPTIONS = [
+  { id: "classic", label: "Стандартная сосиска" },
+  { id: "craft", label: "Крафтовая колбаска собственного производства" },
+];
 
 const MENU_ITEMS = [
   // ——— ЗАКУСКИ ———
@@ -137,7 +139,7 @@ const MENU_ITEMS = [
     id: "classic-hot-dog",
     name: "Классик",
     description:
-      "Горчица, кетчуп, майонез, маринованные огурцы и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+      "Горчица, кетчуп, майонез, маринованные огурцы и жареный лук.",
     price: null,
     category: "hot-dogs",
     image: IMG("CLASSIC-HOT-DOG.png"),
@@ -146,7 +148,7 @@ const MENU_ITEMS = [
   {
     id: "cheddar-bacon-dog",
     name: "Чеддер Бекон",
-    description: "Сырный соус, бекон и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    description: "Сырный соус, бекон и жареный лук.",
     price: null,
     category: "hot-dogs",
     image: IMG("HOT-DOG_becon.png"),
@@ -155,7 +157,7 @@ const MENU_ITEMS = [
   {
     id: "jalapeno-cheddar-dog",
     name: "Халапеньо Чеддер",
-    description: "Сырный соус, перец халапеньо и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    description: "Сырный соус, перец халапеньо и жареный лук.",
     price: null,
     category: "hot-dogs",
     image: IMG("HOT-DOG_halapen.png"),
@@ -164,7 +166,7 @@ const MENU_ITEMS = [
   {
     id: "bavarian-dog",
     name: "Баварский",
-    description: "Тушеная квашеная капуста, горчица и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+    description: "Тушеная квашеная капуста, горчица и жареный лук.",
     price: null,
     category: "hot-dogs",
     image: IMG("HOT-DOG_bov.png"),
@@ -174,7 +176,7 @@ const MENU_ITEMS = [
     id: "bbq-bacon-dog",
     name: "BBQ Бекон",
     description:
-      "Соус BBQ, маринованные огурцы, бекон и жареный лук." + HOT_DOG_SAUSAGE_NOTE,
+      "Соус BBQ, маринованные огурцы, бекон и жареный лук.",
     price: null,
     category: "hot-dogs",
     image: IMG("HOT-DOG_bbq.png"),
@@ -565,6 +567,27 @@ function renderDetailContent(item) {
       : "";
 
   const imageHtml = renderDetailImage(item);
+  const isHotDog = item.category === "hot-dogs";
+  const defaultSausageId = HOT_DOG_SAUSAGE_OPTIONS[0]?.id ?? "classic";
+  const defaultSausageLabel =
+    HOT_DOG_SAUSAGE_OPTIONS.find((o) => o.id === defaultSausageId)?.label ??
+    HOT_DOG_SAUSAGE_OPTIONS[0]?.label ??
+    "";
+  const sausagePickerHtml = isHotDog
+    ? `
+      <div class="detail-sausage-picker" id="detail-sausage-picker" aria-label="Выберите сосиску">
+        <p class="detail-sausage-picker__title">Выберите сосиску</p>
+        <div class="detail-sausage-picker__options">
+          ${HOT_DOG_SAUSAGE_OPTIONS.map((o, idx) => {
+            const active = idx === 0;
+            return `<button type="button" class="detail-sausage-option${
+              active ? " is-active" : ""
+            }" data-sausage="${o.id}">${o.label}</button>`;
+          }).join("")}
+        </div>
+      </div>
+    `
+    : "";
 
   return `
     <div class="${detailImageWrapClass(item)}">
@@ -573,11 +596,49 @@ function renderDetailContent(item) {
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
       ${hitHtml}
-      <h2 class="detail-info__title">${item.name}</h2>
+      <h2 class="detail-info__title">
+        ${item.name}
+        ${
+          isHotDog
+            ? ` — <span id="detail-hotdog-sausage-label">${defaultSausageLabel}</span>`
+            : ""
+        }
+      </h2>
       <p class="detail-info__desc">${item.description || ""}</p>
+      ${sausagePickerHtml}
       <p class="detail-info__price">${priceLabel}</p>
     </div>
   `;
+}
+
+function bindHotDogSausagePicker() {
+  const picker = document.getElementById("detail-sausage-picker");
+  const labelEl = document.getElementById("detail-hotdog-sausage-label");
+  if (!picker || !labelEl) return;
+
+  const buttons = Array.from(
+    picker.querySelectorAll("[data-sausage]"),
+  );
+  if (buttons.length === 0) return;
+
+  const setSelected = (id) => {
+    buttons.forEach((btn) => {
+      const btnId = btn.getAttribute("data-sausage") || "";
+      btn.classList.toggle("is-active", btnId === id);
+    });
+    const opt = HOT_DOG_SAUSAGE_OPTIONS.find((o) => o.id === id);
+    if (opt) labelEl.textContent = opt.label;
+  };
+
+  // Стартовая опция (первое значение в PDF/списке).
+  setSelected(HOT_DOG_SAUSAGE_OPTIONS[0]?.id ?? "classic");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-sausage") || "classic";
+      setSelected(id);
+    });
+  });
 }
 
 function openDetail(index) {
@@ -589,6 +650,7 @@ function openDetail(index) {
 
   detailIndex = index;
   stage.innerHTML = renderDetailContent(item);
+  bindHotDogSausagePicker();
   overlay.classList.remove("is-hidden", "is-closing");
   overlay.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
