@@ -702,16 +702,11 @@ function isBoxItem(item) {
   return item.category === "dumplings";
 }
 
-function boxImageStyle(item) {
+function boxFrameStyle(item) {
   if (!isBoxItem(item)) return "";
-  const styles = [];
-  if (item.boxScale != null) {
-    styles.push(`transform: scale(${item.boxScale})`);
-    styles.push("transform-origin: center center");
-  }
+  const scale = item.boxScale ?? 1;
   const focusY = item.boxFocusY ?? 50;
-  styles.push(`object-position: center ${focusY}%`);
-  return styles.length ? ` style="${styles.join("; ")};"` : "";
+  return ` style="--box-scale: ${scale}; --box-focus-y: ${focusY}%;"`;
 }
 
 function imageScaleFrameStyle(item) {
@@ -747,7 +742,7 @@ function renderListImage(item) {
   if (!item.image) return renderNoImage();
   const imgAttrs = `src="${item.image}" alt="" loading="lazy"`;
   if (isBoxItem(item)) {
-    return `<div class="menu-card__box-frame"><img ${imgAttrs}${boxImageStyle(item)} /></div>`;
+    return `<div class="menu-card__box-frame"${boxFrameStyle(item)}><div class="menu-card__box-scale"><img ${imgAttrs} /></div></div>`;
   }
   if (item.imageScale != null) {
     return `<div class="menu-card__scale-frame"${imageScaleFrameStyle(item)}><img ${imgAttrs} /></div>`;
@@ -760,7 +755,7 @@ function renderDetailImage(item) {
     return `<div class="detail-no-image">${NO_IMAGE_LABEL}</div>`;
   }
   if (isBoxItem(item)) {
-    return `<div class="detail-box-frame"><img src="${item.image}" alt="${item.name}"${boxImageStyle(item)} /></div>`;
+    return `<div class="detail-box-frame"${boxFrameStyle(item)}><div class="detail-box-scale"><img src="${item.image}" alt="${item.name}" /></div></div>`;
   }
   if (item.imageScale != null) {
     return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${item.name}" /></div>`;
