@@ -127,7 +127,7 @@ export function BottomNav() {
         <Link
           href="/games"
           className={cn(
-            "relative flex min-w-[3.1rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 text-[12px] font-medium transition-all sm:min-w-[3.25rem] sm:px-2 sm:py-2",
+            "relative flex min-w-[3.4rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[12px] font-medium transition-all sm:min-w-[3.5rem] sm:px-2 sm:py-2",
             onGames
               ? "bg-white text-black shadow-sm"
               : "text-white/70 hover:text-white"
@@ -136,8 +136,8 @@ export function BottomNav() {
           <span className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]" aria-hidden>
             🎯
           </span>
-          <span className="text-center text-[9px] leading-tight sm:text-[10px] sm:whitespace-nowrap">
-            {t("games")}
+          <span className="whitespace-nowrap text-center text-[9px] leading-tight sm:text-[10px]">
+            {t("tab_games")}
           </span>
         </Link>
       </div>

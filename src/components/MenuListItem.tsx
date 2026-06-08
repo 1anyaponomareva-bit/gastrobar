@@ -156,7 +156,7 @@ export function MenuListItem({
         </div>
 
         <div
-          className={`flex min-h-0 flex-1 flex-col gap-1 text-left ${isTincture ? "justify-start" : "justify-end"}`}
+          className={`flex min-h-0 flex-1 flex-col gap-1 text-left ${isTincture || isWine ? "justify-start" : "justify-end"}`}
         >
           <h3
             className={`font-bold text-white ${isTincture ? "line-clamp-2 shrink-0 break-words text-lg leading-[1.35] pb-0.5" : "text-lg leading-tight"}`}
@@ -245,7 +245,9 @@ export function MenuListItem({
                 }`
               : isFuzzyBeer
                 ? "h-full min-h-[120px] w-full origin-center object-contain object-[58%_50%] scale-[1.2] will-change-transform"
-                : "h-full min-h-[120px] w-full object-contain object-center"
+                : isWine
+                  ? "h-full min-h-[120px] w-full object-contain object-bottom"
+                  : "h-full min-h-[120px] w-full object-contain object-center"
           }
           style={
             isTincture

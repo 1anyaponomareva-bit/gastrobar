@@ -103,9 +103,10 @@ export function MenuDetailView({
   const isSpirits = item.barSubcategory === "spirits";
   const isBeer = item.barSubcategory === "beer";
   const isFuzzyBeer = item.id === "fuzzy-ipa-thunderslap" || item.id === "fuzzy-lager";
+  const isWine = item.barSubcategory === "wine";
   const isMinimalBarCard = isSoftDrink || isSpirits;
-  /** Пиво — целиком в кадре, без кропа как у коктейлей с object-cover */
-  const detailImageContain = isMinimalBarCard || isBeer;
+  /** Пиво и вино — целиком в кадре, без кропа как у коктейлей с object-cover */
+  const detailImageContain = isMinimalBarCard || isBeer || isWine;
   const tinctureDetailRimFocus =
     item.barSubcategory === "tincture" && TINCTURE_RIM_FOCUS_IDS.has(item.id);
 
@@ -175,7 +176,9 @@ export function MenuDetailView({
                     : detailImageContain
                       ? isFuzzyBeer
                         ? "h-full w-full origin-center object-contain object-[58%_50%] scale-110 will-change-transform"
-                        : "h-full w-full object-contain object-center"
+                        : isWine
+                          ? "h-full w-full object-contain object-bottom"
+                          : "h-full w-full object-contain object-center"
                       : "h-full w-full object-cover object-center"
               }
             />
@@ -322,7 +325,9 @@ export function MenuDetailView({
                       (item.category === "cocktail"
                         ? item.barSubcategory === "tincture"
                           ? t("unit_vol_short")
-                          : t("unit_glass")
+                          : item.barSubcategory === "wine"
+                            ? t("unit_wine_glass")
+                            : t("unit_glass")
                         : t("unit_food")))}
                 </p>
               </div>
