@@ -766,12 +766,14 @@ function renderMenuCard(item, index) {
           <h3 class="menu-card__name">${item.name}</h3>
           <p class="menu-card__desc">${item.description || ""}</p>
           ${sausageNoteHtml}
-          <span class="menu-card__price">${priceLabel}</span>
+          <div class="menu-card__footer">
+            <span class="menu-card__price">${priceLabel}</span>
+            <span class="menu-card__open">${ARROW_ICON}</span>
+          </div>
         </div>
       </div>
       <div class="${menuMediaClass(item)}">
         ${renderListImage(item)}
-        <span class="menu-card__open">${ARROW_ICON}</span>
       </div>
     </article>
   `;

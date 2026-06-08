@@ -438,11 +438,19 @@ a {
   color: rgba(255, 255, 255, 0.78);
 }
 
+.menu-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .menu-card__price {
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  margin-top: 0.25rem;
+  min-width: 0;
   padding: 0.2rem 0.625rem;
   border-radius: 9999px;
   font-size: 0.875rem;
@@ -519,21 +527,15 @@ a {
 }
 
 .menu-card__open {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 20;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  border: none;
   border-radius: 9999px;
   color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
 

@@ -219,12 +219,30 @@ export function MenuListItem({
               {t(strengthKey)}
             </span>
           )}
-          <span
-            className={`inline-flex w-fit max-w-full shrink-0 rounded-full px-3 py-1 text-sm font-medium text-white/90 ${isTincture ? "mt-1" : "mt-2"}`}
-            style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+          <div
+            className={`flex items-center justify-between gap-2 ${isTincture ? "mt-1" : "mt-2"}`}
           >
-            {priceFormatted} VND
-          </span>
+            <span
+              className="inline-flex w-fit max-w-full min-w-0 shrink rounded-full px-3 py-1 text-sm font-medium text-white/90"
+              style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+            >
+              {priceFormatted} VND
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 transition-transform hover:scale-105 hover:text-white active:scale-95"
+              style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+              aria-label={t("aria_open_details")}
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -280,20 +298,6 @@ export function MenuListItem({
             }}
           />
         )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full text-white/70 backdrop-blur-sm transition-transform hover:scale-105 hover:text-white active:scale-95"
-          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
-          aria-label={t("aria_open_details")}
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
-          </svg>
-        </button>
       </div>
     </article>
   );
