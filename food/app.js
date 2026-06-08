@@ -100,6 +100,7 @@ const MENU_ITEMS = [
     category: "snacks",
     badge: "hit",
     image: IMG("FISH-BITES.png"),
+    imageFocusY: 58,
   },
   {
     id: "french-fries",
@@ -735,6 +736,11 @@ function imageScaleFrameStyle(item) {
   return ` style="--item-scale: ${item.imageScale}"`;
 }
 
+function imageFocusStyle(item) {
+  if (item.imageFocusY == null) return "";
+  return ` style="object-position: center ${item.imageFocusY}%"`;
+}
+
 function hasEdgeFade(item) {
   return item.edgeFade !== false;
 }
@@ -766,9 +772,9 @@ function renderListImage(item) {
     return `<div class="menu-card__box-frame"${boxFrameStyle(item)}><div class="menu-card__box-scale"><img ${imgAttrs} /></div></div>`;
   }
   if (item.imageScale != null) {
-    return `<div class="menu-card__scale-frame"${imageScaleFrameStyle(item)}><img ${imgAttrs} /></div>`;
+    return `<div class="menu-card__scale-frame"${imageScaleFrameStyle(item)}><img ${imgAttrs}${imageFocusStyle(item)} /></div>`;
   }
-  return `<img ${imgAttrs} />`;
+  return `<img ${imgAttrs}${imageFocusStyle(item)} />`;
 }
 
 function renderDetailImage(item) {
@@ -779,9 +785,9 @@ function renderDetailImage(item) {
     return `<div class="detail-box-frame"${boxFrameStyle(item)}><div class="detail-box-scale"><img src="${item.image}" alt="${itemDisplayName(item)}" /></div></div>`;
   }
   if (item.imageScale != null) {
-    return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${itemDisplayName(item)}" /></div>`;
+    return `<div class="detail-scale-frame"${imageScaleFrameStyle(item)}><img src="${item.image}" alt="${itemDisplayName(item)}"${imageFocusStyle(item)} /></div>`;
   }
-  return `<img src="${item.image}" alt="${itemDisplayName(item)}" />`;
+  return `<img src="${item.image}" alt="${itemDisplayName(item)}"${imageFocusStyle(item)} />`;
 }
 
 function renderHotDogSausageListNote() {
