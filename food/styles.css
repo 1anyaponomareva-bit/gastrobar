@@ -338,8 +338,19 @@ a {
 }
 
 .menu-card--hot-dog {
-  min-height: max(140px, 28dvh);
-  max-height: 220px;
+  min-height: max(168px, 32dvh);
+  max-height: 252px;
+}
+
+.menu-card--hot-dog.menu-card--has-hit {
+  min-height: max(184px, 34dvh);
+  max-height: 264px;
+}
+
+.menu-card--hot-dog .menu-card__name {
+  display: block;
+  overflow: visible;
+  line-height: 1.2;
 }
 
 .menu-card--hot-dog .menu-card__desc {
