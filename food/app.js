@@ -88,6 +88,24 @@ const BBQ_BACON_SAUSAGE_OPTIONS = [
   ),
 ];
 
+const CHEDDAR_BACON_SAUSAGE_OPTIONS = [
+  {
+    id: "standard-pork",
+    label: "Стандартная свиная сосиска",
+    shortLabel: "Стандартная свиная сосиска",
+    price: 90000,
+    grammage: "210–220 г",
+  },
+  {
+    id: "craft",
+    label: "Крафтовая колбаска собственного производства",
+    shortLabel:
+      "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
+    price: 130000,
+    grammage: "210–220 г",
+  },
+];
+
 const MENU_ITEMS = [
   // ——— ЗАКУСКИ ———
   {
@@ -234,8 +252,11 @@ const MENU_ITEMS = [
   {
     id: "cheddar-bacon-dog",
     name: "Чеддер Бекон",
-    description: "Сырный соус, бекон и жареный лук.",
-    price: null,
+    description:
+      "Жареный лук, маринованные огурцы, сырный соус, кетчуп, горчица, бекон и сушёный лук.",
+    priceMin: 90000,
+    priceMax: 130000,
+    sausageOptions: CHEDDAR_BACON_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     image: IMG("HOT-DOG_becon.png"),
     edgeFade: false,
