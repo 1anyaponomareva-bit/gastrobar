@@ -321,3 +321,29 @@ a:hover .games-pick-card:not(.games-pick-card--soon) .games-pick-card__bg,
   opacity: 0.72;
   filter: saturate(0.72) grayscale(0.15);
 }
+
+.category-tabs-scroll {
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.category-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .category-tabs-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+
+  .category-tabs-scroll::-webkit-scrollbar {
+    display: block;
+    height: 6px;
+  }
+
+  .category-tabs-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 9999px;
+  }
+}

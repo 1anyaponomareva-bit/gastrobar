@@ -11,7 +11,7 @@ export const GASTROBAR_LOGO_WIDTH_PX = 220;
 export const GASTROBAR_LOGO_MAX_WIDTH = "min(220px, calc(100vw - 7rem))";
 
 export const CATEGORY_TABS_SHELL_CLASS =
-  "mx-auto w-full max-w-md shrink-0 overflow-x-auto overflow-y-hidden bg-[#030303] px-3 py-2.5 scrollbar-none";
+  "category-tabs-scroll mx-auto w-full max-w-md shrink-0 overflow-x-auto overflow-y-hidden bg-[#030303] px-3 py-2.5";
 
 export const CATEGORY_TABS_ROW_CLASS = "flex gap-2";
 

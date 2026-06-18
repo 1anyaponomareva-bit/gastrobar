@@ -1,11 +1,13 @@
 "use client";
 
+import { useRef } from "react";
 import type { BarSubcategory } from "@/data/menu";
 import {
   CATEGORY_TABS_ROW_CLASS,
   CATEGORY_TABS_SHELL_CLASS,
   categoryTabButtonClass,
 } from "@/lib/appShellLayout";
+import { useHorizontalScrollOnWheel } from "@/lib/useHorizontalScrollOnWheel";
 import { useTranslation } from "@/lib/useTranslation";
 
 const BAR_TAB_IDS: ("all" | BarSubcategory)[] = [
@@ -40,8 +42,11 @@ export function CategoryTabs({
   onChange: (id: BarCategoryId) => void;
 }) {
   const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useHorizontalScrollOnWheel(scrollRef);
+
   return (
-    <div className={CATEGORY_TABS_SHELL_CLASS}>
+    <div ref={scrollRef} className={CATEGORY_TABS_SHELL_CLASS}>
       <div className={CATEGORY_TABS_ROW_CLASS}>
         {BAR_TAB_IDS.map((id) => (
           <button

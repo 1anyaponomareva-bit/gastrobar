@@ -1272,6 +1272,32 @@ function bindLangMenu() {
   });
 }
 
+function bindHorizontalWheelScroll(root) {
+  if (!root || root.dataset.wheelBound === "true") return;
+  root.dataset.wheelBound = "true";
+
+  root.addEventListener(
+    "wheel",
+    (event) => {
+      if (root.scrollWidth <= root.clientWidth) return;
+
+      const delta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.deltaY;
+      if (delta === 0) return;
+
+      root.scrollLeft += delta;
+      event.preventDefault();
+    },
+    { passive: false },
+  );
+}
+
+function bindCategoryTabsWheel() {
+  bindHorizontalWheelScroll(document.getElementById("category-tabs"));
+}
+
 function init() {
   favoriteIds = loadFavorites();
   readSectionFromUrl();
@@ -1279,6 +1305,7 @@ function init() {
   updateCategoryTabsVisibility();
   renderCategoryTabs();
   renderMenuList();
+  bindCategoryTabsWheel();
   bindDetailControls();
   bindLangMenu();
 }
