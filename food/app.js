@@ -106,6 +106,12 @@ const CHEDDAR_BACON_SAUSAGE_OPTIONS = [
   },
 ];
 
+const CHEDDAR_JALAPENO_SAUSAGE_OPTIONS = [
+  hotDogCraftSausageOption(
+    "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
+  ),
+];
+
 const MENU_ITEMS = [
   // ——— ЗАКУСКИ ———
   {
@@ -264,8 +270,10 @@ const MENU_ITEMS = [
   {
     id: "jalapeno-cheddar-dog",
     name: "Халапеньо Чеддер",
-    description: "Сырный соус, перец халапеньо и жареный лук.",
-    price: null,
+    description:
+      "Жареный лук, сырный соус, кетчуп, халапеньо и сушёный лук.",
+    price: 130000,
+    sausageOptions: CHEDDAR_JALAPENO_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     badge: "hit",
     image: IMG("HOT-DOG_halapen.png"),
