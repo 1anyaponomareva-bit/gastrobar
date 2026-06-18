@@ -338,23 +338,65 @@ a {
 }
 
 .menu-card--hot-dog {
-  min-height: max(140px, 25dvh);
-  max-height: 228px;
+  align-items: center;
+  min-height: max(160px, 26dvh);
+  max-height: none;
 }
 
 .menu-card--hot-dog.menu-card--has-hit {
-  min-height: max(152px, 26dvh);
-  max-height: 236px;
+  min-height: max(172px, 27dvh);
+  max-height: none;
+}
+
+.menu-card--hot-dog .menu-card__body {
+  align-self: stretch;
+}
+
+.menu-card--hot-dog .menu-card__content {
+  gap: 0.35rem;
 }
 
 .menu-card--hot-dog .menu-card__name {
   display: block;
   overflow: visible;
   line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .menu-card--hot-dog .menu-card__desc {
+  display: -webkit-box;
+  flex-shrink: 0;
+  min-height: 2.1em;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.menu-card--hot-dog .menu-card__sausage {
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.menu-card--hot-dog .menu-card__price {
+  flex-shrink: 0;
+}
+
+.menu-card--hot-dog .menu-card__media {
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: auto;
+  max-height: calc(100% - 1rem);
+}
+
+.menu-card--hot-dog .menu-card__media > img {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .menu-card--box {
