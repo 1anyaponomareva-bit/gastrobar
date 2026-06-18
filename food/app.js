@@ -57,8 +57,21 @@ const CATEGORY_ORDER = [
 ];
 
 const HOT_DOG_SAUSAGE_OPTIONS = [
-  { id: "classic", label: "Стандартная сосиска" },
-  { id: "craft", label: "Крафтовая колбаска собственного производства" },
+  {
+    id: "vietnamese",
+    label: "Вьетнамская сосиска",
+    shortLabel: "Вьетнамская сосиска",
+    price: 90000,
+    grammage: "200–210 г",
+  },
+  {
+    id: "craft",
+    label: "Крафтовая колбаска собственного производства",
+    shortLabel:
+      "Крафтовая колбаска (курица, свинина или говядина на выбор)",
+    price: 130000,
+    grammage: "280 г",
+  },
 ];
 
 const MENU_ITEMS = [
@@ -216,8 +229,10 @@ const MENU_ITEMS = [
   {
     id: "bavarian-dog",
     name: "Баварский",
-    description: "Тушеная квашеная капуста, горчица и жареный лук.",
-    price: null,
+    description:
+      "Квашенная капуста, майонез, горчица и сушёный лук.",
+    priceMin: 90000,
+    priceMax: 130000,
     category: "hot-dogs",
     image: IMG("HOT-DOG_bov.png"),
     edgeFade: false,
@@ -602,6 +617,28 @@ function formatItemPrice(item) {
   return formatVnd(item.price);
 }
 
+function getHotDogSausagePriceRange() {
+  const prices = HOT_DOG_SAUSAGE_OPTIONS.map((o) => o.price).filter(
+    (p) => p != null,
+  );
+  if (prices.length === 0) return null;
+  return { min: Math.min(...prices), max: Math.max(...prices) };
+}
+
+function formatHotDogListPrice(item) {
+  if (item.priceMin != null && item.priceMax != null) {
+    return formatItemPrice(item);
+  }
+  const range = getHotDogSausagePriceRange();
+  if (!range) return formatVnd(item.price);
+  if (range.min === range.max) return formatVnd(range.min);
+  return `${formatVnd(range.min)} – ${formatVnd(range.max)}`;
+}
+
+function hotDogCardPriceLabel(item) {
+  return `${formatHotDogListPrice(item)} VND`;
+}
+
 function hitBadgeHtml(label) {
   return `
     <span class="hit-badge" aria-hidden="true">
@@ -820,16 +857,28 @@ function renderHotDogSausageListNote() {
     <div class="menu-card__sausage" aria-label="Сосиска на выбор">
       <span class="menu-card__sausage-label">Сосиска на выбор</span>
       <span class="menu-card__sausage-options">
-        ${HOT_DOG_SAUSAGE_OPTIONS.map(
-          (o) => `<span class="menu-card__sausage-chip">${o.label}</span>`,
-        ).join("")}
+        ${HOT_DOG_SAUSAGE_OPTIONS.map((o) => {
+          const meta = [
+            o.grammage,
+            o.price != null ? `${formatVnd(o.price)} VND` : "",
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return `<span class="menu-card__sausage-chip">
+            <span class="menu-card__sausage-chip-label">${o.shortLabel || o.label}</span>
+            ${meta ? `<span class="menu-card__sausage-chip-meta">${meta}</span>` : ""}
+          </span>`;
+        }).join("")}
       </span>
     </div>
   `;
 }
 
 function renderMenuCard(item, index) {
-  const priceLabel = `${formatItemPrice(item)} VND`;
+  const priceLabel =
+    item.category === "hot-dogs"
+      ? hotDogCardPriceLabel(item)
+      : `${formatItemPrice(item)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
     item.category === "hot-dogs" ? renderHotDogSausageListNote() : "";
@@ -926,18 +975,21 @@ function renderMenuList() {
 }
 
 function renderDetailContent(item) {
-  const priceLabel = `${formatItemPrice(item)} VND`;
+  const isHotDog = item.category === "hot-dogs";
+  const defaultSausage = HOT_DOG_SAUSAGE_OPTIONS[0];
+  const priceLabel = isHotDog
+    ? `${formatVnd(defaultSausage?.price)} VND`
+    : `${formatItemPrice(item)} VND`;
   const hitHtml =
     item.badge === "hit"
       ? `<div class="detail-info__hit">${hitBadgeHtml("Хит продаж")}</div>`
       : "";
 
   const imageHtml = renderDetailImage(item);
-  const isHotDog = item.category === "hot-dogs";
-  const defaultSausageId = HOT_DOG_SAUSAGE_OPTIONS[0]?.id ?? "classic";
+  const defaultSausageId = defaultSausage?.id ?? "vietnamese";
   const defaultSausageLabel =
     HOT_DOG_SAUSAGE_OPTIONS.find((o) => o.id === defaultSausageId)?.label ??
-    HOT_DOG_SAUSAGE_OPTIONS[0]?.label ??
+    defaultSausage?.label ??
     "";
   const sausagePickerHtml = isHotDog
     ? `
@@ -946,9 +998,18 @@ function renderDetailContent(item) {
         <div class="detail-sausage-picker__options">
           ${HOT_DOG_SAUSAGE_OPTIONS.map((o, idx) => {
             const active = idx === 0;
+            const meta = [
+              o.grammage,
+              o.price != null ? `${formatVnd(o.price)} VND` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ");
             return `<button type="button" class="detail-sausage-option${
               active ? " is-active" : ""
-            }" data-sausage="${o.id}">${o.label}</button>`;
+            }" data-sausage="${o.id}">
+              <span class="detail-sausage-option__label">${o.shortLabel || o.label}</span>
+              ${meta ? `<span class="detail-sausage-option__meta">${meta}</span>` : ""}
+            </button>`;
           }).join("")}
         </div>
       </div>
@@ -963,15 +1024,15 @@ function renderDetailContent(item) {
     <div class="detail-info">
       ${hitHtml}
       <h2 class="detail-info__title">${itemDisplayName(item)}</h2>
-      ${grammageHtml(item, "detail-info__grammage")}
       ${
         isHotDog
-          ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>`
-          : ""
+          ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
+             <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>`
+          : grammageHtml(item, "detail-info__grammage")
       }
       <p class="detail-info__desc">${item.description || ""}</p>
       ${sausagePickerHtml}
-      <p class="detail-info__price">${priceLabel}</p>
+      <p class="detail-info__price" id="detail-hotdog-price">${priceLabel}</p>
     </div>
   `;
 }
@@ -979,6 +1040,8 @@ function renderDetailContent(item) {
 function bindHotDogSausagePicker() {
   const picker = document.getElementById("detail-sausage-picker");
   const labelEl = document.getElementById("detail-hotdog-sausage-label");
+  const grammageEl = document.getElementById("detail-hotdog-grammage");
+  const priceEl = document.getElementById("detail-hotdog-price");
   if (!picker || !labelEl) return;
 
   const buttons = Array.from(
@@ -992,15 +1055,20 @@ function bindHotDogSausagePicker() {
       btn.classList.toggle("is-active", btnId === id);
     });
     const opt = HOT_DOG_SAUSAGE_OPTIONS.find((o) => o.id === id);
-    if (opt) labelEl.textContent = opt.label;
+    if (opt) {
+      labelEl.textContent = opt.label;
+      if (grammageEl) grammageEl.textContent = opt.grammage || "";
+      if (priceEl && opt.price != null) {
+        priceEl.textContent = `${formatVnd(opt.price)} VND`;
+      }
+    }
   };
 
-  // Стартовая опция (первое значение в PDF/списке).
-  setSelected(HOT_DOG_SAUSAGE_OPTIONS[0]?.id ?? "classic");
+  setSelected(HOT_DOG_SAUSAGE_OPTIONS[0]?.id ?? "vietnamese");
 
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-sausage") || "classic";
+      const id = btn.getAttribute("data-sausage") || "vietnamese";
       setSelected(id);
     });
   });
