@@ -107,9 +107,39 @@ const CHEDDAR_BACON_SAUSAGE_OPTIONS = [
 ];
 
 const CHEDDAR_JALAPENO_SAUSAGE_OPTIONS = [
-  hotDogCraftSausageOption(
-    "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
-  ),
+  {
+    id: "standard-pork",
+    label: "Стандартная свиная сосиска",
+    shortLabel: "Стандартная свиная сосиска",
+    price: 90000,
+    grammage: "210–220 г",
+  },
+  {
+    id: "craft",
+    label: "Крафтовая колбаска собственного производства",
+    shortLabel:
+      "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
+    price: 130000,
+    grammage: "280 г",
+  },
+];
+
+const CLASSIC_HOT_DOG_SAUSAGE_OPTIONS = [
+  {
+    id: "standard-pork",
+    label: "Стандартная свиная сосиска",
+    shortLabel: "Стандартная свиная сосиска",
+    price: 80000,
+    grammage: "200–210 г",
+  },
+  {
+    id: "craft",
+    label: "Крафтовая колбаска собственного производства",
+    shortLabel:
+      "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
+    price: 120000,
+    grammage: "280 г",
+  },
 ];
 
 const MENU_ITEMS = [
@@ -248,8 +278,10 @@ const MENU_ITEMS = [
     id: "classic-hot-dog",
     name: "Классик",
     description:
-      "Горчица, кетчуп, майонез, маринованные огурцы и жареный лук.",
-    price: null,
+      "Жареный лук, маринованный огурец, майонез, кетчуп, горчица и сушёный лук.",
+    priceMin: 80000,
+    priceMax: 120000,
+    sausageOptions: CLASSIC_HOT_DOG_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     badge: "hit",
     image: IMG("CLASSIC-HOT-DOG.png"),
@@ -272,7 +304,8 @@ const MENU_ITEMS = [
     name: "Халапеньо Чеддер",
     description:
       "Жареный лук, сырный соус, кетчуп, халапеньо и сушёный лук.",
-    price: 130000,
+    priceMin: 90000,
+    priceMax: 130000,
     sausageOptions: CHEDDAR_JALAPENO_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     badge: "hit",
