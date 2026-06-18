@@ -59,8 +59,8 @@ const CATEGORY_ORDER = [
 const HOT_DOG_SAUSAGE_OPTIONS = [
   {
     id: "vietnamese",
-    label: "Вьетнамская сосиска",
-    shortLabel: "Вьетнамская сосиска",
+    label: "Стандартная свиная сосиска",
+    shortLabel: "Стандартная свиная сосиска",
     price: 90000,
     grammage: "200–210 г",
   },
