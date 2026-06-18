@@ -129,7 +129,8 @@ const MENU_ITEMS = [
     id: "potato-onion-pierogi",
     name: "Вареники с картофелем и луком",
     description: "Традиционные вареники с картофелем и луком.",
-    price: null,
+    price: 100000,
+    grammage: "200 г",
     category: "dumplings",
     image: IMG("POTATO-DUMPLINGS.png"),
     boxFocusY: 58,
@@ -139,7 +140,8 @@ const MENU_ITEMS = [
     id: "potato-mushroom-pierogi",
     name: "Вареники с картофелем и грибами",
     description: "Вареники с картофелем и грибами.",
-    price: null,
+    price: 110000,
+    grammage: "200 г",
     category: "dumplings",
     image: IMG("POTATO-MUSHROOM-DUMPLINGS.png"),
     boxFocusY: 57,
@@ -149,7 +151,8 @@ const MENU_ITEMS = [
     id: "chicken-dumplings",
     name: "Куриные пельмени",
     description: "Сочные куриные пельмени.",
-    price: null,
+    price: 130000,
+    grammage: "200 г",
     category: "dumplings",
     image: IMG("CHICKEN-DUMPLINGS.png"),
     boxFocusY: 54,
@@ -158,7 +161,8 @@ const MENU_ITEMS = [
     id: "pork-beef-dumplings",
     name: "Пельмени со свининой и говядиной",
     description: "Традиционные пельмени со свининой и говядиной.",
-    price: null,
+    price: 140000,
+    grammage: "200 г",
     category: "dumplings",
     image: IMG("PORK-BEEF-DUMPLINGS.png"),
     boxFocusY: 54,
@@ -168,7 +172,9 @@ const MENU_ITEMS = [
     name: "Жареные пельмени",
     description:
       "Хрустящие жареные пельмени с начинкой на выбор: курица или свинина с говядиной.",
-    price: null,
+    priceMin: 130000,
+    priceMax: 140000,
+    grammage: "200 г",
     category: "dumplings",
     image: IMG("FRIED-DUMPLINGS.png"),
     boxFocusY: 50,
@@ -586,6 +592,16 @@ function formatVnd(price) {
   return vnd.toString();
 }
 
+function formatItemPrice(item) {
+  if (item.priceMin != null && item.priceMax != null) {
+    if (item.priceMin === item.priceMax) {
+      return formatVnd(item.priceMin);
+    }
+    return `${formatVnd(item.priceMin)} – ${formatVnd(item.priceMax)}`;
+  }
+  return formatVnd(item.price);
+}
+
 function hitBadgeHtml(label) {
   return `
     <span class="hit-badge" aria-hidden="true">
@@ -813,7 +829,7 @@ function renderHotDogSausageListNote() {
 }
 
 function renderMenuCard(item, index) {
-  const priceLabel = `${formatVnd(item.price)} VND`;
+  const priceLabel = `${formatItemPrice(item)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
     item.category === "hot-dogs" ? renderHotDogSausageListNote() : "";
@@ -910,7 +926,7 @@ function renderMenuList() {
 }
 
 function renderDetailContent(item) {
-  const priceLabel = `${formatVnd(item.price)} VND`;
+  const priceLabel = `${formatItemPrice(item)} VND`;
   const hitHtml =
     item.badge === "hit"
       ? `<div class="detail-info__hit">${hitBadgeHtml("Хит продаж")}</div>`
