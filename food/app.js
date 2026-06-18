@@ -273,8 +273,6 @@ const MENU_ITEMS = [
     image: IMG("HOT-DOG_bbq.png"),
     edgeFade: false,
   },
-    edgeFade: false,
-  },
 
   // ——— БУРГЕРЫ ———
   {
