@@ -296,6 +296,7 @@ const MENU_ITEMS = [
     priceMax: 130000,
     sausageOptions: CHEDDAR_BACON_SAUSAGE_OPTIONS,
     category: "hot-dogs",
+    badge: "hit",
     image: IMG("HOT-DOG_becon.png"),
     edgeFade: false,
   },
