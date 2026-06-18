@@ -250,7 +250,8 @@ const MENU_ITEMS = [
   },
   {
     id: "pan-fried-chicken-dumplings",
-    name: "Жареные пельмени куриные",
+    name: "Жареные пельмени",
+    nameSubtitle: "Куриные",
     description: "Хрустящие жареные пельмени с куриной начинкой.",
     price: 130000,
     grammage: "200 г",
@@ -262,7 +263,8 @@ const MENU_ITEMS = [
   },
   {
     id: "pan-fried-pork-beef-dumplings",
-    name: "Жареные пельмени свинина говядина",
+    name: "Жареные пельмени",
+    nameSubtitle: "Свинина говядина",
     description: "Хрустящие жареные пельмени со свининой и говядиной.",
     price: 140000,
     grammage: "200 г",
@@ -861,7 +863,32 @@ function itemDisplayName(item) {
   if (item.category === "hot-dogs") {
     return `Хот-дог ${item.name}`;
   }
+  if (item.nameSubtitle) {
+    return `${item.name}. ${item.nameSubtitle}`;
+  }
   return item.name;
+}
+
+function itemNameHtml(item, className) {
+  const displayName = itemDisplayName(item);
+  if (!item.nameSubtitle) {
+    return `<h3 class="${className}">${displayName}</h3>`;
+  }
+  return `<h3 class="${className} menu-card__name--split">
+    <span class="menu-card__name-line">${item.name}</span>
+    <span class="menu-card__name-line menu-card__name-line--sub">${item.nameSubtitle}</span>
+  </h3>`;
+}
+
+function itemDetailTitleHtml(item) {
+  const displayName = itemDisplayName(item);
+  if (!item.nameSubtitle) {
+    return `<h2 class="detail-info__title">${displayName}</h2>`;
+  }
+  return `<h2 class="detail-info__title detail-info__title--split">
+    <span class="detail-info__title-line">${item.name}</span>
+    <span class="detail-info__title-line detail-info__title-line--sub">${item.nameSubtitle}</span>
+  </h2>`;
 }
 
 function isBoxItem(item) {
@@ -1004,7 +1031,7 @@ function renderMenuCard(item, index) {
       <div class="menu-card__body">
         ${headerHtml}
         <div class="menu-card__content">
-          <h3 class="menu-card__name">${itemDisplayName(item)}</h3>
+          ${itemNameHtml(item, "menu-card__name")}
           ${grammageHtml(item, "menu-card__grammage")}
           <p class="menu-card__desc">${item.description || ""}</p>
           ${sausageNoteHtml}
@@ -1120,7 +1147,7 @@ function renderDetailContent(item) {
     <div class="detail-gradient" aria-hidden="true"></div>
     <div class="detail-info">
       ${hitHtml}
-      <h2 class="detail-info__title">${itemDisplayName(item)}</h2>
+      ${itemDetailTitleHtml(item)}
       ${
         isHotDog
           ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>

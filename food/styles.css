@@ -507,6 +507,24 @@ a {
   color: #fff;
 }
 
+.menu-card__name--split {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+
+.menu-card__name-line {
+  display: block;
+  white-space: nowrap;
+}
+
+.menu-card__name-line--sub {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .menu-card__grammage {
   margin: 0;
   font-size: 0.75rem;
@@ -1012,6 +1030,23 @@ a {
   line-height: 1.2;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.detail-info__title--split {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  line-height: 1.15;
+}
+
+.detail-info__title-line {
+  display: block;
+}
+
+.detail-info__title-line--sub {
+  font-size: clamp(1.25rem, 4.5vw, 1.5rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.94);
 }
 
 .detail-info__grammage {
