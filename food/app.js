@@ -346,7 +346,7 @@ const MENU_ITEMS = [
     price: null,
     category: "burgers",
     badge: "hit",
-    image: IMG("burger-classic.png"),
+    image: IMG("burger-classic.png?v=20250618-01"),
   },
   {
     id: "cheeseburger",
@@ -356,7 +356,7 @@ const MENU_ITEMS = [
     price: null,
     category: "burgers",
     badge: "hit",
-    image: IMG("CHEESEBURGER.png"),
+    image: IMG("CHEESEBURGER.png?v=20250618-01"),
   },
   {
     id: "signature-burger",
