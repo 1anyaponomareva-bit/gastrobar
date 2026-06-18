@@ -374,7 +374,7 @@ const MENU_ITEMS = [
     description: "Хрустящее рыбное филе, салат, томат, лук и соус тартар.",
     price: null,
     category: "burgers",
-    image: IMG("fishburger.png"),
+    image: IMG("fishburger.png?v=20250618-01"),
   },
 
   // ——— ГРИЛЬ ———
