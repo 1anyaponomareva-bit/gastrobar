@@ -876,7 +876,7 @@ function itemNameHtml(item, className) {
   }
   return `<h3 class="${className} menu-card__name--split">
     <span class="menu-card__name-line">${item.name}</span>
-    <span class="menu-card__name-line menu-card__name-line--sub">${item.nameSubtitle}</span>
+    <span class="menu-card__name-line">${item.nameSubtitle}</span>
   </h3>`;
 }
 
@@ -887,7 +887,7 @@ function itemDetailTitleHtml(item) {
   }
   return `<h2 class="detail-info__title detail-info__title--split">
     <span class="detail-info__title-line">${item.name}</span>
-    <span class="detail-info__title-line detail-info__title-line--sub">${item.nameSubtitle}</span>
+    <span class="detail-info__title-line">${item.nameSubtitle}</span>
   </h2>`;
 }
 

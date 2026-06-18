@@ -519,12 +519,6 @@ a {
   white-space: nowrap;
 }
 
-.menu-card__name-line--sub {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.92);
-}
-
 .menu-card__grammage {
   margin: 0;
   font-size: 0.75rem;
@@ -1041,12 +1035,6 @@ a {
 
 .detail-info__title-line {
   display: block;
-}
-
-.detail-info__title-line--sub {
-  font-size: clamp(1.25rem, 4.5vw, 1.5rem);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.94);
 }
 
 .detail-info__grammage {
