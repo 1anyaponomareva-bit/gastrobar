@@ -77,16 +77,18 @@ const MENU_ITEMS = [
     id: "shrimp-tempura",
     name: "Креветки темпура",
     description: "Хрустящие креветки в темпуре с соусом сладкий чили.",
-    price: null,
     category: "snacks",
     image: IMG("shrimp-tempura.png"),
     imageScale: 1.74,
+    price: 140000,
+    grammage: "120 г",
   },
   {
     id: "chicken-nuggets",
     name: "Наггетсы",
     description: "Хрустящие наггетсы из куриного бедра.",
-    price: null,
+    price: 80000,
+    grammage: "200 г",
     category: "snacks",
     badge: "hit",
     image: IMG("NUGGETS.png"),
@@ -96,17 +98,19 @@ const MENU_ITEMS = [
     name: "Хрустящие рыбные кусочки",
     description:
       "Хрустящие кусочки рыбы Баса в панировке, подаются с соусом тартар.",
-    price: null,
     category: "snacks",
     badge: "hit",
     image: IMG("FISH-BITES.png"),
     imageFocusY: 58,
+    price: 100000,
+    grammage: "190 г",
   },
   {
     id: "french-fries",
     name: "Картофель фри",
     description: "Хрустящий картофель фри.",
-    price: null,
+    price: 40000,
+    grammage: "120 г",
     category: "snacks",
     image: IMG("FRENCH-FRIES.png"),
   },
@@ -591,6 +595,11 @@ function hitBadgeHtml(label) {
   `;
 }
 
+function grammageHtml(item, className) {
+  if (!item.grammage) return "";
+  return `<p class="${className}">${item.grammage}</p>`;
+}
+
 function getVisibleItems() {
   if (activeSection === "favorites") {
     return MENU_ITEMS.filter((item) => favoriteIds.includes(item.id));
@@ -835,6 +844,7 @@ function renderMenuCard(item, index) {
         ${headerHtml}
         <div class="menu-card__content">
           <h3 class="menu-card__name">${itemDisplayName(item)}</h3>
+          ${grammageHtml(item, "menu-card__grammage")}
           <p class="menu-card__desc">${item.description || ""}</p>
           ${sausageNoteHtml}
           <span class="menu-card__price">${priceLabel}</span>
@@ -937,6 +947,7 @@ function renderDetailContent(item) {
     <div class="detail-info">
       ${hitHtml}
       <h2 class="detail-info__title">${itemDisplayName(item)}</h2>
+      ${grammageHtml(item, "detail-info__grammage")}
       ${
         isHotDog
           ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>`

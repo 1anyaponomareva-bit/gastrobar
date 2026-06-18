@@ -445,6 +445,14 @@ a {
   color: #fff;
 }
 
+.menu-card__grammage {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .menu-card__desc {
   margin: 0;
   display: -webkit-box;
@@ -929,6 +937,15 @@ a {
   line-height: 1.2;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.detail-info__grammage {
+  margin: -0.5rem 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
 
 .detail-info__sausage {
