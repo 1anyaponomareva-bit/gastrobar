@@ -380,7 +380,7 @@ const MENU_ITEMS = [
     grammage: "370 г",
     category: "burgers",
     badge: "hit",
-    image: IMG("GASTROBURGER.png"),
+    image: IMG("GASTROBURGER.jpg?v=20250618-01"),
   },
   {
     id: "fish-burger",
