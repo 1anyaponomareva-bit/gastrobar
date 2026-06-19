@@ -426,6 +426,7 @@ const MENU_ITEMS = [
     description:
       "Свиная колбаска на гриле с картофелем фри, тушеной квашеной капустой и томатным соусом.",
     price: null,
+    grammage: "370 г",
     category: "grill",
     image: IMG("Bavarian Sausage.png"),
   },
@@ -435,6 +436,7 @@ const MENU_ITEMS = [
     description:
       "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
     price: null,
+    grammage: "370 г",
     category: "grill",
     image: IMG("Cheddar Jalapeño Sausage.png"),
   },
@@ -444,6 +446,7 @@ const MENU_ITEMS = [
     description:
       "Куриная колбаска на гриле с картофелем фри, тушёной квашеной капустой и томатным соусом.",
     price: null,
+    grammage: "370 г",
     category: "grill",
     image: IMG("Grilled Chicken Sausage.png"),
   },
