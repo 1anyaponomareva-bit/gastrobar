@@ -4,15 +4,16 @@ const NO_IMAGE_LABEL = "нет изображения";
 
 const FAVORITES_STORAGE_KEY = "gastrofood-favorites";
 
-const FOOD_CATEGORY_IDS = [
-  "snacks",
-  "dumplings",
+const COMBO_CATEGORY_IDS = ["combos", "kids"];
+
+const MAIN_MENU_CATEGORY_ORDER = [
   "hot-dogs",
   "burgers",
+  ...COMBO_CATEGORY_IDS,
+  "snacks",
   "grill",
+  "dumplings",
 ];
-
-const COMBO_CATEGORY_IDS = ["combos", "kids"];
 
 const CATEGORY_LABELS = {
   snacks: "Закуски",
@@ -26,8 +27,7 @@ const CATEGORY_LABELS = {
 
 const FOOD_CATEGORIES = [
   { id: "all", label: "Все" },
-  ...FOOD_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
-  ...COMBO_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
+  ...MAIN_MENU_CATEGORY_ORDER.map((id) => ({ id, label: CATEGORY_LABELS[id] })),
 ];
 
 const COMBO_CATEGORIES = [
@@ -43,15 +43,7 @@ const BOTTOM_NAV = [
   { id: "games", label: "Игры", icon: "🎯", href: "/games" },
 ];
 
-const CATEGORY_ORDER = [
-  "snacks",
-  "dumplings",
-  "hot-dogs",
-  "burgers",
-  "grill",
-  "combos",
-  "kids",
-];
+const CATEGORY_ORDER = MAIN_MENU_CATEGORY_ORDER;
 
 const HOT_DOG_SAUSAGE_STANDARD = {
   id: "standard-pork",
@@ -628,7 +620,7 @@ function getSectionCategories() {
 function getSectionCategoryOrder() {
   if (activeSection === "combo") return COMBO_CATEGORY_IDS;
   if (activeCategory === "all") {
-    return [...FOOD_CATEGORY_IDS, ...COMBO_CATEGORY_IDS];
+    return MAIN_MENU_CATEGORY_ORDER;
   }
   return [activeCategory];
 }
@@ -1134,7 +1126,7 @@ function renderDetailContent(item) {
     sausageOptions.find((o) => o.id === defaultSausageId)?.label ??
     defaultSausage?.label ??
     "";
-  const sausagePickerHtml = isHotDog
+  const sausagePickerHtml = hasHotDogSausage
     ? `
       <div class="detail-sausage-picker" id="detail-sausage-picker" aria-label="Выберите сосиску">
         <p class="detail-sausage-picker__title">Выберите сосиску</p>
@@ -1170,7 +1162,7 @@ function renderDetailContent(item) {
       ${hitHtml}
       ${itemDetailTitleHtml(item)}
       ${
-        isHotDog
+        hasHotDogSausage
           ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
              <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>`
           : hasSauce
@@ -1180,7 +1172,7 @@ function renderDetailContent(item) {
       }
       <p class="detail-info__desc">${item.description || ""}</p>
       ${sausagePickerHtml}
-      <p class="detail-info__price" id="${isHotDog ? "detail-hotdog-price" : "detail-item-price"}">${priceLabel}</p>
+      <p class="detail-info__price" id="${hasHotDogSausage ? "detail-hotdog-price" : "detail-item-price"}">${priceLabel}</p>
     </div>
   `;
 }
