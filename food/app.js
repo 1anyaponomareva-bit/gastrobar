@@ -338,7 +338,7 @@ const MENU_ITEMS = [
     name: "Чизстейк Дог",
     description:
       "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
-    price: 130000,
+    price: 150000,
     grammage: "280 г",
     category: "hot-dogs",
     badge: "hit",
