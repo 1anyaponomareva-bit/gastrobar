@@ -338,6 +338,18 @@ const MENU_ITEMS = [
     image: IMG("HOT-DOG_bbq.png"),
     edgeFade: false,
   },
+  {
+    id: "philly-cheesesteak",
+    name: "Чизстейк Дог",
+    description:
+      "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
+    price: null,
+    category: "hot-dogs",
+    badge: "hit",
+    hotDogPrefix: false,
+    image: IMG("phillycheesesteak.png"),
+    edgeFade: false,
+  },
 
   // ——— БУРГЕРЫ ———
   {
@@ -454,16 +466,6 @@ const MENU_ITEMS = [
   },
 
   // ——— СЭНДВИЧИ И РАПЫ ———
-  {
-    id: "philly-cheesesteak",
-    name: "Фили Чизстейк",
-    description:
-      "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
-    price: null,
-    category: "wraps",
-    badge: "hit",
-    image: IMG("phillycheesesteak.png"),
-  },
   {
     id: "classic-wrap",
     name: "Классический рап",
@@ -861,6 +863,7 @@ function renderCategoryTabs() {
 
 function itemDisplayName(item) {
   if (item.category === "hot-dogs") {
+    if (item.hotDogPrefix === false) return item.name;
     return `Хот-дог ${item.name}`;
   }
   if (item.nameSubtitle) {
