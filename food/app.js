@@ -346,10 +346,12 @@ const MENU_ITEMS = [
     name: "Чизстейк Дог",
     description:
       "Тонко нарезанный говяжий стейк, расплавленный сыр, жареный лук и болгарский перец.",
-    price: null,
+    price: 130000,
+    grammage: "280 г",
     category: "hot-dogs",
     badge: "hit",
     hotDogPrefix: false,
+    hotDogNoSausage: true,
     image: IMG("phillycheesesteak.png"),
     edgeFade: false,
   },
@@ -677,7 +679,9 @@ function formatItemPrice(item) {
 }
 
 function getHotDogSausageOptions(item) {
-  return item?.sausageOptions || HOT_DOG_SAUSAGE_OPTIONS;
+  if (item.hotDogNoSausage) return [];
+  if (item.sausageOptions) return item.sausageOptions;
+  return HOT_DOG_SAUSAGE_OPTIONS;
 }
 
 function getHotDogSausagePriceRange(options) {
@@ -701,7 +705,11 @@ function hotDogCardPriceLabel(item) {
 }
 
 function hasPickerCardLayout(item) {
-  return item.category === "hot-dogs" || item.sauceOptions === true;
+  if (item.sauceOptions === true) return true;
+  if (item.category === "hot-dogs") {
+    return getHotDogSausageOptions(item).length > 0;
+  }
+  return false;
 }
 
 function getWingsSauceOptions() {
@@ -979,6 +987,7 @@ function renderDetailImage(item) {
 
 function renderHotDogSausageListNote(item) {
   const options = getHotDogSausageOptions(item);
+  if (options.length === 0) return "";
   return `
     <div class="menu-card__sausage" aria-label="Сосиска на выбор">
       <span class="menu-card__sausage-label">Сосиска на выбор</span>
@@ -1007,7 +1016,7 @@ function renderMenuCard(item, index) {
       : `${formatItemPrice(item)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
-    item.category === "hot-dogs"
+    item.category === "hot-dogs" && getHotDogSausageOptions(item).length > 0
       ? renderHotDogSausageListNote(item)
       : item.sauceOptions
         ? renderSauceListNote()
@@ -1108,9 +1117,10 @@ function renderDetailContent(item) {
   const isHotDog = item.category === "hot-dogs";
   const hasSauce = item.sauceOptions === true;
   const sausageOptions = getHotDogSausageOptions(item);
+  const hasHotDogSausage = isHotDog && sausageOptions.length > 0;
   const defaultSausage = sausageOptions[0];
   const defaultSauce = WINGS_SAUCE_OPTIONS[0];
-  const priceLabel = isHotDog
+  const priceLabel = hasHotDogSausage
     ? `${formatVnd(defaultSausage?.price)} VND`
     : `${formatItemPrice(item)} VND`;
   const hitHtml =
