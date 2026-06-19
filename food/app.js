@@ -10,7 +10,6 @@ const FOOD_CATEGORY_IDS = [
   "hot-dogs",
   "burgers",
   "grill",
-  "wraps",
 ];
 
 const COMBO_CATEGORY_IDS = ["combos", "kids"];
@@ -21,7 +20,6 @@ const CATEGORY_LABELS = {
   "hot-dogs": "Хот-доги",
   burgers: "Бургеры",
   grill: "Гриль",
-  wraps: "Сэндвичи и рапы",
   kids: "Детские комбо",
   combos: "Комбо наборы",
 };
@@ -51,7 +49,6 @@ const CATEGORY_ORDER = [
   "hot-dogs",
   "burgers",
   "grill",
-  "wraps",
   "combos",
   "kids",
 ];
@@ -463,32 +460,6 @@ const MENU_ITEMS = [
     price: null,
     category: "grill",
     image: IMG("Grilled Chicken Sausage.png"),
-  },
-
-  // ——— СЭНДВИЧИ И РАПЫ ———
-  {
-    id: "classic-wrap",
-    name: "Классический рап",
-    description: "Курица на гриле, свежие овощи и фирменный соус в тортилье.",
-    price: null,
-    category: "wraps",
-    image: IMG("wrap_kur_classic.png"),
-  },
-  {
-    id: "chicken-caesar-wrap",
-    name: "Цезарь-рап",
-    description: "Курица на гриле, салат, пармезан и соус Цезарь.",
-    price: null,
-    category: "wraps",
-    image: IMG("wrap_kur.png"),
-  },
-  {
-    id: "crispy-fish-wrap",
-    name: "Рап с хрустящей рыбой",
-    description: "Хрустящая рыба Баса, свежие овощи и соус тартар.",
-    price: null,
-    category: "wraps",
-    image: IMG("wrap.png"),
   },
 
   // ——— КОМБО НАБОРЫ ———
