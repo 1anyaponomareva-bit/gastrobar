@@ -139,6 +139,12 @@ const CLASSIC_HOT_DOG_SAUSAGE_OPTIONS = [
   },
 ];
 
+const WINGS_SAUCE_OPTIONS = [
+  { id: "classic", label: "Классические" },
+  { id: "bbq", label: "Барбекю" },
+  { id: "spicy", label: "Острые" },
+];
+
 const MENU_ITEMS = [
   // ——— ЗАКУСКИ ———
   {
@@ -410,29 +416,14 @@ const MENU_ITEMS = [
     image: IMG("pork_kebab.png"),
   },
   {
-    id: "original-wings",
-    name: "Куриные крылья, классические",
+    id: "chicken-wings",
+    name: "Куриные крылья",
     description:
       "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
     price: null,
     category: "grill",
+    sauceOptions: true,
     image: IMG("Original Wings .png"),
-  },
-  {
-    id: "bbq-wings",
-    name: "Куриные крылья, барбекю",
-    description: "Куриные крылья, маринованные в пиве и покрытые соусом BBQ.",
-    price: null,
-    category: "grill",
-    image: IMG("BBQ Wings.png"),
-  },
-  {
-    id: "spicy-wings",
-    name: "Куриные крылья, острые",
-    description: "Куриные крылья в пивном маринаде с острой глазурью чили.",
-    price: null,
-    category: "grill",
-    image: IMG("Spicy Wings.png"),
   },
   {
     id: "bavarian-sausage",
@@ -709,6 +700,44 @@ function hotDogCardPriceLabel(item) {
   return `${formatHotDogListPrice(item)} VND`;
 }
 
+function hasPickerCardLayout(item) {
+  return item.category === "hot-dogs" || item.sauceOptions === true;
+}
+
+function getWingsSauceOptions() {
+  return WINGS_SAUCE_OPTIONS;
+}
+
+function renderSauceListNote() {
+  return `
+    <div class="menu-card__sausage" aria-label="Соус на выбор">
+      <span class="menu-card__sausage-label">Соус на выбор</span>
+      <span class="menu-card__sausage-options menu-card__sausage-options--inline">
+        ${WINGS_SAUCE_OPTIONS.map(
+          (o) =>
+            `<span class="menu-card__sausage-chip menu-card__sausage-chip--compact">${o.label}</span>`,
+        ).join("")}
+      </span>
+    </div>
+  `;
+}
+
+function renderSaucePickerHtml() {
+  return `
+    <div class="detail-sausage-picker" id="detail-sauce-picker" aria-label="Выберите соус">
+      <p class="detail-sausage-picker__title">Соус на выбор</p>
+      <div class="detail-sausage-picker__options detail-sausage-picker__options--inline">
+        ${WINGS_SAUCE_OPTIONS.map((o, idx) => {
+          const active = idx === 0;
+          return `<button type="button" class="detail-sausage-option detail-sausage-option--compact${
+            active ? " is-active" : ""
+          }" data-sauce="${o.id}">${o.label}</button>`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function hitBadgeHtml(label) {
   return `
     <span class="hit-badge" aria-hidden="true">
@@ -978,7 +1007,11 @@ function renderMenuCard(item, index) {
       : `${formatItemPrice(item)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
-    item.category === "hot-dogs" ? renderHotDogSausageListNote(item) : "";
+    item.category === "hot-dogs"
+      ? renderHotDogSausageListNote(item)
+      : item.sauceOptions
+        ? renderSauceListNote()
+        : "";
   const badgeSlot =
     item.badge === "hit"
       ? `<div class="menu-card__header-badge">${hitHtml}</div>`
@@ -993,7 +1026,7 @@ function renderMenuCard(item, index) {
   return `
     <article
       class="menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
-        item.category === "hot-dogs" ? " menu-card--hot-dog" : ""
+        hasPickerCardLayout(item) ? " menu-card--hot-dog" : ""
       }${isBoxItem(item) ? " menu-card--box" : ""}${
         isPierogiItem(item) ? " menu-card--pierogi" : ""
       }"
@@ -1073,8 +1106,10 @@ function renderMenuList() {
 
 function renderDetailContent(item) {
   const isHotDog = item.category === "hot-dogs";
+  const hasSauce = item.sauceOptions === true;
   const sausageOptions = getHotDogSausageOptions(item);
   const defaultSausage = sausageOptions[0];
+  const defaultSauce = WINGS_SAUCE_OPTIONS[0];
   const priceLabel = isHotDog
     ? `${formatVnd(defaultSausage?.price)} VND`
     : `${formatItemPrice(item)} VND`;
@@ -1112,7 +1147,9 @@ function renderDetailContent(item) {
         </div>
       </div>
     `
-    : "";
+    : hasSauce
+      ? renderSaucePickerHtml()
+      : "";
 
   return `
     <div class="${detailImageWrapClass(item)}">
@@ -1126,11 +1163,14 @@ function renderDetailContent(item) {
         isHotDog
           ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
              <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>`
-          : grammageHtml(item, "detail-info__grammage")
+          : hasSauce
+            ? `<p class="detail-info__sausage" id="detail-sauce-label">${defaultSauce?.label || ""}</p>
+               ${grammageHtml(item, "detail-info__grammage")}`
+            : grammageHtml(item, "detail-info__grammage")
       }
       <p class="detail-info__desc">${item.description || ""}</p>
       ${sausagePickerHtml}
-      <p class="detail-info__price" id="detail-hotdog-price">${priceLabel}</p>
+      <p class="detail-info__price" id="${isHotDog ? "detail-hotdog-price" : "detail-item-price"}">${priceLabel}</p>
     </div>
   `;
 }
@@ -1173,6 +1213,33 @@ function bindHotDogSausagePicker(item) {
   });
 }
 
+function bindSaucePicker() {
+  const picker = document.getElementById("detail-sauce-picker");
+  const labelEl = document.getElementById("detail-sauce-label");
+  if (!picker || !labelEl) return;
+
+  const buttons = Array.from(picker.querySelectorAll("[data-sauce]"));
+  if (buttons.length === 0) return;
+
+  const setSelected = (id) => {
+    buttons.forEach((btn) => {
+      const btnId = btn.getAttribute("data-sauce") || "";
+      btn.classList.toggle("is-active", btnId === id);
+    });
+    const opt = WINGS_SAUCE_OPTIONS.find((o) => o.id === id);
+    if (opt) labelEl.textContent = opt.label;
+  };
+
+  setSelected(WINGS_SAUCE_OPTIONS[0]?.id ?? "classic");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-sauce") || "classic";
+      setSelected(id);
+    });
+  });
+}
+
 function openDetail(index) {
   const overlay = document.getElementById("detail-overlay");
   const stage = document.getElementById("detail-stage");
@@ -1183,6 +1250,7 @@ function openDetail(index) {
   detailIndex = index;
   stage.innerHTML = renderDetailContent(item);
   bindHotDogSausagePicker(item);
+  bindSaucePicker();
   bindDetailFavorite(item);
   overlay.classList.remove("is-hidden", "is-closing");
   overlay.setAttribute("aria-hidden", "false");

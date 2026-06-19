@@ -519,6 +519,28 @@ a {
   white-space: nowrap;
 }
 
+.menu-card__sausage-options--inline {
+  flex-flow: row wrap;
+}
+
+.menu-card__sausage-chip--compact {
+  flex-direction: row;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.detail-sausage-picker__options--inline {
+  flex-wrap: wrap;
+}
+
+.detail-sausage-option--compact {
+  flex-direction: row;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 9999px;
+}
+
 .menu-card__grammage {
   margin: 0;
   font-size: 0.75rem;
