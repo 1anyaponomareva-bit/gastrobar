@@ -37,16 +37,12 @@ const BAR_LIST_TOP = APP_LIST_TOP_PX;
 const HOOKAH_LIST_TOP = APP_LIST_TOP_PX;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
-/** Напитки, затем снеки — как в MENU_ITEMS */
+/** Напитки */
 function filterBarItems(items: MenuItem[], categoryId: BarCategoryId): MenuItem[] {
   const drinks = items.filter((i) => i.category === "cocktail");
-  const foods = items.filter((i) => i.category === "food");
 
   if (categoryId === "all") {
-    return [...drinks, ...foods];
-  }
-  if (categoryId === "snacks") {
-    return foods;
+    return drinks;
   }
   return drinks.filter((i) => i.barSubcategory === categoryId);
 }

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { MenuPeriod } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { getListNavForProductId } from "@/lib/bonusProductNav";
+import { goToGastrofoodSnacks, isGastrofoodSnackProductId } from "@/lib/gastrofoodNav";
 import type { BarCategoryId } from "@/components/CategoryTabs";
 
 export type PendingListCategory = { bar: BarCategoryId };
@@ -30,6 +31,10 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
 
   const goToProduct = useCallback(
     (period: MenuPeriod, productId: string) => {
+      if (isGastrofoodSnackProductId(productId)) {
+        goToGastrofoodSnacks();
+        return;
+      }
       const nav = getListNavForProductId(productId);
       if (nav) {
         setPeriod(nav.period);
@@ -46,6 +51,10 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
 
   const goToBarCategory = useCallback(
     (categoryTab: BarCategoryId) => {
+      if (categoryTab === "snacks") {
+        goToGastrofoodSnacks();
+        return;
+      }
       setPeriod("bar");
       setPendingListCategory({ bar: categoryTab });
       setHighlightProductId(null);

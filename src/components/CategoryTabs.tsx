@@ -18,7 +18,6 @@ const BAR_TAB_IDS: ("all" | BarSubcategory)[] = [
   "tincture",
   "spirits",
   "soft",
-  "snacks",
 ];
 
 const BAR_TAB_KEYS: Record<"all" | BarSubcategory, string> = {
@@ -29,10 +28,9 @@ const BAR_TAB_KEYS: Record<"all" | BarSubcategory, string> = {
   tincture: "cat_tincture",
   spirits: "cat_spirits",
   soft: "cat_soft",
-  snacks: "cat_snacks",
 };
 
-export type BarCategoryId = "all" | BarSubcategory;
+export type BarCategoryId = "all" | BarSubcategory | "snacks";
 
 export function CategoryTabs({
   value,

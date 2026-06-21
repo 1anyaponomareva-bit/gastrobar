@@ -1,4 +1,4 @@
-export type BarSubcategory = "cocktail" | "wine" | "beer" | "soft" | "spirits" | "tincture" | "snacks";
+export type BarSubcategory = "cocktail" | "wine" | "beer" | "soft" | "spirits" | "tincture";
 export type MenuSubcategory = "snack" | "sausage" | "dumpling";
 
 /** Группа вкуса кальяна — вкладки сортировки в меню. */
@@ -48,7 +48,7 @@ export const TINCTURE_RIM_FOCUS_IDS = new Set<string>([
 ]);
 
 export const MENU_ITEMS: MenuItem[] = [
-  // БАР: коктейли → вино → пиво → настойки → шоты → безалкогольные → снеки
+  // БАР: коктейли → вино → пиво → настойки → шоты → безалкогольные
   {
     id: "whisky-sour",
     name: "Виски Сауэр",
@@ -707,62 +707,6 @@ export const MENU_ITEMS: MenuItem[] = [
     price: "15000",
     grammage: "350 мл",
     barSubcategory: "soft",
-  },
-  // СНЕКИ в общем списке «Бар» после напитков
-  {
-    id: "chicken-jerky",
-    name: "Джерки куриные",
-    description: "Пряные вяленые куриные джерки. Идеально к пиву.",
-    image: "/menu/food-chicken-jerky-horizontal-hero.png",
-    imageList: "/menu/food-chicken-jerky-horizontal-hero.png",
-    category: "food",
-    price: "95000",
-    menuSubcategory: "snack",
-    pairing: ["beer", "cocktail"],
-  },
-  {
-    id: "beef-jerky",
-    name: "Джерки говядина",
-    description: "Вяленая говядина с пряностями. Насыщенный вкус к пиву.",
-    image: "/menu/food-beef-jerky-horizontal-hero.png",
-    imageList: "/menu/food-beef-jerky-horizontal-hero.png",
-    category: "food",
-    price: "115000",
-    menuSubcategory: "snack",
-    pairing: ["beer", "cocktail"],
-  },
-  {
-    id: "pistachios",
-    name: "Фисташки",
-    description: "Обжаренные солёные фисташки к пиву и коктейлям.",
-    image: "/menu/snack_pistachios_ultra.png",
-    imageList: "/menu/food-pistachios-horizontal-hero.png",
-    category: "food",
-    price: "55000",
-    menuSubcategory: "snack",
-    pairing: ["beer", "cocktail"],
-  },
-  {
-    id: "peanuts",
-    name: "Арахис",
-    description: "Хрустящий солёный арахис. Классический барный снэк.",
-    image: "/menu/snack_peanuts_ultra.png",
-    imageList: "/menu/food-peanuts-horizontal-hero.png",
-    category: "food",
-    price: "45000",
-    menuSubcategory: "snack",
-    pairing: ["beer", "cocktail"],
-  },
-  {
-    id: "dried-squid",
-    name: "Сушеный кальмар",
-    description: "Вяленый кальмар. Классическая закуска к пиву.",
-    image: "/menu/food-dried-squid-horizontal-hero.png",
-    imageList: "/menu/food-dried-squid-horizontal-hero.png",
-    category: "food",
-    price: "85000",
-    menuSubcategory: "snack",
-    pairing: ["beer"],
   },
 ];
 

@@ -1,5 +1,8 @@
 const IMG = (file) => (file ? `/food/menu/${encodeURI(file)}` : null);
 
+/** Картинки из общего меню бара (`public/menu/…`). */
+const BAR_MENU_IMG = (path) => path;
+
 const NO_IMAGE_LABEL = "нет изображения";
 
 const FAVORITES_STORAGE_KEY = "gastrofood-favorites";
@@ -16,7 +19,7 @@ const MAIN_MENU_CATEGORY_ORDER = [
 ];
 
 const CATEGORY_LABELS = {
-  snacks: "Закуски",
+  snacks: "Снеки",
   dumplings: "Пельмени и вареники",
   "hot-dogs": "Хот-доги",
   burgers: "Бургеры",
@@ -138,7 +141,7 @@ const WINGS_SAUCE_OPTIONS = [
 ];
 
 const MENU_ITEMS = [
-  // ——— ЗАКУСКИ ———
+  // ——— СНЕКИ ———
   {
     id: "mozzarella-sticks",
     name: "Сырные палочки",
@@ -198,6 +201,46 @@ const MENU_ITEMS = [
     price: null,
     category: "snacks",
     image: IMG("Creamy Chicken Soup.png"),
+  },
+  {
+    id: "chicken-jerky",
+    name: "Джерки куриные",
+    description: "Пряные вяленые куриные джерки. Идеально к пиву.",
+    price: 95000,
+    category: "snacks",
+    image: BAR_MENU_IMG("/menu/food-chicken-jerky-horizontal-hero.png"),
+  },
+  {
+    id: "beef-jerky",
+    name: "Джерки говядина",
+    description: "Вяленая говядина с пряностями. Насыщенный вкус к пиву.",
+    price: 115000,
+    category: "snacks",
+    image: BAR_MENU_IMG("/menu/food-beef-jerky-horizontal-hero.png"),
+  },
+  {
+    id: "pistachios",
+    name: "Фисташки",
+    description: "Обжаренные солёные фисташки к пиву и коктейлям.",
+    price: 55000,
+    category: "snacks",
+    image: BAR_MENU_IMG("/menu/snack_pistachios_ultra.png"),
+  },
+  {
+    id: "peanuts",
+    name: "Арахис",
+    description: "Хрустящий солёный арахис. Классический барный снэк.",
+    price: 45000,
+    category: "snacks",
+    image: BAR_MENU_IMG("/menu/snack_peanuts_ultra.png"),
+  },
+  {
+    id: "dried-squid",
+    name: "Сушеный кальмар",
+    description: "Вяленый кальмар. Классическая закуска к пиву.",
+    price: 85000,
+    category: "snacks",
+    image: BAR_MENU_IMG("/menu/food-dried-squid-horizontal-hero.png"),
   },
 
   // ——— ПЕЛЬМЕНИ И ВАРЕНИКИ ———
@@ -632,11 +675,17 @@ function getSectionCategoryOrder() {
 }
 
 function readSectionFromUrl() {
-  const section = new URLSearchParams(window.location.search).get("section");
+  const params = new URLSearchParams(window.location.search);
+  const section = params.get("section");
   if (section === "combo" || section === "favorites") {
     activeSection = section;
   } else {
     activeSection = "food";
+  }
+
+  const category = params.get("category");
+  if (category && Object.prototype.hasOwnProperty.call(CATEGORY_LABELS, category)) {
+    activeCategory = category;
   }
 }
 
