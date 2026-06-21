@@ -4,31 +4,35 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { CONFIG } from "@/lib/config";
 import { getAssetUrl } from "@/lib/appVersion";
-import { GASTROBAR_LOGO_HEIGHT_PX, GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
+import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
 import { cn } from "@/lib/utils";
 
-const CHOICE_LOGO_HEIGHT_PX = 72;
-const CHOICE_LOGO_MAX_WIDTH = "min(220px, calc(100vw - 3.5rem))";
+const CHOICE_LOGO_HEIGHT_PX = 88;
+const CHOICE_LOGO_MAX_WIDTH = "min(260px, calc(100vw - 3rem))";
+const CHOICE_ILLUSTRATION_HEIGHT_PX = 60;
+const CHOICE_ILLUSTRATION_MAX_WIDTH = "min(140px, 42vw)";
 
 const CHOICE_CARD_CLASS =
-  "group relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-4 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
+  "group relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3.5 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
 
 function ChoiceCard({
   href,
-  icon,
   title,
   description,
   logoSrc,
   logoAlt,
+  illustrationSrc,
+  illustrationAlt,
   accentClass,
 }: {
   href: string;
-  icon: string;
   title: string;
   description: string;
   logoSrc: string;
   logoAlt: string;
+  illustrationSrc: string;
+  illustrationAlt: string;
   accentClass: string;
 }) {
   return (
@@ -52,9 +56,17 @@ function ChoiceCard({
           loading="eager"
           decoding="async"
         />
-        <span className="text-2xl leading-none" aria-hidden>
-          {icon}
-        </span>
+        <img
+          src={illustrationSrc}
+          alt={illustrationAlt}
+          className="w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]"
+          style={{
+            height: CHOICE_ILLUSTRATION_HEIGHT_PX,
+            maxWidth: CHOICE_ILLUSTRATION_MAX_WIDTH,
+          }}
+          loading="eager"
+          decoding="async"
+        />
         <span className="text-lg font-semibold tracking-tight text-white">{title}</span>
         <span className="line-clamp-2 max-w-[16rem] text-xs leading-snug text-white/65">
           {description}
@@ -92,20 +104,22 @@ export function MenuChoiceScreen() {
         <div className="flex w-full max-w-sm flex-col gap-3">
           <ChoiceCard
             href="/food"
-            icon="🍔"
             title={t("tab_food")}
             description={t("menu_chooser_food_desc")}
             logoSrc="/food/menu/GASTROFOOD.png"
             logoAlt="GASTROFOOD"
+            illustrationSrc={getAssetUrl(CONFIG.menuChooserFoodIllustration)}
+            illustrationAlt={t("tab_food")}
             accentClass="hover:shadow-[0_24px_70px_rgba(248,214,109,0.14)]"
           />
           <ChoiceCard
             href="/"
-            icon="🍸"
             title={t("bar")}
             description={t("menu_chooser_bar_desc")}
             logoSrc={getAssetUrl(CONFIG.logoSrc)}
             logoAlt="GASTROBAR"
+            illustrationSrc={getAssetUrl(CONFIG.menuChooserBarIllustration)}
+            illustrationAlt={t("bar")}
             accentClass="hover:shadow-[0_24px_70px_rgba(127,180,255,0.14)]"
           />
         </div>
