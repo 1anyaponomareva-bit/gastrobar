@@ -8,13 +8,16 @@ import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
 import { cn } from "@/lib/utils";
 
-const CHOICE_LOGO_HEIGHT_PX = 88;
-const CHOICE_LOGO_MAX_WIDTH = "min(260px, calc(100vw - 3rem))";
+const CHOICE_LOGO_HEIGHT_PX = 108;
+const CHOICE_LOGO_MAX_WIDTH = "min(300px, calc(100vw - 2.5rem))";
 const CHOICE_ILLUSTRATION_HEIGHT_PX = 60;
 const CHOICE_ILLUSTRATION_MAX_WIDTH = "min(140px, 42vw)";
 
+const ILLUSTRATION_SOFT_EDGE_MASK =
+  "radial-gradient(ellipse 92% 84% at 50% 50%, #000 32%, transparent 72%)";
+
 const CHOICE_CARD_CLASS =
-  "group relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3.5 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
+  "group relative flex w-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
 
 function ChoiceCard({
   href,
@@ -24,6 +27,7 @@ function ChoiceCard({
   logoAlt,
   illustrationSrc,
   illustrationAlt,
+  illustrationSoftEdges = false,
   accentClass,
 }: {
   href: string;
@@ -33,8 +37,16 @@ function ChoiceCard({
   logoAlt: string;
   illustrationSrc: string;
   illustrationAlt: string;
+  illustrationSoftEdges?: boolean;
   accentClass: string;
 }) {
+  const illustrationWrapStyle = illustrationSoftEdges
+    ? {
+        WebkitMaskImage: ILLUSTRATION_SOFT_EDGE_MASK,
+        maskImage: ILLUSTRATION_SOFT_EDGE_MASK,
+      }
+    : undefined;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -56,17 +68,28 @@ function ChoiceCard({
           loading="eager"
           decoding="async"
         />
-        <img
-          src={illustrationSrc}
-          alt={illustrationAlt}
-          className="w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]"
-          style={{
-            height: CHOICE_ILLUSTRATION_HEIGHT_PX,
-            maxWidth: CHOICE_ILLUSTRATION_MAX_WIDTH,
-          }}
-          loading="eager"
-          decoding="async"
-        />
+        <div
+          className={cn(
+            "flex items-center justify-center",
+            illustrationSoftEdges && "px-1",
+          )}
+          style={illustrationWrapStyle}
+        >
+          <img
+            src={illustrationSrc}
+            alt={illustrationAlt}
+            className={cn(
+              "w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]",
+              illustrationSoftEdges && "scale-[1.04]",
+            )}
+            style={{
+              height: CHOICE_ILLUSTRATION_HEIGHT_PX,
+              maxWidth: CHOICE_ILLUSTRATION_MAX_WIDTH,
+            }}
+            loading="eager"
+            decoding="async"
+          />
+        </div>
         <span className="text-lg font-semibold tracking-tight text-white">{title}</span>
         <span className="line-clamp-2 max-w-[16rem] text-xs leading-snug text-white/65">
           {description}
@@ -110,6 +133,7 @@ export function MenuChoiceScreen() {
             logoAlt="GASTROFOOD"
             illustrationSrc={getAssetUrl(CONFIG.menuChooserFoodIllustration)}
             illustrationAlt={t("tab_food")}
+            illustrationSoftEdges
             accentClass="hover:shadow-[0_24px_70px_rgba(248,214,109,0.14)]"
           />
           <ChoiceCard
