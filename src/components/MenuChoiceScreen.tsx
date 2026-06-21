@@ -6,6 +6,7 @@ import { CONFIG } from "@/lib/config";
 import { getAssetUrl } from "@/lib/appVersion";
 import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
+import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
 import { cn } from "@/lib/utils";
 
 const CHOICE_LOGO_HEIGHT_PX = 108;
@@ -111,7 +112,11 @@ export function MenuChoiceScreen() {
         aria-hidden
       />
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 py-3">
+      <div className="relative z-20 flex w-full justify-end pb-2">
+        <MenuChooserLanguageFlags />
+      </div>
+
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 py-1">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
