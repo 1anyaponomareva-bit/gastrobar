@@ -56,6 +56,10 @@ function isDurakPath(path: string): boolean {
   return path === "/durak" || path.startsWith("/durak/");
 }
 
+function isMenuChooserPath(path: string): boolean {
+  return path === "/start";
+}
+
 export function PromoBanner() {
   const { t } = useTranslation();
   const pathname = usePathname() ?? "";
@@ -72,7 +76,7 @@ export function PromoBanner() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (isDurakPath(pathname)) return;
+    if (isDurakPath(pathname) || isMenuChooserPath(pathname)) return;
 
     const last = getLastShownAt();
     if (last != null && isOnCooldown(last)) return;

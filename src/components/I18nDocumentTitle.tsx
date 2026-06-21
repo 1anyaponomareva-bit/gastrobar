@@ -9,6 +9,10 @@ export function I18nDocumentTitle() {
   const pathname = usePathname() ?? "/";
 
   useEffect(() => {
+    if (pathname === "/start") {
+      document.title = t("menu_chooser_meta_title");
+      return;
+    }
     if (pathname === "/games") {
       document.title = `${t("games_meta_title")}`;
       return;
