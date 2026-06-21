@@ -16,6 +16,7 @@ const CHOICE_CARD_CLASS =
 
 function ChoiceCard({
   href,
+  icon,
   title,
   description,
   logoSrc,
@@ -23,6 +24,7 @@ function ChoiceCard({
   accentClass,
 }: {
   href: string;
+  icon: string;
   title: string;
   description: string;
   logoSrc: string;
@@ -50,6 +52,9 @@ function ChoiceCard({
           loading="eager"
           decoding="async"
         />
+        <span className="text-[1.75rem] leading-none" aria-hidden>
+          {icon}
+        </span>
         <span className="text-xl font-semibold tracking-tight text-white">{title}</span>
         <span className="max-w-[17rem] text-sm leading-snug text-white/65">{description}</span>
       </Link>
@@ -85,6 +90,7 @@ export function MenuChoiceScreen() {
         <div className="flex w-full max-w-sm flex-col gap-4">
           <ChoiceCard
             href="/food"
+            icon="🍔"
             title={t("tab_food")}
             description={t("menu_chooser_food_desc")}
             logoSrc="/food/menu/GASTROFOOD.png"
@@ -93,6 +99,7 @@ export function MenuChoiceScreen() {
           />
           <ChoiceCard
             href="/"
+            icon="🍸"
             title={t("bar")}
             description={t("menu_chooser_bar_desc")}
             logoSrc={getAssetUrl(CONFIG.logoSrc)}
