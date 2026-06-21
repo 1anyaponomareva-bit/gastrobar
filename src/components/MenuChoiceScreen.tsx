@@ -10,14 +10,14 @@ import { cn } from "@/lib/utils";
 
 const CHOICE_LOGO_HEIGHT_PX = 108;
 const CHOICE_LOGO_MAX_WIDTH = "min(300px, calc(100vw - 2.5rem))";
-const CHOICE_ILLUSTRATION_HEIGHT_PX = 60;
-const CHOICE_ILLUSTRATION_MAX_WIDTH = "min(140px, 42vw)";
+const CHOICE_ILLUSTRATION_HEIGHT_PX = 52;
+const CHOICE_ILLUSTRATION_MAX_WIDTH = "min(130px, 40vw)";
 
 const ILLUSTRATION_SOFT_EDGE_MASK =
   "radial-gradient(ellipse 92% 84% at 50% 50%, #000 32%, transparent 72%)";
 
 const CHOICE_CARD_CLASS =
-  "group relative flex w-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
+  "group relative flex w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-center shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1] active:scale-[0.98]";
 
 function ChoiceCard({
   href,
@@ -55,43 +55,45 @@ function ChoiceCard({
       className="w-full"
     >
       <Link href={href} className={cn(CHOICE_CARD_CLASS, accentClass)}>
-        <img
-          src={logoSrc}
-          alt={logoAlt}
-          width={GASTROBAR_LOGO_WIDTH_PX}
-          height={CHOICE_LOGO_HEIGHT_PX}
-          className="w-auto object-contain drop-shadow-[0_2px_22px_rgba(0,0,0,0.7)]"
-          style={{
-            height: CHOICE_LOGO_HEIGHT_PX,
-            maxWidth: CHOICE_LOGO_MAX_WIDTH,
-          }}
-          loading="eager"
-          decoding="async"
-        />
-        <div
-          className={cn(
-            "flex items-center justify-center",
-            illustrationSoftEdges && "px-1",
-          )}
-          style={illustrationWrapStyle}
-        >
+        <div className="flex flex-col items-center">
           <img
-            src={illustrationSrc}
-            alt={illustrationAlt}
-            className={cn(
-              "w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]",
-              illustrationSoftEdges && "scale-[1.04]",
-            )}
+            src={logoSrc}
+            alt={logoAlt}
+            width={GASTROBAR_LOGO_WIDTH_PX}
+            height={CHOICE_LOGO_HEIGHT_PX}
+            className="w-auto object-contain drop-shadow-[0_2px_22px_rgba(0,0,0,0.7)]"
             style={{
-              height: CHOICE_ILLUSTRATION_HEIGHT_PX,
-              maxWidth: CHOICE_ILLUSTRATION_MAX_WIDTH,
+              height: CHOICE_LOGO_HEIGHT_PX,
+              maxWidth: CHOICE_LOGO_MAX_WIDTH,
             }}
             loading="eager"
             decoding="async"
           />
+          <div
+            className={cn(
+              "-mt-4 flex items-center justify-center",
+              illustrationSoftEdges && "px-1",
+            )}
+            style={illustrationWrapStyle}
+          >
+            <img
+              src={illustrationSrc}
+              alt={illustrationAlt}
+              className={cn(
+                "w-auto object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]",
+                illustrationSoftEdges && "scale-[1.04]",
+              )}
+              style={{
+                height: CHOICE_ILLUSTRATION_HEIGHT_PX,
+                maxWidth: CHOICE_ILLUSTRATION_MAX_WIDTH,
+              }}
+              loading="eager"
+              decoding="async"
+            />
+          </div>
         </div>
-        <span className="text-lg font-semibold tracking-tight text-white">{title}</span>
-        <span className="line-clamp-2 max-w-[16rem] text-xs leading-snug text-white/65">
+        <span className="text-base font-semibold tracking-tight text-white">{title}</span>
+        <span className="line-clamp-1 max-w-[16rem] text-[11px] leading-snug text-white/60">
           {description}
         </span>
       </Link>
