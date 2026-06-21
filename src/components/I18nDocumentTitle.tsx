@@ -9,8 +9,12 @@ export function I18nDocumentTitle() {
   const pathname = usePathname() ?? "/";
 
   useEffect(() => {
-    if (pathname === "/start") {
+    if (pathname === "/" || pathname === "/start") {
       document.title = t("menu_chooser_meta_title");
+      return;
+    }
+    if (pathname === "/bar") {
+      document.title = t("meta_title_default");
       return;
     }
     if (pathname === "/games") {

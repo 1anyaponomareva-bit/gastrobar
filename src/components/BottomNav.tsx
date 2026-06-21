@@ -8,6 +8,7 @@ import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/useTranslation";
+import { BAR_PATH } from "@/lib/routes";
 
 type NavTab =
   | { id: "food"; tkey: "tab_food"; icon: string; href: string }
@@ -30,12 +31,13 @@ export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const path = pathname ?? "";
+  const onBar = path === BAR_PATH;
   const onGames = path === "/games" || path === "/durak" || path.startsWith("/durak/");
 
   const goPeriod = (id: MenuPeriod) => {
     if (onGames) abandonDurakStoredRoom();
     setPeriod(id);
-    if (path !== "/") router.push("/");
+    if (!onBar) router.push(BAR_PATH);
   };
 
   const tabClass = (active: boolean, games = false) =>
@@ -92,9 +94,9 @@ export function BottomNav() {
             tab.id === "games"
               ? onGames
               : tab.id === "bar"
-                ? !onGames && period === "bar"
+                ? onBar && !onGames && period === "bar"
                 : tab.id === "favorites"
-                  ? !onGames && period === "favorites"
+                  ? onBar && !onGames && period === "favorites"
                   : false;
 
           if ("href" in tab) {

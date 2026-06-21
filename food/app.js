@@ -38,7 +38,7 @@ const COMBO_CATEGORIES = [
 const BOTTOM_NAV = [
   { id: "food", label: "Еда", icon: "🍔" },
   { id: "combo", label: "Комбо", icon: "🍱" },
-  { id: "bar", label: "Бар", icon: "🍸", href: "/" },
+  { id: "bar", label: "Бар", icon: "🍸", href: "/bar" },
   { id: "favorites", label: "Любимое", icon: "❤️" },
   { id: "games", label: "Игры", icon: "🎯", href: "/games" },
 ];

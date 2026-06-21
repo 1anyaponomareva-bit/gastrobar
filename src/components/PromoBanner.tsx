@@ -57,7 +57,7 @@ function isDurakPath(path: string): boolean {
 }
 
 function isMenuChooserPath(path: string): boolean {
-  return path === "/start";
+  return path === "/" || path === "/start";
 }
 
 export function PromoBanner() {

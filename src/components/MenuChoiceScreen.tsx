@@ -7,6 +7,7 @@ import { getAssetUrl } from "@/lib/appVersion";
 import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
 import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
+import { BAR_PATH } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const CHOICE_LOGO_HEIGHT_PX = 108;
@@ -144,7 +145,7 @@ export function MenuChoiceScreen() {
             accentClass="hover:shadow-[0_24px_70px_rgba(248,214,109,0.14)]"
           />
           <ChoiceCard
-            href="/"
+            href={BAR_PATH}
             title={t("bar")}
             description={t("menu_chooser_bar_desc")}
             logoSrc={getAssetUrl(CONFIG.logoSrc)}

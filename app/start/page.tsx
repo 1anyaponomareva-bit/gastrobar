@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
-import { MenuChoiceScreen } from "@/components/MenuChoiceScreen";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "GASTROBAR — Выбор меню",
-  description: "Выберите раздел: еда или бар.",
-  robots: { index: false, follow: false },
-};
-
-export default function MenuChooserPage() {
-  return <MenuChoiceScreen />;
+/** Старый URL экрана выбора — ведём на главную. */
+export default function MenuChooserRedirectPage() {
+  redirect("/");
 }
