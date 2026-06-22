@@ -1,3 +1,7 @@
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, type PDFFont, rgb } from "pdf-lib";
+import { getAssetUrl } from "@/lib/appVersion";
+
 type ChecklistPdfItem = {
   label: string;
   status: "none" | "done" | "failed";
@@ -18,124 +22,65 @@ export type ShiftChecklistPdfOptions = {
   sections: ChecklistPdfSection[];
 };
 
-function pdfEscape(value: string): string {
-  return String(value)
-    .replace(/[\\()]/g, (match) => `\\${match}`)
-    .replace(/[^\x20-\x7E]/g, " ");
+const PAGE_WIDTH = 595;
+const PAGE_HEIGHT = 842;
+const MARGIN_LEFT = 35;
+const MARGIN_RIGHT = 35;
+const MARGIN_BOTTOM = 42;
+
+let fontBytesPromise: Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> | null =
+  null;
+
+async function loadFontBytes(): Promise<{
+  regular: ArrayBuffer;
+  bold: ArrayBuffer;
+}> {
+  if (!fontBytesPromise) {
+    fontBytesPromise = Promise.all([
+      fetch(getAssetUrl("/fonts/NotoSans-Regular.ttf")).then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to load NotoSans-Regular.ttf");
+        }
+        return response.arrayBuffer();
+      }),
+      fetch(getAssetUrl("/fonts/NotoSans-Bold.ttf")).then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to load NotoSans-Bold.ttf");
+        }
+        return response.arrayBuffer();
+      }),
+    ]).then(([regular, bold]) => ({ regular, bold }));
+  }
+
+  return fontBytesPromise;
 }
 
-function buildPdfDocument(options: ShiftChecklistPdfOptions): string {
-  const objs: string[] = [];
-  const add = (object: string) => {
-    objs.push(object);
-    return objs.length;
-  };
+function wrapText(
+  text: string,
+  font: PDFFont,
+  fontSize: number,
+  maxWidth: number,
+): string[] {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return [""];
 
-  const font = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  const bold = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let current = "";
 
-  const text = (x: number, y: number, value: string, size = 10, isBold = false) =>
-    `BT /${isBold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${pdfEscape(value)}) Tj ET\n`;
+  words.forEach((word) => {
+    const candidate = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+      current = candidate;
+      return;
+    }
 
-  const line = (x1: number, y1: number, x2: number, y2: number, gray = 0.82) =>
-    `q ${gray} G 0.5 w ${x1} ${y1} m ${x2} ${y2} l S Q\n`;
-
-  let content = "";
-  let y = 800;
-  const bottom = 40;
-
-  content += text(35, y, "SHIFT OPEN / CLOSE CHECKLIST", 18, true);
-  y -= 22;
-  content += text(35, y, `Venue: ${options.venueLabel}`, 11, true);
-  y -= 16;
-  content += text(
-    35,
-    y,
-    `Date: ${options.date || "-"}    Employee: ${options.employee || "-"}`,
-    11,
-    false,
-  );
-  y -= 16;
-  content += text(
-    35,
-    y,
-    `Shift: ${options.shiftLabel}    Cleaning: ${options.cleaningLabel}`,
-    11,
-    false,
-  );
-  y -= 16;
-  content += line(35, y, 560, y, 0.65);
-  y -= 18;
-
-  options.sections.forEach((section) => {
-    if (y < bottom + 60) return;
-    content += text(35, y, section.title.toUpperCase(), 12, true);
-    y -= 18;
-    section.items.forEach((item) => {
-      if (y < bottom + 20) return;
-      let mark = "[ ]";
-      if (item.status === "done") mark = "[x]";
-      if (item.status === "failed") mark = "[!]";
-      content += text(43, y, `${mark} ${item.label}`, 10, false);
-      y -= 15;
-      if (item.status === "failed" && item.comment?.trim()) {
-        if (y < bottom + 20) return;
-        content += text(55, y, `Reason: ${item.comment.trim()}`, 9, false);
-        y -= 14;
-      }
-    });
-    y -= 8;
+    if (current) lines.push(current);
+    current = word;
   });
 
-  const completed = options.sections.reduce(
-    (sum, section) =>
-      sum + section.items.filter((item) => item.status === "done").length,
-    0,
-  );
-  const failed = options.sections.reduce(
-    (sum, section) =>
-      sum + section.items.filter((item) => item.status === "failed").length,
-    0,
-  );
-  const total = options.sections.reduce(
-    (sum, section) => sum + section.items.length,
-    0,
-  );
-  content += text(
-    35,
-    28,
-    `Done: ${completed} / ${total}    Not done: ${failed}`,
-    10,
-    true,
-  );
-
-  const contentId = add(
-    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
-  );
-  const pageId = add(
-    `<< /Type /Page /Parent 0 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font} 0 R /F2 ${bold} 0 R >> >> /Contents ${contentId} 0 R >>`,
-  );
-  const pagesId = add(`<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`);
-  const linkedObjs = objs.map((object) =>
-    object.replace("/Parent 0 0 R", `/Parent ${pagesId} 0 R`),
-  );
-  const catalogId = linkedObjs.length + 1;
-  linkedObjs.push(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
-
-  let pdf = "%PDF-1.4\n";
-  const xref: number[] = [0];
-  linkedObjs.forEach((object, index) => {
-    xref.push(pdf.length);
-    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-  });
-  const start = pdf.length;
-  pdf += `xref\n0 ${linkedObjs.length + 1}\n0000000000 65535 f \n`;
-  xref.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
-  });
-  pdf += `trailer << /Size ${linkedObjs.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${start}\n%%EOF`;
-
-  return pdf;
+  if (current) lines.push(current);
+  return lines.length ? lines : [normalized];
 }
 
 function buildPdfFileName(venueLabel: string, date: string): string {
@@ -184,16 +129,124 @@ function downloadPdfOnDesktop(blob: Blob, fileName: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
-export function makeShiftChecklistPdfBlob(
+export async function makeShiftChecklistPdfBlob(
   options: ShiftChecklistPdfOptions,
-): Blob {
-  return new Blob([new TextEncoder().encode(buildPdfDocument(options))], {
-    type: "application/pdf",
+): Promise<Blob> {
+  const { regular, bold } = await loadFontBytes();
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  const font = await pdfDoc.embedFont(regular);
+  const fontBold = await pdfDoc.embedFont(bold);
+  const maxTextWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+
+  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let y = PAGE_HEIGHT - 42;
+
+  const ensureSpace = (needed: number) => {
+    if (y - needed >= MARGIN_BOTTOM) return;
+    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    y = PAGE_HEIGHT - 42;
+  };
+
+  const drawLine = () => {
+    ensureSpace(12);
+    page.drawLine({
+      start: { x: MARGIN_LEFT, y },
+      end: { x: PAGE_WIDTH - MARGIN_RIGHT, y },
+      thickness: 0.5,
+      color: rgb(0.65, 0.65, 0.65),
+    });
+    y -= 14;
+  };
+
+  const drawText = (
+    text: string,
+    size: number,
+    isBold = false,
+    indent = 0,
+  ) => {
+    const activeFont = isBold ? fontBold : font;
+    ensureSpace(size + 6);
+    page.drawText(text, {
+      x: MARGIN_LEFT + indent,
+      y,
+      size,
+      font: activeFont,
+      color: rgb(0, 0, 0),
+    });
+    y -= size + 6;
+  };
+
+  const drawWrapped = (
+    text: string,
+    size: number,
+    isBold = false,
+    indent = 0,
+  ) => {
+    const activeFont = isBold ? fontBold : font;
+    const lines = wrapText(text, activeFont, size, maxTextWidth - indent);
+    lines.forEach((line) => drawText(line, size, isBold, indent));
+  };
+
+  drawText("SHIFT OPEN / CLOSE CHECKLIST", 18, true);
+  y -= 4;
+  drawText(`Venue: ${options.venueLabel}`, 11, true);
+  drawText(
+    `Date: ${options.date || "-"}    Employee: ${options.employee || "-"}`,
+    11,
+  );
+  drawText(
+    `Shift: ${options.shiftLabel}    Cleaning: ${options.cleaningLabel}`,
+    11,
+  );
+  drawLine();
+
+  options.sections.forEach((section) => {
+    drawWrapped(section.title.toUpperCase(), 12, true);
+    y -= 2;
+
+    section.items.forEach((item) => {
+      let mark = "[ ]";
+      if (item.status === "done") mark = "[x]";
+      if (item.status === "failed") mark = "[!]";
+
+      drawWrapped(`${mark} ${item.label}`, 10, false, 8);
+
+      if (item.status === "failed" && item.comment?.trim()) {
+        drawWrapped(`Reason: ${item.comment.trim()}`, 9, false, 16);
+      }
+    });
+
+    y -= 6;
   });
+
+  const completed = options.sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.status === "done").length,
+    0,
+  );
+  const failed = options.sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.status === "failed").length,
+    0,
+  );
+  const total = options.sections.reduce(
+    (sum, section) => sum + section.items.length,
+    0,
+  );
+
+  drawLine();
+  drawText(`Done: ${completed} / ${total}    Not done: ${failed}`, 10, true);
+
+  const bytes = await pdfDoc.save();
+  return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
 }
 
-export function exportShiftChecklistPdf(options: ShiftChecklistPdfOptions): void {
-  const blob = makeShiftChecklistPdfBlob(options);
+export async function exportShiftChecklistPdf(
+  options: ShiftChecklistPdfOptions,
+): Promise<void> {
+  const blob = await makeShiftChecklistPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
 
   if (isMobileDevice()) {

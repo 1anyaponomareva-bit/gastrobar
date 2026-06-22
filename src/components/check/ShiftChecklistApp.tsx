@@ -51,6 +51,7 @@ export function ShiftChecklistApp() {
   const [cleaning, setCleaning] = useState<CleaningType>("regular");
   const [activeSection, setActiveSection] = useState("");
   const [revision, setRevision] = useState(0);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
@@ -222,24 +223,33 @@ export function ShiftChecklistApp() {
     bump();
   };
 
-  const handleExportPdf = () => {
-    exportShiftChecklistPdf({
-      venueLabel,
-      date,
-      employee,
-      shiftLabel: SHIFT_TYPE_LABELS[shift],
-      cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
-      sections: sections.map((section) => ({
-        title: section.title,
-        items: section.groups.flatMap((group) =>
-          group.items.map((item) => ({
-            label: group.title ? `${group.title}: ${item.label}` : item.label,
-            status: item.status,
-            comment: item.comment,
-          })),
-        ),
-      })),
-    });
+  const handleExportPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportShiftChecklistPdf({
+        venueLabel,
+        date,
+        employee,
+        shiftLabel: SHIFT_TYPE_LABELS[shift],
+        cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
+        sections: sections.map((section) => ({
+          title: section.title,
+          items: section.groups.flatMap((group) =>
+            group.items.map((item) => ({
+              label: group.title ? `${group.title}: ${item.label}` : item.label,
+              status: item.status,
+              comment: item.comment,
+            })),
+          ),
+        })),
+      });
+    } catch (error) {
+      console.error(error);
+      window.alert("Could not create PDF. Please try again.");
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   if (!hydrated) {
@@ -431,8 +441,13 @@ export function ShiftChecklistApp() {
 
               {showExportPdf ? (
                 <div className="exportOnly">
-                  <button type="button" className="gold" onClick={handleExportPdf}>
-                    Export PDF
+                  <button
+                    type="button"
+                    className="gold"
+                    onClick={handleExportPdf}
+                    disabled={exportingPdf}
+                  >
+                    {exportingPdf ? "Creating PDF..." : "Export PDF"}
                   </button>
                   <p className="note">
                     PDF includes the full shift: opening, during shift, and closing.
