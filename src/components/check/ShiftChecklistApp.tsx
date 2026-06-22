@@ -148,40 +148,62 @@ export function ShiftChecklistApp() {
     ? isClosingSection(activeSectionData.title)
     : false;
 
-  const incompleteItems = useMemo(() => {
-    const missing: Array<{
+  const exportIssues = useMemo(() => {
+    const issues: Array<{
       id: string;
       sectionTitle: string;
       groupTitle: string | null;
       label: string;
+      kind: "unmarked" | "missingComment";
     }> = [];
 
     sections.forEach((section) => {
       section.groups.forEach((group) => {
         group.items.forEach((item) => {
-          if (item.status !== "done") {
-            missing.push({
+          if (item.status === "none") {
+            issues.push({
               id: item.id,
               sectionTitle: section.title,
               groupTitle: group.title,
               label: item.label,
+              kind: "unmarked",
+            });
+            return;
+          }
+
+          if (item.status === "failed" && !item.comment.trim()) {
+            issues.push({
+              id: item.id,
+              sectionTitle: section.title,
+              groupTitle: group.title,
+              label: item.label,
+              kind: "missingComment",
             });
           }
         });
       });
     });
 
-    return missing;
+    return issues;
   }, [sections]);
 
-  const formatIncompleteLabel = (
-    item: (typeof incompleteItems)[number],
+  const formatIssueLabel = (
+    item: (typeof exportIssues)[number],
   ): string => {
     const sectionLabel = getSectionTabLabel(item.sectionTitle);
-    if (item.groupTitle) {
-      return `${sectionLabel} — ${item.groupTitle}: ${item.label}`;
+    const pointLabel = item.groupTitle
+      ? `${sectionLabel} — ${item.groupTitle}: ${item.label}`
+      : `${sectionLabel}: ${item.label}`;
+
+    if (venue === "gastrobar") {
+      return item.kind === "unmarked"
+        ? `Не отмечен пункт: ${pointLabel}`
+        : `Не указана причина: ${pointLabel}`;
     }
-    return `${sectionLabel}: ${item.label}`;
+
+    return item.kind === "unmarked"
+      ? `Not marked: ${pointLabel}`
+      : `Missing reason: ${pointLabel}`;
   };
 
   const completedCount = useMemo(
@@ -250,6 +272,7 @@ export function ShiftChecklistApp() {
 
   const handleCommentChange = (itemId: string, comment: string) => {
     setChecklistItemComment(venue, itemId, comment);
+    setExportBlocked(false);
     bump();
   };
 
@@ -265,9 +288,9 @@ export function ShiftChecklistApp() {
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
-    if (incompleteItems.length) {
+    if (exportIssues.length) {
       setExportBlocked(true);
-      const first = incompleteItems[0];
+      const first = exportIssues[0];
       setActiveSection(first.sectionTitle);
       setStoredCheckSection(venue, shift, first.sectionTitle);
       window.setTimeout(() => {
@@ -481,7 +504,8 @@ export function ShiftChecklistApp() {
                       status={item.status}
                       comment={item.comment}
                       highlightMissing={
-                        exportBlocked && item.status !== "done"
+                        exportBlocked &&
+                        exportIssues.some((issue) => issue.id === item.id)
                       }
                       failPlaceholder={
                         venue === "gastrobar"
@@ -500,16 +524,18 @@ export function ShiftChecklistApp() {
 
               {showExportPdf ? (
                 <div className="exportOnly">
-                  {exportBlocked && incompleteItems.length ? (
+                  {exportBlocked && exportIssues.length ? (
                     <div className="exportError" role="alert">
                       <strong>
                         {venue === "gastrobar"
-                          ? "Нельзя сформировать PDF. Не поставлена галочка у пунктов:"
-                          : "Cannot export PDF. These items are not marked:"}
+                          ? "Нельзя сформировать PDF:"
+                          : "Cannot export PDF:"}
                       </strong>
                       <ul>
-                        {incompleteItems.map((item) => (
-                          <li key={item.id}>{formatIncompleteLabel(item)}</li>
+                        {exportIssues.map((item) => (
+                          <li key={`${item.id}-${item.kind}`}>
+                            {formatIssueLabel(item)}
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -523,7 +549,9 @@ export function ShiftChecklistApp() {
                     {exportingPdf ? "Creating PDF..." : "Export PDF"}
                   </button>
                   <p className="note">
-                    PDF includes the full shift: opening, during shift, and closing.
+                    {venue === "gastrobar"
+                      ? "Для PDF отметьте каждый пункт: галочка или крестик с причиной."
+                      : "For PDF, mark every item: done or not done with a reason."}
                   </p>
                 </div>
               ) : null}
