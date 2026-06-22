@@ -195,8 +195,8 @@ export function makeStaffInventoryPdfBlob(
   const linkedObjs = objs.map((object) =>
     object.replace("/Parent 0 0 R", `/Parent ${pagesId} 0 R`),
   );
-
-  const catalogId = add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+  const catalogId = linkedObjs.length + 1;
+  linkedObjs.push(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
 
   let pdf = "%PDF-1.4\n";
   const xref: number[] = [0];
@@ -213,7 +213,7 @@ export function makeStaffInventoryPdfBlob(
   });
   pdf += `trailer << /Size ${linkedObjs.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${start}\n%%EOF`;
 
-  return new Blob([pdf], { type: "application/pdf" });
+  return new Blob([new TextEncoder().encode(pdf)], { type: "application/pdf" });
 }
 
 function buildPdfFileName(venueLabel: string, date: string): string {
@@ -291,7 +291,8 @@ export async function shareStaffInventoryPdf(
 ): Promise<void> {
   const blob = makeStaffInventoryPdfBlob(rows, date, employee, venueLabel);
   const fileName = buildPdfFileName(venueLabel, date);
-  const file = new File([blob], fileName, {
+  const fileBytes = await blob.arrayBuffer();
+  const file = new File([fileBytes], fileName, {
     type: "application/pdf",
   });
   const shareTitle = `${venueLabel} Order PDF`;
