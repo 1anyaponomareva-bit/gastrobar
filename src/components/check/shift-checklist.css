@@ -43,6 +43,15 @@
   color: var(--red);
 }
 
+.staff-inventory .checkGroup {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+  font-weight: 900;
+  margin: 4px 4px 8px;
+  letter-spacing: 0.28px;
+}
+
 .staff-inventory .checkSection {
   font-size: 13px;
   text-transform: uppercase;

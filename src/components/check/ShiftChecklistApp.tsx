@@ -51,8 +51,8 @@ export function ShiftChecklistApp() {
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
 
   const items = useMemo(
-    () => getShiftChecklistItems(venue, cleaning),
-    [venue, cleaning],
+    () => getShiftChecklistItems(venue, cleaning, shift),
+    [venue, cleaning, shift],
   );
 
   useEffect(() => {
@@ -66,27 +66,46 @@ export function ShiftChecklistApp() {
 
   const sections = useMemo(() => {
     void revision;
-    const grouped = new Map<string, typeof items>();
+    const blockMap = new Map<string, typeof items>();
     items.forEach((item) => {
-      const list = grouped.get(item.section) ?? [];
+      const list = blockMap.get(item.section) ?? [];
       list.push(item);
-      grouped.set(item.section, list);
+      blockMap.set(item.section, list);
     });
-    return Array.from(grouped.entries()).map(([title, sectionItems]) => ({
-      title,
-      items: sectionItems.map((item) => ({
-        ...item,
-        status: getChecklistItemStatus(venue, item.id),
-        comment: getChecklistItemComment(venue, item.id),
-      })),
-    }));
+
+    return Array.from(blockMap.entries()).map(([title, sectionItems]) => {
+      const groupMap = new Map<string, typeof sectionItems>();
+      sectionItems.forEach((item) => {
+        const groupKey = item.group?.trim() || "";
+        const list = groupMap.get(groupKey) ?? [];
+        list.push(item);
+        groupMap.set(groupKey, list);
+      });
+
+      return {
+        title,
+        groups: Array.from(groupMap.entries()).map(([groupTitle, groupItems]) => ({
+          title: groupTitle || null,
+          items: groupItems.map((item) => ({
+            ...item,
+            status: getChecklistItemStatus(venue, item.id),
+            comment: getChecklistItemComment(venue, item.id),
+          })),
+        })),
+      };
+    });
   }, [items, revision, venue]);
 
   const completedCount = useMemo(
     () =>
       sections.reduce(
         (sum, section) =>
-          sum + section.items.filter((item) => item.status === "done").length,
+          sum +
+          section.groups.reduce(
+            (groupSum, group) =>
+              groupSum + group.items.filter((item) => item.status === "done").length,
+            0,
+          ),
         0,
       ),
     [sections],
@@ -96,7 +115,13 @@ export function ShiftChecklistApp() {
     () =>
       sections.reduce(
         (sum, section) =>
-          sum + section.items.filter((item) => item.status === "failed").length,
+          sum +
+          section.groups.reduce(
+            (groupSum, group) =>
+              groupSum +
+              group.items.filter((item) => item.status === "failed").length,
+            0,
+          ),
         0,
       ),
     [sections],
@@ -112,6 +137,7 @@ export function ShiftChecklistApp() {
   const handleShiftChange = (nextShift: ShiftType) => {
     setShift(nextShift);
     setStoredShiftType(nextShift);
+    bump();
   };
 
   const handleCleaningChange = (nextCleaning: CleaningType) => {
@@ -155,11 +181,13 @@ export function ShiftChecklistApp() {
       cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
       sections: sections.map((section) => ({
         title: section.title,
-        items: section.items.map((item) => ({
-          label: item.label,
-          status: item.status,
-          comment: item.comment,
-        })),
+        items: section.groups.flatMap((group) =>
+          group.items.map((item) => ({
+            label: group.title ? `${group.title}: ${item.label}` : item.label,
+            status: item.status,
+            comment: item.comment,
+          })),
+        ),
       })),
     });
   };
@@ -299,16 +327,30 @@ export function ShiftChecklistApp() {
           {sections.map((section) => (
             <div key={section.title}>
               <div className="checkSection">{section.title}</div>
-              {section.items.map((item) => (
-                <ChecklistRow
-                  key={item.id}
-                  label={item.label}
-                  status={item.status}
-                  comment={item.comment}
-                  onMarkDone={() => markDone(item.id)}
-                  onMarkFailed={() => markFailed(item.id)}
-                  onCommentChange={(value) => handleCommentChange(item.id, value)}
-                />
+              {section.groups.map((group) => (
+                <div key={group.title ?? "__default"}>
+                  {group.title ? (
+                    <div className="checkGroup">{group.title}</div>
+                  ) : null}
+                  {group.items.map((item) => (
+                    <ChecklistRow
+                      key={item.id}
+                      label={item.label}
+                      status={item.status}
+                      comment={item.comment}
+                      failPlaceholder={
+                        venue === "gastrobar"
+                          ? "Укажите причину, почему не выполнено"
+                          : "Why was this not completed?"
+                      }
+                      onMarkDone={() => markDone(item.id)}
+                      onMarkFailed={() => markFailed(item.id)}
+                      onCommentChange={(value) =>
+                        handleCommentChange(item.id, value)
+                      }
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           ))}
@@ -333,6 +375,7 @@ function ChecklistRow({
   label,
   status,
   comment,
+  failPlaceholder,
   onMarkDone,
   onMarkFailed,
   onCommentChange,
@@ -340,6 +383,7 @@ function ChecklistRow({
   label: string;
   status: ChecklistItemStatus;
   comment: string;
+  failPlaceholder: string;
   onMarkDone: () => void;
   onMarkFailed: () => void;
   onCommentChange: (value: string) => void;
@@ -378,7 +422,7 @@ function ChecklistRow({
       {status === "failed" ? (
         <textarea
           className="failComment"
-          placeholder="Why was this not completed?"
+          placeholder={failPlaceholder}
           value={comment}
           onChange={(event) => onCommentChange(event.target.value)}
           rows={2}
