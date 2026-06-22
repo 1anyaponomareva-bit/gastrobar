@@ -216,6 +216,56 @@ export function makeStaffInventoryPdfBlob(
   return new Blob([pdf], { type: "application/pdf" });
 }
 
+function buildPdfFileName(venueLabel: string, date: string): string {
+  return `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
+}
+
+function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function isAndroidDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
+function scheduleBlobUrlRevoke(url: string, delayMs = 120_000): void {
+  window.setTimeout(() => URL.revokeObjectURL(url), delayMs);
+}
+
+function presentPdfBlob(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  scheduleBlobUrlRevoke(url);
+
+  if (isAndroidDevice()) {
+    window.location.assign(url);
+    return;
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}
+
+function downloadPdfOnDesktop(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  scheduleBlobUrlRevoke(url);
+}
+
 export function downloadStaffInventoryPdf(
   rows: StaffInventoryRow[],
   date: string,
@@ -223,12 +273,14 @@ export function downloadStaffInventoryPdf(
   venueLabel: string,
 ): void {
   const blob = makeStaffInventoryPdfBlob(rows, date, employee, venueLabel);
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const fileName = buildPdfFileName(venueLabel, date);
+
+  if (isMobileDevice()) {
+    presentPdfBlob(blob);
+    return;
+  }
+
+  downloadPdfOnDesktop(blob, fileName);
 }
 
 export async function shareStaffInventoryPdf(
@@ -238,23 +290,32 @@ export async function shareStaffInventoryPdf(
   venueLabel: string,
 ): Promise<void> {
   const blob = makeStaffInventoryPdfBlob(rows, date, employee, venueLabel);
-  const fileName = `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
+  const fileName = buildPdfFileName(venueLabel, date);
   const file = new File([blob], fileName, {
     type: "application/pdf",
   });
+  const shareTitle = `${venueLabel} Order PDF`;
+  const shareText = `${venueLabel} order list`;
 
-  try {
-    if (navigator.canShare?.({ files: [file] })) {
+  if (typeof navigator.share === "function") {
+    try {
       await navigator.share({
         files: [file],
-        title: `${venueLabel} Order PDF`,
-        text: `${venueLabel} order list`,
+        title: shareTitle,
+        text: shareText,
       });
       return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
     }
-  } catch {
-    // Fall through to download.
   }
 
-  downloadStaffInventoryPdf(rows, date, employee, venueLabel);
+  if (isMobileDevice()) {
+    presentPdfBlob(blob);
+    return;
+  }
+
+  downloadPdfOnDesktop(blob, fileName);
 }
