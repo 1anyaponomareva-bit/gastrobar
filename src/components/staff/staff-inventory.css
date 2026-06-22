@@ -1,0 +1,356 @@
+.staff-inventory {
+  --gold: #f2ad00;
+  --black: #050505;
+  --bg: #f2f2f2;
+  --card: #fff;
+  --red: #d60000;
+  --muted: #777;
+  --line: #e4e4e4;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: #111;
+  min-height: 100dvh;
+}
+
+.staff-inventory *,
+.staff-inventory *::before,
+.staff-inventory *::after {
+  box-sizing: border-box;
+}
+
+.staff-inventory .app {
+  max-width: 760px;
+  margin: auto;
+}
+
+.staff-inventory .top {
+  background: #050505;
+  color: #fff;
+  padding: 8px 10px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 4px 20px #0004;
+}
+
+.staff-inventory .venuePicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.staff-inventory .venueOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 2px solid #2a2a2a;
+  background: #111;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.staff-inventory .venueOption img {
+  height: 44px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.staff-inventory .venueOption.active {
+  border-color: var(--gold);
+  background: #1a1608;
+  box-shadow: 0 0 0 1px #f2ad0033 inset;
+}
+
+.staff-inventory .venueOption:not(.active) {
+  opacity: 0.72;
+}
+
+.staff-inventory .venueOption:not(.active):hover {
+  opacity: 0.92;
+  border-color: #444;
+}
+
+.staff-inventory .meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.staff-inventory .box {
+  background: #151515;
+  border: 1px solid #282828;
+  border-radius: 13px;
+  padding: 8px 10px;
+}
+
+.staff-inventory .box label,
+.staff-inventory .stat label {
+  display: block;
+  color: #aaa;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+}
+
+.staff-inventory .box input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 900;
+  padding: 0;
+}
+
+.staff-inventory .stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.staff-inventory .stat {
+  background: #151515;
+  border: 1px solid #282828;
+  border-radius: 13px;
+  text-align: center;
+  padding: 8px 3px;
+}
+
+.staff-inventory .stat b {
+  color: var(--gold);
+  font-size: 20px;
+  display: block;
+  line-height: 1;
+}
+
+.staff-inventory .actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.staff-inventory button {
+  border: 0;
+  border-radius: 13px;
+  padding: 13px 8px;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.staff-inventory .gold {
+  background: var(--gold);
+  color: #111;
+}
+
+.staff-inventory .dark {
+  background: #111;
+  color: #fff;
+}
+
+.staff-inventory .white {
+  background: #eee;
+  color: #111;
+}
+
+.staff-inventory .danger {
+  background: #d60000;
+  color: #fff;
+}
+
+.staff-inventory .main {
+  padding: 12px 10px 30px;
+}
+
+.staff-inventory .searchRow {
+  display: grid;
+  grid-template-columns: 1fr 94px;
+  gap: 8px;
+}
+
+.staff-inventory .search {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 16px;
+  outline: 0;
+}
+
+.staff-inventory .tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 0 5px;
+  scrollbar-width: none;
+}
+
+.staff-inventory .tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.staff-inventory .tab {
+  white-space: nowrap;
+  background: #fff;
+  border: 1px solid #dcdcdc;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.staff-inventory .tab.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.staff-inventory .mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #777;
+  font-size: 13px;
+  margin: 5px 4px 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.staff-inventory .category {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 900;
+  margin: 17px 4px 8px;
+  letter-spacing: 0.35px;
+}
+
+.staff-inventory .card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 18px;
+  margin-bottom: 10px;
+  padding: 13px;
+  box-shadow: 0 2px 8px #0000000a;
+}
+
+.staff-inventory .card.low {
+  background: #fffafa;
+  border-color: #f0bdbd;
+}
+
+.staff-inventory .name {
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 11px;
+  line-height: 1.2;
+}
+
+.staff-inventory .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.9fr;
+  gap: 8px;
+}
+
+.staff-inventory .field label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #777;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.staff-inventory .field input {
+  width: 100%;
+  height: 41px;
+  border: 1px solid #ddd;
+  border-radius: 11px;
+  padding: 7px;
+  font-size: 16px;
+  font-weight: 800;
+  background: #fff;
+}
+
+.staff-inventory .field.order input {
+  color: var(--red);
+  border: 0;
+  background: #f5f5f5;
+  text-align: center;
+}
+
+.staff-inventory .bottomActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.staff-inventory .note {
+  text-align: center;
+  color: #777;
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 12px;
+}
+
+.staff-inventory .empty {
+  text-align: center;
+  color: #777;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  margin-top: 12px;
+}
+
+@media (max-width: 380px) {
+  .staff-inventory .logo {
+    height: 46px;
+  }
+
+  .staff-inventory .logo img {
+    height: 43px;
+    max-width: 200px;
+  }
+
+  .staff-inventory .box input {
+    font-size: 15px;
+  }
+
+  .staff-inventory .stat b {
+    font-size: 18px;
+  }
+
+  .staff-inventory button {
+    font-size: 13px;
+    padding: 12px 6px;
+  }
+
+  .staff-inventory .name {
+    font-size: 16px;
+  }
+
+  .staff-inventory .field input {
+    font-size: 14px;
+  }
+
+  .staff-inventory .row {
+    gap: 6px;
+  }
+
+  .staff-inventory .searchRow {
+    grid-template-columns: 1fr 82px;
+  }
+}

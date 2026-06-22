@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import StaffHomeScreen from "@/components/staff/StaffHomeScreen";
 
 export const metadata: Metadata = {
-  title: "Закупки — GASTROBAR",
-  description: "Внутреннее приложение для сотрудников: что закончилось и что купить.",
+  title: "Inventory — GASTROBAR",
+  description:
+    "Internal staff app: track stock and purchase orders for GastroFood and GastroBar.",
   robots: { index: false, follow: false },
 };
 
