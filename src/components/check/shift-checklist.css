@@ -1,0 +1,133 @@
+.staff-inventory .segmentPicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.staff-inventory .segmentLabel {
+  display: block;
+  color: #aaa;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+
+.staff-inventory .mode button {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.staff-inventory .segmentBtn {
+  border-radius: 13px;
+  padding: 12px 8px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #151515;
+  color: #fff;
+  border: 1px solid #282828;
+}
+
+.staff-inventory .segmentBtn.active {
+  background: var(--gold);
+  color: #111;
+  border-color: var(--gold);
+}
+
+.staff-inventory .progress {
+  background: #151515;
+  border: 1px solid #282828;
+  border-radius: 13px;
+  text-align: center;
+  padding: 8px 3px;
+  margin-top: 8px;
+}
+
+.staff-inventory .progress b {
+  color: var(--gold);
+  font-size: 20px;
+  display: block;
+  line-height: 1;
+}
+
+.staff-inventory .checkSection {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 900;
+  margin: 17px 4px 8px;
+  letter-spacing: 0.35px;
+}
+
+.staff-inventory .checkItem {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 18px;
+  margin-bottom: 10px;
+  padding: 13px;
+  box-shadow: 0 2px 8px #0000000a;
+  cursor: pointer;
+}
+
+.staff-inventory .checkItem.checked {
+  background: #fffdf5;
+  border-color: #e8c766;
+}
+
+.staff-inventory .checkBox {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  background: #fff;
+  margin-top: 1px;
+}
+
+.staff-inventory .checkItem.checked .checkBox {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #111;
+}
+
+.staff-inventory .checkLabel {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #111;
+}
+
+.staff-inventory .exportOnly {
+  margin-top: 18px;
+}
+
+.staff-inventory .exportOnly button {
+  width: 100%;
+}
+
+@media (max-width: 380px) {
+  .staff-inventory .checkLabel {
+    font-size: 15px;
+  }
+
+  .staff-inventory .segmentBtn {
+    font-size: 13px;
+    padding: 11px 6px;
+  }
+}

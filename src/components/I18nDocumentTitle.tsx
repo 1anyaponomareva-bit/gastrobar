@@ -14,7 +14,11 @@ export function I18nDocumentTitle() {
       return;
     }
     if (pathname === "/staff" || pathname.startsWith("/staff/")) {
-      document.title = "Закупки — GASTROBAR";
+      document.title = "Inventory — GASTROBAR";
+      return;
+    }
+    if (pathname === "/check" || pathname.startsWith("/check/")) {
+      document.title = "Shift Checklist — GASTROBAR";
       return;
     }
     if (pathname === "/bar") {
