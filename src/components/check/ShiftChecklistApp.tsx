@@ -52,6 +52,7 @@ export function ShiftChecklistApp() {
   const [activeSection, setActiveSection] = useState("");
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportBlocked, setExportBlocked] = useState(false);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
@@ -147,6 +148,42 @@ export function ShiftChecklistApp() {
     ? isClosingSection(activeSectionData.title)
     : false;
 
+  const incompleteItems = useMemo(() => {
+    const missing: Array<{
+      id: string;
+      sectionTitle: string;
+      groupTitle: string | null;
+      label: string;
+    }> = [];
+
+    sections.forEach((section) => {
+      section.groups.forEach((group) => {
+        group.items.forEach((item) => {
+          if (item.status !== "done") {
+            missing.push({
+              id: item.id,
+              sectionTitle: section.title,
+              groupTitle: group.title,
+              label: item.label,
+            });
+          }
+        });
+      });
+    });
+
+    return missing;
+  }, [sections]);
+
+  const formatIncompleteLabel = (
+    item: (typeof incompleteItems)[number],
+  ): string => {
+    const sectionLabel = getSectionTabLabel(item.sectionTitle);
+    if (item.groupTitle) {
+      return `${sectionLabel} — ${item.groupTitle}: ${item.label}`;
+    }
+    return `${sectionLabel}: ${item.label}`;
+  };
+
   const completedCount = useMemo(
     () =>
       sections.reduce(
@@ -200,12 +237,14 @@ export function ShiftChecklistApp() {
   const markDone = (itemId: string) => {
     const current = getChecklistItemStatus(venue, itemId);
     setChecklistItemStatus(venue, itemId, current === "done" ? "none" : "done");
+    setExportBlocked(false);
     bump();
   };
 
   const markFailed = (itemId: string) => {
     const current = getChecklistItemStatus(venue, itemId);
     setChecklistItemStatus(venue, itemId, current === "failed" ? "none" : "failed");
+    setExportBlocked(false);
     bump();
   };
 
@@ -225,6 +264,21 @@ export function ShiftChecklistApp() {
 
   const handleExportPdf = async () => {
     if (exportingPdf) return;
+
+    if (incompleteItems.length) {
+      setExportBlocked(true);
+      const first = incompleteItems[0];
+      setActiveSection(first.sectionTitle);
+      setStoredCheckSection(venue, shift, first.sectionTitle);
+      window.setTimeout(() => {
+        document
+          .getElementById(`check-item-${first.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return;
+    }
+
+    setExportBlocked(false);
     setExportingPdf(true);
     try {
       await exportShiftChecklistPdf({
@@ -421,9 +475,13 @@ export function ShiftChecklistApp() {
                   {group.items.map((item) => (
                     <ChecklistRow
                       key={item.id}
+                      itemId={item.id}
                       label={item.label}
                       status={item.status}
                       comment={item.comment}
+                      highlightMissing={
+                        exportBlocked && item.status !== "done"
+                      }
                       failPlaceholder={
                         venue === "gastrobar"
                           ? "Укажите причину, почему не выполнено"
@@ -441,6 +499,20 @@ export function ShiftChecklistApp() {
 
               {showExportPdf ? (
                 <div className="exportOnly">
+                  {exportBlocked && incompleteItems.length ? (
+                    <div className="exportError" role="alert">
+                      <strong>
+                        {venue === "gastrobar"
+                          ? "Нельзя сформировать PDF. Не поставлена галочка у пунктов:"
+                          : "Cannot export PDF. These items are not marked:"}
+                      </strong>
+                      <ul>
+                        {incompleteItems.map((item) => (
+                          <li key={item.id}>{formatIncompleteLabel(item)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     className="gold"
@@ -470,27 +542,35 @@ export function ShiftChecklistApp() {
 }
 
 function ChecklistRow({
+  itemId,
   label,
   status,
   comment,
   failPlaceholder,
+  highlightMissing,
   onMarkDone,
   onMarkFailed,
   onCommentChange,
 }: {
+  itemId: string;
   label: string;
   status: ChecklistItemStatus;
   comment: string;
   failPlaceholder: string;
+  highlightMissing?: boolean;
   onMarkDone: () => void;
   onMarkFailed: () => void;
   onCommentChange: (value: string) => void;
 }) {
-  const rowClass =
-    status === "done" ? "done" : status === "failed" ? "failed" : "";
+  const rowClass = [
+    status === "done" ? "done" : status === "failed" ? "failed" : "",
+    highlightMissing ? "missingMark" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`checkRow ${rowClass}`}>
+    <div id={`check-item-${itemId}`} className={`checkRow ${rowClass}`}>
       <div className="checkItemMain">
         <button
           type="button"

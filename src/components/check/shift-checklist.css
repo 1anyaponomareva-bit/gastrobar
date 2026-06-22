@@ -180,6 +180,32 @@
   margin-top: 18px;
 }
 
+.staff-inventory .exportError {
+  background: #fff5f5;
+  border: 1px solid #efb0b0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: #8f1010;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.staff-inventory .exportError ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.staff-inventory .exportError li {
+  margin-bottom: 6px;
+}
+
+.staff-inventory .checkRow.missingMark {
+  border-color: #d60000;
+  box-shadow: 0 0 0 2px #d6000022;
+}
+
 .staff-inventory .exportOnly button {
   width: 100%;
 }
