@@ -13,6 +13,10 @@ export function I18nDocumentTitle() {
       document.title = t("menu_chooser_meta_title");
       return;
     }
+    if (pathname === "/staff" || pathname.startsWith("/staff/")) {
+      document.title = "Закупки — GASTROBAR";
+      return;
+    }
     if (pathname === "/bar") {
       document.title = t("meta_title_default");
       return;
