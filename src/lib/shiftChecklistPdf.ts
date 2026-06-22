@@ -27,8 +27,11 @@ const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN_LEFT = 40;
 const MARGIN_RIGHT = 40;
+const MARGIN_TOP = 44;
 const MARGIN_BOTTOM = 48;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+const BLOCK_GAP = 10;
+const SECTION_GAP = 28;
 
 const COLORS = {
   text: rgb(0.07, 0.07, 0.07),
@@ -215,7 +218,7 @@ function createPdfContext(
   return {
     pdfDoc,
     page: pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
-    y: PAGE_HEIGHT - 44,
+    y: PAGE_HEIGHT - MARGIN_TOP,
     font,
     fontBold,
   };
@@ -224,7 +227,7 @@ function createPdfContext(
 function ensureSpace(ctx: PdfContext, needed: number) {
   if (ctx.y - needed >= MARGIN_BOTTOM) return;
   ctx.page = ctx.pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  ctx.y = PAGE_HEIGHT - 44;
+  ctx.y = PAGE_HEIGHT - MARGIN_TOP;
 }
 
 function drawFilledBox(
@@ -236,10 +239,9 @@ function drawFilledBox(
   fill: ReturnType<typeof rgb>,
   border = COLORS.line,
 ) {
-  const bottomY = topY - height;
   ctx.page.drawRectangle({
     x,
-    y: bottomY,
+    y: topY - height,
     width,
     height,
     color: fill,
@@ -252,18 +254,57 @@ function drawTextLine(
   ctx: PdfContext,
   text: string,
   x: number,
-  y: number,
+  baselineY: number,
   size: number,
   activeFont: PDFFont,
   color = COLORS.text,
 ) {
   ctx.page.drawText(text, {
     x,
-    y,
+    y: baselineY,
     size,
     font: activeFont,
     color,
   });
+}
+
+function measureWrappedText(
+  text: string,
+  activeFont: PDFFont,
+  fontSize: number,
+  maxWidth: number,
+  lineGap = 4,
+): { lines: string[]; height: number } {
+  const lines = wrapText(text, activeFont, fontSize, maxWidth);
+  const height = lines.length * fontSize + Math.max(0, lines.length - 1) * lineGap;
+  return { lines, height };
+}
+
+function drawWrappedLines(
+  ctx: PdfContext,
+  lines: string[],
+  topY: number,
+  options: {
+    x?: number;
+    size: number;
+    bold?: boolean;
+    color?: ReturnType<typeof rgb>;
+    lineGap?: number;
+  },
+): number {
+  const x = options.x ?? MARGIN_LEFT;
+  const activeFont = options.bold ? ctx.fontBold : ctx.font;
+  const color = options.color ?? COLORS.text;
+  const lineGap = options.lineGap ?? 4;
+  const lineStep = options.size + lineGap;
+  let baselineY = topY - options.size;
+
+  lines.forEach((line) => {
+    drawTextLine(ctx, line, x, baselineY, options.size, activeFont, color);
+    baselineY -= lineStep;
+  });
+
+  return lines.length * lineStep - lineGap;
 }
 
 function drawWrappedBlock(
@@ -276,47 +317,53 @@ function drawWrappedBlock(
     bold?: boolean;
     color?: ReturnType<typeof rgb>;
     lineGap?: number;
+    gapAfter?: number;
   } = {},
 ): number {
-  const x = options.x ?? MARGIN_LEFT;
   const maxWidth = options.maxWidth ?? CONTENT_WIDTH;
   const activeFont = options.bold ? ctx.fontBold : ctx.font;
-  const color = options.color ?? COLORS.text;
-  const lineGap = options.lineGap ?? 4;
-  const lines = wrapText(text, activeFont, size, maxWidth);
-  const blockHeight = lines.length * (size + lineGap);
+  const { lines, height } = measureWrappedText(
+    text,
+    activeFont,
+    size,
+    maxWidth,
+    options.lineGap,
+  );
+  const gapAfter = options.gapAfter ?? BLOCK_GAP;
 
-  ensureSpace(ctx, blockHeight);
-  lines.forEach((line) => {
-    drawTextLine(ctx, line, x, ctx.y, size, activeFont, color);
-    ctx.y -= size + lineGap;
-  });
-
-  return blockHeight;
+  ensureSpace(ctx, height + gapAfter);
+  const topY = ctx.y;
+  drawWrappedLines(ctx, lines, topY, { ...options, size });
+  ctx.y = topY - height - gapAfter;
+  return height + gapAfter;
 }
 
 function drawSectionTitle(ctx: PdfContext, title: string) {
   const size = 11;
   const height = 24;
-  ensureSpace(ctx, height + 10);
-  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 4, CONTENT_WIDTH, height, COLORS.section);
+  const total = height + BLOCK_GAP;
+
+  ensureSpace(ctx, total);
+  const topY = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, height, COLORS.section);
   drawTextLine(
     ctx,
     title.toUpperCase(),
     MARGIN_LEFT + 10,
-    ctx.y - 14,
+    topY - 16,
     size,
     ctx.fontBold,
     COLORS.text,
   );
-  ctx.y -= height + 8;
+  ctx.y = topY - total;
 }
 
 function drawStatusBadge(
   ctx: PdfContext,
   status: ChecklistPdfItem["status"],
   labels: PdfLabels,
-  anchorY: number,
+  rowTop: number,
+  rowHeight: number,
 ) {
   const text =
     status === "done"
@@ -328,10 +375,11 @@ function drawStatusBadge(
   const activeFont = ctx.fontBold;
   const textWidth = activeFont.widthOfTextAtSize(text, size);
   const padX = 8;
-  const padY = 4;
+  const padY = 5;
   const badgeWidth = textWidth + padX * 2;
   const badgeHeight = size + padY * 2;
-  const x = PAGE_WIDTH - MARGIN_RIGHT - badgeWidth;
+  const badgeTop = rowTop - (rowHeight - badgeHeight) / 2;
+  const x = PAGE_WIDTH - MARGIN_RIGHT - badgeWidth - 10;
   const fill =
     status === "done"
       ? COLORS.doneBg
@@ -351,8 +399,16 @@ function drawStatusBadge(
         ? COLORS.failed
         : COLORS.muted;
 
-  drawFilledBox(ctx, x, anchorY + 2, badgeWidth, badgeHeight, fill, border);
-  drawTextLine(ctx, text, x + padX, anchorY - badgeHeight + padY + 1, size, activeFont, color);
+  drawFilledBox(ctx, x, badgeTop, badgeWidth, badgeHeight, fill, border);
+  drawTextLine(
+    ctx,
+    text,
+    x + padX,
+    badgeTop - padY - size,
+    size,
+    activeFont,
+    color,
+  );
 }
 
 function drawChecklistItem(
@@ -362,13 +418,17 @@ function drawChecklistItem(
 ) {
   const labelSize = 10;
   const labelX = MARGIN_LEFT + 12;
-  const badgeReserve = 92;
+  const badgeReserve = 104;
   const labelWidth = CONTENT_WIDTH - 24 - badgeReserve;
+  const lineGap = 4;
+  const padY = 12;
   const lines = wrapText(item.label, ctx.font, labelSize, labelWidth);
-  const rowHeight = Math.max(lines.length * (labelSize + 4) + 18, 30);
+  const textHeight = lines.length * labelSize + Math.max(0, lines.length - 1) * lineGap;
+  const rowHeight = Math.max(textHeight + padY * 2, 34);
+  const total = rowHeight + BLOCK_GAP;
 
-  ensureSpace(ctx, rowHeight + 6);
-  const rowTop = ctx.y + 2;
+  ensureSpace(ctx, total);
+  const rowTop = ctx.y;
   const fill =
     item.status === "done"
       ? COLORS.doneBg
@@ -377,15 +437,15 @@ function drawChecklistItem(
         : COLORS.white;
 
   drawFilledBox(ctx, MARGIN_LEFT, rowTop, CONTENT_WIDTH, rowHeight, fill);
-  drawStatusBadge(ctx, item.status, labels, rowTop);
+  drawStatusBadge(ctx, item.status, labels, rowTop, rowHeight);
 
-  let lineY = rowTop - 14;
+  let baselineY = rowTop - padY - labelSize;
   lines.forEach((line) => {
-    drawTextLine(ctx, line, labelX, lineY, labelSize, ctx.font, COLORS.text);
-    lineY -= labelSize + 4;
+    drawTextLine(ctx, line, labelX, baselineY, labelSize, ctx.font, COLORS.text);
+    baselineY -= labelSize + lineGap;
   });
 
-  ctx.y -= rowHeight + 6;
+  ctx.y = rowTop - total;
 }
 
 function drawFailedSummary(
@@ -393,81 +453,120 @@ function drawFailedSummary(
   failedItems: Array<{ label: string; comment?: string }>,
   labels: PdfLabels,
 ) {
-  drawWrappedBlock(ctx, labels.failedTitle, 12, { bold: true });
-  ctx.y -= 4;
+  drawWrappedBlock(ctx, labels.failedTitle, 12, { bold: true, gapAfter: 12 });
 
   if (!failedItems.length) {
-    drawWrappedBlock(ctx, labels.noFailed, 10, { color: COLORS.muted });
-    ctx.y -= 8;
+    drawWrappedBlock(ctx, labels.noFailed, 10, {
+      color: COLORS.muted,
+      gapAfter: SECTION_GAP,
+    });
     return;
   }
 
-  failedItems.forEach((item) => {
+  failedItems.forEach((item, index) => {
     const reason = item.comment?.trim();
+    const labelLines = wrapText(
+      item.label,
+      ctx.fontBold,
+      10,
+      CONTENT_WIDTH - 24,
+    );
     const reasonLines = reason
       ? wrapText(
           `${labels.reason}: ${reason}`,
           ctx.font,
           9,
-          CONTENT_WIDTH - 28,
+          CONTENT_WIDTH - 24,
         )
       : [];
-    const blockHeight = 28 + reasonLines.length * 13;
+    const labelHeight =
+      labelLines.length * 10 + Math.max(0, labelLines.length - 1) * 4;
+    const reasonHeight =
+      reasonLines.length * 9 + Math.max(0, reasonLines.length - 1) * 4;
+    const blockHeight = 12 + labelHeight + (reasonLines.length ? 6 + reasonHeight : 0) + 12;
+    const gapAfter = index === failedItems.length - 1 ? SECTION_GAP : BLOCK_GAP;
 
-    ensureSpace(ctx, blockHeight + 8);
-    const boxTop = ctx.y + 2;
+    ensureSpace(ctx, blockHeight + gapAfter);
+    const topY = ctx.y;
     drawFilledBox(
       ctx,
       MARGIN_LEFT,
-      boxTop,
+      topY,
       CONTENT_WIDTH,
       blockHeight,
       COLORS.failedBg,
       COLORS.failed,
     );
 
-    drawTextLine(
-      ctx,
-      item.label,
-      MARGIN_LEFT + 12,
-      boxTop - 16,
-      10,
-      ctx.fontBold,
-      COLORS.failed,
-    );
-
-    let reasonY = boxTop - 30;
-    reasonLines.forEach((line) => {
-      drawTextLine(ctx, line, MARGIN_LEFT + 12, reasonY, 9, ctx.font, COLORS.text);
-      reasonY -= 13;
+    drawWrappedLines(ctx, labelLines, topY - 12, {
+      x: MARGIN_LEFT + 12,
+      size: 10,
+      bold: true,
+      color: COLORS.failed,
     });
 
-    ctx.y -= blockHeight + 8;
+    if (reasonLines.length) {
+      drawWrappedLines(ctx, reasonLines, topY - 12 - labelHeight - 6, {
+        x: MARGIN_LEFT + 12,
+        size: 9,
+        color: COLORS.text,
+        lineGap: 4,
+      });
+    }
+
+    ctx.y = topY - blockHeight - gapAfter;
   });
 }
 
-function drawHeader(ctx: PdfContext, options: ShiftChecklistPdfOptions, labels: PdfLabels) {
-  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 8, CONTENT_WIDTH, 4, COLORS.gold, COLORS.gold);
-  ctx.y -= 10;
-
-  drawWrappedBlock(ctx, labels.title, 20, { bold: true });
-  drawWrappedBlock(ctx, options.venueLabel, 13, { bold: true, color: COLORS.muted });
-  ctx.y -= 6;
-
+function drawHeader(
+  ctx: PdfContext,
+  options: ShiftChecklistPdfOptions,
+  labels: PdfLabels,
+) {
+  const titleBlock = measureWrappedText(labels.title, ctx.fontBold, 20, CONTENT_WIDTH);
+  const venueBlock = measureWrappedText(
+    options.venueLabel,
+    ctx.fontBold,
+    13,
+    CONTENT_WIDTH,
+  );
   const meta = [
     `${labels.date}: ${options.date || "-"}`,
     `${labels.employee}: ${options.employee || "-"}`,
     `${labels.shift}: ${options.shiftLabel}`,
     `${labels.cleaning}: ${options.cleaningLabel}`,
   ];
+  const metaLineHeight = 14;
+  const metaHeight = meta.length * metaLineHeight + 16;
+  const headerHeight =
+    8 + titleBlock.height + 8 + venueBlock.height + 10 + metaHeight + SECTION_GAP;
 
-  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 2, CONTENT_WIDTH, 54, COLORS.goldSoft);
-  let metaY = ctx.y - 16;
-  meta.forEach((line) => {
-    drawTextLine(ctx, line, MARGIN_LEFT + 12, metaY, 10, ctx.font, COLORS.text);
-    metaY -= 14;
+  ensureSpace(ctx, headerHeight);
+  const headerTop = ctx.y;
+
+  drawFilledBox(ctx, MARGIN_LEFT, headerTop, CONTENT_WIDTH, 4, COLORS.gold, COLORS.gold);
+
+  let topY = headerTop - 12;
+  drawWrappedLines(ctx, titleBlock.lines, topY, { size: 20, bold: true });
+  topY -= titleBlock.height + 8;
+
+  drawWrappedLines(ctx, venueBlock.lines, topY, {
+    size: 13,
+    bold: true,
+    color: COLORS.muted,
   });
-  ctx.y -= 64;
+  topY -= venueBlock.height + 10;
+
+  const metaTop = topY;
+  drawFilledBox(ctx, MARGIN_LEFT, metaTop, CONTENT_WIDTH, metaHeight, COLORS.goldSoft);
+
+  let metaBaseline = metaTop - 14;
+  meta.forEach((line) => {
+    drawTextLine(ctx, line, MARGIN_LEFT + 12, metaBaseline, 10, ctx.font, COLORS.text);
+    metaBaseline -= metaLineHeight;
+  });
+
+  ctx.y = headerTop - headerHeight;
 }
 
 export async function makeShiftChecklistPdfBlob(
@@ -506,8 +605,7 @@ export async function makeShiftChecklistPdfBlob(
   drawHeader(ctx, options, labels);
   drawFailedSummary(ctx, failedItems, labels);
 
-  drawWrappedBlock(ctx, labels.fullChecklist, 12, { bold: true });
-  ctx.y -= 4;
+  drawWrappedBlock(ctx, labels.fullChecklist, 12, { bold: true, gapAfter: 12 });
 
   options.sections.forEach((section) => {
     drawSectionTitle(ctx, section.title);
@@ -515,13 +613,15 @@ export async function makeShiftChecklistPdfBlob(
     ctx.y -= 4;
   });
 
-  ensureSpace(ctx, 28);
-  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 2, CONTENT_WIDTH, 24, COLORS.section);
+  const summaryHeight = 24 + BLOCK_GAP;
+  ensureSpace(ctx, summaryHeight);
+  const summaryTop = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, summaryTop, CONTENT_WIDTH, 24, COLORS.section);
   drawTextLine(
     ctx,
     labels.summary(completed, total, failed),
     MARGIN_LEFT + 10,
-    ctx.y - 16,
+    summaryTop - 16,
     9.5,
     ctx.fontBold,
     COLORS.text,
