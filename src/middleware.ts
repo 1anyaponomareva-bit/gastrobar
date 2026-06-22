@@ -9,42 +9,7 @@ function getMenuPeriodFromHour(hour: number): string {
   return "dinner";
 }
 
-function isCheckHost(host: string): boolean {
-  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
-  return (
-    hostname === "check.gastrotruck.org" ||
-    hostname === "check.localhost" ||
-    hostname.startsWith("check.")
-  );
-}
-
-function isStaticAssetPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/food/") ||
-    pathname.startsWith("/menu/") ||
-    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$/i.test(pathname)
-  );
-}
-
 export function middleware(request: NextRequest) {
-  const host = request.headers.get("host") ?? "";
-  const { pathname } = request.nextUrl;
-
-  if (isCheckHost(host)) {
-    if (isStaticAssetPath(pathname)) {
-      return NextResponse.next();
-    }
-
-    if (pathname !== "/check" && !pathname.startsWith("/check/")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/check";
-      return NextResponse.rewrite(url);
-    }
-
-    return NextResponse.next();
-  }
-
   const hour = new Date().getHours();
   const period = getMenuPeriodFromHour(hour);
   const response = NextResponse.next();
