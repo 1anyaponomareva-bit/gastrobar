@@ -1,5 +1,5 @@
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, type PDFFont, rgb } from "pdf-lib";
+import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
 import { getAssetUrl } from "@/lib/appVersion";
 
 type ChecklistPdfItem = {
@@ -15,6 +15,7 @@ type ChecklistPdfSection = {
 
 export type ShiftChecklistPdfOptions = {
   venueLabel: string;
+  locale?: "ru" | "en";
   date: string;
   employee: string;
   shiftLabel: string;
@@ -24,9 +25,78 @@ export type ShiftChecklistPdfOptions = {
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-const MARGIN_LEFT = 35;
-const MARGIN_RIGHT = 35;
-const MARGIN_BOTTOM = 42;
+const MARGIN_LEFT = 40;
+const MARGIN_RIGHT = 40;
+const MARGIN_BOTTOM = 48;
+const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+
+const COLORS = {
+  text: rgb(0.07, 0.07, 0.07),
+  muted: rgb(0.42, 0.42, 0.42),
+  gold: rgb(0.95, 0.68, 0),
+  goldSoft: rgb(1, 0.97, 0.9),
+  line: rgb(0.86, 0.86, 0.86),
+  section: rgb(0.95, 0.95, 0.95),
+  done: rgb(0.1, 0.52, 0.24),
+  doneBg: rgb(0.94, 0.98, 0.95),
+  failed: rgb(0.75, 0.08, 0.08),
+  failedBg: rgb(1, 0.96, 0.96),
+  white: rgb(1, 1, 1),
+};
+
+type PdfLabels = {
+  title: string;
+  failedTitle: string;
+  noFailed: string;
+  reason: string;
+  fullChecklist: string;
+  date: string;
+  employee: string;
+  shift: string;
+  cleaning: string;
+  statusDone: string;
+  statusFailed: string;
+  statusNone: string;
+  summary: (done: number, total: number, failed: number) => string;
+};
+
+function getLabels(locale: "ru" | "en"): PdfLabels {
+  if (locale === "ru") {
+    return {
+      title: "Чек-лист смены",
+      failedTitle: "Не выполненные задачи",
+      noFailed: "Невыполненных задач нет.",
+      reason: "Причина",
+      fullChecklist: "Полный чек-лист",
+      date: "Дата",
+      employee: "Сотрудник",
+      shift: "Смена",
+      cleaning: "Уборка",
+      statusDone: "Выполнено",
+      statusFailed: "Не выполнено",
+      statusNone: "Не отмечено",
+      summary: (done, total, failed) =>
+        `Выполнено: ${done} из ${total}   Не выполнено: ${failed}`,
+    };
+  }
+
+  return {
+    title: "Shift Checklist",
+    failedTitle: "Incomplete Tasks",
+    noFailed: "No incomplete tasks.",
+    reason: "Reason",
+    fullChecklist: "Full Checklist",
+    date: "Date",
+    employee: "Employee",
+    shift: "Shift",
+    cleaning: "Cleaning",
+    statusDone: "Done",
+    statusFailed: "Not done",
+    statusNone: "Not marked",
+    summary: (done, total, failed) =>
+      `Done: ${done} / ${total}   Not done: ${failed}`,
+  };
+}
 
 let fontBytesPromise: Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> | null =
   null;
@@ -57,7 +127,7 @@ async function loadFontBytes(): Promise<{
 
 function wrapText(
   text: string,
-  font: PDFFont,
+  activeFont: PDFFont,
   fontSize: number,
   maxWidth: number,
 ): string[] {
@@ -70,7 +140,7 @@ function wrapText(
 
   words.forEach((word) => {
     const candidate = current ? `${current} ${word}` : word;
-    if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+    if (activeFont.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
       current = candidate;
       return;
     }
@@ -129,6 +199,277 @@ function downloadPdfOnDesktop(blob: Blob, fileName: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
+type PdfContext = {
+  page: PDFPage;
+  y: number;
+  font: PDFFont;
+  fontBold: PDFFont;
+  pdfDoc: PDFDocument;
+};
+
+function createPdfContext(
+  pdfDoc: PDFDocument,
+  font: PDFFont,
+  fontBold: PDFFont,
+): PdfContext {
+  return {
+    pdfDoc,
+    page: pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
+    y: PAGE_HEIGHT - 44,
+    font,
+    fontBold,
+  };
+}
+
+function ensureSpace(ctx: PdfContext, needed: number) {
+  if (ctx.y - needed >= MARGIN_BOTTOM) return;
+  ctx.page = ctx.pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  ctx.y = PAGE_HEIGHT - 44;
+}
+
+function drawFilledBox(
+  ctx: PdfContext,
+  x: number,
+  topY: number,
+  width: number,
+  height: number,
+  fill: ReturnType<typeof rgb>,
+  border = COLORS.line,
+) {
+  const bottomY = topY - height;
+  ctx.page.drawRectangle({
+    x,
+    y: bottomY,
+    width,
+    height,
+    color: fill,
+    borderColor: border,
+    borderWidth: 0.6,
+  });
+}
+
+function drawTextLine(
+  ctx: PdfContext,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  activeFont: PDFFont,
+  color = COLORS.text,
+) {
+  ctx.page.drawText(text, {
+    x,
+    y,
+    size,
+    font: activeFont,
+    color,
+  });
+}
+
+function drawWrappedBlock(
+  ctx: PdfContext,
+  text: string,
+  size: number,
+  options: {
+    x?: number;
+    maxWidth?: number;
+    bold?: boolean;
+    color?: ReturnType<typeof rgb>;
+    lineGap?: number;
+  } = {},
+): number {
+  const x = options.x ?? MARGIN_LEFT;
+  const maxWidth = options.maxWidth ?? CONTENT_WIDTH;
+  const activeFont = options.bold ? ctx.fontBold : ctx.font;
+  const color = options.color ?? COLORS.text;
+  const lineGap = options.lineGap ?? 4;
+  const lines = wrapText(text, activeFont, size, maxWidth);
+  const blockHeight = lines.length * (size + lineGap);
+
+  ensureSpace(ctx, blockHeight);
+  lines.forEach((line) => {
+    drawTextLine(ctx, line, x, ctx.y, size, activeFont, color);
+    ctx.y -= size + lineGap;
+  });
+
+  return blockHeight;
+}
+
+function drawSectionTitle(ctx: PdfContext, title: string) {
+  const size = 11;
+  const height = 24;
+  ensureSpace(ctx, height + 10);
+  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 4, CONTENT_WIDTH, height, COLORS.section);
+  drawTextLine(
+    ctx,
+    title.toUpperCase(),
+    MARGIN_LEFT + 10,
+    ctx.y - 14,
+    size,
+    ctx.fontBold,
+    COLORS.text,
+  );
+  ctx.y -= height + 8;
+}
+
+function drawStatusBadge(
+  ctx: PdfContext,
+  status: ChecklistPdfItem["status"],
+  labels: PdfLabels,
+  anchorY: number,
+) {
+  const text =
+    status === "done"
+      ? labels.statusDone
+      : status === "failed"
+        ? labels.statusFailed
+        : labels.statusNone;
+  const size = 8.5;
+  const activeFont = ctx.fontBold;
+  const textWidth = activeFont.widthOfTextAtSize(text, size);
+  const padX = 8;
+  const padY = 4;
+  const badgeWidth = textWidth + padX * 2;
+  const badgeHeight = size + padY * 2;
+  const x = PAGE_WIDTH - MARGIN_RIGHT - badgeWidth;
+  const fill =
+    status === "done"
+      ? COLORS.doneBg
+      : status === "failed"
+        ? COLORS.failedBg
+        : COLORS.white;
+  const border =
+    status === "done"
+      ? COLORS.done
+      : status === "failed"
+        ? COLORS.failed
+        : COLORS.line;
+  const color =
+    status === "done"
+      ? COLORS.done
+      : status === "failed"
+        ? COLORS.failed
+        : COLORS.muted;
+
+  drawFilledBox(ctx, x, anchorY + 2, badgeWidth, badgeHeight, fill, border);
+  drawTextLine(ctx, text, x + padX, anchorY - badgeHeight + padY + 1, size, activeFont, color);
+}
+
+function drawChecklistItem(
+  ctx: PdfContext,
+  item: ChecklistPdfItem,
+  labels: PdfLabels,
+) {
+  const labelSize = 10;
+  const labelX = MARGIN_LEFT + 12;
+  const badgeReserve = 92;
+  const labelWidth = CONTENT_WIDTH - 24 - badgeReserve;
+  const lines = wrapText(item.label, ctx.font, labelSize, labelWidth);
+  const rowHeight = Math.max(lines.length * (labelSize + 4) + 18, 30);
+
+  ensureSpace(ctx, rowHeight + 6);
+  const rowTop = ctx.y + 2;
+  const fill =
+    item.status === "done"
+      ? COLORS.doneBg
+      : item.status === "failed"
+        ? COLORS.failedBg
+        : COLORS.white;
+
+  drawFilledBox(ctx, MARGIN_LEFT, rowTop, CONTENT_WIDTH, rowHeight, fill);
+  drawStatusBadge(ctx, item.status, labels, rowTop);
+
+  let lineY = rowTop - 14;
+  lines.forEach((line) => {
+    drawTextLine(ctx, line, labelX, lineY, labelSize, ctx.font, COLORS.text);
+    lineY -= labelSize + 4;
+  });
+
+  ctx.y -= rowHeight + 6;
+}
+
+function drawFailedSummary(
+  ctx: PdfContext,
+  failedItems: Array<{ label: string; comment?: string }>,
+  labels: PdfLabels,
+) {
+  drawWrappedBlock(ctx, labels.failedTitle, 12, { bold: true });
+  ctx.y -= 4;
+
+  if (!failedItems.length) {
+    drawWrappedBlock(ctx, labels.noFailed, 10, { color: COLORS.muted });
+    ctx.y -= 8;
+    return;
+  }
+
+  failedItems.forEach((item) => {
+    const reason = item.comment?.trim();
+    const reasonLines = reason
+      ? wrapText(
+          `${labels.reason}: ${reason}`,
+          ctx.font,
+          9,
+          CONTENT_WIDTH - 28,
+        )
+      : [];
+    const blockHeight = 28 + reasonLines.length * 13;
+
+    ensureSpace(ctx, blockHeight + 8);
+    const boxTop = ctx.y + 2;
+    drawFilledBox(
+      ctx,
+      MARGIN_LEFT,
+      boxTop,
+      CONTENT_WIDTH,
+      blockHeight,
+      COLORS.failedBg,
+      COLORS.failed,
+    );
+
+    drawTextLine(
+      ctx,
+      item.label,
+      MARGIN_LEFT + 12,
+      boxTop - 16,
+      10,
+      ctx.fontBold,
+      COLORS.failed,
+    );
+
+    let reasonY = boxTop - 30;
+    reasonLines.forEach((line) => {
+      drawTextLine(ctx, line, MARGIN_LEFT + 12, reasonY, 9, ctx.font, COLORS.text);
+      reasonY -= 13;
+    });
+
+    ctx.y -= blockHeight + 8;
+  });
+}
+
+function drawHeader(ctx: PdfContext, options: ShiftChecklistPdfOptions, labels: PdfLabels) {
+  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 8, CONTENT_WIDTH, 4, COLORS.gold, COLORS.gold);
+  ctx.y -= 10;
+
+  drawWrappedBlock(ctx, labels.title, 20, { bold: true });
+  drawWrappedBlock(ctx, options.venueLabel, 13, { bold: true, color: COLORS.muted });
+  ctx.y -= 6;
+
+  const meta = [
+    `${labels.date}: ${options.date || "-"}`,
+    `${labels.employee}: ${options.employee || "-"}`,
+    `${labels.shift}: ${options.shiftLabel}`,
+    `${labels.cleaning}: ${options.cleaningLabel}`,
+  ];
+
+  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 2, CONTENT_WIDTH, 54, COLORS.goldSoft);
+  let metaY = ctx.y - 16;
+  meta.forEach((line) => {
+    drawTextLine(ctx, line, MARGIN_LEFT + 12, metaY, 10, ctx.font, COLORS.text);
+    metaY -= 14;
+  });
+  ctx.y -= 64;
+}
+
 export async function makeShiftChecklistPdfBlob(
   options: ShiftChecklistPdfOptions,
 ): Promise<Blob> {
@@ -138,106 +479,53 @@ export async function makeShiftChecklistPdfBlob(
 
   const font = await pdfDoc.embedFont(regular);
   const fontBold = await pdfDoc.embedFont(bold);
-  const maxTextWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+  const locale = options.locale ?? "en";
+  const labels = getLabels(locale);
+  const ctx = createPdfContext(pdfDoc, font, fontBold);
 
-  let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let y = PAGE_HEIGHT - 42;
-
-  const ensureSpace = (needed: number) => {
-    if (y - needed >= MARGIN_BOTTOM) return;
-    page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    y = PAGE_HEIGHT - 42;
-  };
-
-  const drawLine = () => {
-    ensureSpace(12);
-    page.drawLine({
-      start: { x: MARGIN_LEFT, y },
-      end: { x: PAGE_WIDTH - MARGIN_RIGHT, y },
-      thickness: 0.5,
-      color: rgb(0.65, 0.65, 0.65),
-    });
-    y -= 14;
-  };
-
-  const drawText = (
-    text: string,
-    size: number,
-    isBold = false,
-    indent = 0,
-  ) => {
-    const activeFont = isBold ? fontBold : font;
-    ensureSpace(size + 6);
-    page.drawText(text, {
-      x: MARGIN_LEFT + indent,
-      y,
-      size,
-      font: activeFont,
-      color: rgb(0, 0, 0),
-    });
-    y -= size + 6;
-  };
-
-  const drawWrapped = (
-    text: string,
-    size: number,
-    isBold = false,
-    indent = 0,
-  ) => {
-    const activeFont = isBold ? fontBold : font;
-    const lines = wrapText(text, activeFont, size, maxTextWidth - indent);
-    lines.forEach((line) => drawText(line, size, isBold, indent));
-  };
-
-  drawText("SHIFT OPEN / CLOSE CHECKLIST", 18, true);
-  y -= 4;
-  drawText(`Venue: ${options.venueLabel}`, 11, true);
-  drawText(
-    `Date: ${options.date || "-"}    Employee: ${options.employee || "-"}`,
-    11,
+  const failedItems = options.sections.flatMap((section) =>
+    section.items
+      .filter((item) => item.status === "failed")
+      .map((item) => ({
+        label: item.label,
+        comment: item.comment,
+      })),
   );
-  drawText(
-    `Shift: ${options.shiftLabel}    Cleaning: ${options.cleaningLabel}`,
-    11,
-  );
-  drawLine();
-
-  options.sections.forEach((section) => {
-    drawWrapped(section.title.toUpperCase(), 12, true);
-    y -= 2;
-
-    section.items.forEach((item) => {
-      let mark = "[ ]";
-      if (item.status === "done") mark = "[x]";
-      if (item.status === "failed") mark = "[!]";
-
-      drawWrapped(`${mark} ${item.label}`, 10, false, 8);
-
-      if (item.status === "failed" && item.comment?.trim()) {
-        drawWrapped(`Reason: ${item.comment.trim()}`, 9, false, 16);
-      }
-    });
-
-    y -= 6;
-  });
 
   const completed = options.sections.reduce(
     (sum, section) =>
       sum + section.items.filter((item) => item.status === "done").length,
     0,
   );
-  const failed = options.sections.reduce(
-    (sum, section) =>
-      sum + section.items.filter((item) => item.status === "failed").length,
-    0,
-  );
+  const failed = failedItems.length;
   const total = options.sections.reduce(
     (sum, section) => sum + section.items.length,
     0,
   );
 
-  drawLine();
-  drawText(`Done: ${completed} / ${total}    Not done: ${failed}`, 10, true);
+  drawHeader(ctx, options, labels);
+  drawFailedSummary(ctx, failedItems, labels);
+
+  drawWrappedBlock(ctx, labels.fullChecklist, 12, { bold: true });
+  ctx.y -= 4;
+
+  options.sections.forEach((section) => {
+    drawSectionTitle(ctx, section.title);
+    section.items.forEach((item) => drawChecklistItem(ctx, item, labels));
+    ctx.y -= 4;
+  });
+
+  ensureSpace(ctx, 28);
+  drawFilledBox(ctx, MARGIN_LEFT, ctx.y + 2, CONTENT_WIDTH, 24, COLORS.section);
+  drawTextLine(
+    ctx,
+    labels.summary(completed, total, failed),
+    MARGIN_LEFT + 10,
+    ctx.y - 16,
+    9.5,
+    ctx.fontBold,
+    COLORS.text,
+  );
 
   const bytes = await pdfDoc.save();
   return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });

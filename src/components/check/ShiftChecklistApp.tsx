@@ -283,6 +283,7 @@ export function ShiftChecklistApp() {
     try {
       await exportShiftChecklistPdf({
         venueLabel,
+        locale: venue === "gastrobar" ? "ru" : "en",
         date,
         employee,
         shiftLabel: SHIFT_TYPE_LABELS[shift],
