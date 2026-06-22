@@ -259,3 +259,10 @@ export function getSectionTabLabel(sectionTitle: string): string {
   const word = sectionTitle.split(/\s+/)[0];
   return word || sectionTitle;
 }
+
+export function isClosingSection(sectionTitle: string): boolean {
+  return (
+    sectionTitle.startsWith("Закрытие") ||
+    sectionTitle.startsWith("Closing")
+  );
+}

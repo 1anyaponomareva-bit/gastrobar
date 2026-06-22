@@ -11,6 +11,7 @@ import {
   CLEANING_TYPE_LABELS,
   getSectionTabLabel,
   getShiftChecklistItems,
+  isClosingSection,
   SHIFT_TYPE_LABELS,
   type CleaningType,
   type ShiftType,
@@ -141,10 +142,9 @@ export function ShiftChecklistApp() {
     setStoredCheckSection(venue, shift, sectionTitle);
   };
 
-  useEffect(() => {
-    const main = document.querySelector<HTMLElement>(".shift-checklist .main");
-    main?.scrollTo({ top: 0, behavior: "smooth" });
-  }, [activeSection, venue, shift]);
+  const showExportPdf = activeSectionData
+    ? isClosingSection(activeSectionData.title)
+    : false;
 
   const completedCount = useMemo(
     () =>
@@ -428,19 +428,26 @@ export function ShiftChecklistApp() {
                   ))}
                 </div>
               ))}
+
+              {showExportPdf ? (
+                <div className="exportOnly">
+                  <button type="button" className="gold" onClick={handleExportPdf}>
+                    Export PDF
+                  </button>
+                  <p className="note">
+                    PDF includes the full shift: opening, during shift, and closing.
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
-          <div className="exportOnly">
-            <button type="button" className="gold" onClick={handleExportPdf}>
-              Export PDF
-            </button>
-          </div>
-
-          <p className="note">
-            Tap ✓ on the left if done, ✕ on the right if not done. Add a reason
-            when marking not done. Export PDF includes all marks and comments.
-          </p>
+          {!showExportPdf ? (
+            <p className="note">
+              Tap ✓ on the left if done, ✕ on the right if not done. Add a reason
+              when marking not done.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
