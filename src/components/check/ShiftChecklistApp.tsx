@@ -9,6 +9,7 @@ import {
 } from "@/data/staffInventoryItems";
 import {
   CLEANING_TYPE_LABELS,
+  getSectionTabLabel,
   getShiftChecklistItems,
   SHIFT_TYPE_LABELS,
   type CleaningType,
@@ -22,6 +23,7 @@ import {
   getChecklistItemStatus,
   getStoredCheckDate,
   getStoredCheckEmployee,
+  getStoredCheckSection,
   getStoredCheckVenue,
   getStoredCleaningType,
   getStoredShiftType,
@@ -29,6 +31,7 @@ import {
   setChecklistItemStatus,
   setStoredCheckDate,
   setStoredCheckEmployee,
+  setStoredCheckSection,
   setStoredCheckVenue,
   setStoredCleaningType,
   setStoredShiftType,
@@ -45,6 +48,7 @@ export function ShiftChecklistApp() {
   const [employee, setEmployee] = useState("");
   const [shift, setShift] = useState<ShiftType>("day");
   const [cleaning, setCleaning] = useState<CleaningType>("regular");
+  const [activeSection, setActiveSection] = useState("");
   const [revision, setRevision] = useState(0);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
@@ -95,6 +99,52 @@ export function ShiftChecklistApp() {
       };
     });
   }, [items, revision, venue]);
+
+  useEffect(() => {
+    if (!sections.length) {
+      setActiveSection("");
+      return;
+    }
+
+    const stored = getStoredCheckSection(venue, shift);
+    const hasStored = sections.some((section) => section.title === stored);
+    const nextSection = hasStored ? stored : sections[0].title;
+
+    setActiveSection((current) =>
+      current === nextSection ? current : nextSection,
+    );
+  }, [sections, venue, shift]);
+
+  const activeSectionData = useMemo(
+    () => sections.find((section) => section.title === activeSection) ?? sections[0],
+    [sections, activeSection],
+  );
+
+  const sectionProgress = useMemo(() => {
+    const map = new Map<string, { done: number; total: number }>();
+    sections.forEach((section) => {
+      let done = 0;
+      let total = 0;
+      section.groups.forEach((group) => {
+        group.items.forEach((item) => {
+          total += 1;
+          if (item.status === "done") done += 1;
+        });
+      });
+      map.set(section.title, { done, total });
+    });
+    return map;
+  }, [sections]);
+
+  const handleSectionChange = (sectionTitle: string) => {
+    setActiveSection(sectionTitle);
+    setStoredCheckSection(venue, shift, sectionTitle);
+  };
+
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>(".shift-checklist .main");
+    main?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeSection, venue, shift]);
 
   const completedCount = useMemo(
     () =>
@@ -201,7 +251,7 @@ export function ShiftChecklistApp() {
   }
 
   return (
-    <div className="staff-inventory">
+    <div className="staff-inventory shift-checklist">
       <div className="app">
         <div className="top">
           <div className="venuePicker">
@@ -309,6 +359,32 @@ export function ShiftChecklistApp() {
             </button>
           </div>
 
+          {sections.length > 1 ? (
+            <div className="tabs">
+              {sections.map((section) => {
+                const progress = sectionProgress.get(section.title);
+                const tabLabel = getSectionTabLabel(section.title);
+                const countLabel = progress
+                  ? `${progress.done}/${progress.total}`
+                  : "";
+
+                return (
+                  <button
+                    key={section.title}
+                    type="button"
+                    className={`tab ${
+                      section.title === activeSectionData?.title ? "active" : ""
+                    }`}
+                    onClick={() => handleSectionChange(section.title)}
+                  >
+                    {tabLabel}
+                    {countLabel ? ` ${countLabel}` : ""}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           <div className="statusLegend">
             <span className="legendItem">
               <span className="statusBox doneBox active" aria-hidden="true">
@@ -324,10 +400,10 @@ export function ShiftChecklistApp() {
             </span>
           </div>
 
-          {sections.map((section) => (
-            <div key={section.title}>
-              <div className="checkSection">{section.title}</div>
-              {section.groups.map((group) => (
+          {activeSectionData ? (
+            <div key={activeSectionData.title}>
+              <div className="checkSection">{activeSectionData.title}</div>
+              {activeSectionData.groups.map((group) => (
                 <div key={group.title ?? "__default"}>
                   {group.title ? (
                     <div className="checkGroup">{group.title}</div>
@@ -353,7 +429,7 @@ export function ShiftChecklistApp() {
                 </div>
               ))}
             </div>
-          ))}
+          ) : null}
 
           <div className="exportOnly">
             <button type="button" className="gold" onClick={handleExportPdf}>

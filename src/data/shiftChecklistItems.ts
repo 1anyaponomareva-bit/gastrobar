@@ -250,3 +250,12 @@ export const CLEANING_TYPE_LABELS: Record<CleaningType, string> = {
   regular: "Regular Cleaning",
   general: "General Cleaning",
 };
+
+export function getSectionTabLabel(sectionTitle: string): string {
+  if (sectionTitle.startsWith("Открытие")) return "Открытие";
+  if (sectionTitle.startsWith("Контроль")) return "Контроль";
+  if (sectionTitle.startsWith("Закрытие")) return "Закрытие";
+  if (sectionTitle.length <= 18) return sectionTitle;
+  const word = sectionTitle.split(/\s+/)[0];
+  return word || sectionTitle;
+}

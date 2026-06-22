@@ -133,6 +133,29 @@ export function setStoredCleaningType(value: CleaningType): void {
   localStorage.setItem(`${PREFIX}cleaning`, value);
 }
 
+function activeSectionKey(
+  venue: StaffInventoryVenue,
+  shift: ShiftType,
+): string {
+  return `${PREFIX}section_${venue}_${shift}`;
+}
+
+export function getStoredCheckSection(
+  venue: StaffInventoryVenue,
+  shift: ShiftType,
+): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(activeSectionKey(venue, shift)) ?? "";
+}
+
+export function setStoredCheckSection(
+  venue: StaffInventoryVenue,
+  shift: ShiftType,
+  section: string,
+): void {
+  localStorage.setItem(activeSectionKey(venue, shift), section);
+}
+
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
