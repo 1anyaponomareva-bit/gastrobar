@@ -1,6 +1,12 @@
+type ChecklistPdfItem = {
+  label: string;
+  status: "none" | "done" | "failed";
+  comment?: string;
+};
+
 type ChecklistPdfSection = {
   title: string;
-  items: { label: string; checked: boolean }[];
+  items: ChecklistPdfItem[];
 };
 
 export type ShiftChecklistPdfOptions = {
@@ -67,22 +73,41 @@ function buildPdfDocument(options: ShiftChecklistPdfOptions): string {
     y -= 18;
     section.items.forEach((item) => {
       if (y < bottom + 20) return;
-      const mark = item.checked ? "[x]" : "[ ]";
+      let mark = "[ ]";
+      if (item.status === "done") mark = "[x]";
+      if (item.status === "failed") mark = "[!]";
       content += text(43, y, `${mark} ${item.label}`, 10, false);
       y -= 15;
+      if (item.status === "failed" && item.comment?.trim()) {
+        if (y < bottom + 20) return;
+        content += text(55, y, `Reason: ${item.comment.trim()}`, 9, false);
+        y -= 14;
+      }
     });
     y -= 8;
   });
 
   const completed = options.sections.reduce(
-    (sum, section) => sum + section.items.filter((item) => item.checked).length,
+    (sum, section) =>
+      sum + section.items.filter((item) => item.status === "done").length,
+    0,
+  );
+  const failed = options.sections.reduce(
+    (sum, section) =>
+      sum + section.items.filter((item) => item.status === "failed").length,
     0,
   );
   const total = options.sections.reduce(
     (sum, section) => sum + section.items.length,
     0,
   );
-  content += text(35, 28, `Completed: ${completed} / ${total}`, 10, true);
+  content += text(
+    35,
+    28,
+    `Done: ${completed} / ${total}    Not done: ${failed}`,
+    10,
+    true,
+  );
 
   const contentId = add(
     `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,

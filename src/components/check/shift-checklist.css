@@ -39,20 +39,8 @@
   border-color: var(--gold);
 }
 
-.staff-inventory .progress {
-  background: #151515;
-  border: 1px solid #282828;
-  border-radius: 13px;
-  text-align: center;
-  padding: 8px 3px;
-  margin-top: 8px;
-}
-
-.staff-inventory .progress b {
-  color: var(--gold);
-  font-size: 20px;
-  display: block;
-  line-height: 1;
+.staff-inventory .stat b.statRed {
+  color: var(--red);
 }
 
 .staff-inventory .checkSection {
@@ -64,29 +52,50 @@
   letter-spacing: 0.35px;
 }
 
-.staff-inventory .checkItem {
-  width: 100%;
+.staff-inventory .statusLegend {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  text-align: left;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 4px 4px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #666;
+}
+
+.staff-inventory .legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.staff-inventory .checkRow {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 18px;
   margin-bottom: 10px;
   padding: 13px;
   box-shadow: 0 2px 8px #0000000a;
-  cursor: pointer;
 }
 
-.staff-inventory .checkItem.checked {
+.staff-inventory .checkRow.done {
   background: #fffdf5;
   border-color: #e8c766;
 }
 
-.staff-inventory .checkBox {
-  width: 28px;
-  height: 28px;
+.staff-inventory .checkRow.failed {
+  background: #fff5f5;
+  border-color: #efb0b0;
+}
+
+.staff-inventory .checkItemMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.staff-inventory .statusBox {
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   border: 2px solid #bbb;
   display: flex;
@@ -95,22 +104,61 @@
   flex-shrink: 0;
   font-size: 18px;
   font-weight: 900;
-  color: #fff;
   background: #fff;
+  color: transparent;
+  cursor: pointer;
+  padding: 0;
   margin-top: 1px;
 }
 
-.staff-inventory .checkItem.checked .checkBox {
+.staff-inventory .statusBox.doneBox.active {
   background: var(--gold);
   border-color: var(--gold);
   color: #111;
 }
 
+.staff-inventory .statusBox.failBox {
+  border-color: #d8a0a0;
+}
+
+.staff-inventory .statusBox.failBox.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
 .staff-inventory .checkLabel {
+  flex: 1;
   font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
   color: #111;
+  padding-top: 4px;
+}
+
+.staff-inventory .checkRow.failed .checkLabel {
+  color: #8f1010;
+}
+
+.staff-inventory .failComment {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #efb0b0;
+  border-radius: 11px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 56px;
+  background: #fff;
+  color: #111;
+}
+
+.staff-inventory .failComment:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px #d6000022;
 }
 
 .staff-inventory .exportOnly {
@@ -129,5 +177,11 @@
   .staff-inventory .segmentBtn {
     font-size: 13px;
     padding: 11px 6px;
+  }
+
+  .staff-inventory .statusBox {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
   }
 }

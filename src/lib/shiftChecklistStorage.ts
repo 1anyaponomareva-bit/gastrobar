@@ -3,31 +3,75 @@ import type { CleaningType, ShiftType } from "@/data/shiftChecklistItems";
 
 const PREFIX = "gc_";
 
+export type ChecklistItemStatus = "none" | "done" | "failed";
+
 function venuePrefix(venue: StaffInventoryVenue): string {
   return `${PREFIX}${venue}_`;
 }
 
-export function checklistItemKey(
-  venue: StaffInventoryVenue,
-  itemId: string,
-): string {
+function statusKey(venue: StaffInventoryVenue, itemId: string): string {
+  return `${venuePrefix(venue)}status_${itemId}`;
+}
+
+function commentKey(venue: StaffInventoryVenue, itemId: string): string {
+  return `${venuePrefix(venue)}comment_${itemId}`;
+}
+
+/** @deprecated legacy done flag */
+function legacyDoneKey(venue: StaffInventoryVenue, itemId: string): string {
   return `${venuePrefix(venue)}item_${itemId}`;
 }
 
-export function isChecklistItemChecked(
+export function getChecklistItemStatus(
   venue: StaffInventoryVenue,
   itemId: string,
-): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(checklistItemKey(venue, itemId)) === "1";
+): ChecklistItemStatus {
+  if (typeof window === "undefined") return "none";
+
+  const status = localStorage.getItem(statusKey(venue, itemId));
+  if (status === "done" || status === "failed") return status;
+
+  if (localStorage.getItem(legacyDoneKey(venue, itemId)) === "1") {
+    return "done";
+  }
+
+  return "none";
 }
 
-export function setChecklistItemChecked(
+export function setChecklistItemStatus(
   venue: StaffInventoryVenue,
   itemId: string,
-  checked: boolean,
+  status: ChecklistItemStatus,
 ): void {
-  localStorage.setItem(checklistItemKey(venue, itemId), checked ? "1" : "0");
+  if (status === "none") {
+    localStorage.removeItem(statusKey(venue, itemId));
+    localStorage.removeItem(commentKey(venue, itemId));
+    localStorage.removeItem(legacyDoneKey(venue, itemId));
+    return;
+  }
+
+  localStorage.setItem(statusKey(venue, itemId), status);
+  localStorage.removeItem(legacyDoneKey(venue, itemId));
+
+  if (status === "done") {
+    localStorage.removeItem(commentKey(venue, itemId));
+  }
+}
+
+export function getChecklistItemComment(
+  venue: StaffInventoryVenue,
+  itemId: string,
+): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(commentKey(venue, itemId)) ?? "";
+}
+
+export function setChecklistItemComment(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  comment: string,
+): void {
+  localStorage.setItem(commentKey(venue, itemId), comment);
 }
 
 export function clearChecklistItems(
@@ -35,7 +79,9 @@ export function clearChecklistItems(
   itemIds: string[],
 ): void {
   itemIds.forEach((itemId) => {
-    localStorage.removeItem(checklistItemKey(venue, itemId));
+    localStorage.removeItem(statusKey(venue, itemId));
+    localStorage.removeItem(commentKey(venue, itemId));
+    localStorage.removeItem(legacyDoneKey(venue, itemId));
   });
 }
 
@@ -89,4 +135,21 @@ export function setStoredCleaningType(value: CleaningType): void {
 
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** @deprecated use getChecklistItemStatus */
+export function isChecklistItemChecked(
+  venue: StaffInventoryVenue,
+  itemId: string,
+): boolean {
+  return getChecklistItemStatus(venue, itemId) === "done";
+}
+
+/** @deprecated use setChecklistItemStatus */
+export function setChecklistItemChecked(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  checked: boolean,
+): void {
+  setChecklistItemStatus(venue, itemId, checked ? "done" : "none");
 }

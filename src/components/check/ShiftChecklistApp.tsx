@@ -18,19 +18,22 @@ import { getAssetUrl } from "@/lib/appVersion";
 import { exportShiftChecklistPdf } from "@/lib/shiftChecklistPdf";
 import {
   clearChecklistItems,
+  getChecklistItemComment,
+  getChecklistItemStatus,
   getStoredCheckDate,
   getStoredCheckEmployee,
   getStoredCheckVenue,
   getStoredCleaningType,
   getStoredShiftType,
-  isChecklistItemChecked,
-  setChecklistItemChecked,
+  setChecklistItemComment,
+  setChecklistItemStatus,
   setStoredCheckDate,
   setStoredCheckEmployee,
   setStoredCheckVenue,
   setStoredCleaningType,
   setStoredShiftType,
   todayIsoDate,
+  type ChecklistItemStatus,
 } from "@/lib/shiftChecklistStorage";
 import "../staff/staff-inventory.css";
 import "./shift-checklist.css";
@@ -73,13 +76,29 @@ export function ShiftChecklistApp() {
       title,
       items: sectionItems.map((item) => ({
         ...item,
-        checked: isChecklistItemChecked(venue, item.id),
+        status: getChecklistItemStatus(venue, item.id),
+        comment: getChecklistItemComment(venue, item.id),
       })),
     }));
   }, [items, revision, venue]);
 
   const completedCount = useMemo(
-    () => sections.reduce((sum, section) => sum + section.items.filter((item) => item.checked).length, 0),
+    () =>
+      sections.reduce(
+        (sum, section) =>
+          sum + section.items.filter((item) => item.status === "done").length,
+        0,
+      ),
+    [sections],
+  );
+
+  const failedCount = useMemo(
+    () =>
+      sections.reduce(
+        (sum, section) =>
+          sum + section.items.filter((item) => item.status === "failed").length,
+        0,
+      ),
     [sections],
   );
 
@@ -101,9 +120,20 @@ export function ShiftChecklistApp() {
     bump();
   };
 
-  const toggleItem = (itemId: string) => {
-    const checked = !isChecklistItemChecked(venue, itemId);
-    setChecklistItemChecked(venue, itemId, checked);
+  const markDone = (itemId: string) => {
+    const current = getChecklistItemStatus(venue, itemId);
+    setChecklistItemStatus(venue, itemId, current === "done" ? "none" : "done");
+    bump();
+  };
+
+  const markFailed = (itemId: string) => {
+    const current = getChecklistItemStatus(venue, itemId);
+    setChecklistItemStatus(venue, itemId, current === "failed" ? "none" : "failed");
+    bump();
+  };
+
+  const handleCommentChange = (itemId: string, comment: string) => {
+    setChecklistItemComment(venue, itemId, comment);
     bump();
   };
 
@@ -127,7 +157,8 @@ export function ShiftChecklistApp() {
         title: section.title,
         items: section.items.map((item) => ({
           label: item.label,
-          checked: item.checked,
+          status: item.status,
+          comment: item.comment,
         })),
       })),
     });
@@ -223,11 +254,19 @@ export function ShiftChecklistApp() {
             </div>
           </div>
 
-          <div className="progress">
-            <label>Completed</label>
-            <b>
-              {completedCount} / {items.length}
-            </b>
+          <div className="stats">
+            <div className="stat">
+              <label>Done</label>
+              <b>{completedCount}</b>
+            </div>
+            <div className="stat">
+              <label>Not done</label>
+              <b className="statRed">{failedCount}</b>
+            </div>
+            <div className="stat">
+              <label>Total</label>
+              <b>{items.length}</b>
+            </div>
           </div>
         </div>
 
@@ -242,22 +281,34 @@ export function ShiftChecklistApp() {
             </button>
           </div>
 
+          <div className="statusLegend">
+            <span className="legendItem">
+              <span className="statusBox doneBox active" aria-hidden="true">
+                ✓
+              </span>
+              Done
+            </span>
+            <span className="legendItem">
+              <span className="statusBox failBox active" aria-hidden="true">
+                ✕
+              </span>
+              Not done
+            </span>
+          </div>
+
           {sections.map((section) => (
             <div key={section.title}>
               <div className="checkSection">{section.title}</div>
               {section.items.map((item) => (
-                <button
+                <ChecklistRow
                   key={item.id}
-                  type="button"
-                  className={`checkItem ${item.checked ? "checked" : ""}`}
-                  onClick={() => toggleItem(item.id)}
-                  aria-pressed={item.checked}
-                >
-                  <span className="checkBox" aria-hidden="true">
-                    {item.checked ? "✓" : ""}
-                  </span>
-                  <span className="checkLabel">{item.label}</span>
-                </button>
+                  label={item.label}
+                  status={item.status}
+                  comment={item.comment}
+                  onMarkDone={() => markDone(item.id)}
+                  onMarkFailed={() => markFailed(item.id)}
+                  onCommentChange={(value) => handleCommentChange(item.id, value)}
+                />
               ))}
             </div>
           ))}
@@ -269,11 +320,70 @@ export function ShiftChecklistApp() {
           </div>
 
           <p className="note">
-            Tap a task to mark it done. Export PDF saves the checklist with all
-            checkmarks for this shift.
+            Tap ✓ on the left if done, ✕ on the right if not done. Add a reason
+            when marking not done. Export PDF includes all marks and comments.
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ChecklistRow({
+  label,
+  status,
+  comment,
+  onMarkDone,
+  onMarkFailed,
+  onCommentChange,
+}: {
+  label: string;
+  status: ChecklistItemStatus;
+  comment: string;
+  onMarkDone: () => void;
+  onMarkFailed: () => void;
+  onCommentChange: (value: string) => void;
+}) {
+  const rowClass =
+    status === "done" ? "done" : status === "failed" ? "failed" : "";
+
+  return (
+    <div className={`checkRow ${rowClass}`}>
+      <div className="checkItemMain">
+        <button
+          type="button"
+          className={`statusBox doneBox ${status === "done" ? "active" : ""}`}
+          onClick={onMarkDone}
+          aria-pressed={status === "done"}
+          aria-label={status === "done" ? "Mark as not selected" : "Mark as done"}
+        >
+          {status === "done" ? "✓" : ""}
+        </button>
+
+        <span className="checkLabel">{label}</span>
+
+        <button
+          type="button"
+          className={`statusBox failBox ${status === "failed" ? "active" : ""}`}
+          onClick={onMarkFailed}
+          aria-pressed={status === "failed"}
+          aria-label={
+            status === "failed" ? "Clear not done" : "Mark as not done"
+          }
+        >
+          {status === "failed" ? "✕" : ""}
+        </button>
+      </div>
+
+      {status === "failed" ? (
+        <textarea
+          className="failComment"
+          placeholder="Why was this not completed?"
+          value={comment}
+          onChange={(event) => onCommentChange(event.target.value)}
+          rows={2}
+        />
+      ) : null}
     </div>
   );
 }
