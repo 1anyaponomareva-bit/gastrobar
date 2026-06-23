@@ -3,7 +3,6 @@ export const GASTROFOOD_SNACK_IDS = new Set([
   "beef-jerky",
   "pistachios",
   "peanuts",
-  "dried-squid",
 ]);
 
 export const GASTROFOOD_SNACKS_PATH = "/food?category=snacks";

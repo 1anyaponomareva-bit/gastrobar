@@ -234,14 +234,6 @@ const MENU_ITEMS = [
     category: "snacks",
     image: BAR_MENU_IMG("/menu/food-peanuts-horizontal-hero.png"),
   },
-  {
-    id: "dried-squid",
-    name: "Сушеный кальмар",
-    description: "Вяленый кальмар. Классическая закуска к пиву.",
-    price: 85000,
-    category: "snacks",
-    image: BAR_MENU_IMG("/menu/food-dried-squid-horizontal-hero.png"),
-  },
 
   // ——— ПЕЛЬМЕНИ И ВАРЕНИКИ ———
   {
