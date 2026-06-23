@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { StaffToolBodyLayout } from "@/components/staff/StaffToolBodyLayout";
 
 export const viewport: Viewport = {
   themeColor: "#12121a",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Staff",
   },
   formatDetection: {
@@ -25,5 +26,5 @@ export default function StaffLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return <StaffToolBodyLayout>{children}</StaffToolBodyLayout>;
 }

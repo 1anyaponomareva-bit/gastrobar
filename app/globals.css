@@ -92,6 +92,14 @@ html[data-durak-route="1"] body {
   background-color: #14100c !important;
 }
 
+body.staff-tool-body {
+  padding-bottom: 0 !important;
+}
+
+body.staff-tool-body > .app {
+  padding-bottom: 0 !important;
+}
+
 /* Промо-баннер: золотая пульсация кнопки «Перейти в канал» */
 @keyframes promo-btn-glow {
   0%,
