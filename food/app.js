@@ -14,12 +14,14 @@ const MAIN_MENU_CATEGORY_ORDER = [
   "burgers",
   ...COMBO_CATEGORY_IDS,
   "grill",
+  "appetizers",
   "snacks",
   "dumplings",
 ];
 
 const CATEGORY_LABELS = {
   snacks: "Снеки",
+  appetizers: "Закуски",
   dumplings: "Пельмени и вареники",
   "hot-dogs": "Хот-доги",
   burgers: "Бургеры",
@@ -141,14 +143,14 @@ const WINGS_SAUCE_OPTIONS = [
 ];
 
 const MENU_ITEMS = [
-  // ——— СНЕКИ ———
+  // ——— ЗАКУСКИ ———
   {
     id: "mozzarella-sticks",
     name: "Сырные палочки",
     description:
       "Обжаренные до золотистой корочки палочки из моцареллы с томатным соусом.",
     price: null,
-    category: "snacks",
+    category: "appetizers",
     image: IMG("cheese-sticks.png"),
     imageScale: 1.74,
   },
@@ -156,7 +158,7 @@ const MENU_ITEMS = [
     id: "shrimp-tempura",
     name: "Креветки темпура",
     description: "Хрустящие креветки в темпуре с соусом сладкий чили.",
-    category: "snacks",
+    category: "appetizers",
     image: IMG("shrimp-tempura.png"),
     imageScale: 1.74,
     price: 140000,
@@ -168,7 +170,7 @@ const MENU_ITEMS = [
     description: "Хрустящие наггетсы из куриного бедра.",
     price: 80000,
     grammage: "200 г",
-    category: "snacks",
+    category: "appetizers",
     badge: "hit",
     image: IMG("NUGGETS.png"),
   },
@@ -177,7 +179,7 @@ const MENU_ITEMS = [
     name: "Хрустящие рыбные кусочки",
     description:
       "Хрустящие кусочки рыбы Баса в панировке, подаются с соусом тартар.",
-    category: "snacks",
+    category: "appetizers",
     badge: "hit",
     image: IMG("FISH-BITES.png"),
     imageFocusY: 58,
@@ -190,7 +192,7 @@ const MENU_ITEMS = [
     description: "Хрустящий картофель фри.",
     price: 40000,
     grammage: "120 г",
-    category: "snacks",
+    category: "appetizers",
     image: IMG("FRENCH-FRIES.png"),
   },
   {
@@ -200,9 +202,11 @@ const MENU_ITEMS = [
       "Нежный куриный суп с вермишелью и бархатистым бульоном на основе йогурта.",
     price: 90000,
     grammage: "350 г",
-    category: "snacks",
+    category: "appetizers",
     image: IMG("Creamy Chicken Soup.png"),
   },
+
+  // ——— СНЕКИ ———
   {
     id: "chicken-jerky",
     name: "Джерки куриные",
