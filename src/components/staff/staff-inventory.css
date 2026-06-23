@@ -373,25 +373,30 @@
     background: var(--bg);
   }
 
-  .staff-inventory .top {
+  .staff-inventory.staff-inventory-page .top,
+  .staff-inventory.shift-checklist .top {
     position: relative;
     background: #050505;
-    box-shadow: 0 4px 20px #0004;
+    box-shadow: none;
+    overflow: hidden;
   }
 
-  .staff-inventory .top::before {
+  .staff-inventory.staff-inventory-page .top::before,
+  .staff-inventory.shift-checklist .top::before {
     content: "";
     position: absolute;
     z-index: 0;
     top: 0;
-    bottom: 0;
     left: 50%;
     width: 100vw;
+    height: 100%;
     transform: translateX(-50%);
     background: #050505;
+    pointer-events: none;
   }
 
-  .staff-inventory .top > * {
+  .staff-inventory.staff-inventory-page .top > *,
+  .staff-inventory.shift-checklist .top > * {
     position: relative;
     z-index: 1;
   }
