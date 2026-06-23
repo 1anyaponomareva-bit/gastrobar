@@ -1,9 +1,3 @@
-.staff-inventory.shift-checklist .top {
-  position: static;
-  top: auto;
-  box-shadow: none;
-}
-
 .staff-inventory .segmentPicker {
   display: grid;
   grid-template-columns: 1fr 1fr;
