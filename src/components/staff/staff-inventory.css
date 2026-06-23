@@ -154,6 +154,10 @@
   margin-top: 9px;
 }
 
+.staff-inventory .actions .actionsExport {
+  grid-column: 1 / -1;
+}
+
 .staff-inventory button {
   border: 0;
   border-radius: 13px;

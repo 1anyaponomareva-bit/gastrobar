@@ -10,10 +10,7 @@ import {
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
 import { getAssetUrl } from "@/lib/appVersion";
-import {
-  downloadStaffInventoryPdf,
-  shareStaffInventoryPdf,
-} from "@/lib/staffInventoryPdf";
+import { exportStaffInventoryPdf } from "@/lib/staffInventoryPdf";
 import {
   clearStoredValues,
   getStoredActiveCategory,
@@ -63,6 +60,7 @@ export function StaffInventoryApp() {
   const [onlyOrder, setOnlyOrder] = useState(false);
   const [search, setSearch] = useState("");
   const [revision, setRevision] = useState(0);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -183,22 +181,23 @@ export function StaffInventoryApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleExportPdf = () => {
-    downloadStaffInventoryPdf(
-      rows.filter((row) => row.order > 0),
-      date,
-      employee,
-      venueLabel,
-    );
-  };
+  const handleExportPdf = async () => {
+    if (exportingPdf) return;
 
-  const handleSharePdf = async () => {
-    await shareStaffInventoryPdf(
-      rows.filter((row) => row.order > 0),
-      date,
-      employee,
-      venueLabel,
-    );
+    setExportingPdf(true);
+    try {
+      await exportStaffInventoryPdf({
+        venueLabel,
+        date,
+        employee,
+        rows: rows.filter((row) => row.order > 0),
+      });
+    } catch (error) {
+      console.error(error);
+      window.alert("Could not create PDF. Please try again.");
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   if (!hydrated) {
@@ -274,11 +273,13 @@ export function StaffInventoryApp() {
           </div>
 
           <div className="actions">
-            <button type="button" className="gold" onClick={handleSharePdf}>
-              Share PDF
-            </button>
-            <button type="button" className="gold" onClick={handleExportPdf}>
-              Export PDF
+            <button
+              type="button"
+              className="gold actionsExport"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+            >
+              {exportingPdf ? "Creating PDF..." : "Export PDF"}
             </button>
             <button type="button" className="danger" onClick={handleNewDay}>
               New Day
@@ -391,11 +392,13 @@ export function StaffInventoryApp() {
           </div>
 
           <div className="bottomActions">
-            <button type="button" className="gold" onClick={handleSharePdf}>
-              Share PDF
-            </button>
-            <button type="button" className="gold" onClick={handleExportPdf}>
-              Export PDF
+            <button
+              type="button"
+              className="gold"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+            >
+              {exportingPdf ? "Creating PDF..." : "Export PDF"}
             </button>
             <button type="button" className="dark" onClick={handleSave}>
               Save
