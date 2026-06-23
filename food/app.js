@@ -12,11 +12,11 @@ const COMBO_CATEGORY_IDS = ["combos", "kids"];
 const MAIN_MENU_CATEGORY_ORDER = [
   "hot-dogs",
   "burgers",
-  ...COMBO_CATEGORY_IDS,
   "grill",
   "appetizers",
   "snacks",
   "dumplings",
+  ...COMBO_CATEGORY_IDS,
 ];
 
 const CATEGORY_LABELS = {
