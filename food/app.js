@@ -224,7 +224,7 @@ const MENU_ITEMS = [
     description: "Обжаренные солёные фисташки к пиву и коктейлям.",
     price: 55000,
     category: "snacks",
-    image: BAR_MENU_IMG("/menu/snack_pistachios_ultra.png"),
+    image: BAR_MENU_IMG("/menu/food-pistachios-horizontal-hero.png"),
   },
   {
     id: "peanuts",
@@ -232,7 +232,7 @@ const MENU_ITEMS = [
     description: "Хрустящий солёный арахис. Классический барный снэк.",
     price: 45000,
     category: "snacks",
-    image: BAR_MENU_IMG("/menu/snack_peanuts_ultra.png"),
+    image: BAR_MENU_IMG("/menu/food-peanuts-horizontal-hero.png"),
   },
   {
     id: "dried-squid",
