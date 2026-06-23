@@ -181,6 +181,9 @@ export function StaffInventoryApp() {
     setOnlyOrder(false);
     bump();
     window.scrollTo({ top: 0, behavior: "smooth" });
+    document
+      .querySelector<HTMLElement>(".staff-inventory-fixed .main")
+      ?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleExportPdf = () => {
@@ -212,7 +215,7 @@ export function StaffInventoryApp() {
   let lastCategory = "";
 
   return (
-    <div className="staff-inventory">
+    <div className="staff-inventory staff-inventory-fixed">
       <div className="app">
         <div className="top">
           <div className="venuePicker">
