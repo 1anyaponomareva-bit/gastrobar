@@ -53,6 +53,7 @@ export function ShiftChecklistApp() {
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportBlocked, setExportBlocked] = useState(false);
+  const [exportEmployeeError, setExportEmployeeError] = useState(false);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
@@ -288,6 +289,20 @@ export function ShiftChecklistApp() {
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
+    if (!employee.trim()) {
+      setExportEmployeeError(true);
+      setExportBlocked(true);
+      window.setTimeout(() => {
+        document.getElementById("check-employee")?.focus();
+        document
+          .getElementById("check-employee")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return;
+    }
+
+    setExportEmployeeError(false);
+
     if (exportIssues.length) {
       setExportBlocked(true);
       const first = exportIssues[0];
@@ -383,6 +398,7 @@ export function ShiftChecklistApp() {
                 onChange={(event) => {
                   setEmployee(event.target.value);
                   setStoredCheckEmployee(event.target.value);
+                  if (exportEmployeeError) setExportEmployeeError(false);
                 }}
               />
             </div>
@@ -524,7 +540,7 @@ export function ShiftChecklistApp() {
 
               {showExportPdf ? (
                 <div className="exportOnly">
-                  {exportBlocked && exportIssues.length ? (
+                  {exportBlocked && (exportEmployeeError || exportIssues.length) ? (
                     <div className="exportError" role="alert">
                       <strong>
                         {venue === "gastrobar"
@@ -532,6 +548,13 @@ export function ShiftChecklistApp() {
                           : "Cannot export PDF:"}
                       </strong>
                       <ul>
+                        {exportEmployeeError ? (
+                          <li>
+                            {venue === "gastrobar"
+                              ? "Не указано имя сотрудника"
+                              : "Employee name is required"}
+                          </li>
+                        ) : null}
                         {exportIssues.map((item) => (
                           <li key={`${item.id}-${item.kind}`}>
                             {formatIssueLabel(item)}

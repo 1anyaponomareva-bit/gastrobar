@@ -61,6 +61,7 @@ export function StaffInventoryApp() {
   const [search, setSearch] = useState("");
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportEmployeeError, setExportEmployeeError] = useState(false);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -139,6 +140,7 @@ export function StaffInventoryApp() {
   const handleEmployeeChange = (value: string) => {
     setEmployee(value);
     setStoredEmployee(value);
+    if (exportEmployeeError) setExportEmployeeError(false);
   };
 
   const handleCategoryChange = (category: string) => {
@@ -184,6 +186,18 @@ export function StaffInventoryApp() {
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
+    if (!employee.trim()) {
+      setExportEmployeeError(true);
+      window.setTimeout(() => {
+        document.getElementById("staff-employee")?.focus();
+        document
+          .getElementById("staff-employee")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return;
+    }
+
+    setExportEmployeeError(false);
     setExportingPdf(true);
     try {
       await exportStaffInventoryPdf({
@@ -273,6 +287,11 @@ export function StaffInventoryApp() {
           </div>
 
           <div className="actions">
+            {exportEmployeeError ? (
+              <div className="exportError actionsExport" role="alert">
+                <strong>Employee name is required.</strong>
+              </div>
+            ) : null}
             <button
               type="button"
               className="gold actionsExport"
@@ -392,6 +411,11 @@ export function StaffInventoryApp() {
           </div>
 
           <div className="bottomActions">
+            {exportEmployeeError ? (
+              <div className="exportError bottomActionsExport" role="alert">
+                <strong>Employee name is required.</strong>
+              </div>
+            ) : null}
             <button
               type="button"
               className="gold"
