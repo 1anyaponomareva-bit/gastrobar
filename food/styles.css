@@ -641,7 +641,7 @@ a {
   height: 100%;
   min-height: 120px;
   object-fit: contain;
-  object-position: top center;
+  object-position: center center;
 }
 
 .menu-card__media--box {

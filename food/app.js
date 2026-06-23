@@ -194,6 +194,7 @@ const MENU_ITEMS = [
     grammage: "120 г",
     category: "appetizers",
     image: IMG("FRENCH-FRIES.png"),
+    imageFocusY: 42,
   },
   {
     id: "creamy-chicken-soup",
@@ -470,6 +471,7 @@ const MENU_ITEMS = [
     category: "combos",
     badge: "hit",
     image: IMG("combo_sos.png"),
+    imageFocusY: 52,
   },
 
   // ——— ДЕТСКИЕ КОМБО ———
@@ -492,6 +494,7 @@ const MENU_ITEMS = [
     category: "kids",
     badge: "hit",
     image: IMG("KIDS-COMBO-SAUSAGE.png"),
+    imageFocusY: 52,
   },
 
   // ——— ГРИЛЬ ———
@@ -532,6 +535,7 @@ const MENU_ITEMS = [
     grammage: "370 г",
     category: "grill",
     image: IMG("Bavarian Sausage.png"),
+    imageFocusY: 52,
   },
   {
     id: "cheddar-jalapeno-sausage",
@@ -542,6 +546,7 @@ const MENU_ITEMS = [
     grammage: "370 г",
     category: "grill",
     image: IMG("Cheddar Jalapeño Sausage.png"),
+    imageFocusY: 52,
   },
   {
     id: "grilled-chicken-sausage",
@@ -552,6 +557,7 @@ const MENU_ITEMS = [
     grammage: "370 г",
     category: "grill",
     image: IMG("Grilled Chicken Sausage.png"),
+    imageFocusY: 52,
   },
 ];
 

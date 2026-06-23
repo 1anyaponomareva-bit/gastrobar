@@ -37,17 +37,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "GASTROBAR — Меню",
   description: "Меню гастробара. Бар, блюда и акции.",
-  applicationName: "GASTROBAR",
-  manifest: "/manifest.json",
-  /**
-   * Иконки вкладки и «Добавить на экран»: app/icon.png и app/apple-icon.png
-   * (генерируются скриптом npm run icons / prebuild из menu/logo_gastrobar.png).
-   */
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "GASTROBAR",
-  },
 };
 
 export default function RootLayout({
