@@ -13,8 +13,8 @@ const MAIN_MENU_CATEGORY_ORDER = [
   "hot-dogs",
   "burgers",
   ...COMBO_CATEGORY_IDS,
-  "snacks",
   "grill",
+  "snacks",
   "dumplings",
 ];
 
@@ -428,66 +428,6 @@ const MENU_ITEMS = [
     image: IMG("fishburger.png?v=20250618-01"),
   },
 
-  // ——— ГРИЛЬ ———
-  {
-    id: "chicken-kebab",
-    name: "Куриный шашлык",
-    description: "Маринованный куриный шашлык на гриле с томатным соусом.",
-    price: 110000,
-    grammage: "120 г",
-    category: "grill",
-    image: IMG("pork_kebab_bread.png?v=20250621-01"),
-  },
-  {
-    id: "pork-kebab",
-    name: "Свиной шашлык",
-    description: "Сочный маринованный шашлык из свинины с томатным соусом.",
-    price: 120000,
-    grammage: "120 г",
-    category: "grill",
-    image: IMG("pork_kebab_bread.png?v=20250621-01"),
-  },
-  {
-    id: "chicken-wings",
-    name: "Куриные крылья",
-    description:
-      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
-    price: null,
-    category: "grill",
-    sauceOptions: true,
-    image: IMG("Original Wings .png"),
-  },
-  {
-    id: "bavarian-sausage",
-    name: "Баварская колбаска",
-    description:
-      "Свиная колбаска на гриле с картофелем фри, тушеной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
-    category: "grill",
-    image: IMG("Bavarian Sausage.png"),
-  },
-  {
-    id: "cheddar-jalapeno-sausage",
-    name: "Колбаска Чеддер и Халапеньо",
-    description:
-      "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
-    category: "grill",
-    image: IMG("Cheddar Jalapeño Sausage.png"),
-  },
-  {
-    id: "grilled-chicken-sausage",
-    name: "Куриная гриль-колбаска",
-    description:
-      "Куриная колбаска на гриле с картофелем фри, тушёной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
-    category: "grill",
-    image: IMG("Grilled Chicken Sausage.png"),
-  },
-
   // ——— КОМБО НАБОРЫ ———
   {
     id: "burger-combo",
@@ -547,6 +487,66 @@ const MENU_ITEMS = [
     category: "kids",
     badge: "hit",
     image: IMG("KIDS-COMBO-SAUSAGE.png"),
+  },
+
+  // ——— ГРИЛЬ ———
+  {
+    id: "chicken-kebab",
+    name: "Куриный шашлык",
+    description: "Маринованный куриный шашлык на гриле с томатным соусом.",
+    price: 110000,
+    grammage: "120 г",
+    category: "grill",
+    image: IMG("pork_kebab_bread.png?v=20250621-01"),
+  },
+  {
+    id: "pork-kebab",
+    name: "Свиной шашлык",
+    description: "Сочный маринованный шашлык из свинины с томатным соусом.",
+    price: 120000,
+    grammage: "120 г",
+    category: "grill",
+    image: IMG("pork_kebab_bread.png?v=20250621-01"),
+  },
+  {
+    id: "chicken-wings",
+    name: "Куриные крылья",
+    description:
+      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
+    price: null,
+    category: "grill",
+    sauceOptions: true,
+    image: IMG("Original Wings .png"),
+  },
+  {
+    id: "bavarian-sausage",
+    name: "Баварская колбаска",
+    description:
+      "Свиная колбаска на гриле с картофелем фри, тушеной квашеной капустой и томатным соусом.",
+    price: null,
+    grammage: "370 г",
+    category: "grill",
+    image: IMG("Bavarian Sausage.png"),
+  },
+  {
+    id: "cheddar-jalapeno-sausage",
+    name: "Колбаска Чеддер и Халапеньо",
+    description:
+      "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
+    price: null,
+    grammage: "370 г",
+    category: "grill",
+    image: IMG("Cheddar Jalapeño Sausage.png"),
+  },
+  {
+    id: "grilled-chicken-sausage",
+    name: "Куриная гриль-колбаска",
+    description:
+      "Куриная колбаска на гриле с картофелем фри, тушёной квашеной капустой и томатным соусом.",
+    price: null,
+    grammage: "370 г",
+    category: "grill",
+    image: IMG("Grilled Chicken Sausage.png"),
   },
 ];
 
