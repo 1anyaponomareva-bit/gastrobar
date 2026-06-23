@@ -198,7 +198,8 @@ const MENU_ITEMS = [
     name: "Куриный суп",
     description:
       "Нежный куриный суп с вермишелью и бархатистым бульоном на основе йогурта.",
-    price: null,
+    price: 90000,
+    grammage: "350 г",
     category: "snacks",
     image: IMG("Creamy Chicken Soup.png"),
   },
