@@ -365,7 +365,7 @@
   }
 }
 
-/* Tablet landscape: full-width background bands; content column stays 760px */
+/* Tablet landscape: full-width black header band; content column stays 760px */
 @media (min-width: 768px) and (orientation: landscape) {
   .staff-inventory {
     width: 100%;
@@ -375,37 +375,24 @@
 
   .staff-inventory .top {
     position: relative;
-    background: transparent;
-    box-shadow: none;
+    background: #050505;
+    box-shadow: 0 4px 20px #0004;
   }
 
   .staff-inventory .top::before {
     content: "";
     position: absolute;
-    z-index: -1;
+    z-index: 0;
     top: 0;
     bottom: 0;
     left: 50%;
     width: 100vw;
     transform: translateX(-50%);
     background: #050505;
-    box-shadow: 0 4px 20px #0004;
   }
 
-  .staff-inventory .main {
+  .staff-inventory .top > * {
     position: relative;
-    background: transparent;
-  }
-
-  .staff-inventory .main::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 100vw;
-    transform: translateX(-50%);
-    background: var(--bg);
+    z-index: 1;
   }
 }
