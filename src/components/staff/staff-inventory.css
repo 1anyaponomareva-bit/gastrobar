@@ -25,30 +25,10 @@
   margin: auto;
 }
 
-.staff-inventory.staff-inventory-fixed {
-  height: 100dvh;
-  overflow: hidden;
-}
-
-.staff-inventory.staff-inventory-fixed .app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.staff-inventory.staff-inventory-fixed .top {
-  position: relative;
+.staff-inventory.staff-inventory-page .top {
+  position: static;
   top: auto;
-  flex-shrink: 0;
-}
-
-.staff-inventory.staff-inventory-fixed .main {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  box-shadow: none;
 }
 
 .staff-inventory .top {
