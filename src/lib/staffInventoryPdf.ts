@@ -2,6 +2,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
 import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
 import { getAssetUrl } from "@/lib/appVersion";
+import { deliverPdfFile } from "@/lib/deliverPdfFile";
 
 export type StaffInventoryPdfOptions = {
   venueLabel: string;
@@ -81,48 +82,6 @@ function groupedRows(rows: StaffInventoryRow[]): Record<string, StaffInventoryRo
 
 function buildPdfFileName(venueLabel: string, date: string): string {
   return `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
-}
-
-function isMobileDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-function isAndroidDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android/i.test(navigator.userAgent);
-}
-
-function presentPdfBlob(blob: Blob): void {
-  const url = URL.createObjectURL(blob);
-  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
-
-  if (isAndroidDevice()) {
-    window.location.assign(url);
-    return;
-  }
-
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-}
-
-function downloadPdfOnDesktop(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.rel = "noopener";
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
 type PdfContext = {
@@ -454,11 +413,5 @@ export async function exportStaffInventoryPdf(
 ): Promise<void> {
   const blob = await makeStaffInventoryPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
-
-  if (isMobileDevice()) {
-    presentPdfBlob(blob);
-    return;
-  }
-
-  downloadPdfOnDesktop(blob, fileName);
+  await deliverPdfFile(blob, fileName, `${options.venueLabel} Order PDF`);
 }
