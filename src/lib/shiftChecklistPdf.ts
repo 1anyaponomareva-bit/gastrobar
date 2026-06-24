@@ -1,7 +1,10 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
 import { getAssetUrl } from "@/lib/appVersion";
-import { deliverPdfFile } from "@/lib/deliverPdfFile";
+import {
+  deliverPdfFile,
+  type DeliverPdfResult,
+} from "@/lib/deliverPdfFile";
 
 type ChecklistPdfItem = {
   label: string;
@@ -129,6 +132,10 @@ async function loadFontBytes(): Promise<{
   return fontBytesPromise;
 }
 
+export function preloadShiftChecklistPdfFonts(): void {
+  void loadFontBytes();
+}
+
 function wrapText(
   text: string,
   activeFont: PDFFont,
@@ -159,6 +166,13 @@ function wrapText(
 
 function buildPdfFileName(venueLabel: string, date: string): string {
   return `${venueLabel.replace(/\s+/g, "")}_ShiftChecklist_${date || "checklist"}.pdf`;
+}
+
+export function getShiftChecklistPdfFileName(
+  venueLabel: string,
+  date: string,
+): string {
+  return buildPdfFileName(venueLabel, date);
 }
 
 type PdfContext = {
@@ -592,8 +606,8 @@ export async function makeShiftChecklistPdfBlob(
 
 export async function exportShiftChecklistPdf(
   options: ShiftChecklistPdfOptions,
-): Promise<void> {
+): Promise<DeliverPdfResult> {
   const blob = await makeShiftChecklistPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
-  await deliverPdfFile(blob, fileName);
+  return deliverPdfFile(blob, fileName);
 }

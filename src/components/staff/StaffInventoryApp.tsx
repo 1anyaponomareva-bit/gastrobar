@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getStaffInventoryCategories,
   getStaffInventoryItems,
@@ -10,7 +10,15 @@ import {
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
 import { getAssetUrl } from "@/lib/appVersion";
-import { exportStaffInventoryPdf } from "@/lib/staffInventoryPdf";
+import {
+  deliverPdfFile,
+  type DeliverPdfResult,
+} from "@/lib/deliverPdfFile";
+import {
+  getStaffInventoryPdfFileName,
+  makeStaffInventoryPdfBlob,
+  preloadStaffInventoryPdfFonts,
+} from "@/lib/staffInventoryPdf";
 import {
   clearStoredValues,
   getStoredActiveCategory,
@@ -62,12 +70,20 @@ export function StaffInventoryApp() {
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportEmployeeError, setExportEmployeeError] = useState(false);
+  const sharePrepareRef = useRef<{
+    key: string;
+    promise: Promise<Blob>;
+  } | null>(null);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
   const items = useMemo(() => getStaffInventoryItems(venue), [venue]);
   const categories = useMemo(() => getStaffInventoryCategories(venue), [venue]);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
+
+  useEffect(() => {
+    preloadStaffInventoryPdfFonts();
+  }, []);
 
   useEffect(() => {
     const storedVenue = getStoredVenue();
@@ -183,6 +199,42 @@ export function StaffInventoryApp() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const orderRows = useMemo(
+    () => rows.filter((row) => row.order > 0),
+    [rows],
+  );
+
+  const buildShareKey = useCallback(() => {
+    return [
+      venue,
+      date,
+      employee.trim(),
+      orderRows.map((row) => `${row.index}:${row.order}`).join("|"),
+    ].join("::");
+  }, [venue, date, employee, orderRows]);
+
+  const beginSharePreparation = useCallback(() => {
+    if (!employee.trim()) return;
+
+    const key = buildShareKey();
+    sharePrepareRef.current = {
+      key,
+      promise: makeStaffInventoryPdfBlob({
+        venueLabel,
+        date,
+        employee,
+        rows: orderRows,
+      }),
+    };
+  }, [buildShareKey, venueLabel, date, employee, orderRows]);
+
+  const handleSharePdfResult = (result: DeliverPdfResult) => {
+    if (result === "cancelled" || result === "downloaded") return;
+    window.alert(
+      "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
+    );
+  };
+
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
@@ -200,12 +252,23 @@ export function StaffInventoryApp() {
     setExportEmployeeError(false);
     setExportingPdf(true);
     try {
-      await exportStaffInventoryPdf({
-        venueLabel,
-        date,
-        employee,
-        rows: rows.filter((row) => row.order > 0),
-      });
+      const fileName = getStaffInventoryPdfFileName(venueLabel, date);
+      const key = buildShareKey();
+      const prepared = sharePrepareRef.current;
+      const blob =
+        prepared?.key === key
+          ? await prepared.promise
+          : await makeStaffInventoryPdfBlob({
+              venueLabel,
+              date,
+              employee,
+              rows: orderRows,
+            });
+      const result = await deliverPdfFile(blob, fileName);
+
+      if (result !== "shared") {
+        handleSharePdfResult(result);
+      }
     } catch (error) {
       console.error(error);
       window.alert(
@@ -297,6 +360,8 @@ export function StaffInventoryApp() {
             <button
               type="button"
               className="gold actionsExport"
+              onPointerDown={beginSharePreparation}
+              onTouchStart={beginSharePreparation}
               onClick={handleExportPdf}
               disabled={exportingPdf}
             >
@@ -421,6 +486,8 @@ export function StaffInventoryApp() {
             <button
               type="button"
               className="gold"
+              onPointerDown={beginSharePreparation}
+              onTouchStart={beginSharePreparation}
               onClick={handleExportPdf}
               disabled={exportingPdf}
             >

@@ -7,13 +7,38 @@ function isIosDevice(): boolean {
   return /Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
 }
 
-function shouldUseNativeShare(): boolean {
+function hasTouchScreen(): boolean {
   if (typeof navigator === "undefined") return false;
-  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
-  return isIosDevice();
+  if (navigator.maxTouchPoints > 0) return true;
+  return window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
 }
 
-function buildPdfFile(bytes: ArrayBuffer, fileName: string): File {
+function shouldUseNativeShare(): boolean {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
+    return false;
+  }
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
+  if (isIosDevice()) return true;
+  if (
+    "userAgentData" in navigator &&
+    (navigator as Navigator & { userAgentData?: { mobile?: boolean } })
+      .userAgentData?.mobile === true
+  ) {
+    return true;
+  }
+  // Touch tablets (Lenovo Tab, Surface, etc.) — share, never auto-download.
+  if (hasTouchScreen()) return true;
+  return false;
+}
+
+function buildPdfFileFromBlob(blob: Blob, fileName: string): File {
+  return new File([blob], fileName, {
+    type: "application/pdf",
+    lastModified: Date.now(),
+  });
+}
+
+function buildPdfFileFromBytes(bytes: ArrayBuffer, fileName: string): File {
   return new File([bytes], fileName, {
     type: "application/pdf",
     lastModified: Date.now(),
@@ -40,12 +65,6 @@ async function tryNativeFileShare(file: File): Promise<DeliverPdfResult> {
 
   // iOS shares a page URL instead of the file when title/text/url are included.
   const shareData: ShareData = { files: [file] };
-
-  if (typeof navigator.canShare === "function" && !navigator.canShare(shareData)) {
-    if (!isIosDevice()) {
-      throw new Error("This browser cannot share PDF files.");
-    }
-  }
 
   try {
     await navigator.share(shareData);
@@ -75,37 +94,82 @@ async function fetchPdfFileViaServer(
     throw new Error("Failed to prepare PDF for sharing.");
   }
 
-  const roundTrip = await response.arrayBuffer();
-  return buildPdfFile(roundTrip, fileName);
+  const serverBlob = await response.blob();
+  return buildPdfFileFromBlob(serverBlob, fileName);
+}
+
+function uniqueFiles(files: File[]): File[] {
+  const seen = new Set<string>();
+  const unique: File[] = [];
+  files.forEach((file) => {
+    const key = `${file.name}:${file.size}:${file.type}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(file);
+  });
+  return unique;
+}
+
+async function buildShareFileCandidates(
+  blob: Blob,
+  fileName: string,
+): Promise<File[]> {
+  const candidates: File[] = [buildPdfFileFromBlob(blob, fileName)];
+  const bytes = await blob.arrayBuffer();
+  candidates.push(buildPdfFileFromBytes(bytes, fileName));
+
+  if (shouldUseNativeShare()) {
+    try {
+      candidates.push(await fetchPdfFileViaServer(bytes, fileName));
+    } catch {
+      // Continue with locally built files.
+    }
+  }
+
+  return uniqueFiles(candidates);
+}
+
+function orderCandidatesForShare(candidates: File[]): File[] {
+  if (typeof navigator.canShare !== "function") {
+    return candidates;
+  }
+
+  const supported = candidates.filter((file) =>
+    navigator.canShare!({ files: [file] }),
+  );
+  if (supported.length) {
+    return uniqueFiles([...supported, ...candidates]);
+  }
+
+  return candidates;
+}
+
+async function shareFileCandidates(
+  candidates: File[],
+): Promise<DeliverPdfResult> {
+  const ordered = orderCandidatesForShare(candidates);
+  let lastError: unknown;
+
+  for (const file of ordered) {
+    try {
+      return await tryNativeFileShare(file);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "cancelled";
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("Could not share the PDF file.");
 }
 
 async function sharePdfFile(
   blob: Blob,
   fileName: string,
 ): Promise<DeliverPdfResult> {
-  const bytes = await blob.arrayBuffer();
-
-  // iPad/iPhone: server round-trip first — more reliable File for Web Share on iOS.
-  if (isIosDevice()) {
-    const serverFile = await fetchPdfFileViaServer(bytes, fileName);
-    return tryNativeFileShare(serverFile);
-  }
-
-  const directFile = buildPdfFile(bytes, fileName);
-
-  try {
-    return await tryNativeFileShare(directFile);
-  } catch (firstError) {
-    if (
-      firstError instanceof DOMException &&
-      firstError.name === "AbortError"
-    ) {
-      return "cancelled";
-    }
-
-    const serverFile = await fetchPdfFileViaServer(bytes, fileName);
-    return tryNativeFileShare(serverFile);
-  }
+  const candidates = await buildShareFileCandidates(blob, fileName);
+  return shareFileCandidates(candidates);
 }
 
 /**

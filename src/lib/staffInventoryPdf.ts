@@ -2,7 +2,10 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
 import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
 import { getAssetUrl } from "@/lib/appVersion";
-import { deliverPdfFile } from "@/lib/deliverPdfFile";
+import {
+  deliverPdfFile,
+  type DeliverPdfResult,
+} from "@/lib/deliverPdfFile";
 
 export type StaffInventoryPdfOptions = {
   venueLabel: string;
@@ -58,6 +61,10 @@ async function loadFontBytes(): Promise<{
   return fontBytesPromise;
 }
 
+export function preloadStaffInventoryPdfFonts(): void {
+  void loadFontBytes();
+}
+
 function money(value: number): string {
   return (Math.round(value * 100) / 100).toString();
 }
@@ -82,6 +89,13 @@ function groupedRows(rows: StaffInventoryRow[]): Record<string, StaffInventoryRo
 
 function buildPdfFileName(venueLabel: string, date: string): string {
   return `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
+}
+
+export function getStaffInventoryPdfFileName(
+  venueLabel: string,
+  date: string,
+): string {
+  return buildPdfFileName(venueLabel, date);
 }
 
 type PdfContext = {
@@ -410,8 +424,8 @@ export async function makeStaffInventoryPdfBlob(
 
 export async function exportStaffInventoryPdf(
   options: StaffInventoryPdfOptions,
-): Promise<void> {
+): Promise<DeliverPdfResult> {
   const blob = await makeStaffInventoryPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
-  await deliverPdfFile(blob, fileName);
+  return deliverPdfFile(blob, fileName);
 }

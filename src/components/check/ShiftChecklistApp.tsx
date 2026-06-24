@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   STAFF_INVENTORY_VENUE_LABELS,
   STAFF_INVENTORY_VENUE_LOGOS,
@@ -17,7 +17,15 @@ import {
   type ShiftType,
 } from "@/data/shiftChecklistItems";
 import { getAssetUrl } from "@/lib/appVersion";
-import { exportShiftChecklistPdf } from "@/lib/shiftChecklistPdf";
+import {
+  deliverPdfFile,
+  type DeliverPdfResult,
+} from "@/lib/deliverPdfFile";
+import {
+  getShiftChecklistPdfFileName,
+  makeShiftChecklistPdfBlob,
+  preloadShiftChecklistPdfFonts,
+} from "@/lib/shiftChecklistPdf";
 import {
   clearChecklistItems,
   getChecklistItemComment,
@@ -54,6 +62,10 @@ export function ShiftChecklistApp() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportBlocked, setExportBlocked] = useState(false);
   const [exportEmployeeError, setExportEmployeeError] = useState(false);
+  const sharePrepareRef = useRef<{
+    key: string;
+    promise: Promise<Blob>;
+  } | null>(null);
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
@@ -62,6 +74,10 @@ export function ShiftChecklistApp() {
     () => getShiftChecklistItems(venue, cleaning, shift),
     [venue, cleaning, shift],
   );
+
+  useEffect(() => {
+    preloadShiftChecklistPdfFonts();
+  }, []);
 
   useEffect(() => {
     setVenue(getStoredCheckVenue());
@@ -286,6 +302,65 @@ export function ShiftChecklistApp() {
     bump();
   };
 
+  const pdfExportOptions = useMemo(
+    () => ({
+      venueLabel,
+      locale: (venue === "gastrobar" ? "ru" : "en") as "ru" | "en",
+      date,
+      employee,
+      shiftLabel: SHIFT_TYPE_LABELS[shift],
+      cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
+      sections: sections.map((section) => ({
+        title: section.title,
+        items: section.groups.flatMap((group) =>
+          group.items.map((item) => ({
+            label: group.title ? `${group.title}: ${item.label}` : item.label,
+            status: item.status,
+            comment: item.comment,
+          })),
+        ),
+      })),
+    }),
+    [venueLabel, venue, date, employee, shift, cleaning, sections],
+  );
+
+  const buildShareKey = useCallback(() => {
+    return [
+      venue,
+      shift,
+      cleaning,
+      date,
+      employee.trim(),
+      revision,
+    ].join("::");
+  }, [venue, shift, cleaning, date, employee, revision]);
+
+  const beginSharePreparation = useCallback(() => {
+    if (!employee.trim() || exportIssues.length) return;
+
+    const key = buildShareKey();
+    sharePrepareRef.current = {
+      key,
+      promise: makeShiftChecklistPdfBlob(pdfExportOptions),
+    };
+  }, [
+    buildShareKey,
+    employee,
+    exportIssues.length,
+    pdfExportOptions,
+    venueLabel,
+    date,
+  ]);
+
+  const handleSharePdfResult = (result: DeliverPdfResult) => {
+    if (result === "cancelled" || result === "downloaded") return;
+    window.alert(
+      venue === "gastrobar"
+        ? "Не удалось отправить PDF. Нажмите Share PDF ещё раз и выберите Telegram или WhatsApp, не «Скопировать ссылку»."
+        : "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
+    );
+  };
+
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
@@ -319,24 +394,18 @@ export function ShiftChecklistApp() {
     setExportBlocked(false);
     setExportingPdf(true);
     try {
-      await exportShiftChecklistPdf({
-        venueLabel,
-        locale: venue === "gastrobar" ? "ru" : "en",
-        date,
-        employee,
-        shiftLabel: SHIFT_TYPE_LABELS[shift],
-        cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
-        sections: sections.map((section) => ({
-          title: section.title,
-          items: section.groups.flatMap((group) =>
-            group.items.map((item) => ({
-              label: group.title ? `${group.title}: ${item.label}` : item.label,
-              status: item.status,
-              comment: item.comment,
-            })),
-          ),
-        })),
-      });
+      const fileName = getShiftChecklistPdfFileName(venueLabel, date);
+      const key = buildShareKey();
+      const prepared = sharePrepareRef.current;
+      const blob =
+        prepared?.key === key
+          ? await prepared.promise
+          : await makeShiftChecklistPdfBlob(pdfExportOptions);
+      const result = await deliverPdfFile(blob, fileName);
+
+      if (result !== "shared") {
+        handleSharePdfResult(result);
+      }
     } catch (error) {
       console.error(error);
       window.alert(
@@ -570,6 +639,8 @@ export function ShiftChecklistApp() {
                   <button
                     type="button"
                     className="gold"
+                    onPointerDown={beginSharePreparation}
+                    onTouchStart={beginSharePreparation}
                     onClick={handleExportPdf}
                     disabled={exportingPdf}
                   >
