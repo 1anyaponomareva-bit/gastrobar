@@ -1,13 +1,16 @@
 export type DeliverPdfResult = "shared" | "downloaded" | "cancelled";
 
-function isMobileDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
 function isIosDevice(): boolean {
   if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
+  // iPadOS 13+ often reports as Mac in Safari and home-screen PWAs.
+  return /Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+}
+
+function shouldUseNativeShare(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
+  return isIosDevice();
 }
 
 function buildPdfFile(bytes: ArrayBuffer, fileName: string): File {
@@ -81,6 +84,13 @@ async function sharePdfFile(
   fileName: string,
 ): Promise<DeliverPdfResult> {
   const bytes = await blob.arrayBuffer();
+
+  // iPad/iPhone: server round-trip first — more reliable File for Web Share on iOS.
+  if (isIosDevice()) {
+    const serverFile = await fetchPdfFileViaServer(bytes, fileName);
+    return tryNativeFileShare(serverFile);
+  }
+
   const directFile = buildPdfFile(bytes, fileName);
 
   try {
@@ -99,14 +109,14 @@ async function sharePdfFile(
 }
 
 /**
- * Mobile/tablet: native share sheet with a real PDF file attachment only.
+ * Phones/tablets: native share sheet with a real PDF file attachment only.
  * Desktop: download the PDF file.
  */
 export async function deliverPdfFile(
   blob: Blob,
   fileName: string,
 ): Promise<DeliverPdfResult> {
-  if (isMobileDevice()) {
+  if (shouldUseNativeShare()) {
     return sharePdfFile(blob, fileName);
   }
 
