@@ -573,7 +573,7 @@ export function ShiftChecklistApp() {
                     onClick={handleExportPdf}
                     disabled={exportingPdf}
                   >
-                    {exportingPdf ? "Creating PDF..." : "Export PDF"}
+                    {exportingPdf ? "Sharing PDF..." : "Share PDF"}
                   </button>
                   <p className="note">
                     {venue === "gastrobar"

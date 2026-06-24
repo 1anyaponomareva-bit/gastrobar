@@ -300,7 +300,7 @@ export function StaffInventoryApp() {
               onClick={handleExportPdf}
               disabled={exportingPdf}
             >
-              {exportingPdf ? "Creating PDF..." : "Export PDF"}
+              {exportingPdf ? "Sharing PDF..." : "Share PDF"}
             </button>
             <button type="button" className="danger" onClick={handleNewDay}>
               New Day
@@ -424,7 +424,7 @@ export function StaffInventoryApp() {
               onClick={handleExportPdf}
               disabled={exportingPdf}
             >
-              {exportingPdf ? "Creating PDF..." : "Export PDF"}
+              {exportingPdf ? "Sharing PDF..." : "Share PDF"}
             </button>
             <button type="button" className="dark" onClick={handleSave}>
               Save
