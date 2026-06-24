@@ -595,5 +595,5 @@ export async function exportShiftChecklistPdf(
 ): Promise<void> {
   const blob = await makeShiftChecklistPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
-  await deliverPdfFile(blob, fileName, `${options.venueLabel} Checklist PDF`);
+  await deliverPdfFile(blob, fileName);
 }

@@ -339,7 +339,11 @@ export function ShiftChecklistApp() {
       });
     } catch (error) {
       console.error(error);
-      window.alert("Could not create PDF. Please try again.");
+      window.alert(
+        venue === "gastrobar"
+          ? "Не удалось отправить PDF-файл. В меню «Поделиться» выберите Telegram или WhatsApp, не «Скопировать ссылку»."
+          : "Could not share the PDF file. Choose Telegram or WhatsApp in the share menu — not Copy Link.",
+      );
     } finally {
       setExportingPdf(false);
     }

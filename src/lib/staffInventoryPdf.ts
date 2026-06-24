@@ -413,5 +413,5 @@ export async function exportStaffInventoryPdf(
 ): Promise<void> {
   const blob = await makeStaffInventoryPdfBlob(options);
   const fileName = buildPdfFileName(options.venueLabel, options.date);
-  await deliverPdfFile(blob, fileName, `${options.venueLabel} Order PDF`);
+  await deliverPdfFile(blob, fileName);
 }

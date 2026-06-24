@@ -208,7 +208,9 @@ export function StaffInventoryApp() {
       });
     } catch (error) {
       console.error(error);
-      window.alert("Could not create PDF. Please try again.");
+      window.alert(
+        "Could not share the PDF file. Choose Telegram or WhatsApp in the share menu — not Copy Link.",
+      );
     } finally {
       setExportingPdf(false);
     }
