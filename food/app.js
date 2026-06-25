@@ -505,7 +505,7 @@ const MENU_ITEMS = [
     price: 110000,
     grammage: "120 г",
     category: "grill",
-    image: IMG("pork_kebab_bread.png?v=20250621-01"),
+    image: IMG("KUR_kebab_bread.png?v=20250624-01"),
   },
   {
     id: "pork-kebab",
@@ -514,7 +514,7 @@ const MENU_ITEMS = [
     price: 120000,
     grammage: "120 г",
     category: "grill",
-    image: IMG("pork_kebab_bread.png?v=20250621-01"),
+    image: IMG("pork_kebab_bread.png?v=20250624-01"),
   },
   {
     id: "chicken-wings",
