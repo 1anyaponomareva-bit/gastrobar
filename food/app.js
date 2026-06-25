@@ -395,7 +395,7 @@ const MENU_ITEMS = [
     name: "Классик Бургер",
     description:
       "Соус для бургеров, салат, помидор, котлета, маринованные огурцы, маринованный лук и соус для бургеров.",
-    price: 220000,
+    price: 200000,
     grammage: "300 г",
     category: "burgers",
     badge: "hit",
@@ -406,7 +406,7 @@ const MENU_ITEMS = [
     name: "Чизбургер",
     description:
       "Соус для бургеров, салат, помидор, котлета, сырный соус, маринованные огурцы, маринованный лук и соус для бургеров.",
-    price: 230000,
+    price: 220000,
     grammage: "310 г",
     category: "burgers",
     badge: "hit",
@@ -428,7 +428,7 @@ const MENU_ITEMS = [
     name: "Фишбургер",
     description:
       "Соус тартар, маринованные огурцы, котлета, квашенная капуста, жареный лук и соус тартар.",
-    price: 150000,
+    price: 160000,
     grammage: "320 г",
     category: "burgers",
     image: IMG("fishburger.png?v=20250618-01"),
@@ -518,10 +518,11 @@ const MENU_ITEMS = [
   },
   {
     id: "chicken-wings",
-    name: "Куриные крылья",
+    name: "CHICKEN WINGS",
     description:
       "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
-    price: null,
+    price: 110000,
+    grammage: "200 г",
     category: "grill",
     sauceOptions: true,
     image: IMG("Original Wings .png"),
