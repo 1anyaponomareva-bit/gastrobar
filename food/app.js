@@ -363,7 +363,7 @@ const MENU_ITEMS = [
   },
   {
     id: "bavarian-dog",
-    name: "Баварский",
+    name: "Квашенная капуста горчица",
     description:
       "Квашенная капуста, майонез, горчица и сушёный лук.",
     priceMin: 90000,
