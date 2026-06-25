@@ -313,8 +313,18 @@ const MENU_ITEMS = [
 
   // ——— ХОТ-ДОГИ ———
   {
+    id: "simple-hot-dog",
+    name: "Классический",
+    description: "Сосиска, булка, кетчуп.",
+    price: 60000,
+    category: "hot-dogs",
+    hotDogNoSausage: true,
+    image: IMG("KIDS-HOT-DOG.png"),
+    edgeFade: false,
+  },
+  {
     id: "classic-hot-dog",
-    name: "Классик",
+    name: "Датский",
     description:
       "Жареный лук, маринованный огурец, майонез, кетчуп, горчица и сушёный лук.",
     priceMin: 80000,
