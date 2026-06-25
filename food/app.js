@@ -448,7 +448,7 @@ const MENU_ITEMS = [
   {
     id: "burger-combo",
     name: "Бургер Комбо",
-    description: "Классический бургер или чизбургер, картофель фри и напиток.",
+    description: "Классический бургер, картофель фри и напиток.",
     price: null,
     category: "combos",
     badge: "hit",
@@ -457,7 +457,7 @@ const MENU_ITEMS = [
   {
     id: "hot-dog-combo",
     name: "Хот-Дог Комбо",
-    description: "Любой классический хот-дог, картофель фри и напиток.",
+    description: "Датский хот-дог, картофель фри и напиток.",
     price: null,
     category: "combos",
     badge: "hit",
@@ -471,17 +471,6 @@ const MENU_ITEMS = [
     category: "combos",
     badge: "hit",
     image: IMG("wings_combo.png"),
-  },
-  {
-    id: "sausage-plate-combo",
-    name: "Комбо с колбасками",
-    description:
-      "Любая крафтовая колбаска, картофель фри, тушёная квашеная капуста и напиток.",
-    price: null,
-    category: "combos",
-    badge: "hit",
-    image: IMG("combo_sos.png"),
-    imageFocusY: 52,
   },
 
   // ——— ДЕТСКИЕ КОМБО ———
