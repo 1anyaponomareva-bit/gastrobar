@@ -496,14 +496,23 @@ const MENU_ITEMS = [
     image: IMG("KIDS-COMBO-NUGGETS.png"),
   },
   {
-    id: "kids-sausage-combo",
-    name: "Детский комбо с сосиской",
-    description:
-      "Стандартная сосиска, картофель фри, сок или напиток и игрушка-сюрприз.",
+    id: "kids-hot-dog-combo",
+    name: "Детский комбо с хот-догом",
+    description: "Классический хот-дог, картофель фри и игрушка-сюрприз.",
     price: null,
     category: "kids",
     badge: "hit",
     image: IMG("KIDS-COMBO-SAUSAGE.png"),
+    imageFocusY: 52,
+  },
+  {
+    id: "kids-soup-combo",
+    name: "Детский комбо с супом",
+    description: "Куриный суп, картофель фри и игрушка-сюрприз.",
+    price: null,
+    category: "kids",
+    badge: "hit",
+    image: IMG("KIDS-COMBO-SOUP.png"),
     imageFocusY: 52,
   },
 
