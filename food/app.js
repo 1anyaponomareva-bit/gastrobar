@@ -143,6 +143,17 @@ const WINGS_SAUCE_OPTIONS = [
 const MENU_ITEMS = [
   // ——— ЗАКУСКИ ———
   {
+    id: "chicken-wings",
+    name: "Куриные крылья",
+    description:
+      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
+    price: 110000,
+    grammage: "200 г",
+    category: "appetizers",
+    sauceOptions: true,
+    image: IMG("Original Wings .png"),
+  },
+  {
     id: "mozzarella-sticks",
     name: "Сырные палочки",
     description:
@@ -161,17 +172,6 @@ const MENU_ITEMS = [
     category: "appetizers",
     badge: "hit",
     image: IMG("NUGGETS.png"),
-  },
-  {
-    id: "chicken-wings",
-    name: "Куриные крылья",
-    description:
-      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
-    price: 110000,
-    grammage: "200 г",
-    category: "appetizers",
-    sauceOptions: true,
-    image: IMG("Original Wings .png"),
   },
   {
     id: "crispy-fish-bites",
