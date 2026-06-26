@@ -163,6 +163,17 @@ const MENU_ITEMS = [
     image: IMG("NUGGETS.png"),
   },
   {
+    id: "chicken-wings",
+    name: "Куриные крылья",
+    description:
+      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
+    price: 110000,
+    grammage: "200 г",
+    category: "appetizers",
+    sauceOptions: true,
+    image: IMG("Original Wings .png"),
+  },
+  {
     id: "crispy-fish-bites",
     name: "Хрустящие рыбные кусочки",
     description:
@@ -441,17 +452,6 @@ const MENU_ITEMS = [
     grammage: "120 г",
     category: "grill",
     image: IMG("pork_kebab_bread.png?v=20250624-01"),
-  },
-  {
-    id: "chicken-wings",
-    name: "Куриные крылья",
-    description:
-      "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
-    price: 110000,
-    grammage: "200 г",
-    category: "grill",
-    sauceOptions: true,
-    image: IMG("Original Wings .png"),
   },
   {
     id: "bavarian-sausage",
