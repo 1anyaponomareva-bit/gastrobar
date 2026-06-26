@@ -1,0 +1,24 @@
+---
+description: Auto commit and push after code changes to trigger Vercel deploy
+alwaysApply: true
+---
+
+# Auto deploy after changes
+
+After completing any task that modifies project files, **always commit and push to `main`** without waiting for the user to ask.
+
+## Workflow
+
+1. Finish the requested code/content changes.
+2. Run `git status` and `git diff` — commit only files related to the task (do not add secrets like `.env`).
+3. Write a concise commit message (1–2 sentences, focus on why).
+4. `git add` relevant files → `git commit` → `git push origin main`.
+5. Briefly tell the user the commit is pushed and Vercel will deploy automatically.
+
+## Rules
+
+- Do **not** skip push because the user didn't ask — they expect deploy after every change.
+- Do **not** force-push to `main`.
+- Do **not** commit unrelated untracked files unless the user explicitly included them in the task.
+- If push fails (auth, conflicts), report the error and what the user needs to fix.
+- Deployment is via Vercel on push to GitHub; no separate deploy command is required unless the project adds one later.
