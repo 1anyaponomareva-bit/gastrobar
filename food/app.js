@@ -1,4 +1,4 @@
-const IMG = (file) => (file ? `/food/menu/${encodeURI(file)}` : null);
+const IMG = (file) => (file ? `/food/menu/${encodeURIComponent(file)}` : null);
 
 /** Картинки из общего меню бара (`public/menu/…`). */
 const BAR_MENU_IMG = (path) => path;
