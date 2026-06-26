@@ -151,7 +151,7 @@ const MENU_ITEMS = [
     grammage: "200 г",
     category: "appetizers",
     sauceOptions: true,
-    image: IMG("Original Wings .png"),
+    image: IMG("Original Wings+ .png"),
   },
   {
     id: "mozzarella-sticks",
