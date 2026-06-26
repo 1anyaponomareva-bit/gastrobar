@@ -444,7 +444,7 @@ const MENU_ITEMS = [
   },
   {
     id: "chicken-wings",
-    name: "CHICKEN WINGS",
+    name: "Куриные крылья",
     description:
       "Куриные крылья, маринованные в пиве и обжаренные до золотистой корочки.",
     price: 110000,
