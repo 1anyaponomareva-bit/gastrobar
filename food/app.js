@@ -147,7 +147,7 @@ const MENU_ITEMS = [
     name: "Сырные палочки",
     description:
       "Обжаренные до золотистой корочки палочки из моцареллы с томатным соусом.",
-    price: null,
+    price: 120000,
     category: "appetizers",
     image: IMG("cheese-sticks.png"),
     imageScale: 1.74,
