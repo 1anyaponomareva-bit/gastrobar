@@ -1,4 +1,9 @@
-const IMG = (file) => (file ? `/food/menu/${encodeURIComponent(file)}` : null);
+const IMG = (file) => {
+  if (!file) return null;
+  const [path, ...queryParts] = file.split("?");
+  const query = queryParts.length ? `?${queryParts.join("?")}` : "";
+  return `/food/menu/${encodeURIComponent(path)}${query}`;
+};
 
 /** Картинки из общего меню бара (`public/menu/…`). */
 const BAR_MENU_IMG = (path) => path;
