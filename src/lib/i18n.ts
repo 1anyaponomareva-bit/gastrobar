@@ -51,7 +51,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     tab_combo: "Комбо",
     menu_chooser_title: "Выберите раздел",
     menu_chooser_subtitle: "Еда или бар — нажмите на нужное меню",
-    menu_chooser_food_desc: "Хот-доги, бургеры, комбо, снеки и гриль",
+    menu_chooser_food_desc: "Hot Dog, бургеры, комбо, снеки и гриль",
     menu_chooser_bar_desc: "Коктейли, пиво, вино и безалкогольные напитки",
     menu_chooser_meta_title: "GASTROBAR — Выбор меню",
     hookah: "Кальяны",

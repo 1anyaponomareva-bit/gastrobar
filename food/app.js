@@ -26,7 +26,7 @@ const MAIN_MENU_CATEGORY_ORDER = [
 const CATEGORY_LABELS = {
   snacks: "Снеки",
   appetizers: "Закуски",
-  "hot-dogs": "Хот-доги",
+  "hot-dogs": "Hot Dogs",
   burgers: "Бургеры",
   grill: "Гриль",
   kids: "Детские комбо",
@@ -51,7 +51,7 @@ const BOTTOM_NAV = [
   { id: "games", label: "Игры", icon: "🎯", href: "/games" },
 ];
 
-const CATEGORY_ORDER = MAIN_MENU_CATEGORY_ORDER;
+const HOT_DOG_LABEL = "Hot Dog";
 
 const HOT_DOG_SAUSAGE_STANDARD = {
   id: "standard-pork",
@@ -390,8 +390,8 @@ const MENU_ITEMS = [
   },
   {
     id: "hot-dog-combo",
-    name: "Хот-Дог Комбо",
-    description: "Датский хот-дог, картофель фри и напиток.",
+    name: "Hot Dog Combo",
+    description: "Датский Hot Dog, картофель фри и напиток.",
     price: null,
     category: "combos",
     badge: "hit",
@@ -420,8 +420,8 @@ const MENU_ITEMS = [
   },
   {
     id: "kids-hot-dog-combo",
-    name: "Детский комбо с хот-догом",
-    description: "Классический хот-дог, картофель фри и игрушка-сюрприз.",
+    name: "Детский комбо с Hot Dog",
+    description: "Классический Hot Dog, картофель фри и игрушка-сюрприз.",
     price: null,
     category: "kids",
     badge: "hit",
@@ -854,7 +854,7 @@ function renderCategoryTabs() {
 function itemDisplayName(item) {
   if (item.category === "hot-dogs") {
     if (item.hotDogPrefix === false) return item.name;
-    return `Хот-дог ${item.name}`;
+    return `${HOT_DOG_LABEL} ${item.name}`;
   }
   if (item.nameSubtitle) {
     return `${item.name}. ${item.nameSubtitle}`;
