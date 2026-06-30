@@ -26,7 +26,7 @@ function isHiddenProduct(product: PosterProduct): boolean {
   return product.hidden === "1";
 }
 
-export function extractPosterPrice(product: PosterProduct): string {
+function readPosterPriceRaw(product: PosterProduct): string {
   const spots = product.spots ?? [];
   const visibleSpot = spots.find((spot) => spot.visible !== "0") ?? spots[0];
   if (visibleSpot?.price) return visibleSpot.price;
@@ -39,6 +39,13 @@ export function extractPosterPrice(product: PosterProduct): string {
   if (typeof product.price === "string" && product.price) return product.price;
   if (product.cost) return product.cost;
   return "0";
+}
+
+/** Poster хранит цену в минимальных единицах (VND × 100). */
+export function extractPosterPrice(product: PosterProduct): string {
+  const raw = Number(readPosterPriceRaw(product));
+  if (!Number.isFinite(raw) || raw <= 0) return "0";
+  return String(Math.round(raw / 100));
 }
 
 function formatGrammage(unit?: string): string | undefined {
