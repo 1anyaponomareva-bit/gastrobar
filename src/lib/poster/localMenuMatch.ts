@@ -145,6 +145,31 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["BAVARIAN SAUSAGE", "bavarian-sausage"],
   ["CHEDDAR JALAPENO SAUSAGE", "cheddar-jalapeno-sausage"],
   ["GRILLED CHICKEN SAUSAGE", "grilled-chicken-sausage"],
+  ["HOT DOG SIMPLE", "simple-hot-dog"],
+  ["HOT DOG KIDS", "simple-hot-dog"],
+  ["KIDS HOT DOG", "simple-hot-dog"],
+  ["CHEDDAR AND BACON", "cheddar-bacon-dog"],
+  ["CHEDDAR BACON DOG", "cheddar-bacon-dog"],
+  ["SAUERKRAUT MUSTARD", "bavarian-dog"],
+  ["BAVARIAN DOG", "bavarian-dog"],
+  ["BURGER CLASSIC", "classic-burger"],
+  ["COMBO BURGER", "burger-combo"],
+  ["BURGER COMBO MEAL", "burger-combo"],
+  ["COMBO HOT DOG", "hot-dog-combo"],
+  ["HOT DOG COMBO MEAL", "hot-dog-combo"],
+  ["COMBO WINGS", "wings-combo"],
+  ["WINGS COMBO MEAL", "wings-combo"],
+  ["KIDS COMBO NUGGETS", "kids-nuggets-combo"],
+  ["KIDS NUGGETS COMBO", "kids-nuggets-combo"],
+  ["KIDS COMBO HOT DOG", "kids-hot-dog-combo"],
+  ["KIDS COMBO SOUP", "kids-soup-combo"],
+  ["CHICKEN KEBAB WITH BREAD", "chicken-kebab"],
+  ["PORK KEBAB WITH BREAD", "pork-kebab"],
+  ["KEBAB CHICKEN", "chicken-kebab"],
+  ["KEBAB PORK", "pork-kebab"],
+  ["BAVARIAN GRILL SAUSAGE", "bavarian-sausage"],
+  ["CHEDDAR JALAPENO GRILL SAUSAGE", "cheddar-jalapeno-sausage"],
+  ["CHICKEN GRILL SAUSAGE", "grilled-chicken-sausage"],
 ];
 
 for (const [alias, id] of BAR_POSTER_ALIASES) {
@@ -157,7 +182,21 @@ for (const [alias, id] of FOOD_POSTER_ALIASES) {
 function lookupLocalId(posterName: string): string | null {
   const key = normalizePosterLookupKey(posterName);
   if (!key) return null;
-  return POSTER_ALIAS_TO_LOCAL_ID.get(key) ?? null;
+
+  const exact = POSTER_ALIAS_TO_LOCAL_ID.get(key);
+  if (exact) return exact;
+
+  let bestId: string | null = null;
+  let bestLen = 0;
+  for (const [alias, id] of POSTER_ALIAS_TO_LOCAL_ID) {
+    if (alias.length < 5) continue;
+    if (!key.includes(alias) && !alias.includes(key)) continue;
+    if (alias.length > bestLen) {
+      bestLen = alias.length;
+      bestId = id;
+    }
+  }
+  return bestId;
 }
 
 export function isExcludedPosterProduct(categoryName: string, productName: string): boolean {

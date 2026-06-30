@@ -8,6 +8,16 @@ import {
 } from "./mapProducts";
 import type { MenuItem } from "@/data/menu";
 import type { PosterCategory, PosterProduct } from "./types";
+import {
+  isExcludedPosterProduct,
+  matchLocalBarItem,
+  matchLocalFoodItem,
+} from "./localMenuMatch";
+import { isLikelyBarProduct } from "./categoryMap";
+
+function isHiddenProduct(product: PosterProduct): boolean {
+  return product.hidden === "1";
+}
 
 export type PosterMenuVenue = "bar" | "food";
 
@@ -97,4 +107,36 @@ export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<Pos
     items,
     categories: fetched.categories,
   };
+}
+
+export async function getUnmatchedPosterProducts(
+  venue: PosterMenuVenue,
+): Promise<Array<{ product_name: string; category_name: string }>> {
+  const fetched = await fetchPosterProducts();
+  if (!fetched.ok) return [];
+
+  const unmatched: Array<{ product_name: string; category_name: string }> = [];
+
+  for (const product of fetched.products) {
+    if (isHiddenProduct(product)) continue;
+
+    const productName = product.product_name?.trim() ?? "";
+    const categoryName = product.category_name ?? "";
+    if (!productName) continue;
+    if (isExcludedPosterProduct(categoryName, productName)) continue;
+
+    if (venue === "bar") {
+      if (!isLikelyBarProduct(categoryName, productName)) continue;
+      if (!matchLocalBarItem(productName)) {
+        unmatched.push({ product_name: productName, category_name: categoryName });
+      }
+      continue;
+    }
+
+    if (!matchLocalFoodItem(productName)) {
+      unmatched.push({ product_name: productName, category_name: categoryName });
+    }
+  }
+
+  return unmatched;
 }
