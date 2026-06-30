@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PosterTestBottomNav } from "@/components/poster-test/PosterTestBottomNav";
-import { PosterTestFoodFrame } from "@/components/poster-test/PosterTestFoodFrame";
+import { PosterTestFoodMenu } from "@/components/poster-test/PosterTestFoodMenu";
 
 export const metadata: Metadata = {
   title: "GASTROFOOD — Menu (test)",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function PosterTestFoodPage() {
   return (
     <>
-      <PosterTestFoodFrame />
+      <PosterTestFoodMenu />
       <PosterTestBottomNav />
     </>
   );

@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { Header } from "@/components/Header";
-import { MenuList } from "@/components/MenuList";
-import { TikTokButton } from "@/components/TikTokButton";
-import { PosterTestBottomNav } from "@/components/poster-test/PosterTestBottomNav";
-import { MENU_AND_HOOKAH_ITEMS, MENU_ITEMS } from "@/data/menu";
-import { HOOKAH_MENU_ENABLED } from "@/lib/menuFeatures";
-import { POSTER_TEST_BANNER_HEIGHT_PX } from "@/lib/posterTestRoutes";
+import { PosterTestBarClient } from "@/components/poster-test/PosterTestBarClient";
+import { getPosterMenuForVenue } from "@/lib/poster/menuService";
+import type { MenuItem } from "@/data/menu";
 
 export const metadata: Metadata = {
   title: "GASTROBAR — Bar menu (test)",
@@ -15,17 +11,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PosterTestBarPage() {
-  const menuItems = HOOKAH_MENU_ENABLED ? MENU_AND_HOOKAH_ITEMS : MENU_ITEMS;
+export const dynamic = "force-dynamic";
+
+export default async function PosterTestBarPage() {
+  const menu = await getPosterMenuForVenue("bar");
 
   return (
-    <>
-      <Header layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX} />
-      <main className="mx-auto grid min-h-[100dvh] max-w-md grid-cols-1 bg-black pt-0">
-        <MenuList items={menuItems} layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX} />
-      </main>
-      <PosterTestBottomNav />
-      <TikTokButton />
-    </>
+    <PosterTestBarClient
+      items={(menu.items as MenuItem[]) ?? []}
+      loadError={menu.success ? null : menu.errorText ?? menu.error ?? "Unknown error"}
+    />
   );
 }
