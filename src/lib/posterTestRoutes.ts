@@ -1,0 +1,14 @@
+/** Корень тестовой копии сайта (Poster integration preview). */
+export const POSTER_TEST_ROOT = "/poster-test";
+
+export const POSTER_TEST_BAR_PATH = "/poster-test/bar";
+
+export const POSTER_TEST_FOOD_PATH = "/poster-test/food";
+
+export const POSTER_TEST_COMBO_PATH = "/poster-test/food?section=combo";
+
+export const POSTER_TEST_BANNER_HEIGHT_PX = 28;
+
+export function isPosterTestPath(path: string): boolean {
+  return path === POSTER_TEST_ROOT || path.startsWith(`${POSTER_TEST_ROOT}/`);
+}

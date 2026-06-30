@@ -55,7 +55,7 @@ function LocationIcon({ className }: { className?: string }) {
   );
 }
 
-export function Header() {
+export function Header({ layoutOffsetPx = 0 }: { layoutOffsetPx?: number }) {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   useTheme();
@@ -81,7 +81,7 @@ export function Header() {
       className="pointer-events-none fixed left-0 top-0 z-[1000] w-full bg-black"
       style={{
         position: "fixed",
-        top: 0,
+        top: layoutOffsetPx,
         left: 0,
         width: "100%",
         zIndex: 1000,
