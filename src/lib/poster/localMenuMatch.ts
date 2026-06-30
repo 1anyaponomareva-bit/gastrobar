@@ -145,6 +145,17 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["BAVARIAN SAUSAGE", "bavarian-sausage"],
   ["CHEDDAR JALAPENO SAUSAGE", "cheddar-jalapeno-sausage"],
   ["GRILLED CHICKEN SAUSAGE", "grilled-chicken-sausage"],
+  ["BEEF BURGER", "classic-burger"],
+  ["CHEDDER & BACON", "cheddar-bacon-dog"],
+  ["CHEDDER AND BACON", "cheddar-bacon-dog"],
+  ["CHEESE STEAKE DOG", "philly-cheesesteak"],
+  ["CHEESESTEAK DOG", "philly-cheesesteak"],
+  ["CHEESE SAUSAGES", "cheddar-jalapeno-sausage"],
+  ["CHICKEN SAUSAGES", "grilled-chicken-sausage"],
+  ["CHICKEN SHASHLIK", "chicken-kebab"],
+  ["PORK SHASHLIK", "pork-kebab"],
+  ["KIDS COMBO #1", "kids-nuggets-combo"],
+  ["KIDS COMBO 1", "kids-nuggets-combo"],
   ["HOT DOG SIMPLE", "simple-hot-dog"],
   ["HOT DOG KIDS", "simple-hot-dog"],
   ["KIDS HOT DOG", "simple-hot-dog"],
@@ -212,7 +223,17 @@ export function matchLocalBarItem(posterName: string): MenuItem | null {
   return BAR_BY_ID.get(localId) ?? null;
 }
 
-export function matchLocalFoodItem(posterName: string): LocalFoodCatalogItem | null {
+export function matchLocalFoodItem(
+  posterName: string,
+  categoryName = "",
+): LocalFoodCatalogItem | null {
+  const category = categoryName.trim().toUpperCase();
+  const key = normalizePosterLookupKey(posterName);
+
+  if (category === "HOT DOGS" && key === "classic") {
+    return FOOD_BY_ID.get("classic-hot-dog") ?? null;
+  }
+
   const localId = lookupLocalId(posterName);
   if (!localId) return null;
   return FOOD_BY_ID.get(localId) ?? null;

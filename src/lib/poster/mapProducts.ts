@@ -104,7 +104,7 @@ export function mapPosterProductToFoodItem(product: PosterProduct): PosterFoodMe
   if (!productName) return null;
   if (isExcludedPosterProduct(categoryName, productName)) return null;
 
-  const local = matchLocalFoodItem(productName);
+  const local = matchLocalFoodItem(productName, categoryName);
   if (!local) return null;
 
   return mergeLocalFoodWithPosterPrice(local, product);

@@ -133,7 +133,7 @@ export async function getUnmatchedPosterProducts(
       continue;
     }
 
-    if (!matchLocalFoodItem(productName)) {
+    if (!matchLocalFoodItem(productName, categoryName)) {
       unmatched.push({ product_name: productName, category_name: categoryName });
     }
   }
