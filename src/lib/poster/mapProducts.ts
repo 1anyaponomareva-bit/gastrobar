@@ -1,12 +1,16 @@
 import type { MenuItem } from "@/data/menu";
 import {
   isLikelyBarProduct,
-  isLikelyFoodProduct,
-  mapPosterCategoryToBar,
-  mapPosterCategoryToFood,
   type FoodMenuCategoryId,
 } from "./categoryMap";
-import { resolveLocalBarImage, resolveLocalFoodImage } from "./localImageIndex";
+import type { LocalFoodCatalogItem } from "./foodMenuCatalog";
+import {
+  getLocalBarCatalogOrder,
+  getLocalFoodCatalogOrder,
+  isExcludedPosterProduct,
+  matchLocalBarItem,
+  matchLocalFoodItem,
+} from "./localMenuMatch";
 import type { PosterProduct } from "./types";
 
 export type PosterFoodMenuItem = {
@@ -48,14 +52,33 @@ export function extractPosterPrice(product: PosterProduct): string {
   return String(Math.round(raw / 100));
 }
 
-function formatGrammage(unit?: string): string | undefined {
-  if (!unit) return undefined;
-  const trimmed = unit.trim();
-  if (!trimmed) return undefined;
-  if (/^\d/.test(trimmed) || trimmed.includes("г") || trimmed.includes("ml")) {
-    return trimmed;
-  }
-  return trimmed;
+function mergeLocalBarWithPosterPrice(local: MenuItem, product: PosterProduct): MenuItem {
+  const posterPrice = extractPosterPrice(product);
+  return {
+    ...local,
+    price: posterPrice !== "0" ? posterPrice : local.price,
+  };
+}
+
+function mergeLocalFoodWithPosterPrice(
+  local: LocalFoodCatalogItem,
+  product: PosterProduct,
+): PosterFoodMenuItem {
+  const posterPrice = Number(extractPosterPrice(product)) || null;
+  const hasPosterPrice = posterPrice != null && posterPrice > 0;
+
+  return {
+    id: local.id,
+    name: local.name,
+    description: local.description,
+    grammage: local.grammage,
+    image: local.image,
+    category: local.category,
+    badge: local.badge,
+    price: hasPosterPrice ? posterPrice : (local.price ?? null),
+    priceMin: hasPosterPrice ? undefined : local.priceMin,
+    priceMax: hasPosterPrice ? undefined : local.priceMax,
+  };
 }
 
 export function mapPosterProductToBarItem(product: PosterProduct): MenuItem | null {
@@ -64,21 +87,13 @@ export function mapPosterProductToBarItem(product: PosterProduct): MenuItem | nu
   const categoryName = product.category_name ?? "";
   const productName = product.product_name?.trim() ?? "";
   if (!productName) return null;
+  if (isExcludedPosterProduct(categoryName, productName)) return null;
   if (!isLikelyBarProduct(categoryName, productName)) return null;
 
-  const barSubcategory = mapPosterCategoryToBar(categoryName, productName);
+  const local = matchLocalBarItem(productName);
+  if (!local) return null;
 
-  return {
-    id: `poster-${product.product_id}`,
-    name: productName,
-    description: product.description?.trim() ?? "",
-    image: resolveLocalBarImage(productName),
-    imageList: resolveLocalBarImage(productName),
-    category: "cocktail",
-    price: extractPosterPrice(product),
-    barSubcategory,
-    grammage: formatGrammage(product.unit),
-  };
+  return mergeLocalBarWithPosterPrice(local, product);
 }
 
 export function mapPosterProductToFoodItem(product: PosterProduct): PosterFoodMenuItem | null {
@@ -87,48 +102,34 @@ export function mapPosterProductToFoodItem(product: PosterProduct): PosterFoodMe
   const categoryName = product.category_name ?? "";
   const productName = product.product_name?.trim() ?? "";
   if (!productName) return null;
-  if (!isLikelyFoodProduct(categoryName, productName)) return null;
-  if (isLikelyBarProduct(categoryName, productName) && !isLikelyFoodProduct(categoryName, productName)) {
-    return null;
-  }
+  if (isExcludedPosterProduct(categoryName, productName)) return null;
 
-  const price = Number(extractPosterPrice(product)) || null;
+  const local = matchLocalFoodItem(productName);
+  if (!local) return null;
 
-  return {
-    id: `poster-${product.product_id}`,
-    name: productName,
-    description: product.description?.trim() ?? "",
-    price,
-    category: mapPosterCategoryToFood(categoryName, productName),
-    image: resolveLocalFoodImage(productName),
-    grammage: formatGrammage(product.unit),
-  };
+  return mergeLocalFoodWithPosterPrice(local, product);
 }
 
 export function sortPosterFoodItems(items: PosterFoodMenuItem[]): PosterFoodMenuItem[] {
-  const order: FoodMenuCategoryId[] = [
-    "appetizers",
-    "snacks",
-    "hot-dogs",
-    "burgers",
-    "grill",
-    "combos",
-    "kids",
-  ];
+  const order = getLocalFoodCatalogOrder();
   return [...items].sort((a, b) => {
-    const ai = order.indexOf(a.category);
-    const bi = order.indexOf(b.category);
-    if (ai !== bi) return ai - bi;
+    const ai = order.indexOf(a.id);
+    const bi = order.indexOf(b.id);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
     return a.name.localeCompare(b.name, "ru");
   });
 }
 
 export function sortPosterBarItems(items: MenuItem[]): MenuItem[] {
-  const order = ["cocktail", "wine", "beer", "tincture", "spirits", "soft"] as const;
+  const order = getLocalBarCatalogOrder();
   return [...items].sort((a, b) => {
-    const ai = order.indexOf(a.barSubcategory ?? "cocktail");
-    const bi = order.indexOf(b.barSubcategory ?? "cocktail");
-    if (ai !== bi) return ai - bi;
+    const ai = order.indexOf(a.id);
+    const bi = order.indexOf(b.id);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
     return a.name.localeCompare(b.name, "ru");
   });
 }

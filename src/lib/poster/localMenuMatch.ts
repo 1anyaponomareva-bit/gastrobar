@@ -1,0 +1,188 @@
+import { MENU_ITEMS, type MenuItem } from "@/data/menu";
+import { FOOD_MENU_CATALOG, type LocalFoodCatalogItem } from "./foodMenuCatalog";
+
+export function normalizePosterLookupKey(value: string): string {
+  return value
+    .replace(/^\+/, "")
+    .toLowerCase()
+    .replace(/hot\s*dog/g, "hotdog")
+    .replace(/ё/g, "е")
+    .replace(/[^a-z0-9а-я]/g, "");
+}
+
+const LOCAL_BAR_ITEMS: MenuItem[] = MENU_ITEMS.filter((item) => item.category !== "hookah");
+
+const BAR_BY_ID = new Map(LOCAL_BAR_ITEMS.map((item) => [item.id, item]));
+const FOOD_BY_ID = new Map(FOOD_MENU_CATALOG.map((item) => [item.id, item]));
+
+const POSTER_ALIAS_TO_LOCAL_ID = new Map<string, string>();
+
+function registerAlias(alias: string, localId: string) {
+  const key = normalizePosterLookupKey(alias);
+  if (key) POSTER_ALIAS_TO_LOCAL_ID.set(key, localId);
+}
+
+function registerLocalItemAliases(localId: string, aliases: string[]) {
+  for (const alias of aliases) {
+    registerAlias(alias, localId);
+  }
+}
+
+for (const item of LOCAL_BAR_ITEMS) {
+  registerAlias(item.id, item.id);
+  registerAlias(item.id.replace(/-/g, " "), item.id);
+  registerAlias(item.name, item.id);
+}
+
+for (const item of FOOD_MENU_CATALOG) {
+  registerAlias(item.id, item.id);
+  registerAlias(item.id.replace(/-/g, " "), item.id);
+  registerAlias(item.name, item.id);
+}
+
+const BAR_POSTER_ALIASES: Array<[string, string]> = [
+  ["БУЛЬВАРДЬЕ", "boulevardier"],
+  ["WHISKEY SOUR", "whisky-sour"],
+  ["WHISKY SOUR", "whisky-sour"],
+  ["NEGRONI", "negroni"],
+  ["LONG ISLAND ICED TEA", "long-island"],
+  ["WHISKEY COLA", "whisky-cola"],
+  ["GIN TONIC", "gin-tonic"],
+  ["APEROL SPRITZ", "aperol"],
+  ["БЕЛОЕ ВИНО Passion White Wine Sauvignon Blanc", "passion-white-wine-sauvignon-blanc"],
+  ["КРАСНОЕ ВИНО Passion Cabernet Sauvignon", "passion-cabernet-sauvignon"],
+  ["КРАСНОЕ ВИНО Passion Classic", "passion-classic-red-wine"],
+  ["КРАСНОЕ ВИНО Passion Sweet wine", "passion-sweet-wine"],
+  ["ШАМПАНСКОЕ Chateau Dalat Sparkling White Wine", "chateau-dalat-sparkling-white"],
+  ["SAPPORO LAGER", "beer-light"],
+  ["SAPPORO BLACK", "beer-dark"],
+  ["FUZZY IPA", "fuzzy-ipa-thunderslap"],
+  ["FUZZY LAGER", "fuzzy-lager"],
+  ["LIMONCELLO", "limoncello"],
+  ["PINEAPPLE GINGER HONEY", "pineapple-ginger-honey"],
+  ["PINEAPPLE VANILLA", "pineapple-vanilla"],
+  ["ORANGE CINNAMON", "orange-cinnamon"],
+  ["GRAPEFRUIT ROSEMARY", "grapefruit-rosemary"],
+  ["CRANBERRY", "cranberry"],
+  ["COFFEE CHOCOLATE", "coffee-chocolate"],
+  ["RASPBERRY ROSES", "raspberry-rose"],
+  ["MANGO PASSIONFRUIT", "mango-passionfruit"],
+  ["PASSION FRUIT", "passionfruit"],
+  ["APPLE STRUDEL", "apple-strudel"],
+  ["BLUEBERRY", "blueberry"],
+  ["CHERRY CHOCOLATE", "cherry-chocolate"],
+  ["STRAWBERRY CREAM", "strawberry-cream"],
+  ["B52", "b52"],
+  ["B-52", "b52"],
+  ["COFFEE LIQUEUR KAHLUA", "kahlua"],
+  ["+SAMBUCA VACCARI", "sambuca-vaccari"],
+  ["SAMBUCA VACCARI", "sambuca-vaccari"],
+  ["RHUM CHAUVET", "rhum-chauvet"],
+  ["JAMESON", "jameson"],
+  ["VODKA ABSOLUT", "absolut-vodka"],
+  ["BAILEYS", "baileys"],
+  ["TEQUILA JOSE CUERVO", "jose-cuervo-tequila"],
+  ["JAGERMAISTER", "jagermeister"],
+  ["JAGERMEISTER", "jagermeister"],
+  ["GIN BOMBAY SAPPHIRE", "bombay-sapphire-gin"],
+  ["GIN HARPOON", "gin-harpoon"],
+  ["+HENNESSY VERY SPECIAL", "hennessy-vs"],
+  ["HENNESSY VERY SPECIAL", "hennessy-vs"],
+  ["JIM BEAM APPLE", "jim-beam-apple"],
+  ["JIM BEAM", "jim-beam"],
+  ["JACK DANIELS", "jack-daniels"],
+  ["COCA-COLA ZERO", "coca-cola-zero"],
+  ["COCA-COLA", "coca-cola-can"],
+  ["SPRITE", "sprite-can"],
+  ["FANTA", "fanta-can"],
+  ["SCHWEPPES GINGER ALE", "schweppes-red"],
+  ["SCHWEPPES TONIС", "schweppes-tonic-yellow"],
+  ["SCHWEPPES TONIC", "schweppes-tonic-yellow"],
+  ["SCHWEPPES SODA", "schweppes-soda-grey"],
+  ["ВОДА LA VIE", "water-350"],
+];
+
+const FOOD_POSTER_ALIASES: Array<[string, string]> = [
+  ["CHICKEN WINGS", "chicken-wings"],
+  ["MOZZARELLA STICKS", "mozzarella-sticks"],
+  ["CHICKEN NUGGETS", "chicken-nuggets"],
+  ["CRISPY FISH BITES", "crispy-fish-bites"],
+  ["FISH BITES", "crispy-fish-bites"],
+  ["FRENCH FRIES", "french-fries"],
+  ["CREAMY CHICKEN SOUP", "creamy-chicken-soup"],
+  ["CHICKEN JERKY", "chicken-jerky"],
+  ["BEEF JERKY", "beef-jerky"],
+  ["PISTACHIOS", "pistachios"],
+  ["PEANUTS", "peanuts"],
+  ["SIMPLE HOT DOG", "simple-hot-dog"],
+  ["CLASSIC HOT DOG", "simple-hot-dog"],
+  ["KIDS HOT DOG", "simple-hot-dog"],
+  ["DANISH HOT DOG", "classic-hot-dog"],
+  ["CHEDDAR BACON HOT DOG", "cheddar-bacon-dog"],
+  ["CHEDDAR BACON", "cheddar-bacon-dog"],
+  ["JALAPENO CHEDDAR HOT DOG", "jalapeno-cheddar-dog"],
+  ["JALAPENO CHEDDAR", "jalapeno-cheddar-dog"],
+  ["HALAPENO CHEDDAR", "jalapeno-cheddar-dog"],
+  ["SAUERKRAUT MUSTARD HOT DOG", "bavarian-dog"],
+  ["BAVARIAN HOT DOG", "bavarian-dog"],
+  ["BBQ BACON HOT DOG", "bbq-bacon-dog"],
+  ["BBQ BACON", "bbq-bacon-dog"],
+  ["PHILLY CHEESESTEAK", "philly-cheesesteak"],
+  ["CHEESESTEAK DOG", "philly-cheesesteak"],
+  ["CLASSIC BURGER", "classic-burger"],
+  ["CHEESEBURGER", "cheeseburger"],
+  ["GASTROBURGER", "signature-burger"],
+  ["FISH BURGER", "fish-burger"],
+  ["BURGER COMBO", "burger-combo"],
+  ["HOT DOG COMBO", "hot-dog-combo"],
+  ["WINGS COMBO", "wings-combo"],
+  ["CHICKEN WINGS COMBO", "wings-combo"],
+  ["KIDS NUGGETS COMBO", "kids-nuggets-combo"],
+  ["KIDS HOT DOG COMBO", "kids-hot-dog-combo"],
+  ["KIDS SOUP COMBO", "kids-soup-combo"],
+  ["CHICKEN KEBAB", "chicken-kebab"],
+  ["PORK KEBAB", "pork-kebab"],
+  ["BAVARIAN SAUSAGE", "bavarian-sausage"],
+  ["CHEDDAR JALAPENO SAUSAGE", "cheddar-jalapeno-sausage"],
+  ["GRILLED CHICKEN SAUSAGE", "grilled-chicken-sausage"],
+];
+
+for (const [alias, id] of BAR_POSTER_ALIASES) {
+  registerLocalItemAliases(id, [alias]);
+}
+for (const [alias, id] of FOOD_POSTER_ALIASES) {
+  registerLocalItemAliases(id, [alias]);
+}
+
+function lookupLocalId(posterName: string): string | null {
+  const key = normalizePosterLookupKey(posterName);
+  if (!key) return null;
+  return POSTER_ALIAS_TO_LOCAL_ID.get(key) ?? null;
+}
+
+export function isExcludedPosterProduct(categoryName: string, productName: string): boolean {
+  const haystack = `${categoryName} ${productName}`.toLowerCase();
+  if (/кальян|hookah|shisha/i.test(haystack)) return true;
+  if (categoryName.trim().toUpperCase() === "SAUCES") return true;
+  return false;
+}
+
+export function matchLocalBarItem(posterName: string): MenuItem | null {
+  const localId = lookupLocalId(posterName);
+  if (!localId) return null;
+  return BAR_BY_ID.get(localId) ?? null;
+}
+
+export function matchLocalFoodItem(posterName: string): LocalFoodCatalogItem | null {
+  const localId = lookupLocalId(posterName);
+  if (!localId) return null;
+  return FOOD_BY_ID.get(localId) ?? null;
+}
+
+export function getLocalBarCatalogOrder(): string[] {
+  return LOCAL_BAR_ITEMS.map((item) => item.id);
+}
+
+export function getLocalFoodCatalogOrder(): string[] {
+  return FOOD_MENU_CATALOG.map((item) => item.id);
+}

@@ -3,18 +3,12 @@ import {
   POSTER_PLACEHOLDER_IMAGE_BAR,
   POSTER_PLACEHOLDER_IMAGE_FOOD,
 } from "./constants";
+import { normalizePosterLookupKey } from "./localMenuMatch";
 
-/** Нормализованное имя → путь к локальной картинке. */
+export { normalizePosterLookupKey };
+
 const BAR_IMAGE_BY_NAME = new Map<string, string>();
 const FOOD_IMAGE_BY_NAME = new Map<string, string>();
-
-export function normalizePosterLookupKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/hot\s*dog/g, "hotdog")
-    .replace(/ё/g, "е")
-    .replace(/[^a-z0-9а-я]/g, "");
-}
 
 function addImageEntry(map: Map<string, string>, name: string, image: string) {
   const key = normalizePosterLookupKey(name);

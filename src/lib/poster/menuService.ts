@@ -67,11 +67,12 @@ export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<Pos
   }
 
   if (venue === "bar") {
-    const items = sortPosterBarItems(
-      fetched.products
-        .map(mapPosterProductToBarItem)
-        .filter((item): item is MenuItem => item != null),
-    );
+    const byId = new Map<string, MenuItem>();
+    for (const product of fetched.products) {
+      const item = mapPosterProductToBarItem(product);
+      if (item) byId.set(item.id, item);
+    }
+    const items = sortPosterBarItems([...byId.values()]);
 
     return {
       success: true,
@@ -82,11 +83,12 @@ export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<Pos
     };
   }
 
-  const items = sortPosterFoodItems(
-    fetched.products
-      .map(mapPosterProductToFoodItem)
-      .filter((item): item is PosterFoodMenuItem => item != null),
-  );
+  const byId = new Map<string, PosterFoodMenuItem>();
+  for (const product of fetched.products) {
+    const item = mapPosterProductToFoodItem(product);
+    if (item) byId.set(item.id, item);
+  }
+  const items = sortPosterFoodItems([...byId.values()]);
 
   return {
     success: true,

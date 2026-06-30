@@ -41,6 +41,14 @@ function displayFoodName(item: PosterFoodMenuItem): string {
   return item.name;
 }
 
+function formatItemPrice(item: PosterFoodMenuItem): string {
+  if (item.priceMin != null && item.priceMax != null) {
+    if (item.priceMin === item.priceMax) return formatVnd(item.priceMin);
+    return `${formatVnd(item.priceMin)} – ${formatVnd(item.priceMax)}`;
+  }
+  return formatVnd(item.price);
+}
+
 export function PosterTestFoodMenu() {
   const [items, setItems] = useState<PosterFoodMenuItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -177,7 +185,7 @@ export function PosterTestFoodMenu() {
                       ) : null}
                       <p className="menu-card__desc">{item.description || ""}</p>
                       <span className="menu-card__price">
-                        {formatVnd(item.price)} VND
+                        {formatItemPrice(item)} VND
                       </span>
                     </div>
                   </div>
@@ -239,7 +247,7 @@ export function PosterTestFoodMenu() {
                   <p className="detail-info__grammage">{detailItem.grammage}</p>
                 ) : null}
                 <p className="detail-info__desc">{detailItem.description || ""}</p>
-                <p className="detail-info__price">{formatVnd(detailItem.price)} VND</p>
+                <p className="detail-info__price">{formatItemPrice(detailItem)} VND</p>
               </div>
             </div>
           </>
