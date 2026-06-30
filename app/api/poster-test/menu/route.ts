@@ -19,6 +19,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+
+  if (searchParams.get("debug") === "hotdogs") {
+    const { posterApiGet } = await import("@/lib/poster/client");
+    const result = await posterApiGet<Record<string, unknown>[]>("menu.getProducts");
+    if (!result.ok) {
+      return NextResponse.json({ success: false, error: result.errorText });
+    }
+    const hotdogs = (result.data ?? []).filter(
+      (p) => String(p.category_name ?? "").toUpperCase() === "HOT DOGS",
+    );
+    return NextResponse.json({ success: true, count: hotdogs.length, hotdogs });
+  }
+
   const venue = parseVenue(searchParams.get("venue"));
 
   if (!venue) {
