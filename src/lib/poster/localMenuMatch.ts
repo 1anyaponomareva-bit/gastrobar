@@ -246,3 +246,11 @@ export function getLocalBarCatalogOrder(): string[] {
 export function getLocalFoodCatalogOrder(): string[] {
   return FOOD_MENU_CATALOG.map((item) => item.id);
 }
+
+export function getLocalBarCatalog(): MenuItem[] {
+  return LOCAL_BAR_ITEMS;
+}
+
+export function getLocalFoodCatalog(): LocalFoodCatalogItem[] {
+  return FOOD_MENU_CATALOG;
+}

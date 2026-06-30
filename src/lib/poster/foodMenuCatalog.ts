@@ -1,4 +1,5 @@
 import type { FoodMenuCategoryId } from "./categoryMap";
+import { barMenuImage, foodMenuImage } from "./foodMenuImage";
 
 /** Локальное gastrofood-меню (как на /food) — только для poster-test. */
 export type LocalFoodCatalogItem = {
@@ -23,7 +24,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 110000,
     grammage: "200 г",
     category: "appetizers",
-    image: "/food/menu/Original Wings+ .png",
+    image: foodMenuImage("Original Wings+ .png"),
   },
   {
     id: "mozzarella-sticks",
@@ -32,7 +33,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
       "Обжаренные до золотистой корочки палочки из моцареллы с томатным соусом.",
     price: 120000,
     category: "appetizers",
-    image: "/food/menu/cheese-sticks.png",
+    image: foodMenuImage("cheese-sticks.png"),
   },
   {
     id: "chicken-nuggets",
@@ -42,7 +43,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "200 г",
     category: "appetizers",
     badge: "hit",
-    image: "/food/menu/NUGGETS.png",
+    image: foodMenuImage("NUGGETS.png"),
   },
   {
     id: "crispy-fish-bites",
@@ -53,7 +54,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "190 г",
     category: "appetizers",
     badge: "hit",
-    image: "/food/menu/FISH-BITES.png",
+    image: foodMenuImage("FISH-BITES.png"),
   },
   {
     id: "french-fries",
@@ -62,7 +63,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 40000,
     grammage: "120 г",
     category: "appetizers",
-    image: "/food/menu/FRENCH-FRIES.png",
+    image: foodMenuImage("FRENCH-FRIES.png"),
   },
   {
     id: "creamy-chicken-soup",
@@ -72,7 +73,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 90000,
     grammage: "350 г",
     category: "appetizers",
-    image: "/food/menu/Creamy Chicken Soup.png",
+    image: foodMenuImage("Creamy Chicken Soup.png"),
   },
   {
     id: "chicken-jerky",
@@ -80,7 +81,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Пряные вяленые куриные джерки. Идеально к пиву.",
     price: 95000,
     category: "snacks",
-    image: "/menu/food-chicken-jerky-horizontal-hero.png",
+    image: barMenuImage("/menu/food-chicken-jerky-horizontal-hero.png"),
   },
   {
     id: "beef-jerky",
@@ -88,7 +89,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Вяленая говядина с пряностями. Насыщенный вкус к пиву.",
     price: 115000,
     category: "snacks",
-    image: "/menu/food-beef-jerky-horizontal-hero.png",
+    image: barMenuImage("/menu/food-beef-jerky-horizontal-hero.png"),
   },
   {
     id: "pistachios",
@@ -96,7 +97,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Обжаренные солёные фисташки к пиву и коктейлям.",
     price: 55000,
     category: "snacks",
-    image: "/menu/food-pistachios-horizontal-hero.png",
+    image: barMenuImage("/menu/food-pistachios-horizontal-hero.png"),
   },
   {
     id: "peanuts",
@@ -104,7 +105,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Хрустящий солёный арахис. Классический барный снэк.",
     price: 45000,
     category: "snacks",
-    image: "/menu/food-peanuts-horizontal-hero.png",
+    image: barMenuImage("/menu/food-peanuts-horizontal-hero.png"),
   },
   {
     id: "simple-hot-dog",
@@ -112,7 +113,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Сосиска, булка, кетчуп.",
     price: 60000,
     category: "hot-dogs",
-    image: "/food/menu/KIDS-HOT-DOG.png",
+    image: foodMenuImage("KIDS-HOT-DOG.png"),
   },
   {
     id: "classic-hot-dog",
@@ -123,7 +124,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMax: 120000,
     category: "hot-dogs",
     badge: "hit",
-    image: "/food/menu/CLASSIC-HOT-DOG.png",
+    image: foodMenuImage("CLASSIC-HOT-DOG.png"),
   },
   {
     id: "cheddar-bacon-dog",
@@ -134,7 +135,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMax: 130000,
     category: "hot-dogs",
     badge: "hit",
-    image: "/food/menu/HOT-DOG_becon.png",
+    image: foodMenuImage("HOT-DOG_becon.png"),
   },
   {
     id: "jalapeno-cheddar-dog",
@@ -145,7 +146,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMax: 130000,
     category: "hot-dogs",
     badge: "hit",
-    image: "/food/menu/HOT-DOG_halapen.png",
+    image: foodMenuImage("HOT-DOG_halapen.png"),
   },
   {
     id: "bavarian-dog",
@@ -154,7 +155,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMin: 90000,
     priceMax: 130000,
     category: "hot-dogs",
-    image: "/food/menu/HOT-DOG_bov.png",
+    image: foodMenuImage("HOT-DOG_bov.png"),
   },
   {
     id: "bbq-bacon-dog",
@@ -164,7 +165,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMin: 90000,
     priceMax: 130000,
     category: "hot-dogs",
-    image: "/food/menu/HOT-DOG_bbq.png",
+    image: foodMenuImage("HOT-DOG_bbq.png"),
   },
   {
     id: "philly-cheesesteak",
@@ -175,7 +176,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "280 г",
     category: "hot-dogs",
     badge: "hit",
-    image: "/food/menu/phillycheesesteak.png",
+    image: foodMenuImage("phillycheesesteak.png"),
   },
   {
     id: "classic-burger",
@@ -186,7 +187,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "300 г",
     category: "burgers",
     badge: "hit",
-    image: "/food/menu/burger-classic.png",
+    image: foodMenuImage("burger-classic.png?v=20250618-01"),
   },
   {
     id: "cheeseburger",
@@ -197,7 +198,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "310 г",
     category: "burgers",
     badge: "hit",
-    image: "/food/menu/CHEESEBURGER.png",
+    image: foodMenuImage("CHEESEBURGER.png?v=20250618-02"),
   },
   {
     id: "signature-burger",
@@ -208,7 +209,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "370 г",
     category: "burgers",
     badge: "hit",
-    image: "/food/menu/GASTROBURGER.jpg",
+    image: foodMenuImage("GASTROBURGER.jpg?v=20250618-01"),
   },
   {
     id: "fish-burger",
@@ -218,7 +219,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 160000,
     grammage: "320 г",
     category: "burgers",
-    image: "/food/menu/fishburger.png",
+    image: foodMenuImage("fishburger.png?v=20250618-01"),
   },
   {
     id: "burger-combo",
@@ -227,7 +228,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "combos",
     badge: "hit",
-    image: "/food/menu/combo_burger.png",
+    image: foodMenuImage("combo_burger.png"),
   },
   {
     id: "hot-dog-combo",
@@ -236,7 +237,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "combos",
     badge: "hit",
-    image: "/food/menu/hot-dog_combo.png",
+    image: foodMenuImage("hot-dog_combo.png"),
   },
   {
     id: "wings-combo",
@@ -245,7 +246,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "combos",
     badge: "hit",
-    image: "/food/menu/wings_combo.png",
+    image: foodMenuImage("wings_combo.png"),
   },
   {
     id: "kids-nuggets-combo",
@@ -255,7 +256,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "kids",
     badge: "hit",
-    image: "/food/menu/KIDS-COMBO-NUGGETS.png",
+    image: foodMenuImage("KIDS-COMBO-NUGGETS.png"),
   },
   {
     id: "kids-hot-dog-combo",
@@ -264,7 +265,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "kids",
     badge: "hit",
-    image: "/food/menu/KIDS-COMBO-SAUSAGE.png",
+    image: foodMenuImage("KIDS-COMBO-SAUSAGE.png"),
   },
   {
     id: "kids-soup-combo",
@@ -273,7 +274,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     category: "kids",
     badge: "hit",
-    image: "/food/menu/KIDS-COMBO-SOUP.png",
+    image: foodMenuImage("KIDS-COMBO-SOUP.png"),
   },
   {
     id: "chicken-kebab",
@@ -282,7 +283,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 110000,
     grammage: "120 г",
     category: "grill",
-    image: "/food/menu/KUR_kebab_bread.png",
+    image: foodMenuImage("KUR_kebab_bread.png?v=20250624-01"),
   },
   {
     id: "pork-kebab",
@@ -291,7 +292,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 120000,
     grammage: "120 г",
     category: "grill",
-    image: "/food/menu/pork_kebab_bread.png",
+    image: foodMenuImage("pork_kebab_bread.png?v=20250624-01"),
   },
   {
     id: "bavarian-sausage",
@@ -301,7 +302,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     grammage: "370 г",
     category: "grill",
-    image: "/food/menu/Bavarian Sausage.png",
+    image: foodMenuImage("Bavarian Sausage.png"),
   },
   {
     id: "cheddar-jalapeno-sausage",
@@ -311,7 +312,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     grammage: "370 г",
     category: "grill",
-    image: "/food/menu/Cheddar Jalapeño Sausage.png",
+    image: foodMenuImage("Cheddar Jalapeño Sausage.png"),
   },
   {
     id: "grilled-chicken-sausage",
@@ -321,6 +322,6 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: null,
     grammage: "370 г",
     category: "grill",
-    image: "/food/menu/Grilled Chicken Sausage.png",
+    image: foodMenuImage("Grilled Chicken Sausage.png"),
   },
 ];

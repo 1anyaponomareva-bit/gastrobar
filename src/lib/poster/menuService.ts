@@ -1,9 +1,7 @@
 import { posterApiGet } from "./client";
 import {
-  mapPosterProductToBarItem,
-  mapPosterProductToFoodItem,
-  sortPosterBarItems,
-  sortPosterFoodItems,
+  buildBarMenuFromPosterProducts,
+  buildFoodMenuFromPosterProducts,
   type PosterFoodMenuItem,
 } from "./mapProducts";
 import type { MenuItem } from "@/data/menu";
@@ -77,12 +75,7 @@ export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<Pos
   }
 
   if (venue === "bar") {
-    const byId = new Map<string, MenuItem>();
-    for (const product of fetched.products) {
-      const item = mapPosterProductToBarItem(product);
-      if (item) byId.set(item.id, item);
-    }
-    const items = sortPosterBarItems([...byId.values()]);
+    const items = buildBarMenuFromPosterProducts(fetched.products);
 
     return {
       success: true,
@@ -93,12 +86,7 @@ export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<Pos
     };
   }
 
-  const byId = new Map<string, PosterFoodMenuItem>();
-  for (const product of fetched.products) {
-    const item = mapPosterProductToFoodItem(product);
-    if (item) byId.set(item.id, item);
-  }
-  const items = sortPosterFoodItems([...byId.values()]);
+  const items = buildFoodMenuFromPosterProducts(fetched.products);
 
   return {
     success: true,

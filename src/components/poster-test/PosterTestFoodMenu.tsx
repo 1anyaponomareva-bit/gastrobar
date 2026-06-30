@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
+import { getAssetUrl } from "@/lib/appVersion";
 import { POSTER_TEST_BANNER_HEIGHT_PX } from "@/lib/posterTestRoutes";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -195,7 +196,12 @@ export function PosterTestFoodMenu() {
                     }`}
                   >
                     {item.image ? (
-                      <img src={item.image} alt="" loading="lazy" decoding="async" />
+                      <img
+                        src={getAssetUrl(item.image)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div className="menu-card__no-image">нет изображения</div>
                     )}
@@ -236,7 +242,7 @@ export function PosterTestFoodMenu() {
             <div className="detail-stage">
               <div className="detail-image-wrap">
                 {detailItem.image ? (
-                  <img src={detailItem.image} alt="" />
+                  <img src={getAssetUrl(detailItem.image)} alt="" />
                 ) : (
                   <div className="detail-no-image">нет изображения</div>
                 )}
