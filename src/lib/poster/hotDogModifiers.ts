@@ -9,6 +9,7 @@ export type HotDogSausageOption = {
   shortLabel: string;
   price: number;
   grammage?: string;
+  posterModifierId?: string;
 };
 
 export type EnrichedHotDogFields = {
@@ -59,6 +60,8 @@ function buildSausageOptions(
         label: template.label,
         shortLabel: template.shortLabel,
         grammage: template.grammage,
+        posterModifierId:
+          standardMod.dish_modification_id != null ? String(standardMod.dish_modification_id) : undefined,
         price: basePrice + normalizeModifierAddon(standardMod.price),
       },
     ];
@@ -71,6 +74,8 @@ function buildSausageOptions(
       label: standardTemplate.label,
       shortLabel: standardTemplate.shortLabel,
       grammage: standardTemplate.grammage,
+      posterModifierId:
+        standardMod.dish_modification_id != null ? String(standardMod.dish_modification_id) : undefined,
       price: basePrice + normalizeModifierAddon(standardMod.price),
     },
     {
@@ -78,6 +83,8 @@ function buildSausageOptions(
       label: craftTemplate.label,
       shortLabel: craftTemplate.shortLabel,
       grammage: craftTemplate.grammage,
+      posterModifierId:
+        craftMods[0]?.dish_modification_id != null ? String(craftMods[0].dish_modification_id) : undefined,
       price: basePrice + craftAddon,
     },
   ];

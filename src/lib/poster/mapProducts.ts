@@ -21,6 +21,7 @@ export type { HotDogSausageOption };
 
 export type PosterFoodMenuItem = {
   id: string;
+  posterProductId: string;
   name: string;
   description: string;
   price: number | null;
@@ -66,6 +67,7 @@ function mergeLocalFoodWithPosterPrice(
 
   return {
     id: local.id,
+    posterProductId: product.product_id,
     name: local.name,
     description: local.description,
     grammage: local.grammage,
