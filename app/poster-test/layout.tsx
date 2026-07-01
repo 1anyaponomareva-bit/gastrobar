@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PosterTestBanner } from "@/components/poster-test/PosterTestBanner";
+import { PosterTestCartProvider } from "@/components/poster-test/PosterTestCartProvider";
 import "./poster-test-layout.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default function PosterTestLayout({
   return (
     <div className="poster-test-shell min-h-[100dvh] bg-black">
       <PosterTestBanner />
-      {children}
+      <PosterTestCartProvider>{children}</PosterTestCartProvider>
     </div>
   );
 }

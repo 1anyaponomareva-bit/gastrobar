@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
+import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
 import { abandonDurakStoredRoom } from "@/lib/durak/activeRoomStorage";
 import type { MenuPeriod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -18,20 +19,21 @@ type NavTab =
   | { id: "food"; tkey: "tab_food"; icon: string; href: string }
   | { id: "combo"; tkey: "tab_combo"; icon: string; href: string }
   | { id: "bar"; tkey: "bar"; icon: string; period: MenuPeriod }
-  | { id: "favorites"; tkey: "favorites"; icon: string; period: MenuPeriod }
+  | { id: "cart"; label: string; icon: string }
   | { id: "games"; tkey: "tab_games"; icon: string; href: string };
 
 const NAV_TABS: NavTab[] = [
   { id: "food", tkey: "tab_food", icon: "🍔", href: POSTER_TEST_FOOD_PATH },
   { id: "combo", tkey: "tab_combo", icon: "🍱", href: POSTER_TEST_COMBO_PATH },
   { id: "bar", tkey: "bar", icon: "🍸", period: "bar" },
-  { id: "favorites", tkey: "favorites", icon: "❤️", period: "favorites" },
+  { id: "cart", label: "Корзина", icon: "🛒" },
   { id: "games", tkey: "tab_games", icon: "🎯", href: "/games" },
 ];
 
 export function PosterTestBottomNav() {
   const { t } = useTranslation();
   const { period, setPeriod } = useTheme();
+  const { cartCount, checkoutOpen, openCart } = usePosterTestCart();
   const pathname = usePathname();
   const router = useRouter();
   const path = pathname ?? "";
@@ -45,6 +47,13 @@ export function PosterTestBottomNav() {
     if (!onBar) router.push(POSTER_TEST_BAR_PATH);
   };
 
+  const openCartFromNav = () => {
+    if (!onFood) {
+      router.push(POSTER_TEST_FOOD_PATH);
+    }
+    openCart("cart");
+  };
+
   const tabClass = (active: boolean, games = false) =>
     cn(
       "relative flex flex-col items-center justify-center gap-0.5 rounded-full px-0.5 py-1.5 text-[12px] font-medium transition-all sm:px-1 sm:py-2",
@@ -54,16 +63,17 @@ export function PosterTestBottomNav() {
       active ? "bg-white text-black shadow-sm" : "text-white/70 hover:text-white",
     );
 
-  const labelClass = "max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]";
+  const labelClass =
+    "max-w-[3.5rem] text-center text-[8px] leading-tight sm:max-w-none sm:whitespace-nowrap sm:text-[10px]";
 
   const iconMotion = (tabId: NavTab["id"], active: boolean) => (
     <motion.span
-      className="inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]"
+      className="relative inline-flex min-h-[1.25em] items-center justify-center text-[1.05rem] leading-none sm:text-[1.1rem]"
       animate={
         active
           ? tabId === "bar"
             ? { scale: [1, 1.35, 1], rotate: [0, -10, 10, 0], y: [0, -2, 0] }
-            : tabId === "favorites"
+            : tabId === "cart"
               ? { scale: [1, 1.2, 1] }
               : { scale: [1, 1.25, 1], y: [0, -3, 0] }
           : { scale: 1, rotate: 0, y: 0, opacity: 1 }
@@ -71,7 +81,7 @@ export function PosterTestBottomNav() {
       transition={
         active
           ? {
-              duration: tabId === "bar" ? 0.9 : tabId === "favorites" ? 0.6 : 0.7,
+              duration: tabId === "bar" ? 0.9 : tabId === "cart" ? 0.6 : 0.7,
               repeat: Infinity,
               ease: "easeInOut",
             }
@@ -79,6 +89,11 @@ export function PosterTestBottomNav() {
       }
     >
       {NAV_TABS.find((tab) => tab.id === tabId)?.icon}
+      {tabId === "cart" && cartCount > 0 ? (
+        <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-300 px-1 text-[9px] font-bold leading-none text-black">
+          {cartCount > 9 ? "9+" : cartCount}
+        </span>
+      ) : null}
     </motion.span>
   );
 
@@ -89,12 +104,12 @@ export function PosterTestBottomNav() {
       transition={{ duration: 0.2 }}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-4 flex justify-center safe-bottom px-3",
-        onGames ? "z-[1180]" : "z-40",
+        checkoutOpen ? "z-[30]" : onGames ? "z-[1180]" : "z-40",
       )}
     >
       <div className="pointer-events-auto mx-auto flex w-[min(28rem,calc(100vw-1rem))] max-w-none flex-nowrap items-center justify-between gap-0 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(30rem,calc(100vw-2rem))] sm:gap-0.5 sm:px-2 sm:py-2">
         {NAV_TABS.map((tab) => {
-          const label = t(tab.tkey);
+          const label = "tkey" in tab ? t(tab.tkey) : tab.label;
           const active =
             tab.id === "games"
               ? onGames
@@ -104,8 +119,8 @@ export function PosterTestBottomNav() {
                   ? onFood && path.includes("section=combo")
                   : tab.id === "bar"
                     ? onBar && !onGames && period === "bar"
-                    : tab.id === "favorites"
-                      ? onBar && !onGames && period === "favorites"
+                    : tab.id === "cart"
+                      ? checkoutOpen || (onFood && cartCount > 0)
                       : false;
 
           if ("href" in tab) {
@@ -118,6 +133,20 @@ export function PosterTestBottomNav() {
                 {iconMotion(tab.id, active)}
                 <span className={labelClass}>{label}</span>
               </Link>
+            );
+          }
+
+          if (tab.id === "cart") {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={openCartFromNav}
+                className={tabClass(active)}
+              >
+                {iconMotion(tab.id, active)}
+                <span className={labelClass}>{label}</span>
+              </button>
             );
           }
 
