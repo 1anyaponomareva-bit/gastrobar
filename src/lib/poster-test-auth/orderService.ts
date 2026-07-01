@@ -78,3 +78,23 @@ export async function createPosterTestDbOrder(input: {
   if (error || !data) return null;
   return mapOrder(data as OrderRow);
 }
+
+export async function updatePosterTestDbOrderPosterId(
+  orderId: string,
+  posterOrderId: string,
+): Promise<PosterTestOrder | null> {
+  const client = getPosterTestAdminClient();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from("poster_test_orders")
+    .update({
+      poster_order_id: posterOrderId,
+    })
+    .eq("id", orderId)
+    .select("*")
+    .single();
+
+  if (error || !data) return null;
+  return mapOrder(data as OrderRow);
+}

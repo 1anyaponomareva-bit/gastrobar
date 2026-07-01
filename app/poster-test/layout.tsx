@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PosterTestAuthProvider } from "@/components/poster-test/PosterTestAuthProvider";
 import { PosterTestCartProvider } from "@/components/poster-test/PosterTestCartProvider";
 import { PosterTestProfileButton } from "@/components/poster-test/PosterTestProfileButton";
@@ -22,7 +23,9 @@ export default function PosterTestLayout({
     <div className="poster-test-shell min-h-[100dvh] bg-black">
       <PosterTestAuthProvider>
         <PosterTestProfileButton />
-        <PosterTestCartProvider>{children}</PosterTestCartProvider>
+        <Suspense fallback={null}>
+          <PosterTestCartProvider>{children}</PosterTestCartProvider>
+        </Suspense>
       </PosterTestAuthProvider>
     </div>
   );

@@ -4,11 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
+import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import {
   cartKey,
   displayFoodName,
@@ -18,11 +21,19 @@ import {
   type CheckoutStep,
 } from "@/lib/poster/posterTestCartHelpers";
 import { PosterTestCartBonusBlock } from "@/components/poster-test/PosterTestCartBonusBlock";
+import {
+  POSTER_TEST_CHECKOUT_RESUME_KEY,
+  POSTER_TEST_CHECKOUT_RESUME_QUERY,
+  POSTER_TEST_LOGIN_PATH,
+} from "@/lib/posterTestRoutes";
 
 type OrderResponse = {
   success: boolean;
   message?: string;
   orderId?: string;
+  posterOrderId?: string;
+  saved?: boolean;
+  error?: string;
   response?: {
     incoming_order_id?: string | null;
   };
@@ -93,6 +104,10 @@ function CheckoutBackButton({
 }
 
 export function PosterTestCartProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = usePosterTestAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
@@ -103,6 +118,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [createdPosterOrderId, setCreatedPosterOrderId] = useState<string | null>(null);
 
   const cartTotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -124,6 +140,49 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     setCheckoutStep("cart");
     setOrderError(null);
   }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    const shouldResume =
+      searchParams?.get(POSTER_TEST_CHECKOUT_RESUME_QUERY) === "1" ||
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem(POSTER_TEST_CHECKOUT_RESUME_KEY) === "form");
+
+    if (!shouldResume || !user) return;
+
+    sessionStorage.removeItem(POSTER_TEST_CHECKOUT_RESUME_KEY);
+    setCheckoutOpen(true);
+    setCheckoutStep("form");
+    setOrderError(null);
+
+    if (searchParams?.get(POSTER_TEST_CHECKOUT_RESUME_QUERY) === "1") {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete(POSTER_TEST_CHECKOUT_RESUME_QUERY);
+      const query = nextParams.toString();
+      const basePath = pathname ?? "/poster-test";
+      router.replace(query ? `${basePath}?${query}` : basePath);
+    }
+  }, [authLoading, pathname, router, searchParams, user]);
+
+  useEffect(() => {
+    if (!user || checkoutStep !== "form") return;
+    if (!customerName.trim()) {
+      setCustomerName(user.name);
+    }
+  }, [checkoutStep, customerName, user]);
+
+  function beginCheckout() {
+    setOrderError(null);
+    if (authLoading) return;
+    if (!user) {
+      sessionStorage.setItem(POSTER_TEST_CHECKOUT_RESUME_KEY, "form");
+      const returnTo = `${pathname ?? "/poster-test"}?${POSTER_TEST_CHECKOUT_RESUME_QUERY}=1`;
+      router.push(`${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+    setCheckoutStep("form");
+  }
 
   const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string, options?: { openCart?: boolean }) => {
     const price = selectedCartPrice(item, selectedSausageId);
@@ -214,11 +273,18 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
         }),
       });
       const data = (await response.json()) as OrderResponse;
+      if (response.status === 401 || data.error === "UNAUTHORIZED") {
+        sessionStorage.setItem(POSTER_TEST_CHECKOUT_RESUME_KEY, "form");
+        const returnTo = `${pathname ?? "/poster-test"}?${POSTER_TEST_CHECKOUT_RESUME_QUERY}=1`;
+        router.push(`${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`);
+        return;
+      }
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Не удалось оформить заказ.");
       }
 
-      setCreatedOrderId(data.orderId ?? data.response?.incoming_order_id ?? null);
+      setCreatedOrderId(data.orderId ?? data.posterOrderId ?? null);
+      setCreatedPosterOrderId(data.posterOrderId ?? data.response?.incoming_order_id ?? null);
       setCheckoutStep("success");
       setCartItems([]);
     } catch (err) {
@@ -280,7 +346,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                 </p>
                 <h2 className="truncate text-lg font-semibold">
                   {checkoutStep === "success"
-                    ? "Заказ принят"
+                    ? "Заказ отправлен"
                     : checkoutStep === "form"
                       ? "Оформить заказ"
                       : "Корзина"}
@@ -293,9 +359,15 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400 text-3xl text-black">
                   ✓
                 </div>
-                <h3 className="text-xl font-semibold">Заказ принят</h3>
+                <h3 className="text-xl font-semibold">Заказ отправлен</h3>
+                <p className="mt-2 text-sm text-white/60">
+                  Мы передали заказ на кухню. Ожидайте подтверждение от персонала.
+                </p>
+                {createdPosterOrderId ? (
+                  <p className="mt-3 text-xs text-white/40">Poster № {createdPosterOrderId}</p>
+                ) : null}
                 {createdOrderId ? (
-                  <p className="mt-3 text-xs text-white/40">Order ID: {createdOrderId}</p>
+                  <p className="mt-1 text-xs text-white/35">Заказ на сайте: {createdOrderId}</p>
                 ) : null}
                 <button
                   type="button"
@@ -441,11 +513,8 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                     <button
                       type="button"
                       className="w-full rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black disabled:opacity-50"
-                      disabled={cartItems.length === 0}
-                      onClick={() => {
-                        setCheckoutStep("form");
-                        setOrderError(null);
-                      }}
+                      disabled={cartItems.length === 0 || authLoading}
+                      onClick={beginCheckout}
                     >
                       Оформить заказ
                     </button>

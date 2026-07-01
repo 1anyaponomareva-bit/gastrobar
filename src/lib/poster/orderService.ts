@@ -94,6 +94,11 @@ function buildComment(
   order: PosterTestOrderRequest,
   lines: PosterTestOrderLine[],
   total: number,
+  websiteMeta?: {
+    userId: string;
+    email: string | null;
+    websiteOrderId: string;
+  },
 ): string {
   const source = "Источник: Website";
   const fulfillment =
@@ -107,8 +112,25 @@ function buildComment(
     })
     .join("\n");
   const userComment = order.customer.comment ? `Комментарий: ${order.customer.comment}` : "";
+  const websiteLines = websiteMeta
+    ? [
+        `Website user_id: ${websiteMeta.userId}`,
+        `Website email: ${websiteMeta.email ?? "—"}`,
+        `Website order_id: ${websiteMeta.websiteOrderId}`,
+      ]
+    : [];
 
-  return [source, fulfillment, customer, phone, userComment, "Состав заказа:", items, `Итого: ${total} VND`]
+  return [
+    source,
+    fulfillment,
+    customer,
+    phone,
+    userComment,
+    "Состав заказа:",
+    items,
+    `Итого: ${total} VND`,
+    ...websiteLines,
+  ]
     .filter(Boolean)
     .join("\n");
 }
@@ -164,7 +186,16 @@ async function validateOrderAgainstPosterMenu(
   };
 }
 
-export async function createPosterTestOrder(input: unknown): Promise<{
+export type PosterWebsiteOrderMeta = {
+  userId: string;
+  email: string | null;
+  websiteOrderId: string;
+};
+
+export async function createPosterTestOrder(
+  input: unknown,
+  websiteMeta?: PosterWebsiteOrderMeta,
+): Promise<{
   endpoint: typeof POSTER_ORDER_ENDPOINT;
   requestPayload: PosterIncomingOrderPayload;
   response: PosterIncomingOrderResponse;
@@ -179,7 +210,7 @@ export async function createPosterTestOrder(input: unknown): Promise<{
     phone: order.customer.phone,
     first_name: order.customer.name,
     source: "Website",
-    comment: buildComment(order, validated.lines, validated.total),
+    comment: buildComment(order, validated.lines, validated.total, websiteMeta),
     products: validated.posterProducts,
   };
 

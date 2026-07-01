@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requirePosterTestUser } from "@/lib/poster-test-auth/api";
-import { createPosterTestDbOrder } from "@/lib/poster-test-auth/orderService";
+import {
+  createPosterTestDbOrder,
+  updatePosterTestDbOrderPosterId,
+} from "@/lib/poster-test-auth/orderService";
+import { createPosterTestOrder } from "@/lib/poster/orderService";
 import type { PosterTestOrderItem } from "@/lib/poster-test-auth/types";
 
 export const runtime = "nodejs";
@@ -57,12 +61,6 @@ export async function POST(request: Request) {
   const customerName = body.customer?.name?.trim() ?? "";
   const customerPhone = body.customer?.phone?.trim() ?? "";
   const customerComment = body.customer?.comment?.trim() ?? "";
-  const fulfillment =
-    body.customer?.fulfillment === "table"
-      ? "table"
-      : body.customer?.fulfillment === "delivery"
-        ? "delivery"
-        : "pickup";
 
   if (!customerName) {
     return NextResponse.json(
@@ -89,7 +87,7 @@ export async function POST(request: Request) {
 
   const order = await createPosterTestDbOrder({
     userId: auth.user.id,
-    fulfillment,
+    fulfillment: "pickup",
     customerName,
     customerPhone,
     customerComment,
@@ -108,12 +106,71 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({
-    success: true,
-    message: "Заказ принят. Интеграция с Poster будет подключена на следующем этапе.",
-    orderId: order.id,
-    response: {
-      incoming_order_id: null,
-    },
-  });
+  try {
+    const posterResult = await createPosterTestOrder(
+      {
+        customer: {
+          name: customerName,
+          phone: customerPhone,
+          comment: customerComment,
+          fulfillment: "pickup",
+        },
+        items: items.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          selectedSausageId: item.selectedSausageId,
+        })),
+      },
+      {
+        userId: auth.user.id,
+        email: auth.user.email,
+        websiteOrderId: order.id,
+      },
+    );
+
+    const posterOrderId = posterResult.response.incoming_order_id?.trim();
+    if (!posterOrderId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "POSTER_ORDER_ID_MISSING",
+          orderId: order.id,
+          saved: true,
+          message:
+            "Заказ сохранён, но Poster не вернул номер заказа. Попробуйте ещё раз или обратитесь к персоналу.",
+          poster: {
+            endpoint: posterResult.endpoint,
+            response: posterResult.response,
+          },
+        },
+        { status: 502 },
+      );
+    }
+
+    await updatePosterTestDbOrderPosterId(order.id, posterOrderId);
+
+    return NextResponse.json({
+      success: true,
+      message: "Заказ отправлен",
+      orderId: order.id,
+      posterOrderId,
+      totalVnd: posterResult.total,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Не удалось отправить заказ в Poster.";
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "POSTER_SUBMIT_FAILED",
+        orderId: order.id,
+        saved: true,
+        message: `Заказ сохранён, но Poster не принял заказ: ${message}`,
+      },
+      { status: 502 },
+    );
+  }
 }
