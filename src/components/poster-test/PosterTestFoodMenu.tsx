@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { HotDogSausageOption, PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import { getAssetUrl } from "@/lib/appVersion";
-import { POSTER_TEST_BANNER_HEIGHT_PX } from "@/lib/posterTestRoutes";
-
 const CATEGORY_LABELS: Record<string, string> = {
   appetizers: "Закуски",
   snacks: "Снеки",
@@ -403,12 +401,7 @@ export function PosterTestFoodMenu() {
     <>
       <link rel="stylesheet" href="/food/styles.css?v=poster-test" />
 
-      <header
-        className="site-header"
-        style={{
-          marginTop: `calc(${POSTER_TEST_BANNER_HEIGHT_PX}px + env(safe-area-inset-top, 0px))`,
-        }}
-      >
+      <header className="site-header">
         <div className="header-inner">
           <div className="header-logo">
             <img

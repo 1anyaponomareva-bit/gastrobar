@@ -1,0 +1,23 @@
+/* Offsets for fixed TEST VERSION banner on /poster-test (food menu uses food/styles.css vars). */
+.poster-test-shell {
+  --poster-test-banner-height: 28px;
+  --app-main-padding-top: calc(
+    var(--app-header-bar) + var(--poster-test-banner-height) + env(safe-area-inset-top, 0px)
+  );
+  --app-tabs-top: var(--app-main-padding-top);
+  --app-list-top: calc(
+    var(--app-header-bar) + var(--app-tabs-height) + var(--poster-test-banner-height) + 8px
+  );
+}
+
+.poster-test-shell .site-header {
+  top: var(--poster-test-banner-height);
+  margin-top: 0;
+}
+
+.poster-test-shell .menu-scroll {
+  scroll-padding-top: calc(
+    var(--app-header-bar) + var(--app-tabs-height) + var(--poster-test-banner-height) +
+      env(safe-area-inset-top, 0px)
+  );
+}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PosterTestBanner } from "@/components/poster-test/PosterTestBanner";
+import "./poster-test-layout.css";
 
 export const metadata: Metadata = {
   title: "GASTROBAR — Poster test",
