@@ -259,7 +259,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
 
       {checkoutOpen ? (
         <div
-          className="fixed inset-0 z-[2200] flex items-end justify-center bg-black/80 px-0 pb-0 pt-[calc(28px+env(safe-area-inset-top,0px))] backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
+          className="fixed inset-0 z-[2200] flex items-end justify-center bg-black/80 px-0 pb-0 pt-[env(safe-area-inset-top,0px)] backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
           role="dialog"
           aria-modal="true"
           aria-label="Корзина"
@@ -267,7 +267,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
             if (event.target === event.currentTarget) closeCart();
           }}
         >
-          <div className="mx-auto flex max-h-[min(92dvh,calc(100dvh-28px-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#080808] text-white shadow-2xl sm:max-h-[min(88dvh,calc(100dvh-48px))] sm:rounded-[28px]">
+          <div className="mx-auto flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#080808] text-white shadow-2xl sm:max-h-[min(88dvh,calc(100dvh-48px))] sm:rounded-[28px]">
             <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
               <CheckoutBackButton step={checkoutStep} onBack={handleCheckoutBack} onClose={closeCart} />
               <div className="min-w-0 flex-1">

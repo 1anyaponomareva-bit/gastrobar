@@ -15,7 +15,7 @@ export function posterTestUserPath(qrSlug: string): string {
   return `/poster-test/u/${qrSlug}`;
 }
 
-export const POSTER_TEST_BANNER_HEIGHT_PX = 28;
+export const POSTER_TEST_BANNER_HEIGHT_PX = 0;
 
 export function isPosterTestPath(path: string): boolean {
   return path === POSTER_TEST_ROOT || path.startsWith(`${POSTER_TEST_ROOT}/`);

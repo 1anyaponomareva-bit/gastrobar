@@ -1,24 +1,19 @@
-/* Offsets for fixed TEST VERSION banner on /poster-test (food menu uses food/styles.css vars). */
+/* Poster-test layout offsets (food menu uses food/styles.css vars). */
 .poster-test-shell {
-  --poster-test-banner-height: 28px;
-  --app-main-padding-top: calc(
-    var(--app-header-bar) + var(--poster-test-banner-height) + env(safe-area-inset-top, 0px)
-  );
+  --poster-test-banner-height: 0px;
+  --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
   --app-tabs-top: var(--app-main-padding-top);
-  --app-list-top: calc(
-    var(--app-header-bar) + var(--app-tabs-height) + var(--poster-test-banner-height) + 8px
-  );
+  --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 8px);
 }
 
 .poster-test-shell .site-header {
-  top: var(--poster-test-banner-height);
+  top: 0;
   margin-top: 0;
 }
 
 .poster-test-shell .menu-scroll {
   scroll-padding-top: calc(
-    var(--app-header-bar) + var(--app-tabs-height) + var(--poster-test-banner-height) +
-      env(safe-area-inset-top, 0px)
+    var(--app-header-bar) + var(--app-tabs-height) + env(safe-area-inset-top, 0px)
   );
 }
 
@@ -176,58 +171,36 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* TEST VERSION banner + profile button */
-.poster-test-banner__inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  height: 100%;
-  padding: 0 0.75rem;
-}
-
-.poster-test-banner__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #000;
-}
-
-@media (min-width: 640px) {
-  .poster-test-banner__label {
-    font-size: 11px;
-  }
-}
-
+/* Profile button (poster-test only). */
 .poster-test-profile-btn {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  z-index: 2100;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: rgba(0, 0, 0, 0.12);
-  color: #000;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
   text-decoration: none;
+  backdrop-filter: blur(8px);
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .poster-test-profile-btn:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .poster-test-profile-btn:active {
-  transform: translateY(-50%) scale(0.95);
+  transform: scale(0.95);
 }
 
 .poster-test-profile-btn__icon {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   line-height: 1;
 }
 

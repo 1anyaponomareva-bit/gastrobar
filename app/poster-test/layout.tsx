@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { PosterTestBanner } from "@/components/poster-test/PosterTestBanner";
 import { PosterTestAuthProvider } from "@/components/poster-test/PosterTestAuthProvider";
 import { PosterTestCartProvider } from "@/components/poster-test/PosterTestCartProvider";
+import { PosterTestProfileButton } from "@/components/poster-test/PosterTestProfileButton";
 import "./poster-test-layout.css";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export default function PosterTestLayout({
   return (
     <div className="poster-test-shell min-h-[100dvh] bg-black">
       <PosterTestAuthProvider>
-        <PosterTestBanner />
+        <PosterTestProfileButton />
         <PosterTestCartProvider>{children}</PosterTestCartProvider>
       </PosterTestAuthProvider>
     </div>
