@@ -13,7 +13,11 @@ import {
   matchLocalBarItem,
   matchLocalFoodItem,
 } from "./localMenuMatch";
+import { enrichHotDogFromPoster, type HotDogSausageOption } from "./hotDogModifiers";
+import { extractPosterPrice } from "./posterPrice";
 import type { PosterProduct } from "./types";
+
+export type { HotDogSausageOption };
 
 export type PosterFoodMenuItem = {
   id: string;
@@ -26,33 +30,16 @@ export type PosterFoodMenuItem = {
   category: FoodMenuCategoryId;
   image: string;
   badge?: "hit";
+  hotDogNoSausage?: boolean;
+  hotDogPrefix?: boolean;
+  sausageOptions?: HotDogSausageOption[];
 };
 
 function isHiddenProduct(product: PosterProduct): boolean {
   return product.hidden === "1";
 }
 
-function readPosterPriceRaw(product: PosterProduct): string {
-  const spots = product.spots ?? [];
-  const visibleSpot = spots.find((spot) => spot.visible !== "0") ?? spots[0];
-  if (visibleSpot?.price) return visibleSpot.price;
-
-  if (product.price && typeof product.price === "object") {
-    const values = Object.values(product.price).filter(Boolean);
-    if (values[0]) return values[0];
-  }
-
-  if (typeof product.price === "string" && product.price) return product.price;
-  if (product.cost) return product.cost;
-  return "0";
-}
-
-/** Poster хранит цену в минимальных единицах (VND × 100). */
-export function extractPosterPrice(product: PosterProduct): string {
-  const raw = Number(readPosterPriceRaw(product));
-  if (!Number.isFinite(raw) || raw <= 0) return "0";
-  return String(Math.round(raw / 100));
-}
+export { extractPosterPrice } from "./posterPrice";
 
 function withLocalBarAssets(local: MenuItem): MenuItem {
   return {
@@ -139,22 +126,26 @@ export function buildBarMenuFromPosterProducts(products: PosterProduct[]): MenuI
 }
 
 export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): PosterFoodMenuItem[] {
-  const mergedById = new Map<string, PosterFoodMenuItem>();
+  const mergedById = new Map<string, { item: PosterFoodMenuItem; product: PosterProduct }>();
 
   for (const product of products) {
     const mapped = mapPosterProductToFoodItem(product);
-    if (mapped) mergedById.set(mapped.id, mapped);
+    if (mapped) mergedById.set(mapped.id, { item: mapped, product });
   }
 
   return sortPosterFoodItems(
     getLocalFoodCatalog()
       .filter((local) => mergedById.has(local.id))
       .map((local) => {
-        const merged = mergedById.get(local.id)!;
-        return {
-          ...merged,
+        const { item, product } = mergedById.get(local.id)!;
+        let result: PosterFoodMenuItem = {
+          ...item,
           image: local.image,
         };
+        if (local.category === "hot-dogs") {
+          result = { ...result, ...enrichHotDogFromPoster(local, product, item) };
+        }
+        return result;
       }),
   );
 }

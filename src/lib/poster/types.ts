@@ -4,6 +4,32 @@ export type PosterSpot = {
   visible?: string;
 };
 
+export type PosterDishModification = {
+  dish_modification_id?: number | string;
+  name?: string;
+  price?: number | string;
+  brutto?: number | string;
+  type?: number | string;
+  ingredient_id?: number | string;
+  sort_order?: number;
+  is_deleted?: number | string;
+};
+
+export type PosterGroupModification = {
+  dish_modification_group_id?: number | string;
+  name?: string;
+  num_min?: number;
+  num_max?: number;
+  is_deleted?: number | string;
+  modifications?: PosterDishModification[];
+};
+
+export type PosterProductModification = {
+  modificator_id?: string;
+  modificator_name?: string;
+  spots?: PosterSpot[];
+};
+
 export type PosterProduct = {
   product_id: string;
   product_name: string;
@@ -18,6 +44,8 @@ export type PosterProduct = {
   spots?: PosterSpot[];
   price?: Record<string, string> | string;
   cost?: string;
+  modifications?: PosterProductModification[];
+  group_modifications?: PosterGroupModification[];
 };
 
 export type PosterCategory = {

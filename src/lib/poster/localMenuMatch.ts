@@ -118,6 +118,10 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["CLASSIC HOT DOG", "simple-hot-dog"],
   ["KIDS HOT DOG", "simple-hot-dog"],
   ["DANISH HOT DOG", "classic-hot-dog"],
+  ["CLASSIC", "simple-hot-dog"],
+  ["JALAPENO & CHEDDAR", "jalapeno-cheddar-dog"],
+  ["SAUERKRAUT & MUSTARD", "bavarian-dog"],
+  ["BBQ & BACON", "bbq-bacon-dog"],
   ["CHEDDAR BACON HOT DOG", "cheddar-bacon-dog"],
   ["CHEDDAR BACON", "cheddar-bacon-dog"],
   ["JALAPENO CHEDDAR HOT DOG", "jalapeno-cheddar-dog"],
@@ -231,7 +235,7 @@ export function matchLocalFoodItem(
   const key = normalizePosterLookupKey(posterName);
 
   if (category === "HOT DOGS" && key === "classic") {
-    return FOOD_BY_ID.get("classic-hot-dog") ?? null;
+    return FOOD_BY_ID.get("simple-hot-dog") ?? null;
   }
 
   const localId = lookupLocalId(posterName);
