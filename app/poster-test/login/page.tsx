@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+function formatLoginError(error: string): string {
+  const label = error.replaceAll("_", " ");
+  return `Не удалось войти (${label}). Попробуйте снова.`;
+}
+
 export default async function PosterTestLoginPage({
   searchParams,
 }: {
@@ -21,11 +26,7 @@ export default async function PosterTestLoginPage({
   return (
     <PosterTestLoginScreen
       returnTo={returnTo}
-      subtitle={
-        params.error
-          ? `Ошибка входа: ${params.error.replaceAll("_", " ")}`
-          : "Войдите через Google, чтобы открыть личный кабинет."
-      }
+      errorMessage={params.error ? formatLoginError(params.error) : null}
     />
   );
 }
