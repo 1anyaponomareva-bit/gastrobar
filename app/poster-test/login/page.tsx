@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PosterTestLoginScreen } from "@/components/poster-test/PosterTestLoginScreen";
+import { POSTER_TEST_ACCOUNT_PATH } from "@/lib/posterTestRoutes";
 
 export const metadata: Metadata = {
   title: "Вход — Poster test",
@@ -15,7 +16,7 @@ export default async function PosterTestLoginPage({
   const returnTo =
     params.returnTo && params.returnTo.startsWith("/poster-test")
       ? params.returnTo
-      : "/poster-test/account";
+      : POSTER_TEST_ACCOUNT_PATH;
 
   return (
     <PosterTestLoginScreen
@@ -23,7 +24,7 @@ export default async function PosterTestLoginPage({
       subtitle={
         params.error
           ? `Ошибка входа: ${params.error.replaceAll("_", " ")}`
-          : "Войдите через Google или Telegram, чтобы оформлять заказы и копить бонусы."
+          : "Войдите через Google, чтобы открыть личный кабинет."
       }
     />
   );

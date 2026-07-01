@@ -4,13 +4,10 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { PosterTestLoginScreen } from "@/components/poster-test/PosterTestLoginScreen";
-import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import {
   cartKey,
@@ -90,7 +87,6 @@ function CheckoutBackButton({
 }
 
 export function PosterTestCartProvider({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading, refreshSession } = usePosterTestAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
@@ -101,11 +97,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user?.name || customerName.trim()) return;
-    setCustomerName(user.name);
-  }, [customerName, user?.name]);
 
   const cartTotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -127,15 +118,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     setCheckoutStep("cart");
     setOrderError(null);
   }, []);
-
-  useEffect(() => {
-    if (authLoading) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") !== "form") return;
-    setCheckoutOpen(true);
-    setCheckoutStep(user ? "form" : "auth");
-    setOrderError(null);
-  }, [authLoading, user]);
 
   const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string) => {
     const price = selectedCartPrice(item, selectedSausageId);
@@ -183,11 +165,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       setOrderError(null);
       return;
     }
-    if (checkoutStep === "auth") {
-      setCheckoutStep("cart");
-      setOrderError(null);
-      return;
-    }
     closeCart();
   }
 
@@ -230,9 +207,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       });
       const data = (await response.json()) as OrderResponse;
       if (!response.ok || !data.success) {
-        if (response.status === 401) {
-          setCheckoutStep("auth");
-        }
         throw new Error(data.message || "Не удалось оформить заказ.");
       }
 
@@ -281,8 +255,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                 <p className="text-xs uppercase tracking-[0.18em] text-white/45">
                   {checkoutStep === "success"
                     ? "Готово"
-                    : checkoutStep === "auth"
-                      ? "Вход"
                     : checkoutStep === "form"
                       ? "Оформление"
                       : "Ваш заказ"}
@@ -290,8 +262,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                 <h2 className="truncate text-lg font-semibold">
                   {checkoutStep === "success"
                     ? "Заказ принят"
-                    : checkoutStep === "auth"
-                      ? "Войдите в аккаунт"
                     : checkoutStep === "form"
                       ? "Оформить заказ"
                       : "Корзина"}
@@ -305,9 +275,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                   ✓
                 </div>
                 <h3 className="text-xl font-semibold">Заказ принят</h3>
-                <p className="mt-3 text-sm leading-6 text-white/65">
-                  Заказ сохранён в вашем кабинете. Отправка в Poster будет подключена на следующем этапе.
-                </p>
                 {createdOrderId ? (
                   <p className="mt-3 text-xs text-white/40">Order ID: {createdOrderId}</p>
                 ) : null}
@@ -336,16 +303,6 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                         К меню
                       </button>
                     </div>
-                  ) : checkoutStep === "auth" ? (
-                    <PosterTestLoginScreen
-                      compact
-                      returnTo="/poster-test/food?checkout=form"
-                      title="Войдите, чтобы оформить заказ"
-                      subtitle="Меню доступно без регистрации. Для оформления заказа нужен аккаунт."
-                      onSuccess={() => {
-                        void refreshSession().then(() => setCheckoutStep("form"));
-                      }}
-                    />
                   ) : checkoutStep === "cart" ? (
                     <div className="space-y-3">
                       {cartItems.map((item) => (
@@ -466,18 +423,13 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                       className="w-full rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black disabled:opacity-50"
                       disabled={cartItems.length === 0}
                       onClick={() => {
-                        if (!user) {
-                          setCheckoutStep("auth");
-                          setOrderError(null);
-                          return;
-                        }
                         setCheckoutStep("form");
                         setOrderError(null);
                       }}
                     >
                       Оформить заказ
                     </button>
-                  ) : checkoutStep === "auth" ? null : cartItems.length > 0 ? (
+                  ) : cartItems.length > 0 ? (
                     <div className="grid grid-cols-[0.8fr_1.2fr] gap-3">
                       <button
                         type="button"

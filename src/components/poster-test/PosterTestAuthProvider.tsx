@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { POSTER_TEST_LOGIN_PATH } from "@/lib/posterTestRoutes";
 import type { PosterTestUser } from "@/lib/poster-test-auth/types";
 
 type SerializedPosterTestUser = {
@@ -44,6 +46,7 @@ export function usePosterTestAuth(): PosterTestAuthContextValue {
 }
 
 export function PosterTestAuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<SerializedPosterTestUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +75,8 @@ export function PosterTestAuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await fetch("/api/poster-test/auth/signout", { method: "POST" });
     setUser(null);
-  }, []);
+    router.push(POSTER_TEST_LOGIN_PATH);
+  }, [router]);
 
   const value = useMemo(
     () => ({
