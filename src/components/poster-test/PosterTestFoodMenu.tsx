@@ -494,31 +494,32 @@ export function PosterTestFoodMenu() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <div className="detail-stage">
-              <div className="detail-image-wrap">
+            <div className="detail-stage poster-test-detail-stage">
+              <div className="detail-image-wrap poster-test-detail-image-wrap">
                 {detailItem.image ? (
                   <img src={getAssetUrl(detailItem.image)} alt="" />
                 ) : (
                   <div className="detail-no-image">нет изображения</div>
                 )}
               </div>
-              <div className="detail-gradient" aria-hidden="true" />
-              <div className="detail-info">
-                <HotDogDetailPanel
-                  item={detailItem}
-                  selectedSausageId={selectedSausageId}
-                  onSelectSausage={setSelectedSausageId}
-                />
-                <button
-                  type="button"
-                  className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
-                  onClick={addDetailItemToCart}
-                >
-                  Добавить в корзину
-                </button>
-                {addToCartError ? (
-                  <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
-                ) : null}
+              <div className="poster-test-detail-panel">
+                <div className="detail-info poster-test-detail-info">
+                  <HotDogDetailPanel
+                    item={detailItem}
+                    selectedSausageId={selectedSausageId}
+                    onSelectSausage={setSelectedSausageId}
+                  />
+                  <button
+                    type="button"
+                    className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
+                    onClick={addDetailItemToCart}
+                  >
+                    Добавить в корзину
+                  </button>
+                  {addToCartError ? (
+                    <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
+                  ) : null}
+                </div>
               </div>
             </div>
           </>
