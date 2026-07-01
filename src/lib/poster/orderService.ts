@@ -1,6 +1,7 @@
 import { posterApiPost } from "./client";
-import { getPosterMenuForVenue } from "./menuService";
-import type { PosterFoodMenuItem } from "./mapProducts";
+import type { HotDogSausageOption, PosterFoodMenuItem } from "./mapProducts";
+import { getPosterOrderCatalog } from "./posterOrderCatalog";
+import { getPosterSpotId } from "./posterSpot";
 import type {
   PosterIncomingOrderPayload,
   PosterIncomingOrderProduct,
@@ -9,21 +10,8 @@ import type {
   PosterTestOrderRequest,
   PosterTestValidatedOrder,
 } from "./orderTypes";
-import { findMenuItemById } from "./orderTypes";
 
 const POSTER_ORDER_ENDPOINT = "incomingOrders.createIncomingOrder";
-
-function getPosterSpotId(): number {
-  const raw = process.env.POSTER_SPOT_ID?.trim();
-  if (!raw) {
-    throw new Error("POSTER_SPOT_ID is not configured");
-  }
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error("POSTER_SPOT_ID is not configured");
-  }
-  return parsed;
-}
 
 function cleanText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -141,34 +129,63 @@ function buildComment(
     .join("\n");
 }
 
-async function validateOrderAgainstPosterMenu(
+function resolveCatalogItem(
+  catalogEntry: {
+    id: string;
+    name: string;
+    posterProductId: string;
+    price: number | null;
+    priceMin?: number | null;
+    priceMax?: number | null;
+    sausageOptions?: HotDogSausageOption[];
+  },
+  selectedSausageId: string | undefined,
+): {
+  unitPrice: number;
+  selectedSausageLabel?: string;
+  modifierId?: string;
+} {
+  const asFoodItem: PosterFoodMenuItem = {
+    id: catalogEntry.id,
+    posterProductId: catalogEntry.posterProductId,
+    name: catalogEntry.name,
+    description: "",
+    price: catalogEntry.price,
+    priceMin: catalogEntry.priceMin,
+    priceMax: catalogEntry.priceMax,
+    category: "snacks",
+    image: "",
+    sausageOptions: catalogEntry.sausageOptions,
+  };
+  return selectedUnitPrice(asFoodItem, selectedSausageId);
+}
+
+async function validateOrderAgainstPosterCatalog(
   order: PosterTestOrderRequest,
 ): Promise<PosterTestValidatedOrder> {
-  const menu = await getPosterMenuForVenue("food");
-  if (!menu.success) {
-    throw new Error(menu.errorText ?? "Не удалось получить актуальное меню Poster.");
-  }
-
-  const menuItems = menu.items as PosterFoodMenuItem[];
+  const catalog = await getPosterOrderCatalog();
   const lines: PosterTestOrderLine[] = [];
   const posterProducts: PosterIncomingOrderProduct[] = [];
 
   for (const inputItem of order.items) {
     if (!inputItem.id || inputItem.quantity <= 0) continue;
 
-    const item = findMenuItemById(menuItems, inputItem.id);
-    if (!item) {
+    const catalogEntry = catalog.get(inputItem.id);
+    if (!catalogEntry) {
       throw new Error("Одна из позиций больше недоступна в Poster.");
     }
 
-    const { unitPrice, selectedSausageLabel, modifierId } = selectedUnitPrice(item, inputItem.selectedSausageId);
+    const { unitPrice, selectedSausageLabel, modifierId } = resolveCatalogItem(
+      catalogEntry,
+      inputItem.selectedSausageId,
+    );
     if (unitPrice <= 0) {
-      throw new Error(`Для позиции "${item.name}" не удалось определить цену.`);
+      throw new Error(`Для позиции "${catalogEntry.name}" не удалось определить цену.`);
     }
 
     lines.push({
-      id: item.id,
-      name: item.name,
+      id: catalogEntry.id,
+      name: catalogEntry.name,
       quantity: inputItem.quantity,
       unitPrice,
       total: unitPrice * inputItem.quantity,
@@ -177,7 +194,7 @@ async function validateOrderAgainstPosterMenu(
     });
 
     posterProducts.push({
-      product_id: item.posterProductId,
+      product_id: catalogEntry.posterProductId,
       count: inputItem.quantity,
       modification: productModification(modifierId),
     });
@@ -209,8 +226,9 @@ export async function createPosterTestOrder(
   lines: PosterTestOrderLine[];
 }> {
   const order = validateOrderRequest(input);
-  const validated = await validateOrderAgainstPosterMenu(order);
+  const validated = await validateOrderAgainstPosterCatalog(order);
 
+  // One website checkout = one Poster incoming order = one spot (POSTER_SPOT_ID).
   const requestPayload: PosterIncomingOrderPayload = {
     spot_id: getPosterSpotId(),
     phone: order.customer.phone,

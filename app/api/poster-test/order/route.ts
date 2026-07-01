@@ -5,6 +5,7 @@ import {
   updatePosterTestDbOrderPosterId,
 } from "@/lib/poster-test-auth/orderService";
 import { createPosterTestOrder } from "@/lib/poster/orderService";
+import { getPosterSpotId } from "@/lib/poster/posterSpot";
 import type { PosterTestOrderItem } from "@/lib/poster-test-auth/types";
 
 export const runtime = "nodejs";
@@ -43,6 +44,19 @@ function normalizeItems(raw: OrderBody["items"]): PosterTestOrderItem[] {
 export async function POST(request: Request) {
   const auth = await requirePosterTestUser();
   if (auth.errorResponse) return auth.errorResponse;
+
+  try {
+    getPosterSpotId();
+  } catch {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "POSTER_SPOT_ID_NOT_CONFIGURED",
+        message: "POSTER_SPOT_ID is not configured",
+      },
+      { status: 503 },
+    );
+  }
 
   let body: OrderBody;
   try {

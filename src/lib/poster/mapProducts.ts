@@ -19,6 +19,10 @@ import type { PosterProduct } from "./types";
 
 export type { HotDogSausageOption };
 
+export type PosterBarMenuItem = MenuItem & {
+  posterProductId: string;
+};
+
 export type PosterFoodMenuItem = {
   id: string;
   posterProductId: string;
@@ -50,11 +54,12 @@ function withLocalBarAssets(local: MenuItem): MenuItem {
   };
 }
 
-function mergeLocalBarWithPosterPrice(local: MenuItem, product: PosterProduct): MenuItem {
+function mergeLocalBarWithPosterPrice(local: MenuItem, product: PosterProduct): PosterBarMenuItem {
   const posterPrice = extractPosterPrice(product);
   return {
     ...withLocalBarAssets(local),
     price: posterPrice !== "0" ? posterPrice : local.price,
+    posterProductId: product.product_id,
   };
 }
 
@@ -80,7 +85,7 @@ function mergeLocalFoodWithPosterPrice(
   };
 }
 
-export function mapPosterProductToBarItem(product: PosterProduct): MenuItem | null {
+export function mapPosterProductToBarItem(product: PosterProduct): PosterBarMenuItem | null {
   if (isHiddenProduct(product)) return null;
 
   const categoryName = product.category_name ?? "";
@@ -109,21 +114,18 @@ export function mapPosterProductToFoodItem(product: PosterProduct): PosterFoodMe
   return mergeLocalFoodWithPosterPrice(local, product);
 }
 
-export function buildBarMenuFromPosterProducts(products: PosterProduct[]): MenuItem[] {
-  const priceByLocalId = new Map<string, string>();
+export function buildBarMenuFromPosterProducts(products: PosterProduct[]): PosterBarMenuItem[] {
+  const mergedById = new Map<string, PosterBarMenuItem>();
 
   for (const product of products) {
     const mapped = mapPosterProductToBarItem(product);
-    if (mapped) priceByLocalId.set(mapped.id, mapped.price);
+    if (mapped) mergedById.set(mapped.id, mapped);
   }
 
   return sortPosterBarItems(
     getLocalBarCatalog()
-      .filter((local) => priceByLocalId.has(local.id))
-      .map((local) => ({
-        ...withLocalBarAssets(local),
-        price: priceByLocalId.get(local.id)!,
-      })),
+      .filter((local) => mergedById.has(local.id))
+      .map((local) => mergedById.get(local.id)!),
   );
 }
 
@@ -164,7 +166,7 @@ export function sortPosterFoodItems(items: PosterFoodMenuItem[]): PosterFoodMenu
   });
 }
 
-export function sortPosterBarItems(items: MenuItem[]): MenuItem[] {
+export function sortPosterBarItems(items: PosterBarMenuItem[]): PosterBarMenuItem[] {
   const order = getLocalBarCatalogOrder();
   return [...items].sort((a, b) => {
     const ai = order.indexOf(a.id);
