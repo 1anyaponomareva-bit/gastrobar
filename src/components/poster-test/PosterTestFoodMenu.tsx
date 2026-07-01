@@ -103,47 +103,53 @@ function MenuCardCartControl({
   onDecrease: () => void;
 }) {
   const label = displayFoodName(item);
+  const expanded = quantity > 0;
 
   return (
     <div
-      className="menu-card__cart-control"
+      className={`menu-card__cart-control${expanded ? " menu-card__cart-control--expanded" : ""}`}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      {quantity > 0 ? (
-        <div className="menu-card__cart-qty" role="group" aria-label={`Количество: ${label}`}>
+      <div
+        key={expanded ? "qty" : "add"}
+        className="menu-card__cart-control-view"
+      >
+        {expanded ? (
+          <div className="menu-card__cart-qty" role="group" aria-label={`Количество: ${label}`}>
+            <button
+              type="button"
+              className="menu-card__cart-qty-btn"
+              aria-label={`Уменьшить количество ${label}`}
+              onClick={onDecrease}
+            >
+              −
+            </button>
+            <span className="menu-card__cart-qty-value" aria-live="polite">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              className="menu-card__cart-qty-btn menu-card__cart-qty-btn--plus"
+              aria-label={`Добавить ещё ${label}`}
+              onClick={onAdd}
+              disabled={!canAdd}
+            >
+              +
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
-            className="menu-card__cart-qty-btn"
-            aria-label={`Уменьшить количество ${label}`}
-            onClick={onDecrease}
-          >
-            −
-          </button>
-          <span className="menu-card__cart-qty-value" aria-live="polite">
-            {quantity}
-          </span>
-          <button
-            type="button"
-            className="menu-card__cart-qty-btn menu-card__cart-qty-btn--plus"
-            aria-label={`Добавить ещё ${label}`}
+            className="menu-card__cart-btn"
+            aria-label={`Добавить ${label} в корзину`}
             onClick={onAdd}
             disabled={!canAdd}
           >
             +
           </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="menu-card__cart-btn"
-          aria-label={`Добавить ${label} в корзину`}
-          onClick={onAdd}
-          disabled={!canAdd}
-        >
-          +
-        </button>
-      )}
+        )}
+      </div>
     </div>
   );
 }
