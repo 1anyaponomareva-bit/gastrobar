@@ -15,8 +15,14 @@ const POSTER_ORDER_ENDPOINT = "incomingOrders.createIncomingOrder";
 
 function getPosterSpotId(): number {
   const raw = process.env.POSTER_SPOT_ID?.trim();
-  const parsed = Number(raw || "1");
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  if (!raw) {
+    throw new Error("POSTER_SPOT_ID is not configured");
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error("POSTER_SPOT_ID is not configured");
+  }
+  return parsed;
 }
 
 function cleanText(value: unknown): string {
