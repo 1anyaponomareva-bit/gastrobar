@@ -20,8 +20,8 @@ export default function PosterTestLayout({
 }>) {
   return (
     <div className="poster-test-shell min-h-[100dvh] bg-black">
-      <PosterTestBanner />
       <PosterTestAuthProvider>
+        <PosterTestBanner />
         <PosterTestCartProvider>{children}</PosterTestCartProvider>
       </PosterTestAuthProvider>
     </div>

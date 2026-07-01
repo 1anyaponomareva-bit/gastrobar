@@ -17,6 +17,7 @@ import {
   type CartItem,
   type CheckoutStep,
 } from "@/lib/poster/posterTestCartHelpers";
+import { PosterTestCartBonusBlock } from "@/components/poster-test/PosterTestCartBonusBlock";
 
 type OrderResponse = {
   success: boolean;
@@ -307,6 +308,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
             ) : (
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+                  {checkoutStep === "cart" ? <PosterTestCartBonusBlock /> : null}
                   {cartItems.length === 0 ? (
                     <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 text-center text-sm text-white/55">
                       <span className="text-3xl" aria-hidden="true">
