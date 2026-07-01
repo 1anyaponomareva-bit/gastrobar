@@ -422,23 +422,25 @@ export function PosterTestFoodMenu() {
                         <p className="menu-card__desc">{item.description || ""}</p>
                         {needsSausagePicker ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
-                          <span className="menu-card__price">{priceLabel}</span>
-                          <MenuCardCartControl
-                            item={item}
-                            quantity={quickQuantity}
-                            canAdd={canQuickAdd}
-                            opensPicker={needsSausagePicker}
-                            onAdd={() => {
-                              if (needsSausagePicker) {
-                                setDetailItem(item);
-                                return;
-                              }
-                              if (canQuickAdd) {
-                                addItemToCart(item, quickSausageId(item), { openCart: false });
-                              }
-                            }}
-                            onDecrease={() => updateCartQuantity(quickKey, quickQuantity - 1)}
-                          />
+                          <div className="menu-card__price-action">
+                            <span className="menu-card__price">{priceLabel}</span>
+                            <MenuCardCartControl
+                              item={item}
+                              quantity={quickQuantity}
+                              canAdd={canQuickAdd}
+                              opensPicker={needsSausagePicker}
+                              onAdd={() => {
+                                if (needsSausagePicker) {
+                                  setDetailItem(item);
+                                  return;
+                                }
+                                if (canQuickAdd) {
+                                  addItemToCart(item, quickSausageId(item), { openCart: false });
+                                }
+                              }}
+                              onDecrease={() => updateCartQuantity(quickKey, quickQuantity - 1)}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>

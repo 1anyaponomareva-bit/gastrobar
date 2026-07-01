@@ -30,6 +30,8 @@
 .poster-test-shell .menu-card__media {
   z-index: 1;
   background: #030303;
+  width: 38%;
+  max-width: 145px;
 }
 
 .poster-test-shell .menu-card__name,
@@ -96,16 +98,44 @@
 .poster-test-shell .menu-card__price-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
+  justify-content: flex-start;
   margin-top: 0.25rem;
   min-width: 0;
 }
 
-.poster-test-shell .menu-card__price-row .menu-card__price {
-  margin-top: 0;
-  flex: 1;
-  min-width: 0;
+.poster-test-shell .menu-card__price-action {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 0.125rem 0.125rem 0.125rem 0.625rem;
+  gap: 0;
+  border-radius: 9999px;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.poster-test-shell .menu-card__price-action .menu-card__price {
+  margin: 0;
+  padding: 0 0.375rem 0 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: max-content;
+  max-width: none;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.poster-test-shell .menu-card__price-action .menu-card__cart-control {
+  margin-left: 0.25rem;
+  padding-left: 0.25rem;
+  border-left: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
 .poster-test-shell .menu-card__cart-control {
@@ -115,21 +145,21 @@
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  width: 2.75rem;
-  height: 2.75rem;
+  justify-content: center;
+  width: 2.375rem;
+  height: 2.375rem;
   overflow: hidden;
   transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .poster-test-shell .menu-card__cart-control--expanded {
-  width: 5.625rem;
+  width: 5.125rem;
 }
 
 .poster-test-shell .menu-card__cart-control-view {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   animation: menu-card-cart-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -148,14 +178,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.375rem;
+  height: 2.375rem;
   padding: 0;
-  border: 1px solid rgba(212, 175, 55, 0.32);
+  border: 0.5px solid rgba(212, 175, 55, 0.22);
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   color: rgba(212, 175, 55, 0.92);
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
@@ -169,7 +199,7 @@
 
 .poster-test-shell .menu-card__cart-btn:hover {
   background: rgba(212, 175, 55, 0.1);
-  border-color: rgba(212, 175, 55, 0.48);
+  border-color: rgba(212, 175, 55, 0.36);
 }
 
 .poster-test-shell .menu-card__cart-btn:active {
@@ -185,12 +215,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 5.625rem;
-  height: 2.75rem;
-  padding: 0 0.125rem;
+  width: 5.125rem;
+  height: 2.375rem;
+  padding: 0;
+  border: none;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -198,13 +228,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: none;
   border-radius: 9999px;
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
