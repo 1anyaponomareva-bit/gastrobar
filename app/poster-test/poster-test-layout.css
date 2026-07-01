@@ -21,3 +21,113 @@
       env(safe-area-inset-top, 0px)
   );
 }
+
+/* Quick add-to-cart on food menu cards (poster-test only). */
+.poster-test-shell .menu-card__price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  min-width: 0;
+}
+
+.poster-test-shell .menu-card__price-row .menu-card__price {
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.poster-test-shell .menu-card__cart-control {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.poster-test-shell .menu-card__cart-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: #fbbf24;
+  color: #000;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.poster-test-shell .menu-card__cart-btn:hover {
+  background: #fcd34d;
+}
+
+.poster-test-shell .menu-card__cart-btn:active {
+  transform: scale(0.95);
+}
+
+.poster-test-shell .menu-card__cart-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.poster-test-shell .menu-card__cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0.125rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+.poster-test-shell .menu-card__cart-qty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.poster-test-shell .menu-card__cart-qty-btn--plus {
+  background: #fbbf24;
+  color: #000;
+}
+
+.poster-test-shell .menu-card__cart-qty-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.poster-test-shell .menu-card__cart-qty-btn--plus:hover {
+  background: #fcd34d;
+}
+
+.poster-test-shell .menu-card__cart-qty-btn:active {
+  transform: scale(0.95);
+}
+
+.poster-test-shell .menu-card__cart-qty-value {
+  min-width: 1.75rem;
+  padding: 0 0.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+}

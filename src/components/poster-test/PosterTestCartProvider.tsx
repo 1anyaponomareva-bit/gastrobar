@@ -35,7 +35,12 @@ type PosterTestCartContextValue = {
   checkoutStep: CheckoutStep;
   openCart: (step?: CheckoutStep) => void;
   closeCart: () => void;
-  addItemToCart: (item: PosterFoodMenuItem, selectedSausageId: string) => string | null;
+  addItemToCart: (
+    item: PosterFoodMenuItem,
+    selectedSausageId: string,
+    options?: { openCart?: boolean },
+  ) => string | null;
+  updateCartQuantity: (key: string, nextQuantity: number) => void;
 };
 
 const PosterTestCartContext = createContext<PosterTestCartContextValue | null>(null);
@@ -119,7 +124,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     setOrderError(null);
   }, []);
 
-  const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string) => {
+  const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string, options?: { openCart?: boolean }) => {
     const price = selectedCartPrice(item, selectedSausageId);
     if (price.unitPrice <= 0) {
       return "Для этой позиции не удалось определить цену.";
@@ -146,18 +151,20 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
         },
       ];
     });
-    openCart("cart");
+    if (options?.openCart !== false) {
+      openCart("cart");
+    }
     return null;
   }, [openCart]);
 
-  function updateCartQuantity(key: string, nextQuantity: number) {
+  const updateCartQuantity = useCallback((key: string, nextQuantity: number) => {
     setCartItems((current) => {
       if (nextQuantity <= 0) return current.filter((item) => item.key !== key);
       return current.map((item) =>
         item.key === key ? { ...item, quantity: Math.min(99, nextQuantity) } : item,
       );
     });
-  }
+  }, []);
 
   function handleCheckoutBack() {
     if (checkoutStep === "form") {
@@ -230,8 +237,19 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       openCart,
       closeCart,
       addItemToCart,
+      updateCartQuantity,
     }),
-    [addItemToCart, cartCount, cartItems, cartTotal, checkoutOpen, checkoutStep, closeCart, openCart],
+    [
+      addItemToCart,
+      cartCount,
+      cartItems,
+      cartTotal,
+      checkoutOpen,
+      checkoutStep,
+      closeCart,
+      openCart,
+      updateCartQuantity,
+    ],
   );
 
   return (

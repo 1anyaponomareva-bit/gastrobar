@@ -5,9 +5,11 @@ import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
 import { getAssetUrl } from "@/lib/appVersion";
 import {
+  cartKey,
   displayFoodName,
   formatVnd,
   getHotDogSausageOptions,
+  selectedCartPrice,
 } from "@/lib/poster/posterTestCartHelpers";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -87,6 +89,65 @@ function HitBadge() {
   );
 }
 
+function MenuCardCartControl({
+  item,
+  quantity,
+  canAdd,
+  onAdd,
+  onDecrease,
+}: {
+  item: PosterFoodMenuItem;
+  quantity: number;
+  canAdd: boolean;
+  onAdd: () => void;
+  onDecrease: () => void;
+}) {
+  const label = displayFoodName(item);
+
+  return (
+    <div
+      className="menu-card__cart-control"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      {quantity > 0 ? (
+        <div className="menu-card__cart-qty" role="group" aria-label={`Количество: ${label}`}>
+          <button
+            type="button"
+            className="menu-card__cart-qty-btn"
+            aria-label={`Уменьшить количество ${label}`}
+            onClick={onDecrease}
+          >
+            −
+          </button>
+          <span className="menu-card__cart-qty-value" aria-live="polite">
+            {quantity}
+          </span>
+          <button
+            type="button"
+            className="menu-card__cart-qty-btn menu-card__cart-qty-btn--plus"
+            aria-label={`Добавить ещё ${label}`}
+            onClick={onAdd}
+            disabled={!canAdd}
+          >
+            +
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="menu-card__cart-btn"
+          aria-label={`Добавить ${label} в корзину`}
+          onClick={onAdd}
+          disabled={!canAdd}
+        >
+          +
+        </button>
+      )}
+    </div>
+  );
+}
+
 function HotDogDetailPanel({
   item,
   selectedSausageId,
@@ -161,7 +222,7 @@ function HotDogDetailPanel({
 }
 
 export function PosterTestFoodMenu() {
-  const { addItemToCart } = usePosterTestCart();
+  const { addItemToCart, cartItems, updateCartQuantity } = usePosterTestCart();
   const [items, setItems] = useState<PosterFoodMenuItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -220,6 +281,20 @@ export function PosterTestFoodMenu() {
     if (activeCategory === "all") return items;
     return items.filter((item) => item.category === activeCategory);
   }, [activeCategory, items]);
+
+  function quickSausageId(item: PosterFoodMenuItem): string {
+    return getHotDogSausageOptions(item)[0]?.id ?? "standard-pork";
+  }
+
+  function quickCartKey(item: PosterFoodMenuItem): string {
+    const price = selectedCartPrice(item, quickSausageId(item));
+    return cartKey(item.id, price.selectedSausageId);
+  }
+
+  function quickCartQuantity(item: PosterFoodMenuItem): number {
+    const key = quickCartKey(item);
+    return cartItems.find((cartItem) => cartItem.key === key)?.quantity ?? 0;
+  }
 
   function addDetailItemToCart() {
     if (!detailItem) return;
@@ -291,6 +366,10 @@ export function PosterTestFoodMenu() {
                   item.category === "hot-dogs"
                     ? `${formatHotDogListPrice(item)} VND`
                     : `${formatItemPrice(item)} VND`;
+                const quickKey = quickCartKey(item);
+                const quickQuantity = quickCartQuantity(item);
+                const quickPrice = selectedCartPrice(item, quickSausageId(item));
+                const canQuickAdd = quickPrice.unitPrice > 0;
 
                 return (
                   <article
@@ -326,7 +405,20 @@ export function PosterTestFoodMenu() {
                         ) : null}
                         <p className="menu-card__desc">{item.description || ""}</p>
                         {isHotDogPicker ? <HotDogSausageListNote item={item} /> : null}
-                        <span className="menu-card__price">{priceLabel}</span>
+                        <div className="menu-card__price-row">
+                          <span className="menu-card__price">{priceLabel}</span>
+                          <MenuCardCartControl
+                            item={item}
+                            quantity={quickQuantity}
+                            canAdd={canQuickAdd}
+                            onAdd={() => {
+                              if (canQuickAdd) {
+                                addItemToCart(item, quickSausageId(item), { openCart: false });
+                              }
+                            }}
+                            onDecrease={() => updateCartQuantity(quickKey, quickQuantity - 1)}
+                          />
+                        </div>
                       </div>
                     </div>
                     <div
