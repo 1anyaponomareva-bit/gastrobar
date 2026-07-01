@@ -500,6 +500,7 @@ export function PosterTestFoodMenu() {
                   <div className="detail-no-image">нет изображения</div>
                 )}
               </div>
+              <div className="detail-gradient" aria-hidden="true" />
               <div className="detail-info">
                 <HotDogDetailPanel
                   item={detailItem}

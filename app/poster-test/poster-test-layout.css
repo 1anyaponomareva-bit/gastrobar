@@ -17,6 +17,81 @@
   );
 }
 
+/* Menu list cards — keep text off the photo, readable on dark panel */
+.poster-test-shell .menu-card__body {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 0;
+  min-width: 0;
+  background: linear-gradient(90deg, #030303 0%, #030303 88%, rgba(3, 3, 3, 0.92) 100%);
+  box-shadow: 6px 0 20px rgba(0, 0, 0, 0.45);
+}
+
+.poster-test-shell .menu-card__media {
+  z-index: 1;
+  background: #030303;
+}
+
+.poster-test-shell .menu-card__name,
+.poster-test-shell .menu-card__desc,
+.poster-test-shell .menu-card__grammage,
+.poster-test-shell .menu-card__sausage-label,
+.poster-test-shell .menu-card__sausage-chip-label,
+.poster-test-shell .menu-card__price {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.poster-test-shell .menu-card--hot-dog .menu-card__media {
+  overflow: hidden;
+}
+
+.poster-test-shell .menu-card--hot-dog .menu-card__media > img {
+  max-width: 100%;
+}
+
+/* Detail overlay — text panel over image */
+.poster-test-shell .detail-gradient {
+  height: 52vh;
+  min-height: 320px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.98) 18%,
+    rgba(0, 0, 0, 0.92) 38%,
+    rgba(0, 0, 0, 0.72) 58%,
+    rgba(0, 0, 0, 0.35) 80%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.poster-test-shell .detail-info {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.98) 0%,
+    rgba(0, 0, 0, 0.94) 55%,
+    rgba(0, 0, 0, 0.55) 82%,
+    transparent 100%
+  );
+}
+
+.poster-test-shell .detail-info__title,
+.poster-test-shell .detail-info__desc,
+.poster-test-shell .detail-info__grammage,
+.poster-test-shell .detail-info__sausage,
+.poster-test-shell .detail-info__price,
+.poster-test-shell .detail-sausage-picker__title {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+.poster-test-shell .detail-sausage-option {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.poster-test-shell .detail-sausage-option.is-active {
+  background: rgba(212, 175, 55, 0.16);
+}
+
 /* Quick add-to-cart on food menu cards (poster-test only). */
 .poster-test-shell .menu-card__price-row {
   display: flex;
