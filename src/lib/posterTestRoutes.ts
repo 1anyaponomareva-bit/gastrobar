@@ -7,6 +7,14 @@ export const POSTER_TEST_FOOD_PATH = "/poster-test/food";
 
 export const POSTER_TEST_COMBO_PATH = "/poster-test/food?section=combo";
 
+export const POSTER_TEST_ACCOUNT_PATH = "/poster-test/account";
+
+export const POSTER_TEST_LOGIN_PATH = "/poster-test/login";
+
+export function posterTestUserPath(qrSlug: string): string {
+  return `/poster-test/u/${qrSlug}`;
+}
+
 export const POSTER_TEST_BANNER_HEIGHT_PX = 28;
 
 export function isPosterTestPath(path: string): boolean {

@@ -8,6 +8,7 @@ import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
 import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
 import {
+  POSTER_TEST_ACCOUNT_PATH,
   POSTER_TEST_BAR_PATH,
   POSTER_TEST_BANNER_HEIGHT_PX,
   POSTER_TEST_FOOD_PATH,
@@ -164,6 +165,13 @@ export function PosterTestMenuChoiceScreen() {
             accentClass="hover:shadow-[0_24px_70px_rgba(127,180,255,0.14)]"
           />
         </div>
+
+        <Link
+          href={POSTER_TEST_ACCOUNT_PATH}
+          className="w-full max-w-sm rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-3 text-center text-sm font-medium text-white/85 backdrop-blur-md transition hover:border-white/30 hover:bg-white/[0.1]"
+        >
+          👤 Личный кабинет
+        </Link>
       </div>
     </main>
   );
