@@ -1,6 +1,6 @@
 import type { LocalFoodCatalogItem } from "./foodMenuCatalog";
 import { LOCAL_HOT_DOG_CONFIG } from "./foodHotDogConfig";
-import { extractPosterPrice, normalizePosterMoney } from "./posterPrice";
+import { extractPosterPrice } from "./posterPrice";
 import type { PosterDishModification, PosterGroupModification, PosterProduct } from "./types";
 
 export type HotDogSausageOption = {
@@ -30,6 +30,13 @@ function findSausageGroup(product: PosterProduct): PosterGroupModification | nul
   return null;
 }
 
+function normalizeModifierAddon(raw: number | string | undefined): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  /** Доплата за сосиску в group_modifications — уже в VND (не ×100 как spots). */
+  return Math.round(value);
+}
+
 function buildSausageOptions(
   basePrice: number,
   modifications: PosterDishModification[],
@@ -40,7 +47,7 @@ function buildSausageOptions(
   const standardMod = modifications[0];
   const craftMods = modifications.slice(1);
   const craftAddon = craftMods.reduce(
-    (max, mod) => Math.max(max, normalizePosterMoney(mod.price)),
+    (max, mod) => Math.max(max, normalizeModifierAddon(mod.price)),
     0,
   );
 
@@ -52,7 +59,7 @@ function buildSausageOptions(
         label: template.label,
         shortLabel: template.shortLabel,
         grammage: template.grammage,
-        price: basePrice + normalizePosterMoney(standardMod.price),
+        price: basePrice + normalizeModifierAddon(standardMod.price),
       },
     ];
   }
@@ -64,7 +71,7 @@ function buildSausageOptions(
       label: standardTemplate.label,
       shortLabel: standardTemplate.shortLabel,
       grammage: standardTemplate.grammage,
-      price: basePrice + normalizePosterMoney(standardMod.price),
+      price: basePrice + normalizeModifierAddon(standardMod.price),
     },
     {
       id: craftTemplate.id,
@@ -89,7 +96,7 @@ export function enrichHotDogFromPoster(
   const modifications = sausageGroup?.modifications ?? [];
 
   if (config.hotDogNoSausage) {
-    const addon = modifications[0] ? normalizePosterMoney(modifications[0].price) : 0;
+    const addon = modifications[0] ? normalizeModifierAddon(modifications[0].price) : 0;
     const total = basePrice + addon;
     return {
       ...item,
