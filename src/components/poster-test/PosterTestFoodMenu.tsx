@@ -52,8 +52,12 @@ function formatHotDogListPrice(item: PosterFoodMenuItem): string {
   return formatItemPrice(item);
 }
 
+function hasSausageModifierPicker(item: PosterFoodMenuItem): boolean {
+  return getHotDogSausageOptions(item).length > 0;
+}
+
 function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
-  return item.category === "hot-dogs" && getHotDogSausageOptions(item).length > 0;
+  return item.category === "hot-dogs" && hasSausageModifierPicker(item);
 }
 
 function HotDogSausageListNote({ item }: { item: PosterFoodMenuItem }) {
@@ -93,17 +97,22 @@ function MenuCardCartControl({
   item,
   quantity,
   canAdd,
+  opensPicker,
   onAdd,
   onDecrease,
 }: {
   item: PosterFoodMenuItem;
   quantity: number;
   canAdd: boolean;
+  opensPicker?: boolean;
   onAdd: () => void;
   onDecrease: () => void;
 }) {
   const label = displayFoodName(item);
   const expanded = quantity > 0;
+  const addLabel = opensPicker
+    ? `Выбрать сосиску для ${label}`
+    : `Добавить ${label} в корзину`;
 
   return (
     <div
@@ -142,7 +151,7 @@ function MenuCardCartControl({
           <button
             type="button"
             className="menu-card__cart-btn"
-            aria-label={`Добавить ${label} в корзину`}
+            aria-label={addLabel}
             onClick={onAdd}
             disabled={!canAdd}
           >
@@ -368,12 +377,13 @@ export function PosterTestFoodMenu() {
               <div className="menu-list__spacer" aria-hidden="true" />
               {visibleItems.map((item, index) => {
                 const isHotDogPicker = hasPickerCardLayout(item);
+                const needsSausagePicker = hasSausageModifierPicker(item);
                 const priceLabel =
                   item.category === "hot-dogs"
                     ? `${formatHotDogListPrice(item)} VND`
                     : `${formatItemPrice(item)} VND`;
                 const quickKey = quickCartKey(item);
-                const quickQuantity = quickCartQuantity(item);
+                const quickQuantity = needsSausagePicker ? 0 : quickCartQuantity(item);
                 const quickPrice = selectedCartPrice(item, quickSausageId(item));
                 const canQuickAdd = quickPrice.unitPrice > 0;
 
@@ -410,14 +420,19 @@ export function PosterTestFoodMenu() {
                           <p className="menu-card__grammage">{item.grammage}</p>
                         ) : null}
                         <p className="menu-card__desc">{item.description || ""}</p>
-                        {isHotDogPicker ? <HotDogSausageListNote item={item} /> : null}
+                        {needsSausagePicker ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
                           <span className="menu-card__price">{priceLabel}</span>
                           <MenuCardCartControl
                             item={item}
                             quantity={quickQuantity}
                             canAdd={canQuickAdd}
+                            opensPicker={needsSausagePicker}
                             onAdd={() => {
+                              if (needsSausagePicker) {
+                                setDetailItem(item);
+                                return;
+                              }
                               if (canQuickAdd) {
                                 addItemToCart(item, quickSausageId(item), { openCart: false });
                               }
