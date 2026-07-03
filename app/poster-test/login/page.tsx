@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PosterTestBottomNav } from "@/components/poster-test/PosterTestBottomNav";
 import { PosterTestLoginScreen } from "@/components/poster-test/PosterTestLoginScreen";
 import { POSTER_TEST_ACCOUNT_PATH } from "@/lib/posterTestRoutes";
 
@@ -24,9 +25,12 @@ export default async function PosterTestLoginPage({
       : POSTER_TEST_ACCOUNT_PATH;
 
   return (
-    <PosterTestLoginScreen
-      returnTo={returnTo}
-      errorMessage={params.error ? formatLoginError(params.error) : null}
-    />
+    <>
+      <PosterTestLoginScreen
+        returnTo={returnTo}
+        errorMessage={params.error ? formatLoginError(params.error) : null}
+      />
+      <PosterTestBottomNav />
+    </>
   );
 }

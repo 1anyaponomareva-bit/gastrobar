@@ -11,7 +11,7 @@ import {
 } from "@/lib/posterTestRoutes";
 
 const LOGIN_SUBTITLE =
-  "Войдите через Google, чтобы оформлять заказы, получать бонусы и пользоваться программой лояльности Gastrobar.";
+  "Войдите через Google, чтобы копить бонусы и участвовать в программе лояльности Gastrobar.";
 
 type PosterTestLoginScreenProps = {
   returnTo?: string;
@@ -30,7 +30,7 @@ export function PosterTestLoginScreen({
       className="relative flex min-h-[100dvh] items-center justify-center px-5 py-10 sm:px-6"
       style={{
         paddingTop: `calc(${POSTER_TEST_BANNER_HEIGHT_PX}px + env(safe-area-inset-top, 0px) + 2rem)`,
-        paddingBottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",
       }}
     >
       <div
@@ -53,7 +53,7 @@ export function PosterTestLoginScreen({
 
           <div className="text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
-              ЛИЧНЫЙ КАБИНЕТ
+              БОНУСЫ
             </p>
             <h1 className="mt-3 text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-[1.75rem]">
               Войдите в аккаунт

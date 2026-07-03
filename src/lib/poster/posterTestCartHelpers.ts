@@ -12,7 +12,7 @@ export type CartItem = {
   selectedSausageLabel?: string;
 };
 
-export type CheckoutStep = "cart" | "form" | "success";
+export type CheckoutStep = "cart" | "show";
 
 export function formatVnd(price: number | null | undefined): string {
   if (price == null) return "—";

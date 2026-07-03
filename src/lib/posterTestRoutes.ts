@@ -11,10 +11,6 @@ export const POSTER_TEST_ACCOUNT_PATH = "/poster-test/account";
 
 export const POSTER_TEST_LOGIN_PATH = "/poster-test/login";
 
-export const POSTER_TEST_CHECKOUT_RESUME_KEY = "poster_test_checkout_resume";
-
-export const POSTER_TEST_CHECKOUT_RESUME_QUERY = "resumeCheckout";
-
 export function posterTestUserPath(qrSlug: string): string {
   return `/poster-test/u/${qrSlug}`;
 }

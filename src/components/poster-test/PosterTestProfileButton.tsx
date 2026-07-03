@@ -17,7 +17,7 @@ export function PosterTestProfileButton() {
   }
 
   const href = user ? POSTER_TEST_ACCOUNT_PATH : POSTER_TEST_LOGIN_PATH;
-  const label = user ? `Личный кабинет: ${user.name}` : "Войти в личный кабинет";
+  const label = user ? `Бонусы: ${user.name}` : "Войти для бонусов";
 
   return (
     <Link

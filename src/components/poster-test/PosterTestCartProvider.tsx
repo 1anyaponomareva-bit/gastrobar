@@ -4,14 +4,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
-import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import {
   cartKey,
   displayFoodName,
@@ -20,24 +17,6 @@ import {
   type CartItem,
   type CheckoutStep,
 } from "@/lib/poster/posterTestCartHelpers";
-import { PosterTestCartBonusBlock } from "@/components/poster-test/PosterTestCartBonusBlock";
-import {
-  POSTER_TEST_CHECKOUT_RESUME_KEY,
-  POSTER_TEST_CHECKOUT_RESUME_QUERY,
-  POSTER_TEST_LOGIN_PATH,
-} from "@/lib/posterTestRoutes";
-
-type OrderResponse = {
-  success: boolean;
-  message?: string;
-  orderId?: string;
-  posterOrderId?: string;
-  saved?: boolean;
-  error?: string;
-  response?: {
-    incoming_order_id?: string | null;
-  };
-};
 
 type PosterTestCartContextValue = {
   cartItems: CartItem[];
@@ -74,27 +53,12 @@ function CheckoutBackButton({
   onBack: () => void;
   onClose: () => void;
 }) {
-  if (step === "success") {
-    return (
-      <button
-        type="button"
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/80"
-        aria-label="Закрыть"
-        onClick={onClose}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    );
-  }
-
   return (
     <button
       type="button"
       className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/80"
-      aria-label={step === "form" ? "Назад к корзине" : "К меню"}
-      onClick={onBack}
+      aria-label={step === "show" ? "Назад к корзине" : "К меню"}
+      onClick={step === "show" ? onBack : onClose}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -103,22 +67,89 @@ function CheckoutBackButton({
   );
 }
 
+function CartItemRow({
+  item,
+  onUpdateQuantity,
+  large = false,
+}: {
+  item: CartItem;
+  onUpdateQuantity?: (key: string, nextQuantity: number) => void;
+  large?: boolean;
+}) {
+  if (large) {
+    return (
+      <div className="poster-test-order-show__item">
+        <div className="poster-test-order-show__item-main">
+          <span className="poster-test-order-show__qty" aria-label={`Количество: ${item.quantity}`}>
+            {item.quantity}×
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="poster-test-order-show__name">{item.name}</p>
+            {item.selectedSausageLabel ? (
+              <p className="poster-test-order-show__modifier">{item.selectedSausageLabel}</p>
+            ) : null}
+          </div>
+          <span className="poster-test-order-show__line-total">
+            {formatVnd(item.unitPrice * item.quantity)} VND
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl bg-white/[0.06] p-4">
+      <div className="flex gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{item.name}</p>
+          {item.selectedSausageLabel ? (
+            <p className="mt-1 text-xs text-white/50">{item.selectedSausageLabel}</p>
+          ) : null}
+          <p className="mt-2 text-sm text-amber-200">{formatVnd(item.unitPrice)} VND</p>
+        </div>
+        {onUpdateQuantity ? (
+          <button
+            type="button"
+            className="h-8 rounded-full px-2 text-xs text-white/45"
+            onClick={() => onUpdateQuantity(item.key, 0)}
+          >
+            Удалить
+          </button>
+        ) : null}
+      </div>
+      {onUpdateQuantity ? (
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center rounded-full border border-white/10">
+            <button
+              type="button"
+              className="h-9 w-10 text-lg text-white/75"
+              onClick={() => onUpdateQuantity(item.key, item.quantity - 1)}
+            >
+              −
+            </button>
+            <span className="w-9 text-center text-sm">{item.quantity}</span>
+            <button
+              type="button"
+              className="h-9 w-10 text-lg text-white/75"
+              onClick={() => onUpdateQuantity(item.key, item.quantity + 1)}
+            >
+              +
+            </button>
+          </div>
+          <span className="text-sm font-semibold">
+            {formatVnd(item.unitPrice * item.quantity)} VND
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PosterTestCartProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const { user, loading: authLoading } = usePosterTestAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerComment, setCustomerComment] = useState("");
-  const [fulfillment, setFulfillment] = useState<"pickup" | "table">("pickup");
-  const [orderError, setOrderError] = useState<string | null>(null);
-  const [orderLoading, setOrderLoading] = useState(false);
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-  const [createdPosterOrderId, setCreatedPosterOrderId] = useState<string | null>(null);
+  const [orderComment, setOrderComment] = useState("");
 
   const cartTotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -132,57 +163,12 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
   const openCart = useCallback((step: CheckoutStep = "cart") => {
     setCheckoutOpen(true);
     setCheckoutStep(step);
-    setOrderError(null);
   }, []);
 
   const closeCart = useCallback(() => {
     setCheckoutOpen(false);
     setCheckoutStep("cart");
-    setOrderError(null);
   }, []);
-
-  useEffect(() => {
-    if (authLoading) return;
-
-    const shouldResume =
-      searchParams?.get(POSTER_TEST_CHECKOUT_RESUME_QUERY) === "1" ||
-      (typeof window !== "undefined" &&
-        sessionStorage.getItem(POSTER_TEST_CHECKOUT_RESUME_KEY) === "form");
-
-    if (!shouldResume || !user) return;
-
-    sessionStorage.removeItem(POSTER_TEST_CHECKOUT_RESUME_KEY);
-    setCheckoutOpen(true);
-    setCheckoutStep("form");
-    setOrderError(null);
-
-    if (searchParams?.get(POSTER_TEST_CHECKOUT_RESUME_QUERY) === "1") {
-      const nextParams = new URLSearchParams(searchParams.toString());
-      nextParams.delete(POSTER_TEST_CHECKOUT_RESUME_QUERY);
-      const query = nextParams.toString();
-      const basePath = pathname ?? "/poster-test";
-      router.replace(query ? `${basePath}?${query}` : basePath);
-    }
-  }, [authLoading, pathname, router, searchParams, user]);
-
-  useEffect(() => {
-    if (!user || checkoutStep !== "form") return;
-    if (!customerName.trim()) {
-      setCustomerName(user.name);
-    }
-  }, [checkoutStep, customerName, user]);
-
-  function beginCheckout() {
-    setOrderError(null);
-    if (authLoading) return;
-    if (!user) {
-      sessionStorage.setItem(POSTER_TEST_CHECKOUT_RESUME_KEY, "form");
-      const returnTo = `${pathname ?? "/poster-test"}?${POSTER_TEST_CHECKOUT_RESUME_QUERY}=1`;
-      router.push(`${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`);
-      return;
-    }
-    setCheckoutStep("form");
-  }
 
   const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string, options?: { openCart?: boolean }) => {
     const price = selectedCartPrice(item, selectedSausageId);
@@ -226,72 +212,17 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  function showToBartender() {
+    if (cartItems.length === 0) return;
+    setCheckoutStep("show");
+  }
+
   function handleCheckoutBack() {
-    if (checkoutStep === "form") {
+    if (checkoutStep === "show") {
       setCheckoutStep("cart");
-      setOrderError(null);
       return;
     }
     closeCart();
-  }
-
-  async function submitOrder() {
-    setOrderError(null);
-    if (!customerName.trim()) {
-      setOrderError("Введите имя.");
-      return;
-    }
-    if (!customerPhone.trim()) {
-      setOrderError("Введите телефон.");
-      return;
-    }
-    if (cartItems.length === 0) {
-      setOrderError("Корзина пуста.");
-      return;
-    }
-
-    setOrderLoading(true);
-    try {
-      const response = await fetch("/api/poster-test/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            name: customerName,
-            phone: customerPhone,
-            comment: customerComment,
-            fulfillment,
-          },
-          items: cartItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            selectedSausageId: item.selectedSausageId,
-            selectedSausageLabel: item.selectedSausageLabel,
-          })),
-        }),
-      });
-      const data = (await response.json()) as OrderResponse;
-      if (response.status === 401 || data.error === "UNAUTHORIZED") {
-        sessionStorage.setItem(POSTER_TEST_CHECKOUT_RESUME_KEY, "form");
-        const returnTo = `${pathname ?? "/poster-test"}?${POSTER_TEST_CHECKOUT_RESUME_QUERY}=1`;
-        router.push(`${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`);
-        return;
-      }
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Не удалось оформить заказ.");
-      }
-
-      setCreatedOrderId(data.orderId ?? data.posterOrderId ?? null);
-      setCreatedPosterOrderId(data.posterOrderId ?? data.response?.incoming_order_id ?? null);
-      setCheckoutStep("success");
-      setCartItems([]);
-    } catch (err) {
-      setOrderError(err instanceof Error ? err.message : "Не удалось отправить заказ.");
-    } finally {
-      setOrderLoading(false);
-    }
   }
 
   const contextValue = useMemo(
@@ -319,6 +250,8 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const trimmedComment = orderComment.trim();
+
   return (
     <PosterTestCartContext.Provider value={contextValue}>
       {children}
@@ -328,65 +261,81 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
           className="fixed inset-0 z-[2200] flex items-end justify-center bg-black/80 px-0 pb-0 pt-[env(safe-area-inset-top,0px)] backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
           role="dialog"
           aria-modal="true"
-          aria-label="Корзина"
+          aria-label={checkoutStep === "show" ? "Ваш заказ" : "Корзина"}
           onClick={(event) => {
             if (event.target === event.currentTarget) closeCart();
           }}
         >
-          <div className="mx-auto flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#080808] text-white shadow-2xl sm:max-h-[min(88dvh,calc(100dvh-48px))] sm:rounded-[28px]">
+          <div
+            className={[
+              "mx-auto flex w-full flex-col overflow-hidden border border-white/10 bg-[#080808] text-white shadow-2xl",
+              checkoutStep === "show"
+                ? "max-h-[min(96dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] max-w-lg rounded-t-[28px] sm:max-h-[min(92dvh,calc(100dvh-48px))] sm:rounded-[28px]"
+                : "max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] max-w-md rounded-t-[28px] sm:max-h-[min(88dvh,calc(100dvh-48px))] sm:rounded-[28px]",
+            ].join(" ")}
+          >
             <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
               <CheckoutBackButton step={checkoutStep} onBack={handleCheckoutBack} onClose={closeCart} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/45">
-                  {checkoutStep === "success"
-                    ? "Готово"
-                    : checkoutStep === "form"
-                      ? "Оформление"
-                      : "Ваш заказ"}
+                  {checkoutStep === "show" ? "Для бармена" : "Соберите заказ"}
                 </p>
                 <h2 className="truncate text-lg font-semibold">
-                  {checkoutStep === "success"
-                    ? "Заказ отправлен"
-                    : checkoutStep === "form"
-                      ? "Оформить заказ"
-                      : "Корзина"}
+                  {checkoutStep === "show" ? "Ваш заказ" : "Корзина"}
                 </h2>
               </div>
             </div>
 
-            {checkoutStep === "success" ? (
-              <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400 text-3xl text-black">
-                  ✓
+            {checkoutStep === "show" ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+                  <p className="poster-test-order-show__hint">
+                    Покажите этот экран бармену — он оформит заказ и примет оплату на месте.
+                  </p>
+                  <div className="poster-test-order-show__list">
+                    {cartItems.map((item) => (
+                      <CartItemRow key={item.key} item={item} large />
+                    ))}
+                  </div>
+                  {trimmedComment ? (
+                    <div className="poster-test-order-show__comment">
+                      <p className="poster-test-order-show__comment-label">Комментарий</p>
+                      <p className="poster-test-order-show__comment-text">{trimmedComment}</p>
+                    </div>
+                  ) : null}
                 </div>
-                <h3 className="text-xl font-semibold">Заказ отправлен</h3>
-                <p className="mt-2 text-sm text-white/60">
-                  Мы передали заказ на кухню. Ожидайте подтверждение от персонала.
-                </p>
-                {createdPosterOrderId ? (
-                  <p className="mt-3 text-xs text-white/40">Poster № {createdPosterOrderId}</p>
-                ) : null}
-                {createdOrderId ? (
-                  <p className="mt-1 text-xs text-white/35">Заказ на сайте: {createdOrderId}</p>
-                ) : null}
-                <button
-                  type="button"
-                  className="mt-8 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black"
-                  onClick={closeCart}
-                >
-                  Вернуться в меню
-                </button>
-              </div>
+                <div className="shrink-0 border-t border-white/10 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-4">
+                  <div className="poster-test-order-show__total-row">
+                    <span>Итого</span>
+                    <span className="poster-test-order-show__total">{formatVnd(cartTotal)} VND</span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-white/10 px-5 py-3.5 text-sm font-semibold text-white/75"
+                      onClick={() => setCheckoutStep("cart")}
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black"
+                      onClick={closeCart}
+                    >
+                      Готово
+                    </button>
+                  </div>
+                </div>
+              </>
             ) : (
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-                  {checkoutStep === "cart" ? <PosterTestCartBonusBlock /> : null}
                   {cartItems.length === 0 ? (
                     <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 text-center text-sm text-white/55">
                       <span className="text-3xl" aria-hidden="true">
                         🛒
                       </span>
-                      <p>Корзина пуста. Откройте блюдо и добавьте его в заказ.</p>
+                      <p>Корзина пуста. Выберите блюда в меню и покажите заказ бармену.</p>
                       <button
                         type="button"
                         className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-white/80"
@@ -395,149 +344,45 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                         К меню
                       </button>
                     </div>
-                  ) : checkoutStep === "cart" ? (
+                  ) : (
                     <div className="space-y-3">
                       {cartItems.map((item) => (
-                        <div key={item.key} className="rounded-2xl bg-white/[0.06] p-4">
-                          <div className="flex gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold">{item.name}</p>
-                              {item.selectedSausageLabel ? (
-                                <p className="mt-1 text-xs text-white/50">{item.selectedSausageLabel}</p>
-                              ) : null}
-                              <p className="mt-2 text-sm text-amber-200">{formatVnd(item.unitPrice)} VND</p>
-                            </div>
-                            <button
-                              type="button"
-                              className="h-8 rounded-full px-2 text-xs text-white/45"
-                              onClick={() => updateCartQuantity(item.key, 0)}
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between">
-                            <div className="flex items-center rounded-full border border-white/10">
-                              <button
-                                type="button"
-                                className="h-9 w-10 text-lg text-white/75"
-                                onClick={() => updateCartQuantity(item.key, item.quantity - 1)}
-                              >
-                                −
-                              </button>
-                              <span className="w-9 text-center text-sm">{item.quantity}</span>
-                              <button
-                                type="button"
-                                className="h-9 w-10 text-lg text-white/75"
-                                onClick={() => updateCartQuantity(item.key, item.quantity + 1)}
-                              >
-                                +
-                              </button>
-                            </div>
-                            <span className="text-sm font-semibold">
-                              {formatVnd(item.unitPrice * item.quantity)} VND
-                            </span>
-                          </div>
-                        </div>
+                        <CartItemRow
+                          key={item.key}
+                          item={item}
+                          onUpdateQuantity={updateCartQuantity}
+                        />
                       ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <label className="block">
-                        <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">Имя</span>
-                        <input
-                          value={customerName}
-                          onChange={(event) => setCustomerName(event.target.value)}
-                          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
-                          placeholder="Ваше имя"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">Телефон</span>
-                        <input
-                          value={customerPhone}
-                          onChange={(event) => setCustomerPhone(event.target.value)}
-                          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
-                          placeholder="+84..."
-                          inputMode="tel"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">Комментарий</span>
-                        <textarea
-                          value={customerComment}
-                          onChange={(event) => setCustomerComment(event.target.value)}
-                          className="min-h-[96px] w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
-                          placeholder="Например: без лука, заберу через 20 минут"
-                        />
-                      </label>
-                      <div>
+                      <label className="mt-2 block">
                         <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">
-                          Способ получения
+                          Комментарий к заказу
                         </span>
-                        <div className="grid gap-2">
-                          <label className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-sm">
-                            <input
-                              type="radio"
-                              checked={fulfillment === "pickup"}
-                              onChange={() => setFulfillment("pickup")}
-                            />
-                            Самовывоз
-                          </label>
-                          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/40">
-                            <input type="radio" disabled />
-                            За столик (скоро)
-                          </label>
-                          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/40">
-                            <input type="radio" disabled />
-                            Доставка (пока отключено)
-                          </label>
-                        </div>
-                      </div>
+                        <textarea
+                          value={orderComment}
+                          onChange={(event) => setOrderComment(event.target.value)}
+                          className="min-h-[88px] w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
+                          placeholder="Например: без лука, острое"
+                        />
+                      </label>
                     </div>
                   )}
                 </div>
 
                 <div className="shrink-0 border-t border-white/10 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-5 sm:pb-4">
-                  {orderError ? (
-                    <p className="mb-3 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                      {orderError}
-                    </p>
-                  ) : null}
                   {cartItems.length > 0 ? (
                     <div className="mb-4 flex items-center justify-between">
                       <span className="text-sm text-white/55">Итого</span>
                       <span className="text-lg font-semibold">{formatVnd(cartTotal)} VND</span>
                     </div>
                   ) : null}
-                  {checkoutStep === "cart" ? (
-                    <button
-                      type="button"
-                      className="w-full rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black disabled:opacity-50"
-                      disabled={cartItems.length === 0 || authLoading}
-                      onClick={beginCheckout}
-                    >
-                      Оформить заказ
-                    </button>
-                  ) : cartItems.length > 0 ? (
-                    <div className="grid grid-cols-[0.8fr_1.2fr] gap-3">
-                      <button
-                        type="button"
-                        className="rounded-2xl border border-white/10 px-5 py-3.5 text-sm font-semibold text-white/75"
-                        onClick={() => setCheckoutStep("cart")}
-                        disabled={orderLoading}
-                      >
-                        Назад
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black disabled:opacity-50"
-                        onClick={submitOrder}
-                        disabled={orderLoading || cartItems.length === 0}
-                      >
-                        {orderLoading ? "Отправляем..." : "Подтвердить заказ"}
-                      </button>
-                    </div>
-                  ) : null}
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black disabled:opacity-50"
+                    disabled={cartItems.length === 0}
+                    onClick={showToBartender}
+                  >
+                    Показать бармену
+                  </button>
                 </div>
               </>
             )}

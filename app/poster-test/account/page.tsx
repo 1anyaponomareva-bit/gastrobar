@@ -7,7 +7,7 @@ import { getPosterTestUserById } from "@/lib/poster-test-auth/userService";
 import { POSTER_TEST_LOGIN_PATH } from "@/lib/posterTestRoutes";
 
 export const metadata: Metadata = {
-  title: "Личный кабинет — Poster test",
+  title: "Бонусы — Poster test",
   robots: { index: false, follow: false },
 };
 
