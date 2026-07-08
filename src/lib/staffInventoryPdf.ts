@@ -72,7 +72,7 @@ function money(value: number): string {
 function unitSummary(rows: StaffInventoryRow[]): string {
   const totals: Record<string, number> = {};
   rows.forEach((row) => {
-    totals[row.unit] = (totals[row.unit] || 0) + row.order;
+    totals[row.neededUnit] = (totals[row.neededUnit] || 0) + row.order;
   });
   const parts = Object.keys(totals).map((unit) => `${money(totals[unit])} ${unit}`);
   return parts.join(" / ") || "0";
@@ -272,7 +272,7 @@ function drawHeader(ctx: PdfContext, options: StaffInventoryPdfOptions, rows: St
     `Total order by unit: ${unitSummary(rows)}`,
   ];
   const note =
-    "Order amount = Needed stock - Current stock. PDF shows only items where order amount is greater than zero.";
+    "Order amount = NEEDED stock - LEFT stock when both use the same unit. PDF shows only items where order amount is greater than zero.";
   const noteBlock = measureWrappedText(note, ctx.font, 8.5, CONTENT_WIDTH);
   const metaLineHeight = 14;
   const metaHeight = meta.length * metaLineHeight + 16;
@@ -345,7 +345,7 @@ function drawTableHeader(ctx: PdfContext) {
   drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "ITEM", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "UNIT", 300, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "CURRENT", 350, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "LEFT", 350, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "NEEDED", 420, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "ORDER", 490, baseline, 8, ctx.fontBold);
 
@@ -371,12 +371,26 @@ function drawTableRow(
 
   const baseline = rowTop - 14;
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
-  drawTextLine(ctx, row.unit, 300, baseline, 9, ctx.font);
-  drawTextLine(ctx, money(row.current), 350, baseline, 9, ctx.font);
-  drawTextLine(ctx, money(row.needed), 420, baseline, 9, ctx.font);
+  drawTextLine(ctx, row.neededUnit, 300, baseline, 9, ctx.font);
   drawTextLine(
     ctx,
-    `${money(row.order)} ${row.unit}`,
+    `${money(row.current)} ${row.leftUnit}`,
+    350,
+    baseline,
+    9,
+    ctx.font,
+  );
+  drawTextLine(
+    ctx,
+    `${money(row.needed)} ${row.neededUnit}`,
+    420,
+    baseline,
+    9,
+    ctx.font,
+  );
+  drawTextLine(
+    ctx,
+    `${money(row.order)} ${row.neededUnit}`,
     490,
     baseline,
     9.5,

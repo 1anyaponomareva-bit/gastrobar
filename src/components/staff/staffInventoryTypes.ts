@@ -2,7 +2,8 @@ export type StaffInventoryRow = {
   index: number;
   category: string;
   name: string;
-  unit: string;
+  neededUnit: string;
+  leftUnit: string;
   current: number;
   needed: number;
   order: number;

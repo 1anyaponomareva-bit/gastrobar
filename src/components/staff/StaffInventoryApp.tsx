@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getStaffInventoryCategories,
   getStaffInventoryItems,
+  getStaffInventoryUnits,
   STAFF_INVENTORY_VENUE_LABELS,
   STAFF_INVENTORY_VENUE_LOGOS,
   STAFF_INVENTORY_VENUES,
@@ -39,14 +40,17 @@ import "./staff-inventory.css";
 
 function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
   return getStaffInventoryItems(venue).map((item, index) => {
+    const { neededUnit, leftUnit } = getStaffInventoryUnits(item);
     const current = parseNumber(getStoredValue(venue, index, "current"));
     const needed = parseNumber(getStoredValue(venue, index, "needed"));
-    const order = Math.max(needed - current, 0);
+    const order =
+      neededUnit === leftUnit ? Math.max(needed - current, 0) : 0;
     return {
       index,
       category: item[0],
       name: item[1],
-      unit: item[2],
+      neededUnit,
+      leftUnit,
       current,
       needed,
       order,
@@ -434,7 +438,7 @@ export function StaffInventoryApp() {
                       <div className="name">{row.name}</div>
                       <div className="row">
                         <div className="field">
-                          <label>Current ({row.unit})</label>
+                          <label>LEFT ({row.leftUnit})</label>
                           <input
                             inputMode="decimal"
                             value={getStoredValue(venue, row.index, "current")}
@@ -448,7 +452,7 @@ export function StaffInventoryApp() {
                           />
                         </div>
                         <div className="field">
-                          <label>Needed ({row.unit})</label>
+                          <label>NEEDED ({row.neededUnit})</label>
                           <input
                             inputMode="decimal"
                             value={getStoredValue(venue, row.index, "needed")}
@@ -466,7 +470,7 @@ export function StaffInventoryApp() {
                           <input
                             className="orderValue"
                             readOnly
-                            value={formatOrderValue(row.order, row.unit)}
+                            value={formatOrderValue(row.order, row.neededUnit)}
                           />
                         </div>
                       </div>
@@ -502,8 +506,8 @@ export function StaffInventoryApp() {
           </div>
 
           <p className="note">
-            For the next day press New Day / Clear Orders. It clears Current and
-            Needed values for {venueLabel}, sets today date, and keeps all
+            For the next day press New Day / Clear Orders. It clears LEFT and
+            NEEDED values for {venueLabel}, sets today date, and keeps all
             items.
           </p>
         </div>
