@@ -69,15 +69,6 @@ function money(value: number): string {
   return (Math.round(value * 100) / 100).toString();
 }
 
-function unitSummary(rows: StaffInventoryRow[]): string {
-  const totals: Record<string, number> = {};
-  rows.forEach((row) => {
-    totals[row.neededUnit] = (totals[row.neededUnit] || 0) + row.order;
-  });
-  const parts = Object.keys(totals).map((unit) => `${money(totals[unit])} ${unit}`);
-  return parts.join(" / ") || "0";
-}
-
 function groupedRows(rows: StaffInventoryRow[]): Record<string, StaffInventoryRow[]> {
   const groups: Record<string, StaffInventoryRow[]> = {};
   rows.forEach((row) => {
@@ -88,7 +79,7 @@ function groupedRows(rows: StaffInventoryRow[]): Record<string, StaffInventoryRo
 }
 
 function buildPdfFileName(venueLabel: string, date: string): string {
-  return `${venueLabel.replace(/\s+/g, "")}_Order_${date || "order"}.pdf`;
+  return `${venueLabel.replace(/\s+/g, "")}_Inventory_${date || "checklist"}.pdf`;
 }
 
 export function getStaffInventoryPdfFileName(
@@ -263,17 +254,13 @@ function drawWrappedBlock(
 }
 
 function drawHeader(ctx: PdfContext, options: StaffInventoryPdfOptions, rows: StaffInventoryRow[]) {
-  const title = `${options.venueLabel.toUpperCase()} ORDER LIST`;
+  const title = `${options.venueLabel.toUpperCase()} INVENTORY CHECKLIST`;
   const titleBlock = measureWrappedText(title, ctx.fontBold, 20, CONTENT_WIDTH);
   const meta = [
     `Date: ${options.date || "-"}`,
     `Employee: ${options.employee || "-"}`,
-    `Items to order: ${rows.length}`,
-    `Total order by unit: ${unitSummary(rows)}`,
+    `Items: ${rows.length}`,
   ];
-  const note =
-    "Order amount = NEEDED stock - LEFT stock when both use the same unit. PDF shows only items where order amount is greater than zero.";
-  const noteBlock = measureWrappedText(note, ctx.font, 8.5, CONTENT_WIDTH);
   const metaLineHeight = 14;
   const metaHeight = meta.length * metaLineHeight + 16;
   const headerHeight =
@@ -281,8 +268,6 @@ function drawHeader(ctx: PdfContext, options: StaffInventoryPdfOptions, rows: St
     titleBlock.height +
     10 +
     metaHeight +
-    8 +
-    noteBlock.height +
     SECTION_GAP;
 
   ensureSpace(ctx, headerHeight);
@@ -304,12 +289,6 @@ function drawHeader(ctx: PdfContext, options: StaffInventoryPdfOptions, rows: St
   });
 
   topY = metaTop - metaHeight - 8;
-  drawWrappedLines(ctx, noteBlock.lines, topY, {
-    size: 8.5,
-    color: COLORS.muted,
-    x: MARGIN_LEFT,
-  });
-
   ctx.y = headerTop - headerHeight;
 }
 
@@ -344,12 +323,15 @@ function drawTableHeader(ctx: PdfContext) {
   const baseline = topY - 14;
   drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "ITEM", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "UNIT", 300, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, "LEFT", 350, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "NEEDED", 420, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "ORDER", 490, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "NEEDED", 460, baseline, 8, ctx.fontBold);
 
   ctx.y = topY - total;
+}
+
+function formatStockValue(value: number, unit: string): string {
+  if (!value) return `— ${unit}`;
+  return `${money(value)} ${unit}`;
 }
 
 function drawTableRow(
@@ -371,10 +353,9 @@ function drawTableRow(
 
   const baseline = rowTop - 14;
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
-  drawTextLine(ctx, row.neededUnit, 300, baseline, 9, ctx.font);
   drawTextLine(
     ctx,
-    `${money(row.current)} ${row.leftUnit}`,
+    formatStockValue(row.current, row.leftUnit),
     350,
     baseline,
     9,
@@ -382,19 +363,11 @@ function drawTableRow(
   );
   drawTextLine(
     ctx,
-    `${money(row.needed)} ${row.neededUnit}`,
-    420,
+    formatStockValue(row.needed, row.neededUnit),
+    460,
     baseline,
     9,
     ctx.font,
-  );
-  drawTextLine(
-    ctx,
-    `${money(row.order)} ${row.neededUnit}`,
-    490,
-    baseline,
-    9.5,
-    ctx.fontBold,
   );
 
   let labelBaseline = rowTop - 12;
@@ -409,7 +382,7 @@ function drawTableRow(
 export async function makeStaffInventoryPdfBlob(
   options: StaffInventoryPdfOptions,
 ): Promise<Blob> {
-  const rows = options.rows.filter((row) => row.order > 0);
+  const rows = options.rows;
   const { regular, bold } = await loadFontBytes();
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -421,7 +394,7 @@ export async function makeStaffInventoryPdfBlob(
   drawHeader(ctx, options, rows);
 
   if (!rows.length) {
-    drawWrappedBlock(ctx, "No items to order.", 14, { bold: true });
+    drawWrappedBlock(ctx, "No items in checklist.", 14, { bold: true });
   } else {
     const groups = groupedRows(rows);
     Object.keys(groups).forEach((category) => {

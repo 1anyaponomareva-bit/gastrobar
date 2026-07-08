@@ -6,5 +6,4 @@ export type StaffInventoryRow = {
   leftUnit: string;
   current: number;
   needed: number;
-  order: number;
 };

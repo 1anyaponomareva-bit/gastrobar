@@ -41,26 +41,16 @@ import "./staff-inventory.css";
 function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
   return getStaffInventoryItems(venue).map((item, index) => {
     const { neededUnit, leftUnit } = getStaffInventoryUnits(item);
-    const current = parseNumber(getStoredValue(venue, index, "current"));
-    const needed = parseNumber(getStoredValue(venue, index, "needed"));
-    const order =
-      neededUnit === leftUnit ? Math.max(needed - current, 0) : 0;
     return {
       index,
       category: item[0],
       name: item[1],
       neededUnit,
       leftUnit,
-      current,
-      needed,
-      order,
+      current: parseNumber(getStoredValue(venue, index, "current")),
+      needed: parseNumber(getStoredValue(venue, index, "needed")),
     };
   });
-}
-
-function formatOrderValue(order: number, unit: string): string {
-  if (!order) return "";
-  return `${Number(order.toFixed(2))} ${unit}`;
 }
 
 export function StaffInventoryApp() {
@@ -69,7 +59,6 @@ export function StaffInventoryApp() {
   const [date, setDate] = useState("");
   const [employee, setEmployee] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [onlyOrder, setOnlyOrder] = useState(false);
   const [search, setSearch] = useState("");
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -104,17 +93,6 @@ export function StaffInventoryApp() {
     return buildRows(venue);
   }, [hydrated, revision, venue]);
 
-  const stats = useMemo(() => {
-    const toOrder = rows.filter((row) => row.order > 0);
-    return {
-      totalItems: items.length,
-      itemsToOrder: toOrder.length,
-      totalQty: Number(
-        rows.reduce((sum, row) => sum + row.order, 0).toFixed(2),
-      ),
-    };
-  }, [rows, items.length]);
-
   const visibleRows = useMemo(() => {
     const query = search.toLowerCase().trim();
     return rows.filter((row) => {
@@ -128,10 +106,9 @@ export function StaffInventoryApp() {
       ) {
         return false;
       }
-      if (onlyOrder && row.order <= 0) return false;
       return true;
     });
-  }, [rows, activeCategory, search, onlyOrder]);
+  }, [rows, activeCategory, search]);
 
   const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
     if (nextVenue === venue) return;
@@ -139,7 +116,6 @@ export function StaffInventoryApp() {
     setStoredVenue(nextVenue);
     setActiveCategory(getStoredActiveCategory(nextVenue));
     setSearch("");
-    setOnlyOrder(false);
     bump();
   };
 
@@ -178,14 +154,13 @@ export function StaffInventoryApp() {
     setSearch("");
     setActiveCategory("All");
     setStoredActiveCategory(venue, "All");
-    setOnlyOrder(false);
     bump();
   };
 
   const handleNewDay = () => {
     if (
       !window.confirm(
-        `Start a new day and clear all entered stock/order values for ${venueLabel}?`,
+        `Start a new day and clear all entered LEFT and NEEDED values for ${venueLabel}?`,
       )
     ) {
       return;
@@ -198,24 +173,18 @@ export function StaffInventoryApp() {
     setSearch("");
     setActiveCategory("All");
     setStoredActiveCategory(venue, "All");
-    setOnlyOrder(false);
     bump();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  const orderRows = useMemo(
-    () => rows.filter((row) => row.order > 0),
-    [rows],
-  );
 
   const buildShareKey = useCallback(() => {
     return [
       venue,
       date,
       employee.trim(),
-      orderRows.map((row) => `${row.index}:${row.order}`).join("|"),
+      rows.map((row) => `${row.index}:${row.current}:${row.needed}`).join("|"),
     ].join("::");
-  }, [venue, date, employee, orderRows]);
+  }, [venue, date, employee, rows]);
 
   const beginSharePreparation = useCallback(() => {
     if (!employee.trim()) return;
@@ -227,10 +196,10 @@ export function StaffInventoryApp() {
         venueLabel,
         date,
         employee,
-        rows: orderRows,
+        rows,
       }),
     };
-  }, [buildShareKey, venueLabel, date, employee, orderRows]);
+  }, [buildShareKey, venueLabel, date, employee, rows]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
     if (result === "cancelled" || result === "downloaded") return;
@@ -266,7 +235,7 @@ export function StaffInventoryApp() {
               venueLabel,
               date,
               employee,
-              rows: orderRows,
+              rows,
             });
       const result = await deliverPdfFile(blob, fileName);
 
@@ -343,15 +312,7 @@ export function StaffInventoryApp() {
           <div className="stats">
             <div className="stat">
               <label>Total items</label>
-              <b>{stats.totalItems}</b>
-            </div>
-            <div className="stat">
-              <label>To order</label>
-              <b>{stats.itemsToOrder}</b>
-            </div>
-            <div className="stat">
-              <label>Order qty</label>
-              <b>{stats.totalQty}</b>
+              <b>{items.length}</b>
             </div>
           </div>
 
@@ -373,13 +334,6 @@ export function StaffInventoryApp() {
             </button>
             <button type="button" className="danger" onClick={handleNewDay}>
               New Day
-            </button>
-            <button
-              type="button"
-              className="white"
-              onClick={() => setOnlyOrder((value) => !value)}
-            >
-              {onlyOrder ? "Only order" : "All items"}
             </button>
           </div>
         </div>
@@ -412,18 +366,13 @@ export function StaffInventoryApp() {
 
           <div className="mode">
             <span>
-              {venueLabel} ·{" "}
-              {(onlyOrder ? "Showing only order items" : "Showing all items") +
-                ` - ${visibleRows.length} visible`}
+              {venueLabel} · Showing all items - {visibleRows.length} visible
             </span>
-            <span>PDF includes order &gt; 0</span>
           </div>
 
           <div>
             {!visibleRows.length ? (
-              <div className="empty">
-                No items found. Press Reset or turn off Only order.
-              </div>
+              <div className="empty">No items found. Press Reset.</div>
             ) : (
               visibleRows.map((row) => {
                 const showCategoryHeader = row.category !== lastCategory;
@@ -434,7 +383,7 @@ export function StaffInventoryApp() {
                     {showCategoryHeader ? (
                       <div className="category">{row.category}</div>
                     ) : null}
-                    <div className={`card ${row.order > 0 ? "low" : ""}`}>
+                    <div className="card">
                       <div className="name">{row.name}</div>
                       <div className="row">
                         <div className="field">
@@ -465,14 +414,6 @@ export function StaffInventoryApp() {
                             }
                           />
                         </div>
-                        <div className="field order">
-                          <label>Order</label>
-                          <input
-                            className="orderValue"
-                            readOnly
-                            value={formatOrderValue(row.order, row.neededUnit)}
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -501,14 +442,13 @@ export function StaffInventoryApp() {
               Save
             </button>
             <button type="button" className="danger" onClick={handleNewDay}>
-              New Day / Clear Orders
+              New Day / Clear
             </button>
           </div>
 
           <p className="note">
-            For the next day press New Day / Clear Orders. It clears LEFT and
-            NEEDED values for {venueLabel}, sets today date, and keeps all
-            items.
+            For the next day press New Day / Clear. It clears LEFT and NEEDED
+            values for {venueLabel}, sets today date, and keeps all items.
           </p>
         </div>
       </div>
