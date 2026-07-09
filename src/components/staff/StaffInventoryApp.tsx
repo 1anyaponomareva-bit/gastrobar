@@ -164,7 +164,7 @@ export function StaffInventoryApp() {
   const handleNewDay = () => {
     if (
       !window.confirm(
-        `Start a new day and clear all entered LEFT and NEEDED values for ${venueLabel}?`,
+        `Start a new day and clear all entered LEFT and NEEDED values and employee name for ${venueLabel}?`,
       )
     ) {
       return;
@@ -174,6 +174,9 @@ export function StaffInventoryApp() {
     const today = todayIsoDate();
     setDate(today);
     setStoredDate(today);
+    setEmployee("");
+    setStoredEmployee("");
+    setExportEmployeeError(false);
     setSearch("");
     setActiveCategory("All");
     setStoredActiveCategory(venue, "All");
@@ -457,7 +460,7 @@ export function StaffInventoryApp() {
 
           <p className="note">
             For the next day press New Day / Clear. It clears LEFT and NEEDED
-            values for {venueLabel}, sets today date, and keeps all items.
+            values, employee name, and sets today date for {venueLabel}.
           </p>
         </div>
       </div>
