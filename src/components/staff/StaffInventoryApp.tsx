@@ -155,9 +155,6 @@ export function StaffInventoryApp() {
   };
 
   const handleReset = () => {
-    setEmployee("");
-    setStoredEmployee("");
-    setExportEmployeeError(false);
     setSearch("");
     setActiveCategory("All");
     setStoredActiveCategory(venue, "All");

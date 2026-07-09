@@ -294,14 +294,29 @@ export function ShiftChecklistApp() {
   };
 
   const handleResetChecks = () => {
-    if (!window.confirm("Clear all checklist marks and employee name for this venue?")) return;
+    if (!window.confirm("Сбросить весь чеклист: отметки, комментарии, имя и дату?")) {
+      return;
+    }
+
     clearChecklistItems(
       venue,
       items.map((item) => item.id),
     );
+
+    const today = todayIsoDate();
+    setDate(today);
+    setStoredCheckDate(today);
     setEmployee("");
     setStoredCheckEmployee("");
+    setExportBlocked(false);
     setExportEmployeeError(false);
+
+    const firstSection = sections[0]?.title ?? "";
+    setActiveSection(firstSection);
+    if (firstSection) {
+      setStoredCheckSection(venue, shift, firstSection);
+    }
+
     bump();
   };
 
