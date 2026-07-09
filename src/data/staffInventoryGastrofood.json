@@ -1,447 +1,101 @@
 [
-  [
-    "Dairy Products & Eggs",
-    "Butter",
-    "kg"
-  ],
-  [
-    "Dairy Products & Eggs",
-    "Eggs",
-    "pcs"
-  ],
-  [
-    "Dairy Products & Eggs",
-    "Yogurt Dalat",
-    "l"
-  ],
-  [
-    "Disposable Tableware",
-    "Bamboo Skewers (12 cm)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Doll Blind Box (Avengers)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Doll Blind Box (Disney)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Doll Blind Box (Stitch)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Doll Blind Box (Zootopia)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Burger - Take Out (Black, White)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Dine In (Brown 14x8.5)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Dine In (Brown 17x10)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Hotdog - Dine In (Brown 20x6)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Hotdog - Take Out (Black, Brown)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Food Box - Take Out (Black, Brown 17x13)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Lids - Soup Cup",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Fork and Spoon Set",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Paper Bag - French Fries (15x13)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Paper Cup - French Fries - Dine In",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Bag (3kg / 26x42)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Bag (5kg / 30x50)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Cup - Sauce (2oz, 60ml)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Soup Cup (450-500ml)",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Toothpicks (Dental)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Aluminum Foil (45x285m)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Cling Film (30x300m)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Dish Liquid (3.6kg)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Dishes Sponge",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Dishwasher Tablets (Finish 140pcs)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Garbage Bags (55x65)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Hand Soap (Lifebuoy 4kg)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Hand Towel (28x28x25)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Napkins - Wet",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Napkins (20x10)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Paper Towel Roll",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Plastic Gloves",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Steel Cleaning Spray (Bref 750ml)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Stickers - GastroFood (Round)",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Vinyl Gloves (Large)",
-    "pcs"
-  ],
-  [
-    "Sauces",
-    "BBQ Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Burger Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Cheese Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Ketchup",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Mayo",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Mustard",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Oil Cooking",
-    "l"
-  ],
-  [
-    "Sauces",
-    "Shashlik Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Sriracha (Hot Sauce)",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Sweet Chilli Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Tartar Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Greek Sauce",
-    "kg"
-  ],
-  [
-    "Sauces",
-    "Vinegar 4%",
-    "l"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Dill",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Lettuce",
-    "pcs"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Mushrooms",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Onion",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Pepper Green Bell",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Pepper Red Bell",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Pepper Yellow Bell",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Red Onion",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Sour Cabbage",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Tomatoes",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Bacon",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Beef Burger Patty",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Beef Steak",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Bun Burger",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Bun Hot Dog",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Chicken Broth",
-    "l"
-  ],
-  [
-    "Semi-Finished Products",
-    "Chicken Nuggets",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Chicken Shashlik",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Fish Bites",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Fish Burger Patty",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "French Fries",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Mozzarella Sticks",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Saur Cabbage",
-    "kg"
-  ],
-  [
-    "Semi-Finished Products",
-    "Sausage (Hot Dog Heo)",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Sausage Pork",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Sausage Pork & Cheese",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Sausage Chicken",
-    "pcs"
-  ],
-  [
-    "Pantry",
-    "Bay Leaf",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Black Pepper (Powder)",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Dry Onion",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Jalapeno (Can)",
-    "pcs"
-  ],
-  [
-    "Pantry",
-    "Pasta Orzo",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Pickles",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Salt",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Sugar",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Sumac",
-    "kg"
-  ],
-  [
-    "Gas Equipment",
-    "Gas Tank #1",
-    "%"
-  ],
-  [
-    "Gas Equipment",
-    "Gas Tank #2",
-    "%"
-  ]
+  ["Dairy Products & Eggs", "Butter", "kg"],
+  ["Dairy Products & Eggs", "Eggs", "pcs"],
+  ["Dairy Products & Eggs", "Milk", "l"],
+  ["Dairy Products & Eggs", "Milk - Condensed", "pcs"],
+  ["Dairy Products & Eggs", "Yogurt", "l"],
+
+  ["Disposable Tableware", "Bamboo Skewers (12cm)", "pcs"],
+  ["Disposable Tableware", "Burger Box", "pcs"],
+  ["Disposable Tableware", "Food Box - Take Out", "pcs"],
+  ["Disposable Tableware", "Food Plate - Dine In (Big)", "pcs"],
+  ["Disposable Tableware", "Food Plate - Dine In (Small)", "pcs"],
+  ["Disposable Tableware", "French Fries Paper Bag", "pcs"],
+  ["Disposable Tableware", "French Fries Paper Cup", "pcs"],
+  ["Disposable Tableware", "Hotdog Box", "pcs"],
+  ["Disposable Tableware", "Plastic Bag (3kg)", "pcs"],
+  ["Disposable Tableware", "Plastic Bag (5kg)", "pcs"],
+  ["Disposable Tableware", "Plastic Fork and Spoon Set", "pcs"],
+  ["Disposable Tableware", "Sauce Cup+Lid", "pcs"],
+  ["Disposable Tableware", "Soup Cup+Lid", "pcs"],
+  ["Disposable Tableware", "Toothpicks (Dental)", "pcs"],
+  ["Disposable Tableware", "Toy", "pcs"],
+
+  ["Fruits & Vegetables", "Cabbage Chinese", "kg"],
+  ["Fruits & Vegetables", "Cucumber", "kg"],
+  ["Fruits & Vegetables", "Lettuce", "pcs"],
+  ["Fruits & Vegetables", "Mushrooms", "kg"],
+  ["Fruits & Vegetables", "Onion", "kg"],
+  ["Fruits & Vegetables", "Onion Red", "kg"],
+  ["Fruits & Vegetables", "Pepper Green Bell", "kg"],
+  ["Fruits & Vegetables", "Pepper Red Bell", "kg"],
+  ["Fruits & Vegetables", "Pepper Yellow Bell", "kg"],
+  ["Fruits & Vegetables", "Tomatos", "kg"],
+
+  ["Pantry", "Bay Leaf", "kg"],
+  ["Pantry", "Flour", "kg"],
+  ["Pantry", "Jalapeno (Can)", "pcs"],
+  ["Pantry", "Oil Cooking", "l"],
+  ["Pantry", "Oil Olive", "l"],
+  ["Pantry", "Onion (Dry)", "kg"],
+  ["Pantry", "Pasta Orzo", "kg"],
+  ["Pantry", "Pepper Black (Powder)", "kg"],
+  ["Pantry", "Pickles", "kg"],
+  ["Pantry", "Salt", "kg"],
+  ["Pantry", "Sugar", "kg"],
+  ["Pantry", "Sumac", "kg"],
+  ["Pantry", "Yeast", "pcs"],
+
+  ["Sauces & Syrups", "Mayo", "kg"],
+  ["Sauces & Syrups", "Mustard - Yellow", "kg"],
+  ["Sauces & Syrups", "Sauce - BBQ", "kg"],
+  ["Sauces & Syrups", "Sauce - Ketchup", "kg"],
+  ["Sauces & Syrups", "Sauce - Sriracha", "kg"],
+  ["Sauces & Syrups", "Sauce - Sweet Chilli", "kg"],
+  ["Sauces & Syrups", "Vinegar (8%)", "l"],
+
+  ["Semi-Finished Products", "Bun Burger", "pcs"],
+  ["Semi-Finished Products", "Bun Hot Dog", "pcs"],
+  ["Semi-Finished Products", "French Fries", "kg"],
+  ["Semi-Finished Products", "Sauce - Cheese", "kg"],
+  ["Semi-Finished Products", "Sauce - Burger", "kg"],
+  ["Semi-Finished Products", "Sauce - Greek", "kg"],
+  ["Semi-Finished Products", "Sauce - Tomato&Herbs", "kg"],
+  ["Semi-Finished Products", "Sauce - Tartar", "kg"],
+  ["Semi-Finished Products", "Chicken Sausage", "pcs"],
+  ["Semi-Finished Products", "Chicken Shashlik", "kg"],
+  ["Semi-Finished Products", "Chicken Nuggets", "kg"],
+  ["Semi-Finished Products", "Chicken Soup", "l"],
+  ["Semi-Finished Products", "Chicken Wings", "kg"],
+  ["Semi-Finished Products", "Beef Patty", "pcs"],
+  ["Semi-Finished Products", "Beef Steak", "kg"],
+  ["Semi-Finished Products", "Pork Sausage (Vietnamese)", "pcs"],
+  ["Semi-Finished Products", "Pork Sausage", "pcs"],
+  ["Semi-Finished Products", "Pork Shashlik", "kg"],
+  ["Semi-Finished Products", "Pork Cheese Sausage", "pcs"],
+  ["Semi-Finished Products", "Mozzarella Sticks", "kg"],
+  ["Semi-Finished Products", "Fish Bites", "kg"],
+  ["Semi-Finished Products", "Fish Patty", "pcs"],
+  ["Semi-Finished Products", "Sour Cabbage", "kg"],
+
+  ["Supplies", "Aluminum Foil", "pcs"],
+  ["Supplies", "Cling Film", "pcs"],
+  ["Supplies", "Dish Liquid", "pcs"],
+  ["Supplies", "Sponge", "pcs"],
+  ["Supplies", "Sponge - Metal", "pcs"],
+  ["Supplies", "Dishwasher Tablets", "pcs"],
+  ["Supplies", "Garbage Bags (45L)", "pcs"],
+  ["Supplies", "Garbage Bags (60L)", "pcs"],
+  ["Supplies", "Gloves - Plastic (Single Pack)", "pcs"],
+  ["Supplies", "Gloves - Vinyl (Large)", "pcs"],
+  ["Supplies", "Nupkins - Wet (Single Pack)", "pcs"],
+  ["Supplies", "Nupkins (20*10)", "pcs"],
+  ["Supplies", "Sanitizer 90%", "l"],
+  ["Supplies", "Soap - Hand", "pcs"],
+  ["Supplies", "Steel Cleaning Spray", "pcs"],
+  ["Supplies", "Stickers - Gastrofood", "pcs"],
+  ["Supplies", "Stickers", "pcs"],
+  ["Supplies", "Towel - Hand (Cotton)", "pcs"],
+  ["Supplies", "Towel - Kitchen", "pcs"],
+  ["Supplies", "Towel - Paper Roll", "pcs"]
 ]
