@@ -1,560 +1,107 @@
 [
-  [
-    "Alcohol",
-    "Beer - Biere Blanche / 20 L",
-    "pcs",
-    "l"
-  ],
-  [
-    "Alcohol",
-    "Beer - Fuzzy Logic Hard Lemonade / 20 L",
-    "pcs",
-    "l"
-  ],
-  [
-    "Alcohol",
-    "Beer - Sapporo Black / 10 L",
-    "pcs",
-    "l"
-  ],
-  [
-    "Alcohol",
-    "Beer - Sapporo Lager / 20 L",
-    "pcs",
-    "l"
-  ],
-  [
-    "Alcohol",
-    "Bourbon - Jim Beam / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Bourbon - Jim Beam Apple / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Cognac - Hennessy Very Special / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Gin - Bombay Sapphire / 1000/750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Gin - Gordon's / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Gin - Odin's Drops / 500 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Aperol / 1000/700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Baileys / 750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Campari / 1000/750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Cointreau / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Jagermeister / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Liqueur - Kahlua Coffee / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Rum - Bacardi / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Rum - Odin's Drops / 500 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Rum - Rhum Chauvet / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Tequila - Olmeca Altos Plata / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Tequila - Olmeca Silver / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Vermouth - Martini Rosso / 1 L",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Vodka - Absolut / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Vodka - Odin's Drops / 500 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Whiskey - Jack Daniel's / 1000/700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Whiskey - Jameson / 700 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Wine Red - Passion Cabernet Sauvignon / 750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Wine White - Passion Sauvignon Blanc / 750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Alcohol",
-    "Wine White Sparkling - Chateau Dalat / 750 ML",
-    "pcs",
-    "ml"
-  ],
-  [
-    "Dairy Products & Eggs",
-    "Eggs / 10 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Dairy Products & Eggs",
-    "Heavy Cream 20% / 1000 G",
-    "g",
-    "g"
-  ],
-  [
-    "Disposable Tableware",
-    "Paper Cup+Lid (400ML) / 50 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Bag - Cups (Double) / 1000 G",
-    "g",
-    "g"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Bag - Cups (Single) / 1000 G",
-    "g",
-    "g"
-  ],
-  [
-    "Disposable Tableware",
-    "Plastic Cup+Lid (500ML) / 50 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Spill-Proof Paper (13CM) / 50 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Straw (8MM Single Pack) / 100 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Straw (Black / 13CM) / 500 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Straw (Black / 21CM) / 500 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Disposable Tableware",
-    "Toothpicks (Dental) / 500 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Lemon / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Lime / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Mint / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Fruits & Vegetables",
-    "Orange / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Pantry",
-    "Salt / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Sauces & Syrups",
-    "Syrup - French Vanilla / 700 ML",
-    "ml",
-    "ml"
-  ],
-  [
-    "Sauces & Syrups",
-    "Syrup - Green Mint / 700 ML",
-    "ml",
-    "ml"
-  ],
-  [
-    "Sauces & Syrups",
-    "Syrup - Guava / 700 ML",
-    "ml",
-    "ml"
-  ],
-  [
-    "Sauces & Syrups",
-    "Syrup - Tiramisu / 700 ML",
-    "ml",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Chicken Jerky / 50 G",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Beef Jerky / 50 G",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Pistachios / 60 G",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Peanuts / 50 G",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Strawberry Cream / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Grapefruit Rosemary / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Apple Cinnamon / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Orange Cinnamon / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Coffee Chocolate / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Limoncello / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Pineapple Ginger / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Pineapple Vanilla / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Blueberry / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Passion Fruit / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Mango Passion Fruit / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Cranberry / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Semi-Finished Products",
-    "Infused Vodka - Raspberry Roses / 1 L",
-    "l",
-    "ml"
-  ],
-  [
-    "Soft Drinks",
-    "Coca-Cola / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Coca-Cola - Zero / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Fanta / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Mirinda / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Schweppes Ginger Ale / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Schweppes Soda / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Schweppes Tonic / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Soft Drinks",
-    "Sprite / 320 ML",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Dish Liquid / 3600 G",
-    "g",
-    "g"
-  ],
-  [
-    "Supplies",
-    "Dish Sponge / PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Dishwasher Tablets / 150 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Garbage Bags / 1 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Supplies",
-    "Gas Tank - Sapporo / PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Gas Tank - Fuzzy / PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Gloves - Vinyl (Large) / 100 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Hookah Coal / KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Supplies",
-    "Hookah Tip / PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Napkins (20x10) / PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Sanitizer 90% / 5 L",
-    "l",
-    "l"
-  ],
-  [
-    "Supplies",
-    "Soap - Hand / 4 KG",
-    "kg",
-    "kg"
-  ],
-  [
-    "Supplies",
-    "Towel - Hand (Cotton) / 10 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Towel - Kitchen Roll / 1 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Towel - Paper Roll / 6 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Supplies",
-    "Stickers / 800 PCS",
-    "pcs",
-    "pcs"
-  ],
-  [
-    "Tobacco",
-    "Darkside / G",
-    "g",
-    "g"
-  ],
-  [
-    "Tobacco",
-    "Musthave / G",
-    "g",
-    "g"
-  ],
-  [
-    "Tobacco",
-    "Overdose / G",
-    "g",
-    "g"
-  ]
+  ["Alcohol", "Beer - Biere Blanche / 20 L", "pcs", "l"],
+  ["Alcohol", "Beer - Fuzzy Logic Hard Lemonade / 20 L", "pcs", "l"],
+  ["Alcohol", "Beer - Sapporo Black / 10 L", "pcs", "l"],
+  ["Alcohol", "Beer - Sapporo Lager / 20 L", "pcs", "l"],
+  ["Alcohol", "Bourbon - Jim Beam / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Bourbon - Jim Beam Apple / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Cognac - Hennessy Very Special / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Gin - Bombay Sapphire / 1000/750 ML", "pcs", "ml"],
+  ["Alcohol", "Gin - Gordon's / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Gin - Odin's Drops / 500 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Aperol / 1000/700 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Baileys / 750 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Campari / 1000/750 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Cointreau / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Jagermeister / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Liqueur - Kahlua Coffee / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Rum - Bacardi / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Rum - Odin's Drops / 500 ML", "pcs", "ml"],
+  ["Alcohol", "Rum - Rhum Chauvet / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Tequila - Olmeca Altos Plata / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Tequila - Olmeca Silver / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Vermouth - Martini Rosso / 1 L", "pcs", "ml"],
+  ["Alcohol", "Vodka - Absolut / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Vodka - Odin's Drops / 500 ML", "pcs", "ml"],
+  ["Alcohol", "Whiskey - Jack Daniel's / 1000/700 ML", "pcs", "ml"],
+  ["Alcohol", "Whiskey - Jameson / 700 ML", "pcs", "ml"],
+  ["Alcohol", "Wine Red - Passion Cabernet Sauvignon / 750 ML", "pcs", "ml"],
+  ["Alcohol", "Wine White - Passion Sauvignon Blanc / 750 ML", "pcs", "ml"],
+  ["Alcohol", "Wine White Sparkling - Chateau Dalat / 750 ML", "pcs", "ml"],
+
+  ["Dairy Products & Eggs", "Eggs / 10 PCS", "pcs", "pcs"],
+  ["Dairy Products & Eggs", "Heavy Cream 20% / 1000 G", "pcs", "g"],
+
+  ["Disposable Tableware", "Paper Cup+Lid (400ML)", "pcs", "pcs"],
+  ["Disposable Tableware", "Plastic Bag - Cups (Double)", "kg", "g"],
+  ["Disposable Tableware", "Plastic Bag - Cups (Single)", "kg", "g"],
+  ["Disposable Tableware", "Plastic Cup+Lid (500ML)", "pcs", "pcs"],
+  ["Disposable Tableware", "Spill-Proof Paper (13CM)", "pcs", "pcs"],
+  ["Disposable Tableware", "Straw (8MM Single Pack)", "pcs", "pcs"],
+  ["Disposable Tableware", "Straw (Black / 13CM)", "pcs", "pcs"],
+  ["Disposable Tableware", "Straw (Black / 21CM)", "pcs", "pcs"],
+  ["Disposable Tableware", "Toothpicks (Dental)", "pcs", "pcs"],
+
+  ["Fruits & Vegetables", "Lemon", "kg", "g"],
+  ["Fruits & Vegetables", "Lime", "kg", "g"],
+  ["Fruits & Vegetables", "Mint", "kg", "g"],
+  ["Fruits & Vegetables", "Orange", "kg", "g"],
+
+  ["Pantry", "Salt", "kg", "g"],
+  ["Pantry", "Sugar", "kg", "g"],
+
+  ["Sauces & Syrups", "Syrup - French Vavilla / 700 ML", "pcs", "ml"],
+  ["Sauces & Syrups", "Syrup - Green Mint / 700 ML", "pcs", "ml"],
+  ["Sauces & Syrups", "Syrup - Guava / 700 ML", "pcs", "ml"],
+  ["Sauces & Syrups", "Syrup - Tiramisu / 700 ML", "pcs", "ml"],
+
+  ["Semi-Finished Products", "Chicken Jerky", "pcs", "pcs"],
+  ["Semi-Finished Products", "Beef Jerky", "pcs", "pcs"],
+  ["Semi-Finished Products", "Pistachios", "pcs", "pcs"],
+  ["Semi-Finished Products", "Peanuts", "pcs", "pcs"],
+  ["Semi-Finished Products", "Infused Vodka - Strawberry Cream", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Grapefruit Rosemary", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Apple Cinnamon", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Orange Cinnamon", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Coffee Chocolate", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Limoncello", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Pineapple Ginger", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Pineapple Vanilla", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Blueberry", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Passion Fruit", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Mango Passion Fruit", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Cranberry", "pcs", "ml"],
+  ["Semi-Finished Products", "Infused Vodka - Raspberry Roses", "pcs", "ml"],
+
+  ["Soft Drinks", "Coca-Cola", "pcs", "pcs"],
+  ["Soft Drinks", "Coca-Cola - Zero", "pcs", "pcs"],
+  ["Soft Drinks", "Fanta", "pcs", "pcs"],
+  ["Soft Drinks", "Mirinda", "pcs", "pcs"],
+  ["Soft Drinks", "Schweppes Ginger Ale", "pcs", "pcs"],
+  ["Soft Drinks", "Schweppes Soda", "pcs", "pcs"],
+  ["Soft Drinks", "Schweppes Tonic", "pcs", "pcs"],
+  ["Soft Drinks", "Sprite", "pcs", "pcs"],
+
+  ["Supplies", "Dish Liquid / 3600 G", "pcs", "g"],
+  ["Supplies", "Dishwasher Tablets / 150 PCS", "pcs", "pcs"],
+  ["Supplies", "Garbage Bags (45L)", "kg", "g"],
+  ["Supplies", "Garbage Bags (60L)", "kg", "g"],
+  ["Supplies", "Gas Tank - Sapporo", "pcs", "pcs"],
+  ["Supplies", "Gas Tank - Fuzzy", "pcs", "pcs"],
+  ["Supplies", "Gloves - Vinyl (Large) / 100 PCS", "pcs", "pcs"],
+  ["Supplies", "Hookah Coal", "kg", "g"],
+  ["Supplies", "Hookah Tip", "pcs", "pcs"],
+  ["Supplies", "Nupkins (20*10)", "pcs", "pcs"],
+  ["Supplies", "Sanitizer 90% / 5 L", "pcs", "l"],
+  ["Supplies", "Soap - Hand / 4 KG", "pcs", "g"],
+  ["Supplies", "Sponge", "pcs", "pcs"],
+  ["Supplies", "Sponge - Metal", "pcs", "pcs"],
+  ["Supplies", "Towel - Hand (Cotton) / 10 PCS", "pcs", "pcs"],
+  ["Supplies", "Towel - Kitchen Roll / 1 PCS", "pcs", "pcs"],
+  ["Supplies", "Towel - Paper Roll / 6 PCS", "pcs", "pcs"],
+  ["Supplies", "Stickers / 800 PCS", "pcs", "pcs"],
+
+  ["Tobacco", "Darkside", "g", "g"],
+  ["Tobacco", "Musthave", "g", "g"],
+  ["Tobacco", "Overdose", "g", "g"]
 ]
