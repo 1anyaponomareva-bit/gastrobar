@@ -329,8 +329,8 @@ function drawTableHeader(ctx: PdfContext) {
   ctx.y = topY - total;
 }
 
-function formatStockValue(value: number, unit: string): string {
-  if (!value) return `— ${unit}`;
+function formatStockValue(value: number, unit: string, isFilled: boolean): string {
+  if (!isFilled) return "";
   return `${money(value)} ${unit}`;
 }
 
@@ -355,7 +355,7 @@ function drawTableRow(
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
   drawTextLine(
     ctx,
-    formatStockValue(row.current, row.leftUnit),
+    formatStockValue(row.current, row.leftUnit, row.hasCurrent),
     350,
     baseline,
     9,
@@ -363,7 +363,7 @@ function drawTableRow(
   );
   drawTextLine(
     ctx,
-    formatStockValue(row.needed, row.neededUnit),
+    formatStockValue(row.needed, row.neededUnit, row.hasNeeded),
     460,
     baseline,
     9,
@@ -382,7 +382,7 @@ function drawTableRow(
 export async function makeStaffInventoryPdfBlob(
   options: StaffInventoryPdfOptions,
 ): Promise<Blob> {
-  const rows = options.rows;
+  const rows = options.rows.filter((row) => row.hasCurrent || row.hasNeeded);
   const { regular, bold } = await loadFontBytes();
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -394,7 +394,7 @@ export async function makeStaffInventoryPdfBlob(
   drawHeader(ctx, options, rows);
 
   if (!rows.length) {
-    drawWrappedBlock(ctx, "No items in checklist.", 14, { bold: true });
+    drawWrappedBlock(ctx, "No filled items in checklist.", 14, { bold: true });
   } else {
     const groups = groupedRows(rows);
     Object.keys(groups).forEach((category) => {

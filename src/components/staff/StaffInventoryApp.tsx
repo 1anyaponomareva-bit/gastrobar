@@ -41,14 +41,18 @@ import "./staff-inventory.css";
 function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
   return getStaffInventoryItems(venue).map((item, index) => {
     const { neededUnit, leftUnit } = getStaffInventoryUnits(item);
+    const currentValue = getStoredValue(venue, index, "current");
+    const neededValue = getStoredValue(venue, index, "needed");
     return {
       index,
       category: item[0],
       name: item[1],
       neededUnit,
       leftUnit,
-      current: parseNumber(getStoredValue(venue, index, "current")),
-      needed: parseNumber(getStoredValue(venue, index, "needed")),
+      current: parseNumber(currentValue),
+      needed: parseNumber(neededValue),
+      hasCurrent: currentValue.trim() !== "",
+      hasNeeded: neededValue.trim() !== "",
     };
   });
 }
@@ -182,7 +186,12 @@ export function StaffInventoryApp() {
       venue,
       date,
       employee.trim(),
-      rows.map((row) => `${row.index}:${row.current}:${row.needed}`).join("|"),
+      rows
+        .map(
+          (row) =>
+            `${row.index}:${row.current}:${row.needed}:${row.hasCurrent}:${row.hasNeeded}`,
+        )
+        .join("|"),
     ].join("::");
   }, [venue, date, employee, rows]);
 

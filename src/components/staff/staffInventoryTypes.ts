@@ -6,4 +6,6 @@ export type StaffInventoryRow = {
   leftUnit: string;
   current: number;
   needed: number;
+  hasCurrent: boolean;
+  hasNeeded: boolean;
 };
