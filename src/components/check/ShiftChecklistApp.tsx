@@ -294,11 +294,14 @@ export function ShiftChecklistApp() {
   };
 
   const handleResetChecks = () => {
-    if (!window.confirm("Clear all checklist marks for this venue?")) return;
+    if (!window.confirm("Clear all checklist marks and employee name for this venue?")) return;
     clearChecklistItems(
       venue,
       items.map((item) => item.id),
     );
+    setEmployee("");
+    setStoredCheckEmployee("");
+    setExportEmployeeError(false);
     bump();
   };
 
