@@ -158,10 +158,6 @@
   grid-column: 1 / -1;
 }
 
-.staff-inventory .bottomActions .bottomActionsExport {
-  grid-column: 1 / -1;
-}
-
 .staff-inventory .exportError {
   background: #fff5f5;
   border: 1px solid #efb0b0;
@@ -314,13 +310,6 @@
   background: #fff;
 }
 
-
-.staff-inventory .bottomActions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
-  margin-top: 18px;
-}
 
 .staff-inventory .note {
   text-align: center;

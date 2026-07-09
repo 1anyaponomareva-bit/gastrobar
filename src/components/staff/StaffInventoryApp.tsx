@@ -344,10 +344,18 @@ export function StaffInventoryApp() {
             >
               {exportingPdf ? "Sharing PDF..." : "Share PDF"}
             </button>
+            <button type="button" className="dark" onClick={handleSave}>
+              Save
+            </button>
             <button type="button" className="danger" onClick={handleNewDay}>
               New Day
             </button>
           </div>
+
+          <p className="note">
+            For the next day press New Day. It clears LEFT and NEEDED values,
+            employee name, and sets today date for {venueLabel}.
+          </p>
         </div>
 
         <div className="main">
@@ -433,35 +441,6 @@ export function StaffInventoryApp() {
               })
             )}
           </div>
-
-          <div className="bottomActions">
-            {exportEmployeeError ? (
-              <div className="exportError bottomActionsExport" role="alert">
-                <strong>Employee name is required.</strong>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="gold"
-              onPointerDown={beginSharePreparation}
-              onTouchStart={beginSharePreparation}
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-            >
-              {exportingPdf ? "Sharing PDF..." : "Share PDF"}
-            </button>
-            <button type="button" className="dark" onClick={handleSave}>
-              Save
-            </button>
-            <button type="button" className="danger" onClick={handleNewDay}>
-              New Day / Clear
-            </button>
-          </div>
-
-          <p className="note">
-            For the next day press New Day / Clear. It clears LEFT and NEEDED
-            values, employee name, and sets today date for {venueLabel}.
-          </p>
         </div>
       </div>
     </div>
