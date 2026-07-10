@@ -518,6 +518,17 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "spirits",
   },
   {
+    id: "bacardi-rum",
+    name: "Ром Bacardi",
+    description: "Шот.",
+    image: "/menu/bacardi.png",
+    imageList: "/menu/bacardi.png",
+    category: "cocktail",
+    price: "100000",
+    grammage: "50 мл",
+    barSubcategory: "spirits",
+  },
+  {
     id: "jameson",
     name: "Виски Jameson",
     description: "Шот.",
