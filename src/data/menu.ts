@@ -638,7 +638,7 @@ export const MENU_ITEMS: MenuItem[] = [
     grammage: "50 мл",
     barSubcategory: "spirits",
   },
-  // Безалкогольные (банки): кола → Sprite → Fanta → Schweppes
+  // Безалкогольные (банки): кола → Sprite → Fanta → Mirinda → Schweppes
   {
     id: "coca-cola-can",
     name: "Coca-Cola",
@@ -675,6 +675,16 @@ export const MENU_ITEMS: MenuItem[] = [
     description: "Газированный напиток.",
     image: "/menu/fanta-can.png",
     imageList: "/menu/fanta-can.png",
+    category: "cocktail",
+    price: "30000",
+    barSubcategory: "soft",
+  },
+  {
+    id: "mirinda-can",
+    name: "Mirinda",
+    description: "Газированный напиток.",
+    image: "/menu/mirinda.png",
+    imageList: "/menu/mirinda.png",
     category: "cocktail",
     price: "30000",
     barSubcategory: "soft",
