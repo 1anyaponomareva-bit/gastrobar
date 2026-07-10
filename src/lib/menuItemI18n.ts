@@ -20,7 +20,8 @@ const TITLES_EN: Record<string, string> = {
   "chateau-dalat-sparkling-white": "Chateau Dalat · Sparkling White",
   "beer-light": "Sapporo (light lager on tap)",
   "beer-dark": "Sapporo (dark lager on tap)",
-  "fuzzy-ipa-thunderslap": "Beer · Fuzzy IPA Thunderslap",
+  "fuzzy-wheat-beer": "Beer · Biere Blanche · Wheat Beer",
+  "fuzzy-lemon-cider": "Cider · Lemon Cider · Fuzzy",
   "fuzzy-lager": "Beer · Fuzzy Lager",
   "pineapple-ginger-honey": "Pineapple · Ginger · Honey",
   limoncello: "Limoncello",
@@ -99,7 +100,8 @@ const TITLES_VN: Record<string, string> = {
   "chateau-dalat-sparkling-white": "Chateau Dalat · Sparkling White",
   "beer-light": "Bia Sapporo sáng (bia tươi)",
   "beer-dark": "Bia Sapporo đen (bia tươi)",
-  "fuzzy-ipa-thunderslap": "Bia · Fuzzy IPA Thunderslap",
+  "fuzzy-wheat-beer": "Bia · Biere Blanche · Wheat Beer",
+  "fuzzy-lemon-cider": "Cider · Lemon Cider · Fuzzy",
   "fuzzy-lager": "Bia · Fuzzy Lager",
   "pineapple-ginger-honey": "Dứa · Gừng · Mật ong",
   limoncello: "Limoncello",
@@ -167,7 +169,8 @@ const TITLES_VN: Record<string, string> = {
 const TITLES_RU: Partial<Record<string, string>> = {
   "beer-light": "Светлое пиво Sapporo",
   "beer-dark": "Тёмное пиво Sapporo",
-  "fuzzy-ipa-thunderslap": "Пиво FUZZY IPA Thunderslap",
+  "fuzzy-wheat-beer": "Пиво BIERE BLANCHE · Wheat Beer",
+  "fuzzy-lemon-cider": "Сидр LEMON CIDER · FUZZY",
   "fuzzy-lager": "Пиво FUZZY Lager",
 };
 

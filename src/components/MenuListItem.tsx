@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
-import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
+import { TINCTURE_RIM_FOCUS_IDS, FUZZY_BEER_MENU_IDS } from "@/data/menu";
 import { strengthLabelKey } from "@/lib/menuStrengthLabel";
 import {
   menuItemDisplayName,
@@ -60,7 +60,7 @@ export function MenuListItem({
   const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
-  const isFuzzyBeer = item.id === "fuzzy-ipa-thunderslap" || item.id === "fuzzy-lager";
+  const isFuzzyBeer = FUZZY_BEER_MENU_IDS.has(item.id);
   const isWine = item.barSubcategory === "wine";
   /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
   const isBarCompact = isSoftDrink || isSpirits;
