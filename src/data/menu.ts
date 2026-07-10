@@ -584,6 +584,17 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "spirits",
   },
   {
+    id: "gordons-gin",
+    name: "Джин Gordon's",
+    description: "Шот.",
+    image: "/menu/gordons-gin.png",
+    imageList: "/menu/gordons-gin.png",
+    category: "cocktail",
+    price: "90000",
+    grammage: "50 мл",
+    barSubcategory: "spirits",
+  },
+  {
     id: "gin-harpoon",
     name: "Джин Harpoon",
     description: "Шот.",
