@@ -31,6 +31,26 @@ function shouldUseNativeShare(): boolean {
   return false;
 }
 
+/** True when the browser can attach a PDF file to the native share sheet. */
+function canSharePdfFiles(): boolean {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
+    return false;
+  }
+  if (typeof navigator.canShare !== "function") {
+    // Older iOS Safari: no canShare API, but file share usually works.
+    return isIosDevice();
+  }
+  try {
+    const probe = new File(["%PDF-1.4\n"], "probe.pdf", {
+      type: "application/pdf",
+      lastModified: Date.now(),
+    });
+    return navigator.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
 function buildPdfFileFromBlob(blob: Blob, fileName: string): File {
   return new File([blob], fileName, {
     type: "application/pdf",
@@ -56,6 +76,25 @@ function downloadPdfFile(blob: Blob, fileName: string): void {
   anchor.click();
   document.body.removeChild(anchor);
   window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
+/** iOS/iPadOS: <a download> is ignored — open PDF so user can share from viewer. */
+function openPdfInNewTab(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    downloadPdfFile(blob, "export.pdf");
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+}
+
+function deliverPdfFallback(blob: Blob, fileName: string): DeliverPdfResult {
+  if (isIosDevice()) {
+    openPdfInNewTab(blob);
+  } else {
+    downloadPdfFile(blob, fileName);
+  }
+  return "downloaded";
 }
 
 async function tryNativeFileShare(file: File): Promise<DeliverPdfResult> {
@@ -173,7 +212,8 @@ async function sharePdfFile(
 }
 
 /**
- * Phones/tablets: native share sheet with a real PDF file attachment only.
+ * Phones/tablets: native share sheet with a real PDF file attachment.
+ * If file share is unavailable (common on Android tablets in Chrome), save/open PDF instead.
  * Desktop: download the PDF file.
  */
 export async function deliverPdfFile(
@@ -181,7 +221,17 @@ export async function deliverPdfFile(
   fileName: string,
 ): Promise<DeliverPdfResult> {
   if (shouldUseNativeShare()) {
-    return sharePdfFile(blob, fileName);
+    if (canSharePdfFiles()) {
+      try {
+        return await sharePdfFile(blob, fileName);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return "cancelled";
+        }
+        console.warn("Native PDF share failed, using fallback:", error);
+      }
+    }
+    return deliverPdfFallback(blob, fileName);
   }
 
   downloadPdfFile(blob, fileName);

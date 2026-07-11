@@ -214,7 +214,13 @@ export function StaffInventoryApp() {
   }, [buildShareKey, venueLabel, date, employee, rows]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
-    if (result === "cancelled" || result === "downloaded") return;
+    if (result === "cancelled") return;
+    if (result === "downloaded") {
+      window.alert(
+        "PDF saved. Open Downloads or Files app, or use the Share button in the PDF viewer.",
+      );
+      return;
+    }
     window.alert(
       "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
     );
