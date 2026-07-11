@@ -447,7 +447,7 @@ const MENU_ITEMS = [
     price: 110000,
     grammage: "120 г",
     category: "grill",
-    image: IMG("KUR_kebab_bread.png?v=20250624-01"),
+    image: IMG("chickenkebab.jpeg?v=20250711-01"),
   },
   {
     id: "pork-kebab",
@@ -456,7 +456,7 @@ const MENU_ITEMS = [
     price: 120000,
     grammage: "120 г",
     category: "grill",
-    image: IMG("pork_kebab_bread.png?v=20250624-01"),
+    image: IMG("porkkebab.jpeg?v=20250711-01"),
   },
   {
     id: "bavarian-sausage",

@@ -283,7 +283,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 110000,
     grammage: "120 г",
     category: "grill",
-    image: foodMenuImage("KUR_kebab_bread.png?v=20250624-01"),
+    image: foodMenuImage("chickenkebab.jpeg?v=20250711-01"),
   },
   {
     id: "pork-kebab",
@@ -292,7 +292,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 120000,
     grammage: "120 г",
     category: "grill",
-    image: foodMenuImage("pork_kebab_bread.png?v=20250624-01"),
+    image: foodMenuImage("porkkebab.jpeg?v=20250711-01"),
   },
   {
     id: "bavarian-sausage",
