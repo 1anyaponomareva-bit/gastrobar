@@ -371,21 +371,32 @@ export function ShiftChecklistApp() {
   ]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
-    if (result === "cancelled") return;
-    if (result === "downloaded") {
-      window.alert(
-        venue === "gastrobar"
-          ? "PDF сохранён. Откройте «Файлы» или «Загрузки», либо нажмите «Поделиться» в просмотре PDF."
-          : "PDF saved. Open Downloads or Files app, or use the Share button in the PDF viewer.",
-      );
-      return;
-    }
+    if (result === "cancelled" || result === "downloaded") return;
     window.alert(
       venue === "gastrobar"
         ? "Не удалось отправить PDF. Нажмите Share PDF ещё раз и выберите Telegram или WhatsApp, не «Скопировать ссылку»."
         : "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
     );
   };
+
+  useEffect(() => {
+    if (!hydrated || !employee.trim() || exportIssues.length) {
+      sharePrepareRef.current = null;
+      return;
+    }
+
+    const key = buildShareKey();
+    sharePrepareRef.current = {
+      key,
+      promise: makeShiftChecklistPdfBlob(pdfExportOptions),
+    };
+  }, [
+    hydrated,
+    buildShareKey,
+    employee,
+    exportIssues.length,
+    pdfExportOptions,
+  ]);
 
   const handleExportPdf = async () => {
     if (exportingPdf) return;

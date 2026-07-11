@@ -213,14 +213,26 @@ export function StaffInventoryApp() {
     };
   }, [buildShareKey, venueLabel, date, employee, rows]);
 
-  const handleSharePdfResult = (result: DeliverPdfResult) => {
-    if (result === "cancelled") return;
-    if (result === "downloaded") {
-      window.alert(
-        "PDF saved. Open Downloads or Files app, or use the Share button in the PDF viewer.",
-      );
+  useEffect(() => {
+    if (!hydrated || !employee.trim()) {
+      sharePrepareRef.current = null;
       return;
     }
+
+    const key = buildShareKey();
+    sharePrepareRef.current = {
+      key,
+      promise: makeStaffInventoryPdfBlob({
+        venueLabel,
+        date,
+        employee,
+        rows,
+      }),
+    };
+  }, [hydrated, buildShareKey, venueLabel, date, employee, rows]);
+
+  const handleSharePdfResult = (result: DeliverPdfResult) => {
+    if (result === "cancelled" || result === "downloaded") return;
     window.alert(
       "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
     );
