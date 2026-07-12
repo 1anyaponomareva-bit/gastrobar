@@ -807,7 +807,13 @@ function ChecklistRow({
 
         {penaltyPoints != null ? (
           <span
-            className={`penaltyPoints ${status === "failed" ? "penaltyPointsActive" : ""}`}
+            className={[
+              "penaltyPoints",
+              status === "done" ? "penaltyPointsDone" : "",
+              status === "failed" ? "penaltyPointsFailed" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             aria-label={`${penaltyPoints} penalty points`}
           >
             {penaltyPoints}

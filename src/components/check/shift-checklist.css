@@ -157,16 +157,23 @@
   line-height: 1;
   color: var(--red);
   background: transparent;
-  border: none;
-  border-radius: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
   white-space: nowrap;
   text-align: center;
   box-sizing: border-box;
 }
 
-.staff-inventory .penaltyPointsActive {
-  color: var(--red);
-  background: transparent;
+.staff-inventory .penaltyPointsDone {
+  color: #111;
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.staff-inventory .penaltyPointsFailed {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
 }
 
 .staff-inventory .penaltyTotal {
