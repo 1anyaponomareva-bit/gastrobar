@@ -1,5 +1,9 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
+import {
+  getPenaltyGrading,
+  getPenaltyVerdictText,
+} from "@/lib/checklistPenaltyGrading";
 import { getAssetUrl } from "@/lib/appVersion";
 import {
   deliverPdfFile,
@@ -488,7 +492,7 @@ function drawFailedSummary(
     const reasonHeight =
       reasonLines.length * 9 + Math.max(0, reasonLines.length - 1) * 4;
     const blockHeight = 12 + labelHeight + (reasonLines.length ? 6 + reasonHeight : 0) + 12;
-    const gapAfter = index === failedItems.length - 1 ? SECTION_GAP : BLOCK_GAP;
+    const gapAfter = index === failedItems.length - 1 ? BLOCK_GAP : BLOCK_GAP;
 
     ensureSpace(ctx, blockHeight + gapAfter);
     const topY = ctx.y;
@@ -520,6 +524,70 @@ function drawFailedSummary(
 
     ctx.y = topY - blockHeight - gapAfter;
   });
+
+  ctx.y -= SECTION_GAP - BLOCK_GAP;
+}
+
+function drawPenaltyVerdict(
+  ctx: PdfContext,
+  penaltyTotal: number,
+  locale: "ru" | "en",
+) {
+  const grading = getPenaltyGrading(penaltyTotal);
+  if (!grading) return;
+
+  const { title, verdict, tierRange } = getPenaltyVerdictText(grading, locale);
+  const pointsText = String(penaltyTotal);
+  const boxHeight = 92;
+  const total = boxHeight + SECTION_GAP;
+
+  ensureSpace(ctx, total);
+  const topY = ctx.y;
+
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, boxHeight, COLORS.failedBg, COLORS.failed);
+
+  drawTextLine(
+    ctx,
+    title.toUpperCase(),
+    MARGIN_LEFT + 14,
+    topY - 18,
+    10,
+    ctx.fontBold,
+    COLORS.failed,
+  );
+
+  drawTextLine(
+    ctx,
+    pointsText,
+    MARGIN_LEFT + 14,
+    topY - 48,
+    26,
+    ctx.fontBold,
+    COLORS.failed,
+  );
+
+  drawTextLine(
+    ctx,
+    verdict,
+    MARGIN_LEFT + 14,
+    topY - 68,
+    13,
+    ctx.fontBold,
+    COLORS.text,
+  );
+
+  const tierWidth = ctx.font.widthOfTextAtSize(tierRange, 9);
+  drawTextLine(
+    ctx,
+    tierRange,
+    PAGE_WIDTH - MARGIN_RIGHT - 14 - tierWidth,
+    topY - 68,
+    9,
+    ctx.font,
+    COLORS.muted,
+  );
+
+  ctx.y = topY - total;
 }
 
 function drawHeader(
@@ -623,6 +691,7 @@ export async function makeShiftChecklistPdfBlob(
 
   drawHeader(ctx, options, labels);
   drawFailedSummary(ctx, failedItems, labels);
+  drawPenaltyVerdict(ctx, penaltyTotal, locale);
 
   drawWrappedBlock(ctx, labels.fullChecklist, 12, { bold: true, gapAfter: 12 });
 
