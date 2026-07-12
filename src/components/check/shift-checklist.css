@@ -156,19 +156,24 @@
 
 .staff-inventory .penaltyPoints {
   flex-shrink: 0;
-  font-size: 12px;
+  align-self: center;
+  font-size: 17px;
   font-weight: 900;
-  line-height: 1.2;
-  color: #888;
-  background: #f3f3f3;
-  border-radius: 999px;
-  padding: 4px 8px;
+  line-height: 1;
+  color: var(--red);
+  background: #fff0f0;
+  border: 1px solid #efb0b0;
+  border-radius: 10px;
+  padding: 7px 10px;
   white-space: nowrap;
+  min-width: 52px;
+  text-align: center;
 }
 
 .staff-inventory .penaltyPointsActive {
-  color: #8f1010;
-  background: #ffe8e8;
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
 }
 
 .staff-inventory .penaltyTotal {
@@ -276,6 +281,12 @@
 @media (max-width: 380px) {
   .staff-inventory .checkLabel {
     font-size: 15px;
+  }
+
+  .staff-inventory .penaltyPoints {
+    font-size: 15px;
+    padding: 6px 8px;
+    min-width: 46px;
   }
 
   .staff-inventory .segmentBtn {
