@@ -151,23 +151,22 @@
   justify-content: center;
   height: 32px;
   min-width: 44px;
-  padding: 0 10px;
+  padding: 0 4px;
   font-size: 17px;
   font-weight: 900;
   line-height: 1;
   color: var(--red);
-  background: #fff0f0;
-  border: 2px solid #efb0b0;
-  border-radius: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   white-space: nowrap;
   text-align: center;
   box-sizing: border-box;
 }
 
 .staff-inventory .penaltyPointsActive {
-  color: #fff;
-  background: var(--red);
-  border-color: var(--red);
+  color: var(--red);
+  background: transparent;
 }
 
 .staff-inventory .penaltyTotal {
