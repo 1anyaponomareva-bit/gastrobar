@@ -683,6 +683,16 @@ export function ShiftChecklistApp() {
                   >
                     {exportingPdf ? "Sharing PDF..." : "Share PDF"}
                   </button>
+                  <div className="penaltiesBlock">
+                    <h3 className="penaltiesTitle">Таблица штрафов</h3>
+                    <ul className="penaltiesList">
+                      <li>1–11 баллов — замечание.</li>
+                      <li>12–21 балл — удержание 100&nbsp;000 VND.</li>
+                      <li>22–31 балл — удержание 300&nbsp;000 VND.</li>
+                      <li>32–41 балл — удержание 500&nbsp;000 VND.</li>
+                      <li>42 балла и выше — удержание 1&nbsp;000&nbsp;000 VND.</li>
+                    </ul>
+                  </div>
                   <p className="note">
                     {venue === "gastrobar"
                       ? "Для PDF отметьте каждый пункт: галочка или крестик с причиной."
