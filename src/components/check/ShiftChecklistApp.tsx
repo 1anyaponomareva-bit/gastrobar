@@ -791,16 +791,7 @@ function ChecklistRow({
           {status === "done" ? "✓" : ""}
         </button>
 
-        <span className="checkLabel">
-          <span className="checkLabelText">{label}</span>
-          {penaltyPoints != null ? (
-            <span
-              className={`penaltyPoints ${status === "failed" ? "penaltyPointsActive" : ""}`}
-            >
-              {penaltyPoints}
-            </span>
-          ) : null}
-        </span>
+        <span className="checkLabelText">{label}</span>
 
         <button
           type="button"
@@ -813,6 +804,15 @@ function ChecklistRow({
         >
           {status === "failed" ? "✕" : ""}
         </button>
+
+        {penaltyPoints != null ? (
+          <span
+            className={`penaltyPoints ${status === "failed" ? "penaltyPointsActive" : ""}`}
+            aria-label={`${penaltyPoints} penalty points`}
+          >
+            {penaltyPoints}
+          </span>
+        ) : null}
       </div>
 
       {status === "failed" ? (

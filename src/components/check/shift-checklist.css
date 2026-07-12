@@ -98,8 +98,8 @@
 
 .staff-inventory .checkItemMain {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
 }
 
 .staff-inventory .statusBox {
@@ -117,7 +117,6 @@
   color: transparent;
   cursor: pointer;
   padding: 0;
-  margin-top: 1px;
 }
 
 .staff-inventory .statusBox.doneBox.active {
@@ -136,38 +135,33 @@
   color: #fff;
 }
 
-.staff-inventory .checkLabel {
+.staff-inventory .checkLabelText {
   flex: 1;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  min-width: 0;
   font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
   color: #111;
-  padding-top: 4px;
-}
-
-.staff-inventory .checkLabelText {
-  flex: 1;
-  min-width: 0;
 }
 
 .staff-inventory .penaltyPoints {
   flex-shrink: 0;
-  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 44px;
+  padding: 0 10px;
   font-size: 17px;
   font-weight: 900;
   line-height: 1;
   color: var(--red);
   background: #fff0f0;
-  border: 1px solid #efb0b0;
-  border-radius: 10px;
-  padding: 7px 10px;
+  border: 2px solid #efb0b0;
+  border-radius: 8px;
   white-space: nowrap;
-  min-width: 52px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .staff-inventory .penaltyPointsActive {
@@ -188,7 +182,7 @@
   font-size: 18px;
 }
 
-.staff-inventory .checkRow.failed .checkLabel {
+.staff-inventory .checkRow.failed .checkLabelText {
   color: #8f1010;
 }
 
@@ -279,14 +273,14 @@
 }
 
 @media (max-width: 380px) {
-  .staff-inventory .checkLabel {
+  .staff-inventory .checkLabelText {
     font-size: 15px;
   }
 
   .staff-inventory .penaltyPoints {
     font-size: 15px;
-    padding: 6px 8px;
-    min-width: 46px;
+    min-width: 40px;
+    padding: 0 8px;
   }
 
   .staff-inventory .segmentBtn {
