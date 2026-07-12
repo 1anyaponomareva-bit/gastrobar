@@ -169,7 +169,7 @@
   line-height: 1.35;
 }
 
-.staff-inventory button {
+.staff-inventory button:not(.statusBox) {
   border: 0;
   border-radius: 13px;
   padding: 13px 8px;
@@ -346,7 +346,7 @@
     font-size: 18px;
   }
 
-  .staff-inventory button {
+  .staff-inventory button:not(.statusBox) {
     font-size: 13px;
     padding: 12px 6px;
   }
