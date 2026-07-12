@@ -319,11 +319,7 @@ export function ShiftChecklistApp() {
     bump();
   };
 
-  const handleResetChecks = () => {
-    if (!window.confirm("Сбросить весь чеклист: отметки, комментарии, имя и дату?")) {
-      return;
-    }
-
+  const performChecklistReset = useCallback(() => {
     clearChecklistItems(
       venue,
       items.map((item) => item.id),
@@ -336,6 +332,7 @@ export function ShiftChecklistApp() {
     setStoredCheckEmployee("");
     setExportBlocked(false);
     setExportEmployeeError(false);
+    sharePrepareRef.current = null;
 
     const firstSection = sections[0]?.title ?? "";
     setActiveSection(firstSection);
@@ -344,6 +341,14 @@ export function ShiftChecklistApp() {
     }
 
     bump();
+  }, [venue, items, shift, sections, bump]);
+
+  const handleResetChecks = () => {
+    if (!window.confirm("Сбросить весь чеклист: отметки, комментарии, имя и дату?")) {
+      return;
+    }
+
+    performChecklistReset();
   };
 
   const pdfExportOptions = useMemo(
@@ -467,7 +472,9 @@ export function ShiftChecklistApp() {
           : await makeShiftChecklistPdfBlob(pdfExportOptions);
       const result = await deliverPdfFile(blob, fileName);
 
-      if (result !== "shared") {
+      if (result === "shared" || result === "downloaded") {
+        performChecklistReset();
+      } else {
         handleSharePdfResult(result);
       }
     } catch (error) {
