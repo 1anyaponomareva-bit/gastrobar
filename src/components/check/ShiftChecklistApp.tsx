@@ -254,6 +254,32 @@ export function ShiftChecklistApp() {
     [sections],
   );
 
+  const penaltyPointsTotal = useMemo(
+    () =>
+      sections.reduce(
+        (sum, section) =>
+          sum +
+          section.groups.reduce(
+            (groupSum, group) =>
+              groupSum +
+              group.items.reduce((itemSum, item) => {
+                if (item.status !== "failed" || item.penaltyPoints == null) {
+                  return itemSum;
+                }
+                return itemSum + item.penaltyPoints;
+              }, 0),
+            0,
+          ),
+        0,
+      ),
+    [sections],
+  );
+
+  const hasPenaltyScoring = useMemo(
+    () => items.some((item) => item.penaltyPoints != null),
+    [items],
+  );
+
   const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
     if (nextVenue === venue) return;
     setVenue(nextVenue);
@@ -335,6 +361,7 @@ export function ShiftChecklistApp() {
             label: group.title ? `${group.title}: ${item.label}` : item.label,
             status: item.status,
             comment: item.comment,
+            penaltyPoints: item.penaltyPoints,
           })),
         ),
       })),
@@ -627,6 +654,7 @@ export function ShiftChecklistApp() {
                       key={item.id}
                       itemId={item.id}
                       label={item.label}
+                      penaltyPoints={item.penaltyPoints}
                       status={item.status}
                       comment={item.comment}
                       highlightMissing={
@@ -683,6 +711,11 @@ export function ShiftChecklistApp() {
                   >
                     {exportingPdf ? "Sharing PDF..." : "Share PDF"}
                   </button>
+                  {hasPenaltyScoring && failedCount > 0 ? (
+                    <p className="penaltyTotal" role="status">
+                      Штрафные баллы: <strong>{penaltyPointsTotal}</strong>
+                    </p>
+                  ) : null}
                   <div className="penaltiesBlock">
                     <h3 className="penaltiesTitle">Таблица штрафов</h3>
                     <ul className="penaltiesList">
@@ -718,6 +751,7 @@ export function ShiftChecklistApp() {
 function ChecklistRow({
   itemId,
   label,
+  penaltyPoints,
   status,
   comment,
   failPlaceholder,
@@ -728,6 +762,7 @@ function ChecklistRow({
 }: {
   itemId: string;
   label: string;
+  penaltyPoints?: number;
   status: ChecklistItemStatus;
   comment: string;
   failPlaceholder: string;
@@ -756,7 +791,16 @@ function ChecklistRow({
           {status === "done" ? "✓" : ""}
         </button>
 
-        <span className="checkLabel">{label}</span>
+        <span className="checkLabel">
+          <span className="checkLabelText">{label}</span>
+          {penaltyPoints != null ? (
+            <span
+              className={`penaltyPoints ${status === "failed" ? "penaltyPointsActive" : ""}`}
+            >
+              {penaltyPoints} б.
+            </span>
+          ) : null}
+        </span>
 
         <button
           type="button"

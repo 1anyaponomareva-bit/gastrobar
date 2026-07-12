@@ -10,6 +10,7 @@ type ChecklistPdfItem = {
   label: string;
   status: "none" | "done" | "failed";
   comment?: string;
+  penaltyPoints?: number;
 };
 
 type ChecklistPdfSection = {
@@ -64,7 +65,8 @@ type PdfLabels = {
   statusDone: string;
   statusFailed: string;
   statusNone: string;
-  summary: (done: number, total: number, failed: number) => string;
+  summary: (done: number, total: number, failed: number, penaltyTotal?: number) => string;
+  penaltyPointsLabel: (points: number) => string;
 };
 
 function getLabels(locale: "ru" | "en"): PdfLabels {
@@ -82,8 +84,12 @@ function getLabels(locale: "ru" | "en"): PdfLabels {
       statusDone: "Выполнено",
       statusFailed: "Не выполнено",
       statusNone: "Не отмечено",
-      summary: (done, total, failed) =>
-        `Выполнено: ${done} из ${total}   Не выполнено: ${failed}`,
+      summary: (done, total, failed, penaltyTotal) => {
+        const base = `Выполнено: ${done} из ${total}   Не выполнено: ${failed}`;
+        if (!penaltyTotal) return base;
+        return `${base}   Штрафные баллы: ${penaltyTotal}`;
+      },
+      penaltyPointsLabel: (points) => `Штрафные баллы: ${points}`,
     };
   }
 
@@ -100,8 +106,12 @@ function getLabels(locale: "ru" | "en"): PdfLabels {
     statusDone: "Done",
     statusFailed: "Not done",
     statusNone: "Not marked",
-    summary: (done, total, failed) =>
-      `Done: ${done} / ${total}   Not done: ${failed}`,
+    summary: (done, total, failed, penaltyTotal) => {
+      const base = `Done: ${done} / ${total}   Not done: ${failed}`;
+      if (!penaltyTotal) return base;
+      return `${base}   Penalty points: ${penaltyTotal}`;
+    },
+    penaltyPointsLabel: (points) => `Penalty points: ${points}`,
   };
 }
 
@@ -392,7 +402,12 @@ function drawChecklistItem(
   const labelSize = 10;
   const labelX = MARGIN_LEFT + 12;
   const badgeReserve = 104;
-  const labelWidth = CONTENT_WIDTH - 24 - badgeReserve;
+  const pointsText =
+    item.penaltyPoints != null ? `${item.penaltyPoints} б.` : "";
+  const pointsWidth = pointsText
+    ? ctx.fontBold.widthOfTextAtSize(pointsText, 8.5) + 16
+    : 0;
+  const labelWidth = CONTENT_WIDTH - 24 - badgeReserve - pointsWidth;
   const lineGap = 4;
   const padY = 12;
   const lines = wrapText(item.label, ctx.font, labelSize, labelWidth);
@@ -417,6 +432,22 @@ function drawChecklistItem(
     drawTextLine(ctx, line, labelX, baselineY, labelSize, ctx.font, COLORS.text);
     baselineY -= labelSize + lineGap;
   });
+
+  if (pointsText) {
+    const pointsColor =
+      item.status === "failed" ? COLORS.failed : COLORS.muted;
+    const pointsX =
+      PAGE_WIDTH - MARGIN_RIGHT - 10 - 104 - pointsWidth + 8;
+    drawTextLine(
+      ctx,
+      pointsText,
+      pointsX,
+      rowTop - rowHeight / 2 - 3,
+      8.5,
+      ctx.fontBold,
+      pointsColor,
+    );
+  }
 
   ctx.y = rowTop - total;
 }
@@ -559,9 +590,24 @@ export async function makeShiftChecklistPdfBlob(
     section.items
       .filter((item) => item.status === "failed")
       .map((item) => ({
-        label: item.label,
+        label:
+          item.penaltyPoints != null
+            ? `${item.label} (${item.penaltyPoints} б.)`
+            : item.label,
         comment: item.comment,
       })),
+  );
+
+  const penaltyTotal = options.sections.reduce(
+    (sum, section) =>
+      sum +
+      section.items.reduce((itemSum, item) => {
+        if (item.status !== "failed" || item.penaltyPoints == null) {
+          return itemSum;
+        }
+        return itemSum + item.penaltyPoints;
+      }, 0),
+    0,
   );
 
   const completed = options.sections.reduce(
@@ -592,7 +638,7 @@ export async function makeShiftChecklistPdfBlob(
   drawFilledBox(ctx, MARGIN_LEFT, summaryTop, CONTENT_WIDTH, 24, COLORS.section);
   drawTextLine(
     ctx,
-    labels.summary(completed, total, failed),
+    labels.summary(completed, total, failed, penaltyTotal),
     MARGIN_LEFT + 10,
     summaryTop - 16,
     9.5,
