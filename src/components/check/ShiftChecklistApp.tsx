@@ -797,7 +797,7 @@ function ChecklistRow({
             <span
               className={`penaltyPoints ${status === "failed" ? "penaltyPointsActive" : ""}`}
             >
-              {penaltyPoints} б.
+              {penaltyPoints}
             </span>
           ) : null}
         </span>

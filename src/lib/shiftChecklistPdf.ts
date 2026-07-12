@@ -403,7 +403,7 @@ function drawChecklistItem(
   const labelX = MARGIN_LEFT + 12;
   const badgeReserve = 104;
   const pointsText =
-    item.penaltyPoints != null ? `${item.penaltyPoints} б.` : "";
+    item.penaltyPoints != null ? String(item.penaltyPoints) : "";
   const pointsWidth = pointsText
     ? ctx.fontBold.widthOfTextAtSize(pointsText, 8.5) + 16
     : 0;
@@ -592,7 +592,7 @@ export async function makeShiftChecklistPdfBlob(
       .map((item) => ({
         label:
           item.penaltyPoints != null
-            ? `${item.label} (${item.penaltyPoints} б.)`
+            ? `${item.label} (${item.penaltyPoints})`
             : item.label,
         comment: item.comment,
       })),
