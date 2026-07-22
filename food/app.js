@@ -66,7 +66,7 @@ function hotDogCraftSausageOption(shortLabel) {
     id: "craft",
     label: "Крафтовая колбаска собственного производства",
     shortLabel,
-    price: 130000,
+    price: 120000,
     grammage: "280 г",
   };
 }
@@ -98,7 +98,7 @@ const CHEDDAR_BACON_SAUSAGE_OPTIONS = [
     label: "Крафтовая колбаска собственного производства",
     shortLabel:
       "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
-    price: 130000,
+    price: 120000,
     grammage: "210–220 г",
   },
 ];
@@ -116,7 +116,7 @@ const CHEDDAR_JALAPENO_SAUSAGE_OPTIONS = [
     label: "Крафтовая колбаска собственного производства",
     shortLabel:
       "Крафтовая колбаска (курица, свинина или свинина с сыром на выбор)",
-    price: 130000,
+    price: 120000,
     grammage: "280 г",
   },
 ];
@@ -126,7 +126,7 @@ const CLASSIC_HOT_DOG_SAUSAGE_OPTIONS = [
     id: "standard-pork",
     label: "Стандартная свиная сосиска",
     shortLabel: "Стандартная свиная сосиска",
-    price: 80000,
+    price: 90000,
     grammage: "200–210 г",
   },
   {
@@ -261,7 +261,7 @@ const MENU_ITEMS = [
     name: "Датский",
     description:
       "Жареный лук, маринованный огурец, майонез, кетчуп, горчица и сушёный лук.",
-    priceMin: 80000,
+    priceMin: 90000,
     priceMax: 120000,
     sausageOptions: CLASSIC_HOT_DOG_SAUSAGE_OPTIONS,
     category: "hot-dogs",
@@ -275,7 +275,7 @@ const MENU_ITEMS = [
     description:
       "Жареный лук, маринованные огурцы, сырный соус, кетчуп, горчица, бекон и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     sausageOptions: CHEDDAR_BACON_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     badge: "hit",
@@ -288,7 +288,7 @@ const MENU_ITEMS = [
     description:
       "Жареный лук, сырный соус, кетчуп, халапеньо и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     sausageOptions: CHEDDAR_JALAPENO_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     badge: "hit",
@@ -301,7 +301,8 @@ const MENU_ITEMS = [
     description:
       "Квашенная капуста, майонез, горчица и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
+    sausageOptions: HOT_DOG_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     image: IMG("HOT-DOG_bov.png"),
     edgeFade: false,
@@ -312,7 +313,7 @@ const MENU_ITEMS = [
     description:
       "Жареный лук, маринованный огурец, майонез, соус BBQ, горчица, бекон и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     sausageOptions: BBQ_BACON_SAUSAGE_OPTIONS,
     category: "hot-dogs",
     image: IMG("HOT-DOG_bbq.png"),

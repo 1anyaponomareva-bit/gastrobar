@@ -120,7 +120,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Датский",
     description:
       "Жареный лук, маринованный огурец, майонез, кетчуп, горчица и сушёный лук.",
-    priceMin: 80000,
+    priceMin: 90000,
     priceMax: 120000,
     category: "hot-dogs",
     badge: "hit",
@@ -132,7 +132,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description:
       "Жареный лук, маринованные огурцы, сырный соус, кетчуп, горчица, бекон и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     category: "hot-dogs",
     badge: "hit",
     image: foodMenuImage("HOT-DOG_becon.png"),
@@ -143,7 +143,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description:
       "Жареный лук, сырный соус, кетчуп, халапеньо и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     category: "hot-dogs",
     badge: "hit",
     image: foodMenuImage("HOT-DOG_halapen.png"),
@@ -153,7 +153,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Квашенная капуста горчица",
     description: "Квашенная капуста, майонез, горчица и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     category: "hot-dogs",
     image: foodMenuImage("HOT-DOG_bov.png"),
   },
@@ -163,7 +163,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description:
       "Жареный лук, маринованный огурец, майонез, соус BBQ, горчица, бекон и сушёный лук.",
     priceMin: 90000,
-    priceMax: 130000,
+    priceMax: 120000,
     category: "hot-dogs",
     image: foodMenuImage("HOT-DOG_bbq.png"),
   },
