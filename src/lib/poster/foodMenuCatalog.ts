@@ -31,7 +31,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Сырные палочки",
     description:
       "Обжаренные до золотистой корочки палочки из моцареллы с томатным соусом.",
-    price: 120000,
+    price: 100000,
     category: "appetizers",
     image: foodMenuImage("cheese-sticks.png"),
   },
@@ -70,7 +70,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Куриный суп",
     description:
       "Нежный куриный суп с вермишелью и бархатистым бульоном на основе йогурта.",
-    price: 90000,
+    price: 60000,
     grammage: "350 г",
     category: "appetizers",
     image: foodMenuImage("Creamy Chicken Soup.png"),
