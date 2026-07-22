@@ -208,7 +208,7 @@ const MENU_ITEMS = [
     price: 90000,
     grammage: "350 г",
     category: "appetizers",
-    image: IMG("Creamy Chicken Soup.png?v=20260722-01"),
+    image: IMG("Creamy Chicken Soup.png?v=20260722-02"),
   },
 
   // ——— СНЕКИ ———
@@ -365,7 +365,7 @@ const MENU_ITEMS = [
     grammage: "370 г",
     category: "burgers",
     badge: "hit",
-    image: IMG("GASTROBURGER.jpg?v=20250618-01"),
+    image: IMG("GASTROBURGER.jpg?v=20260722-02"),
   },
   {
     id: "fish-burger",

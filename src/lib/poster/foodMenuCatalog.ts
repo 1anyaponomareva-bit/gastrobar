@@ -73,7 +73,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 60000,
     grammage: "350 г",
     category: "appetizers",
-    image: foodMenuImage("Creamy Chicken Soup.png?v=20260722-01"),
+    image: foodMenuImage("Creamy Chicken Soup.png?v=20260722-02"),
   },
   {
     id: "chicken-jerky",
@@ -209,7 +209,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "370 г",
     category: "burgers",
     badge: "hit",
-    image: foodMenuImage("GASTROBURGER.jpg?v=20250618-01"),
+    image: foodMenuImage("GASTROBURGER.jpg?v=20260722-02"),
   },
   {
     id: "fish-burger",
