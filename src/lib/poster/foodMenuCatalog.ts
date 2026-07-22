@@ -183,7 +183,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Классик Бургер",
     description:
       "Соус для бургеров, салат, помидор, котлета, маринованные огурцы, маринованный лук и соус для бургеров.",
-    price: 200000,
+    price: 160000,
     grammage: "300 г",
     category: "burgers",
     badge: "hit",
@@ -194,7 +194,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Чизбургер",
     description:
       "Соус для бургеров, салат, помидор, котлета, сырный соус, маринованные огурцы, маринованный лук и соус для бургеров.",
-    price: 220000,
+    price: 180000,
     grammage: "310 г",
     category: "burgers",
     badge: "hit",
@@ -205,7 +205,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "GASTROBURGER",
     description:
       "Соус BBQ, маринованные огурцы слайсы, котлета, сырный соус, хрустящий бекон, жареный лук, жареные грибы, соус BBQ. Подаётся с влажной салфеткой и одноразовыми перчатками.",
-    price: 240000,
+    price: 200000,
     grammage: "370 г",
     category: "burgers",
     badge: "hit",
@@ -216,7 +216,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Фишбургер",
     description:
       "Соус тартар, маринованные огурцы, котлета, квашенная капуста, жареный лук и соус тартар.",
-    price: 160000,
+    price: 140000,
     grammage: "320 г",
     category: "burgers",
     image: foodMenuImage("fishburger.png?v=20250618-01"),
