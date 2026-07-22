@@ -73,7 +73,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 60000,
     grammage: "350 г",
     category: "appetizers",
-    image: foodMenuImage("Creamy Chicken Soup.png"),
+    image: foodMenuImage("Creamy Chicken Soup.png?v=20260722-01"),
   },
   {
     id: "chicken-jerky",

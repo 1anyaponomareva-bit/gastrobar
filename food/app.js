@@ -208,7 +208,7 @@ const MENU_ITEMS = [
     price: 90000,
     grammage: "350 г",
     category: "appetizers",
-    image: IMG("Creamy Chicken Soup.png"),
+    image: IMG("Creamy Chicken Soup.png?v=20260722-01"),
   },
 
   // ——— СНЕКИ ———
