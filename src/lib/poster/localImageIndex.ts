@@ -47,6 +47,7 @@ const FOOD_LOCAL_ENTRIES: Array<{ name: string; image: string }> = [
   { name: "BBQ Бекон", image: "/food/menu/HOT-DOG_bbq.png" },
   { name: "Чизстейк Дог", image: "/food/menu/phillycheesesteak.png" },
   { name: "Классик Бургер", image: "/food/menu/burger-classic.png" },
+  { name: "Бургер из сочной говядины", image: "/food/menu/burger-classic.png" },
   { name: "CLASSIC BURGER", image: "/food/menu/burger-classic.png" },
   { name: "Чизбургер", image: "/food/menu/CHEESEBURGER.png" },
   { name: "CHEESEBURGER", image: "/food/menu/CHEESEBURGER.png" },

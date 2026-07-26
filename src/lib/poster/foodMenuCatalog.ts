@@ -180,7 +180,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
   },
   {
     id: "classic-burger",
-    name: "Классик Бургер",
+    name: "Бургер из сочной говядины",
     description:
       "Соус для бургеров, салат, помидор, котлета, маринованные огурцы, маринованный лук и соус для бургеров.",
     price: 160000,
