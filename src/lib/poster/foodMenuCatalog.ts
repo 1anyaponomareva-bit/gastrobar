@@ -256,7 +256,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 140000,
     category: "kids",
     badge: "hit",
-    image: foodMenuImage("KIDS-COMBO-NUGGETS+.png?v=20260726-01"),
+    image: foodMenuImage("KIDS-COMBO-NUGGETS.png?v=20260726-02"),
   },
   {
     id: "kids-hot-dog-combo",
@@ -265,7 +265,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     price: 140000,
     category: "kids",
     badge: "hit",
-    image: foodMenuImage("KIDS-COMBO-SAUSAGE.png?v=20260726-01"),
+    image: foodMenuImage("KIDS-COMBO-SAUSAGE.png?v=20260726-02"),
   },
   {
     id: "chicken-kebab",
