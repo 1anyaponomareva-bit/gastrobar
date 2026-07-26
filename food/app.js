@@ -459,6 +459,15 @@ const MENU_ITEMS = [
     image: IMG("hot-dog_combo.png"),
   },
   {
+    id: "cheese-steak-dog-combo",
+    name: "Cheese Steak Dog Combo",
+    description: "Cheese Steak Dog, картофель фри и напиток.",
+    price: 170000,
+    category: "combos",
+    badge: "hit",
+    image: IMG("COMBO_PHILY.png?v=20260726-01"),
+  },
+  {
     id: "wings-combo",
     name: "Комбо с крыльями",
     description: "Куриные крылья, картофель фри и напиток.",
