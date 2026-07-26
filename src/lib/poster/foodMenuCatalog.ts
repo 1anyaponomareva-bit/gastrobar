@@ -223,8 +223,8 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
   },
   {
     id: "burger-combo",
-    name: "Бургер Комбо",
-    description: "Классический бургер, картофель фри и напиток.",
+    name: "Чизбургер Комбо",
+    description: "Чизбургер, картофель фри и напиток.",
     price: 230000,
     category: "combos",
     badge: "hit",
@@ -233,7 +233,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
   {
     id: "hot-dog-combo",
     name: "Hot Dog Combo",
-    description: "Датский Hot Dog, картофель фри и напиток.",
+    description: "Любой классический Hot Dog, картофель фри и напиток.",
     price: 140000,
     category: "combos",
     badge: "hit",
@@ -249,9 +249,20 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     image: foodMenuImage("COMBO_PHILY.png?v=20260726-01"),
   },
   {
+    id: "pita-kebab-combo",
+    name: "Пита Кебаб Комбо",
+    description:
+      "Пита с кебабом на выбор — курица или свинина, картофель фри и напиток.",
+    price: 170000,
+    category: "combos",
+    badge: "hit",
+    image: foodMenuImage("pita_combo.png?v=20260726-01"),
+  },
+  {
     id: "family-combo",
     name: "Семейное комбо",
-    description: "Большой набор для компании: горячие блюда, гарнир и напитки.",
+    description:
+      "На выбор классический бургер или чизбургер, плюс гарнир и напитки.",
     price: 550000,
     category: "combos",
     badge: "hit",
