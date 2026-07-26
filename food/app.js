@@ -1196,9 +1196,77 @@ function renderBuildYourOwnExtrasHtml() {
   `;
 }
 
+function renderBuildYourOwnDetail(item) {
+  const sausageOptions = getHotDogSausageOptions(item);
+  const defaultSausage = sausageOptions[0];
+  const priceLabel = `${formatVnd(defaultSausage?.price ?? item.price ?? 60000)} VND`;
+  const imgSrc = item.image || "";
+
+  const sausageRows = sausageOptions
+    .map((o, idx) => {
+      const active = idx === 0;
+      const addon = o.addon ?? Math.max(0, (o.price || 0) - (item.price || 60000));
+      const meta = [o.grammage, addon > 0 ? `+${formatVnd(addon)}` : "в базе"]
+        .filter(Boolean)
+        .join(" · ");
+      return `<button type="button" class="byo-sausage${
+        active ? " is-active" : ""
+      }" data-sausage="${o.id}">
+        <span class="byo-sausage__name">${o.shortLabel || o.label}</span>
+        <span class="byo-sausage__meta">${meta}</span>
+      </button>`;
+    })
+    .join("");
+
+  return `
+    <div class="byo-screen">
+      <div class="byo-screen__scroll">
+        <div class="byo-screen__hero">
+          ${imgSrc ? `<img src="${imgSrc}" alt="" class="byo-screen__hero-img" />` : ""}
+          <div class="byo-screen__hero-shade" aria-hidden="true"></div>
+          <div class="byo-screen__hero-copy">
+            <p class="byo-screen__eyebrow">Конструктор</p>
+            <h2 class="byo-screen__title">${itemDisplayName(item)}</h2>
+            <p class="byo-screen__lead">База ${formatVnd(item.price || 60000)} · сосиска, добавки и соусы</p>
+          </div>
+        </div>
+        <div class="byo-screen__body">
+          <section class="byo-block">
+            <div class="byo-block__head">
+              <div>
+                <h3 class="byo-block__title">1. Сосиска</h3>
+                <p class="byo-block__hint">Обязательно · выберите одну</p>
+              </div>
+              <span class="byo-block__badge">Выберите 1</span>
+            </div>
+            <div class="byo-sausage-list" id="detail-sausage-picker">${sausageRows}</div>
+          </section>
+          ${renderBuildYourOwnExtrasHtml()}
+          <section class="byo-final" aria-live="polite">
+            <div class="byo-final__head">
+              <h3 class="byo-final__title">Ваш хот-дог</h3>
+              <span class="byo-final__ready">Готово к заказу</span>
+            </div>
+            <p class="byo-final__line" id="detail-hotdog-sausage-label">${defaultSausage?.label || ""}</p>
+            <p class="byo-final__gram" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>
+            <div class="byo-final__total">
+              <span>Итого</span>
+              <strong id="detail-hotdog-price">${priceLabel}</strong>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderDetailContent(item) {
   const isHotDog = item.category === "hot-dogs";
   const isBuildYourOwn = item.buildYourOwn || item.id === "simple-hot-dog";
+  if (isBuildYourOwn) {
+    return renderBuildYourOwnDetail(item);
+  }
+
   const hasSauce = item.sauceOptions === true;
   const sausageOptions = getHotDogSausageOptions(item);
   const hasHotDogSausage = isHotDog && sausageOptions.length > 0;
@@ -1221,25 +1289,16 @@ function renderDetailContent(item) {
   const sausagePickerHtml = hasHotDogSausage
     ? `
       <div class="detail-sausage-picker" id="detail-sausage-picker" aria-label="Выберите сосиску">
-        <div class="detail-extra-group__head">
-          <p class="detail-sausage-picker__title">Сосиска</p>
-          ${
-            isBuildYourOwn
-              ? `<span class="detail-extra-group__badge detail-extra-group__badge--required">Выберите 1</span>`
-              : ""
-          }
-        </div>
+        <p class="detail-sausage-picker__title">Выберите сосиску</p>
         <div class="detail-sausage-picker__options">
           ${sausageOptions.map((o, idx) => {
             const active = idx === 0;
-            const addon = o.addon ?? Math.max(0, (o.price || 0) - (item.price || 60000));
-            const meta = isBuildYourOwn
-              ? [o.grammage, addon > 0 ? `+${formatVnd(addon)}` : ""]
-                  .filter(Boolean)
-                  .join(" · ")
-              : [o.grammage, o.price != null ? `${formatVnd(o.price)} VND` : ""]
-                  .filter(Boolean)
-                  .join(" · ");
+            const meta = [
+              o.grammage,
+              o.price != null ? `${formatVnd(o.price)} VND` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ");
             return `<button type="button" class="detail-sausage-option${
               active ? " is-active" : ""
             }" data-sausage="${o.id}">
@@ -1263,21 +1322,18 @@ function renderDetailContent(item) {
       ${hitHtml}
       ${itemDetailTitleHtml(item)}
       ${
-        isBuildYourOwn
-          ? `<p class="detail-info__desc">Базовая цена ${formatVnd(item.price || 60000)} VND. Выберите сосиску, добавки и соусы.</p>`
-          : hasHotDogSausage
-            ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
+        hasHotDogSausage
+          ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
              <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>
              <p class="detail-info__desc">${item.description || ""}</p>`
-            : hasSauce
-              ? `<p class="detail-info__sausage" id="detail-sauce-label">${defaultSauce?.label || ""}</p>
+          : hasSauce
+            ? `<p class="detail-info__sausage" id="detail-sauce-label">${defaultSauce?.label || ""}</p>
                ${grammageHtml(item, "detail-info__grammage")}
                <p class="detail-info__desc">${item.description || ""}</p>`
-              : `${grammageHtml(item, "detail-info__grammage")}
+            : `${grammageHtml(item, "detail-info__grammage")}
                <p class="detail-info__desc">${item.description || ""}</p>`
       }
       ${sausagePickerHtml}
-      ${isBuildYourOwn ? renderBuildYourOwnExtrasHtml() : ""}
       <p class="detail-info__price" id="${hasHotDogSausage ? "detail-hotdog-price" : "detail-item-price"}">${priceLabel}</p>
     </div>
   `;
@@ -1334,7 +1390,9 @@ function bindBuildYourOwnExtras(item) {
   if (!priceEl || buttons.length === 0) return;
 
   const selectedSausagePrice = () => {
-    const active = document.querySelector("#detail-sausage-picker .detail-sausage-option.is-active");
+    const active =
+      document.querySelector("#detail-sausage-picker .byo-sausage.is-active") ||
+      document.querySelector("#detail-sausage-picker .detail-sausage-option.is-active");
     const id = active?.getAttribute("data-sausage") || options[0]?.id;
     return options.find((o) => o.id === id)?.price ?? item.price ?? 60000;
   };
@@ -1405,9 +1463,11 @@ function openDetail(index) {
   if (!overlay || !stage || !item) return;
 
   detailIndex = index;
+  const isBuildYourOwn = item.buildYourOwn || item.id === "simple-hot-dog";
   stage.innerHTML = renderDetailContent(item);
+  overlay.classList.toggle("detail-overlay--byo", isBuildYourOwn);
   bindHotDogSausagePicker(item);
-  if (item.buildYourOwn || item.id === "simple-hot-dog") {
+  if (isBuildYourOwn) {
     bindBuildYourOwnExtras(item);
   }
   bindSaucePicker();
@@ -1432,6 +1492,7 @@ function closeDetail() {
   window.setTimeout(() => {
     overlay.classList.add("is-hidden");
     overlay.classList.remove("is-closing");
+    overlay.classList.remove("detail-overlay--byo");
     overlay.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
     detailIndex = -1;

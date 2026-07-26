@@ -363,7 +363,7 @@ export function PosterTestFoodMenu() {
 
   return (
     <>
-      <link rel="stylesheet" href="/food/styles.css?v=poster-test" />
+      <link rel="stylesheet" href="/food/styles.css?v=byo-fix-20260726" />
 
       <header className="site-header">
         <div className="header-inner">
