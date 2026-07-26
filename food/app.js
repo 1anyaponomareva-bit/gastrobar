@@ -460,17 +460,6 @@ const MENU_ITEMS = [
     image: IMG("KIDS-COMBO-SAUSAGE.png"),
     imageFocusY: 52,
   },
-  {
-    id: "kids-soup-combo",
-    name: "Детский комбо с супом",
-    description: "Куриный суп, картофель фри и игрушка-сюрприз.",
-    price: null,
-    category: "kids",
-    badge: "hit",
-    image: IMG("KIDS-COMBO-SOUP.png"),
-    imageFocusY: 52,
-  },
-
   // ——— ГРИЛЬ ———
   {
     id: "chicken-kebab",

@@ -268,15 +268,6 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     image: foodMenuImage("KIDS-COMBO-SAUSAGE.png"),
   },
   {
-    id: "kids-soup-combo",
-    name: "Детский комбо с супом",
-    description: "Куриный суп, картофель фри и игрушка-сюрприз.",
-    price: null,
-    category: "kids",
-    badge: "hit",
-    image: foodMenuImage("KIDS-COMBO-SOUP.png"),
-  },
-  {
     id: "chicken-kebab",
     name: "Бокс с куриным шашлыком",
     description: "Бокс с маринованным куриным шашлыком на гриле с томатным соусом.",
