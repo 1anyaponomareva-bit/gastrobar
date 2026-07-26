@@ -219,6 +219,18 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["BAVARIAN GRILL SAUSAGE", "bavarian-sausage"],
   ["CHEDDAR JALAPENO GRILL SAUSAGE", "cheddar-jalapeno-sausage"],
   ["CHICKEN GRILL SAUSAGE", "grilled-chicken-sausage"],
+  ["CHICKEN KEBAB BOX", "chicken-kebab"],
+  ["KUR KEBAB", "chicken-kebab"],
+  ["PORK KEBAB BOX", "pork-kebab"],
+  ["PORK KEBAB PITA", "pork-kebab-pita"],
+  ["PORK PITA", "pork-kebab-pita"],
+  ["PITA PORK", "pork-kebab-pita"],
+  ["PITA WITH PORK KEBAB", "pork-kebab-pita"],
+  ["CHICKEN KEBAB PITA", "chicken-kebab-pita"],
+  ["CHICKEN PITA", "chicken-kebab-pita"],
+  ["CHICK PITA", "chicken-kebab-pita"],
+  ["PITA CHICKEN", "chicken-kebab-pita"],
+  ["PITA WITH CHICKEN KEBAB", "chicken-kebab-pita"],
 ];
 
 for (const [alias, id] of BAR_POSTER_ALIASES) {
