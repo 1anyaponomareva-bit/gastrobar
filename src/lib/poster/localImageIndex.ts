@@ -37,7 +37,7 @@ const FOOD_LOCAL_ENTRIES: Array<{ name: string; image: string }> = [
   { name: "Джерки говядина", image: "/menu/food-beef-jerky-horizontal-hero.png" },
   { name: "Фисташки", image: "/menu/food-pistachios-horizontal-hero.png" },
   { name: "Арахис", image: "/menu/food-peanuts-horizontal-hero.png" },
-  { name: "Классический Hot Dog", image: "/food/menu/KIDS-HOT-DOG.png" },
+  { name: "Собери свой Hot Dog", image: "/food/menu/KIDS-HOT-DOG.png" },
   { name: "CLASSIC HOT DOG", image: "/food/menu/CLASSIC-HOT-DOG.png" },
   { name: "Датский Hot Dog", image: "/food/menu/CLASSIC-HOT-DOG.png" },
   { name: "DANISH HOT DOG", image: "/food/menu/CLASSIC-HOT-DOG.png" },

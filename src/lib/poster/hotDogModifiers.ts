@@ -43,7 +43,8 @@ function buildSausageOptions(
   modifications: PosterDishModification[],
   templates: NonNullable<(typeof LOCAL_HOT_DOG_CONFIG)[string]["sausageTemplates"]>,
 ): HotDogSausageOption[] {
-  if (modifications.length === 0 || templates.length === 0) return [];
+  if (templates.length === 0) return [];
+  if (modifications.length === 0 && templates.length <= 2) return [];
 
   const standardMod = modifications[0];
   const craftMods = modifications.slice(1);
@@ -65,6 +66,24 @@ function buildSausageOptions(
         price: basePrice + normalizeModifierAddon(standardMod.price),
       },
     ];
+  }
+
+  if (templates.length > 2) {
+    return templates.map((template, index) => {
+      const modification = modifications[index];
+      const fallbackAddon = index === 0 ? 0 : craftAddon || 30000;
+      return {
+        id: template.id,
+        label: template.label,
+        shortLabel: template.shortLabel,
+        grammage: template.grammage,
+        posterModifierId:
+          modification?.dish_modification_id != null
+            ? String(modification.dish_modification_id)
+            : undefined,
+        price: basePrice + (modification ? normalizeModifierAddon(modification.price) : fallbackAddon),
+      };
+    });
   }
 
   const [standardTemplate, craftTemplate] = templates;

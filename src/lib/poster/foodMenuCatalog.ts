@@ -109,8 +109,8 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
   },
   {
     id: "simple-hot-dog",
-    name: "Классический",
-    description: "Сосиска, булка, кетчуп.",
+    name: "Собери свой Hot Dog",
+    description: "Выберите сосиску, добавки и соусы по своему вкусу.",
     price: 60000,
     category: "hot-dogs",
     image: foodMenuImage("KIDS-HOT-DOG.png"),

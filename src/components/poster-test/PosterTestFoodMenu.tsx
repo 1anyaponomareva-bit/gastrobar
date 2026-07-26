@@ -11,6 +11,12 @@ import {
   getHotDogSausageOptions,
   selectedCartPrice,
 } from "@/lib/poster/posterTestCartHelpers";
+import {
+  BUILD_YOUR_OWN_HOT_DOG_ID,
+  HOT_DOG_SAUCES,
+  HOT_DOG_TOPPINGS,
+  type BuildYourOwnHotDogOption,
+} from "@/lib/poster/buildYourOwnHotDog";
 
 const CATEGORY_LABELS: Record<string, string> = {
   appetizers: "Закуски",
@@ -167,19 +173,75 @@ function HotDogDetailPanel({
   item,
   selectedSausageId,
   onSelectSausage,
+  selectedOptionIds,
+  onToggleOption,
 }: {
   item: PosterFoodMenuItem;
   selectedSausageId: string;
   onSelectSausage: (id: string) => void;
+  selectedOptionIds: string[];
+  onToggleOption: (id: string, group: "toppings" | "sauces") => void;
 }) {
   const options = getHotDogSausageOptions(item);
   const hasSausage = options.length > 0;
   const selected =
     options.find((option) => option.id === selectedSausageId) ?? options[0] ?? null;
 
-  const priceLabel = hasSausage
-    ? `${formatVnd(selected?.price)} VND`
-    : `${formatItemPrice(item)} VND`;
+  const selectedPrice = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
+  const priceLabel = `${formatVnd(selectedPrice.unitPrice)} VND`;
+  const isBuildYourOwn = item.id === BUILD_YOUR_OWN_HOT_DOG_ID;
+
+  function OptionGroup({
+    title,
+    options,
+    max,
+    group,
+  }: {
+    title: string;
+    options: BuildYourOwnHotDogOption[];
+    max: number;
+    group: "toppings" | "sauces";
+  }) {
+    const selectedCount = options.filter((option) => selectedOptionIds.includes(option.id)).length;
+    return (
+      <section className="mt-5 border-t border-white/10 pt-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold text-white">{title}</h3>
+          <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-white/55">
+            Необязательно, до {max}
+          </span>
+        </div>
+        <div className="space-y-1">
+          {options.map((option) => {
+            const active = selectedOptionIds.includes(option.id);
+            const disabled = !active && selectedCount >= max;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left disabled:opacity-35"
+                disabled={disabled}
+                aria-pressed={active}
+                onClick={() => onToggleOption(option.id, group)}
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                    active ? "border-amber-300 bg-amber-300 text-black" : "border-white/25"
+                  }`}
+                >
+                  {active ? "✓" : ""}
+                </span>
+                <span className="min-w-0 flex-1 text-sm text-white/80">{option.label}</span>
+                <span className="text-xs text-white/55">
+                  {option.price > 0 ? `+${formatVnd(option.price)}` : "0"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>
@@ -229,6 +291,17 @@ function HotDogDetailPanel({
           </div>
         </div>
       ) : null}
+      {isBuildYourOwn ? (
+        <>
+          <OptionGroup
+            title="Добавки"
+            options={HOT_DOG_TOPPINGS}
+            max={3}
+            group="toppings"
+          />
+          <OptionGroup title="Соусы" options={HOT_DOG_SAUCES} max={5} group="sauces" />
+        </>
+      ) : null}
       <p className="detail-info__price" id={hasSausage ? "detail-hotdog-price" : "detail-item-price"}>
         {priceLabel}
       </p>
@@ -243,6 +316,7 @@ export function PosterTestFoodMenu() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [detailItem, setDetailItem] = useState<PosterFoodMenuItem | null>(null);
   const [selectedSausageId, setSelectedSausageId] = useState("standard-pork");
+  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [addToCartError, setAddToCartError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -280,6 +354,7 @@ export function PosterTestFoodMenu() {
     if (!detailItem) return;
     const options = getHotDogSausageOptions(detailItem);
     setSelectedSausageId(options[0]?.id ?? "standard-pork");
+    setSelectedOptionIds([]);
   }, [detailItem]);
 
   const categories = useMemo(
@@ -313,13 +388,24 @@ export function PosterTestFoodMenu() {
 
   function addDetailItemToCart() {
     if (!detailItem) return;
-    const error = addItemToCart(detailItem, selectedSausageId);
+    const error = addItemToCart(detailItem, selectedSausageId, { selectedOptionIds });
     if (error) {
       setAddToCartError(error);
       return;
     }
     setAddToCartError(null);
     setDetailItem(null);
+  }
+
+  function toggleBuildYourOwnOption(id: string, group: "toppings" | "sauces") {
+    const groupOptions = group === "toppings" ? HOT_DOG_TOPPINGS : HOT_DOG_SAUCES;
+    const max = group === "toppings" ? 3 : 5;
+    setSelectedOptionIds((current) => {
+      if (current.includes(id)) return current.filter((optionId) => optionId !== id);
+      const selectedInGroup = groupOptions.filter((option) => current.includes(option.id)).length;
+      if (selectedInGroup >= max) return current;
+      return [...current, id];
+    });
   }
 
   return (
@@ -508,6 +594,8 @@ export function PosterTestFoodMenu() {
                     item={detailItem}
                     selectedSausageId={selectedSausageId}
                     onSelectSausage={setSelectedSausageId}
+                    selectedOptionIds={selectedOptionIds}
+                    onToggleOption={toggleBuildYourOwnOption}
                   />
                   <button
                     type="button"

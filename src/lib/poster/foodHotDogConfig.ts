@@ -62,8 +62,35 @@ const CLASSIC_SAUSAGE_TEMPLATES: HotDogSausageTemplate[] = [
   ),
 ];
 
+const BUILD_YOUR_OWN_SAUSAGE_TEMPLATES: HotDogSausageTemplate[] = [
+  {
+    id: "standard-pork",
+    label: "Классическая свиная сосиска",
+    shortLabel: "Классическая свиная сосиска",
+    grammage: "60 г",
+  },
+  {
+    id: "craft-chicken",
+    label: "Куриная крафтовая сосиска",
+    shortLabel: "Куриная крафтовая сосиска",
+    grammage: "140 г",
+  },
+  {
+    id: "craft-pork",
+    label: "Свиная крафтовая сосиска",
+    shortLabel: "Свиная крафтовая сосиска",
+    grammage: "140 г",
+  },
+  {
+    id: "craft-pork-cheese",
+    label: "Свиная крафтовая сосиска с сыром",
+    shortLabel: "Свиная крафтовая сосиска с сыром",
+    grammage: "140 г",
+  },
+];
+
 export const LOCAL_HOT_DOG_CONFIG: Record<string, LocalHotDogConfig> = {
-  "simple-hot-dog": { hotDogNoSausage: true },
+  "simple-hot-dog": { sausageTemplates: BUILD_YOUR_OWN_SAUSAGE_TEMPLATES },
   "classic-hot-dog": { sausageTemplates: CLASSIC_SAUSAGE_TEMPLATES },
   "cheddar-bacon-dog": { sausageTemplates: CHEDDAR_SAUSAGE_TEMPLATES },
   "jalapeno-cheddar-dog": { sausageTemplates: JALAPENO_SAUSAGE_TEMPLATES },

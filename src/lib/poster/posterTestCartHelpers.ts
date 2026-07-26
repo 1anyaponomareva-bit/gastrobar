@@ -1,4 +1,5 @@
 import type { HotDogSausageOption, PosterFoodMenuItem } from "@/lib/poster/mapProducts";
+import { getBuildYourOwnOptions } from "@/lib/poster/buildYourOwnHotDog";
 
 const HOT_DOG_LABEL = "Hot Dog";
 
@@ -10,6 +11,8 @@ export type CartItem = {
   unitPrice: number;
   selectedSausageId?: string;
   selectedSausageLabel?: string;
+  selectedOptionIds?: string[];
+  selectedOptionLabels?: string[];
 };
 
 export type CheckoutStep = "cart" | "show";
@@ -39,29 +42,43 @@ export function getHotDogSausageOptions(item: PosterFoodMenuItem): HotDogSausage
   return item.sausageOptions ?? [];
 }
 
-export function cartKey(itemId: string, selectedSausageId?: string): string {
-  return selectedSausageId ? `${itemId}:${selectedSausageId}` : itemId;
+export function cartKey(
+  itemId: string,
+  selectedSausageId?: string,
+  selectedOptionIds: string[] = [],
+): string {
+  const selections = [selectedSausageId, ...selectedOptionIds.slice().sort()].filter(Boolean);
+  return selections.length > 0 ? `${itemId}:${selections.join(":")}` : itemId;
 }
 
 export function selectedCartPrice(
   item: PosterFoodMenuItem,
   selectedSausageId: string,
+  selectedOptionIds: string[] = [],
 ): {
   unitPrice: number;
   selectedSausageId?: string;
   selectedSausageLabel?: string;
+  selectedOptionIds?: string[];
+  selectedOptionLabels?: string[];
 } {
+  const selectedOptions = getBuildYourOwnOptions(selectedOptionIds);
+  const extrasTotal = selectedOptions.reduce((sum, option) => sum + option.price, 0);
   const options = getHotDogSausageOptions(item);
   if (options.length > 0) {
     const selected = options.find((option) => option.id === selectedSausageId) ?? options[0];
     return {
-      unitPrice: selected.price,
+      unitPrice: selected.price + extrasTotal,
       selectedSausageId: selected.id,
       selectedSausageLabel: selected.label,
+      selectedOptionIds,
+      selectedOptionLabels: selectedOptions.map((option) => option.label),
     };
   }
 
   return {
-    unitPrice: item.price ?? item.priceMin ?? item.priceMax ?? 0,
+    unitPrice: (item.price ?? item.priceMin ?? item.priceMax ?? 0) + extrasTotal,
+    selectedOptionIds,
+    selectedOptionLabels: selectedOptions.map((option) => option.label),
   };
 }

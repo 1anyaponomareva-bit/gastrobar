@@ -29,7 +29,7 @@ type PosterTestCartContextValue = {
   addItemToCart: (
     item: PosterFoodMenuItem,
     selectedSausageId: string,
-    options?: { openCart?: boolean },
+    options?: { openCart?: boolean; selectedOptionIds?: string[] },
   ) => string | null;
   updateCartQuantity: (key: string, nextQuantity: number) => void;
 };
@@ -88,6 +88,11 @@ function CartItemRow({
             {item.selectedSausageLabel ? (
               <p className="poster-test-order-show__modifier">{item.selectedSausageLabel}</p>
             ) : null}
+            {item.selectedOptionLabels?.map((label) => (
+              <p key={label} className="poster-test-order-show__modifier">
+                + {label}
+              </p>
+            ))}
           </div>
           <span className="poster-test-order-show__line-total">
             {formatVnd(item.unitPrice * item.quantity)} VND
@@ -104,6 +109,9 @@ function CartItemRow({
           <p className="text-sm font-semibold">{item.name}</p>
           {item.selectedSausageLabel ? (
             <p className="mt-1 text-xs text-white/50">{item.selectedSausageLabel}</p>
+          ) : null}
+          {item.selectedOptionLabels?.length ? (
+            <p className="mt-1 text-xs text-white/50">+ {item.selectedOptionLabels.join(", ")}</p>
           ) : null}
           <p className="mt-2 text-sm text-amber-200">{formatVnd(item.unitPrice)} VND</p>
         </div>
@@ -170,13 +178,14 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     setCheckoutStep("cart");
   }, []);
 
-  const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string, options?: { openCart?: boolean }) => {
-    const price = selectedCartPrice(item, selectedSausageId);
+  const addItemToCart = useCallback((item: PosterFoodMenuItem, selectedSausageId: string, options?: { openCart?: boolean; selectedOptionIds?: string[] }) => {
+    const selectedOptionIds = options?.selectedOptionIds ?? [];
+    const price = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
     if (price.unitPrice <= 0) {
       return "Для этой позиции не удалось определить цену.";
     }
 
-    const key = cartKey(item.id, price.selectedSausageId);
+    const key = cartKey(item.id, price.selectedSausageId, selectedOptionIds);
     setCartItems((current) => {
       const existing = current.find((entry) => entry.key === key);
       if (existing) {
@@ -194,6 +203,8 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
           unitPrice: price.unitPrice,
           selectedSausageId: price.selectedSausageId,
           selectedSausageLabel: price.selectedSausageLabel,
+          selectedOptionIds: price.selectedOptionIds,
+          selectedOptionLabels: price.selectedOptionLabels,
         },
       ];
     });

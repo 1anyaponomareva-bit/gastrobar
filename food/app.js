@@ -139,6 +139,37 @@ const CLASSIC_HOT_DOG_SAUSAGE_OPTIONS = [
   },
 ];
 
+const BUILD_YOUR_OWN_SAUSAGE_OPTIONS = [
+  {
+    id: "standard-pork",
+    label: "Классическая свиная сосиска",
+    shortLabel: "Классическая свиная сосиска",
+    price: 60000,
+    grammage: "60 г",
+  },
+  {
+    id: "craft-chicken",
+    label: "Куриная крафтовая сосиска",
+    shortLabel: "Куриная крафтовая сосиска",
+    price: 90000,
+    grammage: "140 г",
+  },
+  {
+    id: "craft-pork",
+    label: "Свиная крафтовая сосиска",
+    shortLabel: "Свиная крафтовая сосиска",
+    price: 90000,
+    grammage: "140 г",
+  },
+  {
+    id: "craft-pork-cheese",
+    label: "Свиная крафтовая сосиска с сыром",
+    shortLabel: "Свиная крафтовая сосиска с сыром",
+    price: 90000,
+    grammage: "140 г",
+  },
+];
+
 const WINGS_SAUCE_OPTIONS = [
   { id: "classic", label: "Классические" },
   { id: "bbq", label: "Барбекю" },
@@ -248,11 +279,11 @@ const MENU_ITEMS = [
   // ——— ХОТ-ДОГИ ———
   {
     id: "simple-hot-dog",
-    name: "Классический",
-    description: "Сосиска, булка, кетчуп.",
+    name: "Собери свой Hot Dog",
+    description: "Выберите сосиску, добавки и соусы по своему вкусу.",
     price: 60000,
     category: "hot-dogs",
-    hotDogNoSausage: true,
+    sausageOptions: BUILD_YOUR_OWN_SAUSAGE_OPTIONS,
     image: IMG("KIDS-HOT-DOG.png"),
     edgeFade: false,
   },
