@@ -477,7 +477,7 @@ const MENU_ITEMS = [
     price: null,
     category: "kids",
     badge: "hit",
-    image: IMG("KIDS-COMBO-NUGGETS.png"),
+    image: IMG("KIDS-COMBO-NUGGETS+.png?v=20260726-01"),
   },
   {
     id: "kids-hot-dog-combo",
@@ -486,7 +486,7 @@ const MENU_ITEMS = [
     price: null,
     category: "kids",
     badge: "hit",
-    image: IMG("KIDS-COMBO-SAUSAGE.png"),
+    image: IMG("KIDS-COMBO-SAUSAGE.png?v=20260726-01"),
     imageFocusY: 52,
   },
   // ——— ГРИЛЬ ———
