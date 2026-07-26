@@ -453,10 +453,10 @@ const MENU_ITEMS = [
     id: "hot-dog-combo",
     name: "Hot Dog Combo",
     description: "Датский Hot Dog, картофель фри и напиток.",
-    price: null,
+    price: 140000,
     category: "combos",
     badge: "hit",
-    image: IMG("hot-dog_combo.png"),
+    image: IMG("COMBO_hotdog.png?v=20260726-01"),
   },
   {
     id: "cheese-steak-dog-combo",
