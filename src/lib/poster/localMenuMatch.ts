@@ -114,7 +114,7 @@ const BAR_POSTER_ALIASES: Array<[string, string]> = [
   ["SCHWEPPES GINGER ALE", "schweppes-red"],
   ["SCHWEPPES TONIС", "schweppes-tonic-yellow"],
   ["SCHWEPPES TONIC", "schweppes-tonic-yellow"],
-  "SCHWEPPES SODA", "schweppes-soda-grey"],
+  ["SCHWEPPES SODA", "schweppes-soda-grey"],
   ["MELON PAPAYA", "lemonade-melon-papaya"],
   ["MELONPAPAYA", "lemonade-melon-papaya"],
   ["LEMONADE MELON PAPAYA", "lemonade-melon-papaya"],
