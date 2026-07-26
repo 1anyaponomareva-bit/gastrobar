@@ -16,8 +16,8 @@ import {
   HOT_DOG_SAUCES,
   HOT_DOG_TOPPINGS,
   isBuildYourOwnHotDog,
-  type BuildYourOwnHotDogOption,
 } from "@/lib/poster/buildYourOwnHotDog";
+import { BuildYourOwnHotDogBuilder } from "@/components/poster-test/BuildYourOwnHotDogBuilder";
 
 const CATEGORY_LABELS: Record<string, string> = {
   appetizers: "Закуски",
@@ -182,129 +182,47 @@ function HotDogDetailPanel({
   item,
   selectedSausageId,
   onSelectSausage,
-  selectedOptionIds,
-  onToggleOption,
 }: {
   item: PosterFoodMenuItem;
   selectedSausageId: string;
   onSelectSausage: (id: string) => void;
-  selectedOptionIds: string[];
-  onToggleOption: (id: string, group: "toppings" | "sauces") => void;
 }) {
   const options = getHotDogSausageOptions(item);
   const hasSausage = options.length > 0;
   const selected =
     options.find((option) => option.id === selectedSausageId) ?? options[0] ?? null;
 
-  const selectedPrice = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
+  const selectedPrice = selectedCartPrice(item, selectedSausageId);
   const priceLabel = `${formatVnd(selectedPrice.unitPrice)} VND`;
-  const isBuildYourOwn = isBuildYourOwnHotDog(item.id);
-
-  function OptionGroup({
-    title,
-    options: groupOptions,
-    max,
-    group,
-  }: {
-    title: string;
-    options: BuildYourOwnHotDogOption[];
-    max: number;
-    group: "toppings" | "sauces";
-  }) {
-    const selectedCount = groupOptions.filter((option) =>
-      selectedOptionIds.includes(option.id),
-    ).length;
-    return (
-      <section className="mt-5 border-t border-white/10 pt-4">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-white">{title}</h3>
-          <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-white/55">
-            Необязательно, до {max}
-          </span>
-        </div>
-        <div className="space-y-1">
-          {groupOptions.map((option) => {
-            const active = selectedOptionIds.includes(option.id);
-            const disabled = !active && selectedCount >= max;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left disabled:opacity-35"
-                disabled={disabled}
-                aria-pressed={active}
-                onClick={() => onToggleOption(option.id, group)}
-              >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                    active ? "border-amber-300 bg-amber-300 text-black" : "border-white/25"
-                  }`}
-                >
-                  {active ? "✓" : ""}
-                </span>
-                <span className="min-w-0 flex-1 text-sm text-white/80">{option.label}</span>
-                <span className="text-xs text-white/55">
-                  {option.price > 0 ? `+${formatVnd(option.price)}` : ""}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-    );
-  }
 
   return (
     <>
       <h2 className="detail-info__title">{displayFoodName(item)}</h2>
-      {isBuildYourOwn ? (
-        <p className="detail-info__desc">
-          Базовая цена {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)} VND. Выберите сосиску,
-          добавки и соусы.
-        </p>
-      ) : (
+      {hasSausage ? (
         <>
-          {hasSausage ? (
-            <>
-              <p className="detail-info__sausage" id="detail-hotdog-sausage-label">
-                {selected?.label ?? ""}
-              </p>
-              <p className="detail-info__grammage" id="detail-hotdog-grammage">
-                {selected?.grammage ?? ""}
-              </p>
-            </>
-          ) : item.grammage ? (
-            <p className="detail-info__grammage">{item.grammage}</p>
-          ) : null}
-          <p className="detail-info__desc">{item.description || ""}</p>
+          <p className="detail-info__sausage" id="detail-hotdog-sausage-label">
+            {selected?.label ?? ""}
+          </p>
+          <p className="detail-info__grammage" id="detail-hotdog-grammage">
+            {selected?.grammage ?? ""}
+          </p>
         </>
-      )}
+      ) : item.grammage ? (
+        <p className="detail-info__grammage">{item.grammage}</p>
+      ) : null}
+      <p className="detail-info__desc">{item.description || ""}</p>
       {hasSausage ? (
         <div
           className="detail-sausage-picker"
           id="detail-sausage-picker"
           aria-label="Выберите сосиску"
         >
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <p className="detail-sausage-picker__title">Сосиска</p>
-            {isBuildYourOwn ? (
-              <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] text-emerald-300">
-                Выберите 1
-              </span>
-            ) : null}
-          </div>
+          <p className="detail-sausage-picker__title">Выберите сосиску</p>
           <div className="detail-sausage-picker__options">
             {options.map((option) => {
-              const addon =
-                option.addon ??
-                Math.max(0, option.price - (item.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE));
-              const meta = isBuildYourOwn
-                ? [option.grammage, addon > 0 ? `+${formatVnd(addon)}` : null]
-                    .filter(Boolean)
-                    .join(" · ")
-                : [option.grammage, `${formatVnd(option.price)} VND`]
-                    .filter(Boolean)
-                    .join(" · ");
+              const meta = [option.grammage, `${formatVnd(option.price)} VND`]
+                .filter(Boolean)
+                .join(" · ");
               const active = option.id === (selected?.id ?? "");
               return (
                 <button
@@ -324,12 +242,6 @@ function HotDogDetailPanel({
             })}
           </div>
         </div>
-      ) : null}
-      {isBuildYourOwn ? (
-        <>
-          <OptionGroup title="Добавки" options={HOT_DOG_TOPPINGS} max={3} group="toppings" />
-          <OptionGroup title="Соусы" options={HOT_DOG_SAUCES} max={5} group="sauces" />
-        </>
       ) : null}
       <p className="detail-info__price" id={hasSausage ? "detail-hotdog-price" : "detail-item-price"}>
         {priceLabel}
@@ -384,6 +296,12 @@ export function PosterTestFoodMenu() {
     const options = getHotDogSausageOptions(detailItem);
     setSelectedSausageId(options[0]?.id ?? "standard-pork");
     setSelectedOptionIds([]);
+    setAddToCartError(null);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [detailItem]);
 
   const categories = useMemo(
@@ -534,9 +452,13 @@ export function PosterTestFoodMenu() {
                         {!isHotDogPicker && !isBuildYourOwnHotDog(item.id) && item.grammage ? (
                           <p className="menu-card__grammage">{item.grammage}</p>
                         ) : null}
-                        {!isBuildYourOwnHotDog(item.id) ? (
+                        {isBuildYourOwnHotDog(item.id) ? (
+                          <p className="menu-card__desc menu-card__desc--cta">
+                            Нажми на карточку и собери свой Hot Dog: сосиска, добавки и соусы
+                          </p>
+                        ) : (
                           <p className="menu-card__desc">{item.description || ""}</p>
-                        ) : null}
+                        )}
                         {hasSausageModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
                           <div className="menu-card__price-action">
@@ -596,52 +518,65 @@ export function PosterTestFoodMenu() {
       </main>
 
       <div
-        className={`detail-overlay${detailItem ? "" : " is-hidden"}`}
+        className={`detail-overlay${detailItem ? "" : " is-hidden"}${
+          detailItem && isBuildYourOwnHotDog(detailItem.id) ? " detail-overlay--byo" : ""
+        }`}
         aria-hidden={!detailItem}
       >
         {detailItem ? (
-          <>
-            <button
-              type="button"
-              className="detail-back"
-              aria-label="Назад"
-              onClick={() => setDetailItem(null)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div className="detail-stage poster-test-detail-stage">
-              <div className="detail-image-wrap poster-test-detail-image-wrap">
-                {detailItem.image ? (
-                  <img src={getAssetUrl(detailItem.image)} alt="" />
-                ) : (
-                  <div className="detail-no-image">нет изображения</div>
-                )}
-              </div>
-              <div className="poster-test-detail-panel">
-                <div className="detail-info poster-test-detail-info">
-                  <HotDogDetailPanel
-                    item={detailItem}
-                    selectedSausageId={selectedSausageId}
-                    onSelectSausage={setSelectedSausageId}
-                    selectedOptionIds={selectedOptionIds}
-                    onToggleOption={toggleBuildYourOwnOption}
-                  />
-                  <button
-                    type="button"
-                    className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
-                    onClick={addDetailItemToCart}
-                  >
-                    Добавить в корзину
-                  </button>
-                  {addToCartError ? (
-                    <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
-                  ) : null}
+          isBuildYourOwnHotDog(detailItem.id) ? (
+            <BuildYourOwnHotDogBuilder
+              item={detailItem}
+              selectedSausageId={selectedSausageId}
+              selectedOptionIds={selectedOptionIds}
+              addToCartError={addToCartError}
+              onSelectSausage={setSelectedSausageId}
+              onToggleOption={toggleBuildYourOwnOption}
+              onAddToCart={addDetailItemToCart}
+              onClose={() => setDetailItem(null)}
+            />
+          ) : (
+            <>
+              <button
+                type="button"
+                className="detail-back"
+                aria-label="Назад"
+                onClick={() => setDetailItem(null)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="detail-stage poster-test-detail-stage">
+                <div className="detail-image-wrap poster-test-detail-image-wrap">
+                  {detailItem.image ? (
+                    <img src={getAssetUrl(detailItem.image)} alt="" />
+                  ) : (
+                    <div className="detail-no-image">нет изображения</div>
+                  )}
+                </div>
+                <div className="poster-test-detail-panel">
+                  <div className="detail-info poster-test-detail-info">
+                    <HotDogDetailPanel
+                      item={detailItem}
+                      selectedSausageId={selectedSausageId}
+                      onSelectSausage={setSelectedSausageId}
+                    />
+                    <button
+                      type="button"
+                      className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
+                      onClick={addDetailItemToCart}
+                    >
+                      Добавить в корзину
+                    </button>
+                    {addToCartError ? (
+                      <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
+            </>
+          )
         ) : null}
       </div>
     </>

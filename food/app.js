@@ -1094,7 +1094,7 @@ function renderMenuCard(item, index) {
           ${itemNameHtml(item, "menu-card__name")}
           ${
             item.buildYourOwn || item.id === "simple-hot-dog"
-              ? ""
+              ? `<p class="menu-card__desc menu-card__desc--cta">Нажми на карточку и собери свой Hot Dog: сосиска, добавки и соусы</p>`
               : `${grammageHtml(item, "menu-card__grammage")}
           <p class="menu-card__desc">${item.description || ""}</p>`
           }
