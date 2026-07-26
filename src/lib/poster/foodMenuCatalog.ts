@@ -253,7 +253,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     name: "Детский комбо с наггетсами",
     description:
       "Наггетсы, картофель фри, сок или напиток и игрушка-сюрприз.",
-    price: null,
+    price: 140000,
     category: "kids",
     badge: "hit",
     image: foodMenuImage("KIDS-COMBO-NUGGETS+.png?v=20260726-01"),
@@ -262,7 +262,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     id: "kids-hot-dog-combo",
     name: "Детский комбо с Hot Dog",
     description: "Классический Hot Dog, картофель фри и игрушка-сюрприз.",
-    price: null,
+    price: 140000,
     category: "kids",
     badge: "hit",
     image: foodMenuImage("KIDS-COMBO-SAUSAGE.png?v=20260726-01"),
