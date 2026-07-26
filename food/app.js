@@ -476,6 +476,15 @@ const MENU_ITEMS = [
     badge: "hit",
     image: IMG("wings_combo.png"),
   },
+  {
+    id: "family-combo",
+    name: "Семейное комбо",
+    description: "Большой набор для компании: горячие блюда, гарнир и напитки.",
+    price: 550000,
+    category: "combos",
+    badge: "hit",
+    image: IMG("family_combo.png?v=20260726-01"),
+  },
 
   // ——— ДЕТСКИЕ КОМБО ———
   {

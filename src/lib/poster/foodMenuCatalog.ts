@@ -258,6 +258,15 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     image: foodMenuImage("wings_combo.png"),
   },
   {
+    id: "family-combo",
+    name: "Семейное комбо",
+    description: "Большой набор для компании: горячие блюда, гарнир и напитки.",
+    price: 550000,
+    category: "combos",
+    badge: "hit",
+    image: foodMenuImage("family_combo.png?v=20260726-01"),
+  },
+  {
     id: "kids-nuggets-combo",
     name: "Детский комбо с наггетсами",
     description:
