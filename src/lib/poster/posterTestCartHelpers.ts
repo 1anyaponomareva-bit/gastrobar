@@ -1,5 +1,10 @@
 import type { HotDogSausageOption, PosterFoodMenuItem } from "@/lib/poster/mapProducts";
-import { getBuildYourOwnOptions } from "@/lib/poster/buildYourOwnHotDog";
+import {
+  BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
+  getBuildYourOwnOptions,
+  getBuildYourOwnSausageOptions,
+  isBuildYourOwnHotDog,
+} from "@/lib/poster/buildYourOwnHotDog";
 
 const HOT_DOG_LABEL = "Hot Dog";
 
@@ -39,6 +44,10 @@ export function displayFoodName(item: PosterFoodMenuItem): string {
 
 export function getHotDogSausageOptions(item: PosterFoodMenuItem): HotDogSausageOption[] {
   if (item.hotDogNoSausage) return [];
+  if (isBuildYourOwnHotDog(item.id)) {
+    if (item.sausageOptions && item.sausageOptions.length > 0) return item.sausageOptions;
+    return getBuildYourOwnSausageOptions(item.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
+  }
   return item.sausageOptions ?? [];
 }
 

@@ -4,7 +4,48 @@ export type BuildYourOwnHotDogOption = {
   price: number;
 };
 
+export type BuildYourOwnHotDogSausage = {
+  id: string;
+  label: string;
+  shortLabel: string;
+  grammage: string;
+  /** Доплата к базовой цене 60.000 */
+  addon: number;
+};
+
 export const BUILD_YOUR_OWN_HOT_DOG_ID = "simple-hot-dog";
+export const BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE = 60000;
+
+export const HOT_DOG_SAUSAGES: BuildYourOwnHotDogSausage[] = [
+  {
+    id: "standard-pork",
+    label: "Классическая свиная сосиска",
+    shortLabel: "Классическая свиная сосиска",
+    grammage: "60 г",
+    addon: 0,
+  },
+  {
+    id: "craft-chicken",
+    label: "Куриная крафтовая сосиска",
+    shortLabel: "Куриная крафтовая сосиска",
+    grammage: "140 г",
+    addon: 30000,
+  },
+  {
+    id: "craft-pork",
+    label: "Свиная крафтовая сосиска",
+    shortLabel: "Свиная крафтовая сосиска",
+    grammage: "140 г",
+    addon: 30000,
+  },
+  {
+    id: "craft-pork-cheese",
+    label: "Свиная крафтовая сосиска с сыром",
+    shortLabel: "Свиная крафтовая сосиска с сыром",
+    grammage: "140 г",
+    addon: 30000,
+  },
+];
 
 export const HOT_DOG_TOPPINGS: BuildYourOwnHotDogOption[] = [
   { id: "fried-onion", label: "Жареный лук", price: 15000 },
@@ -28,6 +69,21 @@ export const HOT_DOG_SAUCES: BuildYourOwnHotDogOption[] = [
   { id: "tartar", label: "Тартар", price: 10000 },
   { id: "tomato-herbs", label: "Томатный с травами", price: 10000 },
 ];
+
+export function isBuildYourOwnHotDog(itemId: string): boolean {
+  return itemId === BUILD_YOUR_OWN_HOT_DOG_ID;
+}
+
+export function getBuildYourOwnSausageOptions(basePrice = BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE) {
+  return HOT_DOG_SAUSAGES.map((sausage) => ({
+    id: sausage.id,
+    label: sausage.label,
+    shortLabel: sausage.shortLabel,
+    grammage: sausage.grammage,
+    price: basePrice + sausage.addon,
+    addon: sausage.addon,
+  }));
+}
 
 export function getBuildYourOwnOptions(ids: string[]): BuildYourOwnHotDogOption[] {
   const byId = new Map(

@@ -145,6 +145,7 @@ const BUILD_YOUR_OWN_SAUSAGE_OPTIONS = [
     label: "Классическая свиная сосиска",
     shortLabel: "Классическая свиная сосиска",
     price: 60000,
+    addon: 0,
     grammage: "60 г",
   },
   {
@@ -152,6 +153,7 @@ const BUILD_YOUR_OWN_SAUSAGE_OPTIONS = [
     label: "Куриная крафтовая сосиска",
     shortLabel: "Куриная крафтовая сосиска",
     price: 90000,
+    addon: 30000,
     grammage: "140 г",
   },
   {
@@ -159,6 +161,7 @@ const BUILD_YOUR_OWN_SAUSAGE_OPTIONS = [
     label: "Свиная крафтовая сосиска",
     shortLabel: "Свиная крафтовая сосиска",
     price: 90000,
+    addon: 30000,
     grammage: "140 г",
   },
   {
@@ -166,8 +169,32 @@ const BUILD_YOUR_OWN_SAUSAGE_OPTIONS = [
     label: "Свиная крафтовая сосиска с сыром",
     shortLabel: "Свиная крафтовая сосиска с сыром",
     price: 90000,
+    addon: 30000,
     grammage: "140 г",
   },
+];
+
+const BUILD_YOUR_OWN_TOPPINGS = [
+  { id: "fried-onion", label: "Жареный лук", price: 15000 },
+  { id: "pickled-onion", label: "Маринованный лук", price: 15000 },
+  { id: "crispy-onion", label: "Хрустящий лук", price: 15000 },
+  { id: "sour-cabbage", label: "Квашеная капуста", price: 20000 },
+  { id: "pickles", label: "Маринованные огурцы", price: 15000 },
+  { id: "jalapeno", label: "Халапеньо", price: 20000 },
+  { id: "crispy-bacon", label: "Хрустящий бекон", price: 25000 },
+];
+
+const BUILD_YOUR_OWN_SAUCES = [
+  { id: "mayonnaise", label: "Майонез", price: 0 },
+  { id: "ketchup", label: "Кетчуп", price: 0 },
+  { id: "mustard", label: "Горчица", price: 10000 },
+  { id: "honey-mustard", label: "Медовая горчица", price: 10000 },
+  { id: "bbq", label: "BBQ", price: 10000 },
+  { id: "cheese", label: "Сырный", price: 15000 },
+  { id: "sriracha", label: "Шрирача", price: 10000 },
+  { id: "sweet-chilli", label: "Сладкий чили", price: 10000 },
+  { id: "tartar", label: "Тартар", price: 10000 },
+  { id: "tomato-herbs", label: "Томатный с травами", price: 10000 },
 ];
 
 const WINGS_SAUCE_OPTIONS = [
@@ -283,7 +310,9 @@ const MENU_ITEMS = [
     description: "Выберите сосиску, добавки и соусы по своему вкусу.",
     price: 60000,
     category: "hot-dogs",
+    hotDogPrefix: false,
     sausageOptions: BUILD_YOUR_OWN_SAUSAGE_OPTIONS,
+    buildYourOwn: true,
     image: IMG("KIDS-HOT-DOG.png"),
     edgeFade: false,
   },
@@ -699,6 +728,9 @@ function getHotDogSausagePriceRange(options) {
 }
 
 function formatHotDogListPrice(item) {
+  if (item.buildYourOwn || item.id === "simple-hot-dog") {
+    return formatVnd(item.price ?? 60000);
+  }
   if (item.priceMin != null && item.priceMax != null) {
     return formatItemPrice(item);
   }
@@ -713,6 +745,7 @@ function hotDogCardPriceLabel(item) {
 }
 
 function hasPickerCardLayout(item) {
+  if (item.buildYourOwn || item.id === "simple-hot-dog") return false;
   if (item.sauceOptions === true) return true;
   if (item.category === "hot-dogs") {
     return getHotDogSausageOptions(item).length > 0;
@@ -1024,7 +1057,10 @@ function renderMenuCard(item, index) {
       : `${formatItemPrice(item)} VND`;
   const hitHtml = item.badge === "hit" ? hitBadgeHtml("Хит") : "";
   const sausageNoteHtml =
-    item.category === "hot-dogs" && getHotDogSausageOptions(item).length > 0
+    item.category === "hot-dogs" &&
+    !item.buildYourOwn &&
+    item.id !== "simple-hot-dog" &&
+    getHotDogSausageOptions(item).length > 0
       ? renderHotDogSausageListNote(item)
       : item.sauceOptions
         ? renderSauceListNote()
@@ -1056,8 +1092,12 @@ function renderMenuCard(item, index) {
         ${headerHtml}
         <div class="menu-card__content">
           ${itemNameHtml(item, "menu-card__name")}
-          ${grammageHtml(item, "menu-card__grammage")}
-          <p class="menu-card__desc">${item.description || ""}</p>
+          ${
+            item.buildYourOwn || item.id === "simple-hot-dog"
+              ? ""
+              : `${grammageHtml(item, "menu-card__grammage")}
+          <p class="menu-card__desc">${item.description || ""}</p>`
+          }
           ${sausageNoteHtml}
           <span class="menu-card__price">${priceLabel}</span>
         </div>
@@ -1121,8 +1161,44 @@ function renderMenuList() {
   });
 }
 
+function renderBuildYourOwnExtrasHtml() {
+  const toppingRows = BUILD_YOUR_OWN_TOPPINGS.map(
+    (o) => `
+      <button type="button" class="detail-extra-option" data-extra="${o.id}" data-extra-group="toppings" data-extra-price="${o.price}" aria-pressed="false">
+        <span class="detail-extra-option__check" aria-hidden="true"></span>
+        <span class="detail-extra-option__label">${o.label}</span>
+        <span class="detail-extra-option__price">${o.price > 0 ? `+${formatVnd(o.price)}` : ""}</span>
+      </button>`,
+  ).join("");
+  const sauceRows = BUILD_YOUR_OWN_SAUCES.map(
+    (o) => `
+      <button type="button" class="detail-extra-option" data-extra="${o.id}" data-extra-group="sauces" data-extra-price="${o.price}" aria-pressed="false">
+        <span class="detail-extra-option__check" aria-hidden="true"></span>
+        <span class="detail-extra-option__label">${o.label}</span>
+        <span class="detail-extra-option__price">${o.price > 0 ? `+${formatVnd(o.price)}` : ""}</span>
+      </button>`,
+  ).join("");
+  return `
+    <section class="detail-extra-group" data-extra-max="3" data-extra-section="toppings">
+      <div class="detail-extra-group__head">
+        <h3 class="detail-extra-group__title">Добавки</h3>
+        <span class="detail-extra-group__badge">Необязательно, до 3</span>
+      </div>
+      <div class="detail-extra-group__list">${toppingRows}</div>
+    </section>
+    <section class="detail-extra-group" data-extra-max="5" data-extra-section="sauces">
+      <div class="detail-extra-group__head">
+        <h3 class="detail-extra-group__title">Соусы</h3>
+        <span class="detail-extra-group__badge">Необязательно, до 5</span>
+      </div>
+      <div class="detail-extra-group__list">${sauceRows}</div>
+    </section>
+  `;
+}
+
 function renderDetailContent(item) {
   const isHotDog = item.category === "hot-dogs";
+  const isBuildYourOwn = item.buildYourOwn || item.id === "simple-hot-dog";
   const hasSauce = item.sauceOptions === true;
   const sausageOptions = getHotDogSausageOptions(item);
   const hasHotDogSausage = isHotDog && sausageOptions.length > 0;
@@ -1145,16 +1221,25 @@ function renderDetailContent(item) {
   const sausagePickerHtml = hasHotDogSausage
     ? `
       <div class="detail-sausage-picker" id="detail-sausage-picker" aria-label="Выберите сосиску">
-        <p class="detail-sausage-picker__title">Выберите сосиску</p>
+        <div class="detail-extra-group__head">
+          <p class="detail-sausage-picker__title">Сосиска</p>
+          ${
+            isBuildYourOwn
+              ? `<span class="detail-extra-group__badge detail-extra-group__badge--required">Выберите 1</span>`
+              : ""
+          }
+        </div>
         <div class="detail-sausage-picker__options">
           ${sausageOptions.map((o, idx) => {
             const active = idx === 0;
-            const meta = [
-              o.grammage,
-              o.price != null ? `${formatVnd(o.price)} VND` : "",
-            ]
-              .filter(Boolean)
-              .join(" · ");
+            const addon = o.addon ?? Math.max(0, (o.price || 0) - (item.price || 60000));
+            const meta = isBuildYourOwn
+              ? [o.grammage, addon > 0 ? `+${formatVnd(addon)}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")
+              : [o.grammage, o.price != null ? `${formatVnd(o.price)} VND` : ""]
+                  .filter(Boolean)
+                  .join(" · ");
             return `<button type="button" class="detail-sausage-option${
               active ? " is-active" : ""
             }" data-sausage="${o.id}">
@@ -1178,16 +1263,21 @@ function renderDetailContent(item) {
       ${hitHtml}
       ${itemDetailTitleHtml(item)}
       ${
-        hasHotDogSausage
-          ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
-             <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>`
-          : hasSauce
-            ? `<p class="detail-info__sausage" id="detail-sauce-label">${defaultSauce?.label || ""}</p>
-               ${grammageHtml(item, "detail-info__grammage")}`
-            : grammageHtml(item, "detail-info__grammage")
+        isBuildYourOwn
+          ? `<p class="detail-info__desc">Базовая цена ${formatVnd(item.price || 60000)} VND. Выберите сосиску, добавки и соусы.</p>`
+          : hasHotDogSausage
+            ? `<p class="detail-info__sausage" id="detail-hotdog-sausage-label">${defaultSausageLabel}</p>
+             <p class="detail-info__grammage" id="detail-hotdog-grammage">${defaultSausage?.grammage || ""}</p>
+             <p class="detail-info__desc">${item.description || ""}</p>`
+            : hasSauce
+              ? `<p class="detail-info__sausage" id="detail-sauce-label">${defaultSauce?.label || ""}</p>
+               ${grammageHtml(item, "detail-info__grammage")}
+               <p class="detail-info__desc">${item.description || ""}</p>`
+              : `${grammageHtml(item, "detail-info__grammage")}
+               <p class="detail-info__desc">${item.description || ""}</p>`
       }
-      <p class="detail-info__desc">${item.description || ""}</p>
       ${sausagePickerHtml}
+      ${isBuildYourOwn ? renderBuildYourOwnExtrasHtml() : ""}
       <p class="detail-info__price" id="${hasHotDogSausage ? "detail-hotdog-price" : "detail-item-price"}">${priceLabel}</p>
     </div>
   `;
@@ -1199,12 +1289,18 @@ function bindHotDogSausagePicker(item) {
   const labelEl = document.getElementById("detail-hotdog-sausage-label");
   const grammageEl = document.getElementById("detail-hotdog-grammage");
   const priceEl = document.getElementById("detail-hotdog-price");
-  if (!picker || !labelEl) return;
+  if (!picker) return;
 
   const buttons = Array.from(
     picker.querySelectorAll("[data-sausage]"),
   );
   if (buttons.length === 0) return;
+
+  const extrasTotal = () =>
+    Array.from(document.querySelectorAll(".detail-extra-option.is-active")).reduce(
+      (sum, btn) => sum + (Number(btn.getAttribute("data-extra-price")) || 0),
+      0,
+    );
 
   const setSelected = (id) => {
     buttons.forEach((btn) => {
@@ -1213,10 +1309,10 @@ function bindHotDogSausagePicker(item) {
     });
     const opt = options.find((o) => o.id === id);
     if (opt) {
-      labelEl.textContent = opt.label;
+      if (labelEl) labelEl.textContent = opt.label;
       if (grammageEl) grammageEl.textContent = opt.grammage || "";
       if (priceEl && opt.price != null) {
-        priceEl.textContent = `${formatVnd(opt.price)} VND`;
+        priceEl.textContent = `${formatVnd(opt.price + extrasTotal())} VND`;
       }
     }
   };
@@ -1227,6 +1323,49 @@ function bindHotDogSausagePicker(item) {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-sausage") || "standard-pork";
       setSelected(id);
+    });
+  });
+}
+
+function bindBuildYourOwnExtras(item) {
+  const priceEl = document.getElementById("detail-hotdog-price");
+  const options = getHotDogSausageOptions(item);
+  const buttons = Array.from(document.querySelectorAll(".detail-extra-option"));
+  if (!priceEl || buttons.length === 0) return;
+
+  const selectedSausagePrice = () => {
+    const active = document.querySelector("#detail-sausage-picker .detail-sausage-option.is-active");
+    const id = active?.getAttribute("data-sausage") || options[0]?.id;
+    return options.find((o) => o.id === id)?.price ?? item.price ?? 60000;
+  };
+
+  const updatePrice = () => {
+    const extras = buttons
+      .filter((btn) => btn.classList.contains("is-active"))
+      .reduce((sum, btn) => sum + (Number(btn.getAttribute("data-extra-price")) || 0), 0);
+    priceEl.textContent = `${formatVnd(selectedSausagePrice() + extras)} VND`;
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const group = btn.getAttribute("data-extra-group");
+      const section = document.querySelector(`[data-extra-section="${group}"]`);
+      const max = Number(section?.getAttribute("data-extra-max") || 0);
+      const active = btn.classList.contains("is-active");
+      if (active) {
+        btn.classList.remove("is-active");
+        btn.setAttribute("aria-pressed", "false");
+      } else {
+        const selectedCount = buttons.filter(
+          (entry) =>
+            entry.getAttribute("data-extra-group") === group &&
+            entry.classList.contains("is-active"),
+        ).length;
+        if (selectedCount >= max) return;
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-pressed", "true");
+      }
+      updatePrice();
     });
   });
 }
@@ -1268,6 +1407,9 @@ function openDetail(index) {
   detailIndex = index;
   stage.innerHTML = renderDetailContent(item);
   bindHotDogSausagePicker(item);
+  if (item.buildYourOwn || item.id === "simple-hot-dog") {
+    bindBuildYourOwnExtras(item);
+  }
   bindSaucePicker();
   bindDetailFavorite(item);
   overlay.classList.remove("is-hidden", "is-closing");

@@ -1,4 +1,9 @@
 import type { LocalFoodCatalogItem } from "./foodMenuCatalog";
+import {
+  BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
+  getBuildYourOwnSausageOptions,
+  isBuildYourOwnHotDog,
+} from "./buildYourOwnHotDog";
 import { LOCAL_HOT_DOG_CONFIG } from "./foodHotDogConfig";
 import { extractPosterPrice } from "./posterPrice";
 import type { PosterDishModification, PosterGroupModification, PosterProduct } from "./types";
@@ -10,6 +15,7 @@ export type HotDogSausageOption = {
   price: number;
   grammage?: string;
   posterModifierId?: string;
+  addon?: number;
 };
 
 export type EnrichedHotDogFields = {
@@ -72,6 +78,7 @@ function buildSausageOptions(
     return templates.map((template, index) => {
       const modification = modifications[index];
       const fallbackAddon = index === 0 ? 0 : craftAddon || 30000;
+      const addon = modification ? normalizeModifierAddon(modification.price) : fallbackAddon;
       return {
         id: template.id,
         label: template.label,
@@ -81,7 +88,8 @@ function buildSausageOptions(
           modification?.dish_modification_id != null
             ? String(modification.dish_modification_id)
             : undefined,
-        price: basePrice + (modification ? normalizeModifierAddon(modification.price) : fallbackAddon),
+        price: basePrice + addon,
+        addon,
       };
     });
   }
@@ -105,6 +113,7 @@ function buildSausageOptions(
       posterModifierId:
         craftMods[0]?.dish_modification_id != null ? String(craftMods[0].dish_modification_id) : undefined,
       price: basePrice + craftAddon,
+      addon: craftAddon,
     },
   ];
 }
@@ -120,6 +129,28 @@ export function enrichHotDogFromPoster(
   const basePrice = Number(extractPosterPrice(product)) || 0;
   const sausageGroup = findSausageGroup(product);
   const modifications = sausageGroup?.modifications ?? [];
+
+  if (isBuildYourOwnHotDog(local.id)) {
+    const resolvedBase =
+      basePrice > 0 ? basePrice : (local.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
+    const sausageOptions = getBuildYourOwnSausageOptions(resolvedBase).map((option, index) => ({
+      ...option,
+      posterModifierId:
+        modifications[index]?.dish_modification_id != null
+          ? String(modifications[index].dish_modification_id)
+          : undefined,
+    }));
+    return {
+      ...item,
+      hotDogNoSausage: false,
+      hotDogPrefix: false,
+      sausageOptions,
+      price: BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
+      priceMin: undefined,
+      priceMax: undefined,
+      grammage: undefined,
+    };
+  }
 
   if (config.hotDogNoSausage) {
     const addon = modifications[0] ? normalizeModifierAddon(modifications[0].price) : 0;

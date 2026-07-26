@@ -12,9 +12,10 @@ import {
   selectedCartPrice,
 } from "@/lib/poster/posterTestCartHelpers";
 import {
-  BUILD_YOUR_OWN_HOT_DOG_ID,
+  BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
   HOT_DOG_SAUCES,
   HOT_DOG_TOPPINGS,
+  isBuildYourOwnHotDog,
   type BuildYourOwnHotDogOption,
 } from "@/lib/poster/buildYourOwnHotDog";
 
@@ -47,6 +48,9 @@ function formatItemPrice(item: PosterFoodMenuItem): string {
 }
 
 function formatHotDogListPrice(item: PosterFoodMenuItem): string {
+  if (isBuildYourOwnHotDog(item.id)) {
+    return formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
+  }
   const options = getHotDogSausageOptions(item);
   if (options.length > 0) {
     const prices = options.map((option) => option.price);
@@ -59,7 +63,12 @@ function formatHotDogListPrice(item: PosterFoodMenuItem): string {
 }
 
 function hasSausageModifierPicker(item: PosterFoodMenuItem): boolean {
+  if (isBuildYourOwnHotDog(item.id)) return false;
   return getHotDogSausageOptions(item).length > 0;
+}
+
+function needsDetailBuilder(item: PosterFoodMenuItem): boolean {
+  return isBuildYourOwnHotDog(item.id) || getHotDogSausageOptions(item).length > 0;
 }
 
 function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
@@ -189,11 +198,11 @@ function HotDogDetailPanel({
 
   const selectedPrice = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
   const priceLabel = `${formatVnd(selectedPrice.unitPrice)} VND`;
-  const isBuildYourOwn = item.id === BUILD_YOUR_OWN_HOT_DOG_ID;
+  const isBuildYourOwn = isBuildYourOwnHotDog(item.id);
 
   function OptionGroup({
     title,
-    options,
+    options: groupOptions,
     max,
     group,
   }: {
@@ -202,7 +211,9 @@ function HotDogDetailPanel({
     max: number;
     group: "toppings" | "sauces";
   }) {
-    const selectedCount = options.filter((option) => selectedOptionIds.includes(option.id)).length;
+    const selectedCount = groupOptions.filter((option) =>
+      selectedOptionIds.includes(option.id),
+    ).length;
     return (
       <section className="mt-5 border-t border-white/10 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -212,7 +223,7 @@ function HotDogDetailPanel({
           </span>
         </div>
         <div className="space-y-1">
-          {options.map((option) => {
+          {groupOptions.map((option) => {
             const active = selectedOptionIds.includes(option.id);
             const disabled = !active && selectedCount >= max;
             return (
@@ -233,7 +244,7 @@ function HotDogDetailPanel({
                 </span>
                 <span className="min-w-0 flex-1 text-sm text-white/80">{option.label}</span>
                 <span className="text-xs text-white/55">
-                  {option.price > 0 ? `+${formatVnd(option.price)}` : "0"}
+                  {option.price > 0 ? `+${formatVnd(option.price)}` : ""}
                 </span>
               </button>
             );
@@ -246,31 +257,54 @@ function HotDogDetailPanel({
   return (
     <>
       <h2 className="detail-info__title">{displayFoodName(item)}</h2>
-      {hasSausage ? (
+      {isBuildYourOwn ? (
+        <p className="detail-info__desc">
+          Базовая цена {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)} VND. Выберите сосиску,
+          добавки и соусы.
+        </p>
+      ) : (
         <>
-          <p className="detail-info__sausage" id="detail-hotdog-sausage-label">
-            {selected?.label ?? ""}
-          </p>
-          <p className="detail-info__grammage" id="detail-hotdog-grammage">
-            {selected?.grammage ?? ""}
-          </p>
+          {hasSausage ? (
+            <>
+              <p className="detail-info__sausage" id="detail-hotdog-sausage-label">
+                {selected?.label ?? ""}
+              </p>
+              <p className="detail-info__grammage" id="detail-hotdog-grammage">
+                {selected?.grammage ?? ""}
+              </p>
+            </>
+          ) : item.grammage ? (
+            <p className="detail-info__grammage">{item.grammage}</p>
+          ) : null}
+          <p className="detail-info__desc">{item.description || ""}</p>
         </>
-      ) : item.grammage ? (
-        <p className="detail-info__grammage">{item.grammage}</p>
-      ) : null}
-      <p className="detail-info__desc">{item.description || ""}</p>
+      )}
       {hasSausage ? (
         <div
           className="detail-sausage-picker"
           id="detail-sausage-picker"
           aria-label="Выберите сосиску"
         >
-          <p className="detail-sausage-picker__title">Выберите сосиску</p>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="detail-sausage-picker__title">Сосиска</p>
+            {isBuildYourOwn ? (
+              <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] text-emerald-300">
+                Выберите 1
+              </span>
+            ) : null}
+          </div>
           <div className="detail-sausage-picker__options">
-            {options.map((option, index) => {
-              const meta = [option.grammage, `${formatVnd(option.price)} VND`]
-                .filter(Boolean)
-                .join(" · ");
+            {options.map((option) => {
+              const addon =
+                option.addon ??
+                Math.max(0, option.price - (item.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE));
+              const meta = isBuildYourOwn
+                ? [option.grammage, addon > 0 ? `+${formatVnd(addon)}` : null]
+                    .filter(Boolean)
+                    .join(" · ")
+                : [option.grammage, `${formatVnd(option.price)} VND`]
+                    .filter(Boolean)
+                    .join(" · ");
               const active = option.id === (selected?.id ?? "");
               return (
                 <button
@@ -293,12 +327,7 @@ function HotDogDetailPanel({
       ) : null}
       {isBuildYourOwn ? (
         <>
-          <OptionGroup
-            title="Добавки"
-            options={HOT_DOG_TOPPINGS}
-            max={3}
-            group="toppings"
-          />
+          <OptionGroup title="Добавки" options={HOT_DOG_TOPPINGS} max={3} group="toppings" />
           <OptionGroup title="Соусы" options={HOT_DOG_SAUCES} max={5} group="sauces" />
         </>
       ) : null}
@@ -463,13 +492,13 @@ export function PosterTestFoodMenu() {
               <div className="menu-list__spacer" aria-hidden="true" />
               {visibleItems.map((item, index) => {
                 const isHotDogPicker = hasPickerCardLayout(item);
-                const needsSausagePicker = hasSausageModifierPicker(item);
+                const opensDetail = needsDetailBuilder(item);
                 const priceLabel =
                   item.category === "hot-dogs"
                     ? `${formatHotDogListPrice(item)} VND`
                     : `${formatItemPrice(item)} VND`;
                 const quickKey = quickCartKey(item);
-                const quickQuantity = needsSausagePicker ? 0 : quickCartQuantity(item);
+                const quickQuantity = opensDetail ? 0 : quickCartQuantity(item);
                 const quickPrice = selectedCartPrice(item, quickSausageId(item));
                 const canQuickAdd = quickPrice.unitPrice > 0;
 
@@ -502,11 +531,13 @@ export function PosterTestFoodMenu() {
                       </div>
                       <div className="menu-card__content">
                         <h3 className="menu-card__name">{displayFoodName(item)}</h3>
-                        {!isHotDogPicker && item.grammage ? (
+                        {!isHotDogPicker && !isBuildYourOwnHotDog(item.id) && item.grammage ? (
                           <p className="menu-card__grammage">{item.grammage}</p>
                         ) : null}
-                        <p className="menu-card__desc">{item.description || ""}</p>
-                        {needsSausagePicker ? <HotDogSausageListNote item={item} /> : null}
+                        {!isBuildYourOwnHotDog(item.id) ? (
+                          <p className="menu-card__desc">{item.description || ""}</p>
+                        ) : null}
+                        {hasSausageModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
                           <div className="menu-card__price-action">
                             <span className="menu-card__price">{priceLabel}</span>
@@ -514,9 +545,9 @@ export function PosterTestFoodMenu() {
                               item={item}
                               quantity={quickQuantity}
                               canAdd={canQuickAdd}
-                              opensPicker={needsSausagePicker}
+                              opensPicker={opensDetail}
                               onAdd={() => {
-                                if (needsSausagePicker) {
+                                if (opensDetail) {
                                   setDetailItem(item);
                                   return;
                                 }
