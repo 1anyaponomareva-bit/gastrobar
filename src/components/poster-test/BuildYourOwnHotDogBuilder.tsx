@@ -6,6 +6,7 @@ import {
   BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
   HOT_DOG_SAUCES,
   HOT_DOG_TOPPINGS,
+  getBuildYourOwnSausageOptions,
   type BuildYourOwnHotDogOption,
 } from "@/lib/poster/buildYourOwnHotDog";
 import {
@@ -14,6 +15,7 @@ import {
   getHotDogSausageOptions,
   selectedCartPrice,
 } from "@/lib/poster/posterTestCartHelpers";
+import styles from "./BuildYourOwnHotDogBuilder.module.css";
 
 type Props = {
   item: PosterFoodMenuItem;
@@ -46,17 +48,17 @@ function OptionGroup({
   const selectedCount = options.filter((option) => selectedOptionIds.includes(option.id)).length;
 
   return (
-    <section className="byo-section">
-      <div className="byo-section__head">
+    <section className={styles.section}>
+      <div className={styles.sectionHead}>
         <div>
-          <h3 className="byo-section__title">{title}</h3>
-          <p className="byo-section__hint">{hint}</p>
+          <h3 className={styles.sectionTitle}>{title}</h3>
+          <p className={styles.sectionHint}>{hint}</p>
         </div>
-        <span className="byo-section__count">
+        <span className={styles.count}>
           {selectedCount}/{max}
         </span>
       </div>
-      <div className="byo-option-list">
+      <div className={styles.optionList}>
         {options.map((option) => {
           const active = selectedOptionIds.includes(option.id);
           const disabled = !active && selectedCount >= max;
@@ -64,16 +66,16 @@ function OptionGroup({
             <button
               key={option.id}
               type="button"
-              className={`byo-option${active ? " is-active" : ""}`}
+              className={styles.option}
               disabled={disabled}
               aria-pressed={active}
               onClick={() => onToggleOption(option.id, group)}
             >
-              <span className={`byo-option__check${active ? " is-on" : ""}`} aria-hidden="true">
+              <span className={active ? styles.checkOn : styles.check} aria-hidden="true">
                 {active ? "✓" : ""}
               </span>
-              <span className="byo-option__label">{option.label}</span>
-              <span className="byo-option__price">
+              <span className={styles.optionLabel}>{option.label}</span>
+              <span className={styles.optionPrice}>
                 {option.price > 0 ? `+${formatVnd(option.price)}` : "вкл."}
               </span>
             </button>
@@ -94,10 +96,18 @@ export function BuildYourOwnHotDogBuilder({
   onAddToCart,
   onClose,
 }: Props) {
-  const options = getHotDogSausageOptions(item);
+  const fromItem = getHotDogSausageOptions(item);
+  const options =
+    fromItem.length > 0
+      ? fromItem
+      : getBuildYourOwnSausageOptions(item.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
   const selected =
     options.find((option) => option.id === selectedSausageId) ?? options[0] ?? null;
-  const price = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
+  const price = selectedCartPrice(
+    { ...item, sausageOptions: options, hotDogNoSausage: false },
+    selected?.id ?? selectedSausageId,
+    selectedOptionIds,
+  );
   const selectedExtras = [
     ...HOT_DOG_TOPPINGS.filter((option) => selectedOptionIds.includes(option.id)),
     ...HOT_DOG_SAUCES.filter((option) => selectedOptionIds.includes(option.id)),
@@ -107,40 +117,38 @@ export function BuildYourOwnHotDogBuilder({
     Math.max(0, (selected?.price ?? BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE) - BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
 
   return (
-    <div className="byo-builder">
-      <button type="button" className="byo-builder__back" aria-label="Назад" onClick={onClose}>
+    <div className={styles.root} role="dialog" aria-modal="true" aria-label={displayFoodName(item)}>
+      <button type="button" className={styles.back} aria-label="Назад" onClick={onClose}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
 
-      <div className="byo-builder__hero">
-        {item.image ? (
-          <img src={getAssetUrl(item.image)} alt="" className="byo-builder__hero-img" />
-        ) : (
-          <div className="byo-builder__hero-fallback">нет изображения</div>
-        )}
-        <div className="byo-builder__hero-shade" aria-hidden="true" />
-        <div className="byo-builder__hero-copy">
-          <p className="byo-builder__eyebrow">Конструктор</p>
-          <h2 className="byo-builder__title">{displayFoodName(item)}</h2>
-          <p className="byo-builder__lead">
-            База {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)} · выберите сосиску, добавки и соусы
-          </p>
+      <div className={styles.scroll}>
+        <div className={styles.hero}>
+          {item.image ? (
+            <img src={getAssetUrl(item.image)} alt="" className={styles.heroImg} />
+          ) : null}
+          <div className={styles.heroShade} aria-hidden="true" />
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>Конструктор</p>
+            <h2 className={styles.title}>{displayFoodName(item)}</h2>
+            <p className={styles.lead}>
+              База {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)} · сосиска, добавки и соусы
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="byo-builder__sheet">
-        <div className="byo-builder__scroll">
-          <section className="byo-section">
-            <div className="byo-section__head">
+        <div className={styles.body}>
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
               <div>
-                <h3 className="byo-section__title">1. Сосиска</h3>
-                <p className="byo-section__hint">Обязательно · выберите одну</p>
+                <h3 className={styles.sectionTitle}>1. Сосиска</h3>
+                <p className={styles.sectionHint}>Обязательно · выберите одну</p>
               </div>
-              <span className="byo-section__badge">Выберите 1</span>
+              <span className={styles.badge}>Выберите 1</span>
             </div>
-            <div className="byo-sausage-grid">
+            <div className={styles.sausageList}>
               {options.map((option) => {
                 const addon =
                   option.addon ??
@@ -150,12 +158,12 @@ export function BuildYourOwnHotDogBuilder({
                   <button
                     key={option.id}
                     type="button"
-                    className={`byo-sausage${active ? " is-active" : ""}`}
+                    className={active ? styles.sausageActive : styles.sausage}
                     aria-pressed={active}
                     onClick={() => onSelectSausage(option.id)}
                   >
-                    <span className="byo-sausage__name">{option.shortLabel || option.label}</span>
-                    <span className="byo-sausage__meta">
+                    <span className={styles.sausageName}>{option.shortLabel || option.label}</span>
+                    <span className={styles.sausageMeta}>
                       {option.grammage}
                       {addon > 0 ? ` · +${formatVnd(addon)}` : " · в базе"}
                     </span>
@@ -185,12 +193,12 @@ export function BuildYourOwnHotDogBuilder({
             onToggleOption={onToggleOption}
           />
 
-          <section className="byo-summary" aria-live="polite">
-            <div className="byo-summary__head">
-              <h3 className="byo-summary__title">Ваш хот-дог</h3>
-              <span className="byo-summary__ready">Готово к заказу</span>
+          <section className={styles.summary} aria-live="polite">
+            <div className={styles.summaryHead}>
+              <h3 className={styles.summaryTitle}>Ваш хот-дог</h3>
+              <span className={styles.summaryReady}>Готово к заказу</span>
             </div>
-            <ul className="byo-summary__list">
+            <ul className={styles.summaryList}>
               <li>
                 <span>База</span>
                 <span>{formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)}</span>
@@ -206,23 +214,23 @@ export function BuildYourOwnHotDogBuilder({
                 </li>
               ))}
             </ul>
-            <div className="byo-summary__total">
+            <div className={styles.summaryTotal}>
               <span>Итого</span>
               <strong>{formatVnd(price.unitPrice)} VND</strong>
             </div>
           </section>
         </div>
+      </div>
 
-        <div className="byo-builder__footer">
-          <div className="byo-builder__total">
-            <span>Итоговая цена</span>
-            <strong>{formatVnd(price.unitPrice)} VND</strong>
-          </div>
-          <button type="button" className="byo-builder__cta" onClick={onAddToCart}>
-            Добавить в корзину
-          </button>
-          {addToCartError ? <p className="byo-builder__error">{addToCartError}</p> : null}
+      <div className={styles.footer}>
+        <div className={styles.footerTotal}>
+          <span>Итоговая цена</span>
+          <strong>{formatVnd(price.unitPrice)} VND</strong>
         </div>
+        <button type="button" className={styles.cta} onClick={onAddToCart}>
+          Добавить в корзину · {formatVnd(price.unitPrice)}
+        </button>
+        {addToCartError ? <p className={styles.error}>{addToCartError}</p> : null}
       </div>
     </div>
   );

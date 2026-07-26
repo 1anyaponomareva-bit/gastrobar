@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
 import { getAssetUrl } from "@/lib/appVersion";
@@ -259,6 +260,11 @@ export function PosterTestFoodMenu() {
   const [selectedSausageId, setSelectedSausageId] = useState("standard-pork");
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [addToCartError, setAddToCartError] = useState<string | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -517,14 +523,10 @@ export function PosterTestFoodMenu() {
         </div>
       </main>
 
-      <div
-        className={`detail-overlay${detailItem ? "" : " is-hidden"}${
-          detailItem && isBuildYourOwnHotDog(detailItem.id) ? " detail-overlay--byo" : ""
-        }`}
-        aria-hidden={!detailItem}
-      >
-        {detailItem ? (
-          isBuildYourOwnHotDog(detailItem.id) ? (
+      {portalReady &&
+      detailItem &&
+      isBuildYourOwnHotDog(detailItem.id)
+        ? createPortal(
             <BuildYourOwnHotDogBuilder
               item={detailItem}
               selectedSausageId={selectedSausageId}
@@ -534,49 +536,58 @@ export function PosterTestFoodMenu() {
               onToggleOption={toggleBuildYourOwnOption}
               onAddToCart={addDetailItemToCart}
               onClose={() => setDetailItem(null)}
-            />
-          ) : (
-            <>
-              <button
-                type="button"
-                className="detail-back"
-                aria-label="Назад"
-                onClick={() => setDetailItem(null)}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="detail-stage poster-test-detail-stage">
-                <div className="detail-image-wrap poster-test-detail-image-wrap">
-                  {detailItem.image ? (
-                    <img src={getAssetUrl(detailItem.image)} alt="" />
-                  ) : (
-                    <div className="detail-no-image">нет изображения</div>
-                  )}
-                </div>
-                <div className="poster-test-detail-panel">
-                  <div className="detail-info poster-test-detail-info">
-                    <HotDogDetailPanel
-                      item={detailItem}
-                      selectedSausageId={selectedSausageId}
-                      onSelectSausage={setSelectedSausageId}
-                    />
-                    <button
-                      type="button"
-                      className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
-                      onClick={addDetailItemToCart}
-                    >
-                      Добавить в корзину
-                    </button>
-                    {addToCartError ? (
-                      <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
-                    ) : null}
-                  </div>
+            />,
+            document.body,
+          )
+        : null}
+
+      <div
+        className={`detail-overlay${
+          detailItem && !isBuildYourOwnHotDog(detailItem.id) ? "" : " is-hidden"
+        }`}
+        aria-hidden={!detailItem || isBuildYourOwnHotDog(detailItem.id)}
+      >
+        {detailItem && !isBuildYourOwnHotDog(detailItem.id) ? (
+          <>
+            <button
+              type="button"
+              className="detail-back"
+              aria-label="Назад"
+              onClick={() => setDetailItem(null)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="detail-stage poster-test-detail-stage">
+              <div className="detail-image-wrap poster-test-detail-image-wrap">
+                {detailItem.image ? (
+                  <img src={getAssetUrl(detailItem.image)} alt="" />
+                ) : (
+                  <div className="detail-no-image">нет изображения</div>
+                )}
+              </div>
+              <div className="poster-test-detail-panel">
+                <div className="detail-info poster-test-detail-info">
+                  <HotDogDetailPanel
+                    item={detailItem}
+                    selectedSausageId={selectedSausageId}
+                    onSelectSausage={setSelectedSausageId}
+                  />
+                  <button
+                    type="button"
+                    className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(251,191,36,0.22)] active:scale-[0.99]"
+                    onClick={addDetailItemToCart}
+                  >
+                    Добавить в корзину
+                  </button>
+                  {addToCartError ? (
+                    <p className="mt-3 text-center text-sm text-red-300">{addToCartError}</p>
+                  ) : null}
                 </div>
               </div>
-            </>
-          )
+            </div>
+          </>
         ) : null}
       </div>
     </>
