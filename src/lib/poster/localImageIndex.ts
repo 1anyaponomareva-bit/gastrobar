@@ -56,7 +56,6 @@ const FOOD_LOCAL_ENTRIES: Array<{ name: string; image: string }> = [
   { name: "FISH BURGER", image: "/food/menu/fishburger.png" },
   { name: "Бургер Комбо", image: "/food/menu/combo_burger.png?v=20260726-01" },
   { name: "Hot Dog Combo", image: "/food/menu/COMBO_hotdog.png?v=20260726-01" },
-  { name: "Комбо с крыльями", image: "/food/menu/wings_combo.png" },
   { name: "Семейное комбо", image: "/food/menu/family_combo.png?v=20260726-01" },
   { name: "FAMILY COMBO", image: "/food/menu/family_combo.png?v=20260726-01" },
   { name: "Куриный шашлык", image: "/food/menu/KUR_KEBAB_1.jpg?v=20260726-01" },

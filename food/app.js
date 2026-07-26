@@ -468,15 +468,6 @@ const MENU_ITEMS = [
     image: IMG("COMBO_PHILY.png?v=20260726-01"),
   },
   {
-    id: "wings-combo",
-    name: "Комбо с крыльями",
-    description: "Куриные крылья, картофель фри и напиток.",
-    price: null,
-    category: "combos",
-    badge: "hit",
-    image: IMG("wings_combo.png"),
-  },
-  {
     id: "family-combo",
     name: "Семейное комбо",
     description: "Большой набор для компании: горячие блюда, гарнир и напитки.",
