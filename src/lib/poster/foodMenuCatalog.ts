@@ -225,10 +225,10 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     id: "burger-combo",
     name: "Бургер Комбо",
     description: "Классический бургер, картофель фри и напиток.",
-    price: null,
+    price: 230000,
     category: "combos",
     badge: "hit",
-    image: foodMenuImage("combo_burger.png"),
+    image: foodMenuImage("combo_burger.png?v=20260726-01"),
   },
   {
     id: "hot-dog-combo",

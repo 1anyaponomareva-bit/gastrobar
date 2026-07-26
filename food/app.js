@@ -444,10 +444,10 @@ const MENU_ITEMS = [
     id: "burger-combo",
     name: "Бургер Комбо",
     description: "Классический бургер, картофель фри и напиток.",
-    price: null,
+    price: 230000,
     category: "combos",
     badge: "hit",
-    image: IMG("combo_burger.png"),
+    image: IMG("combo_burger.png?v=20260726-01"),
   },
   {
     id: "hot-dog-combo",
