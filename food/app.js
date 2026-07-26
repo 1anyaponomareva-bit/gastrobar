@@ -461,36 +461,27 @@ const MENU_ITEMS = [
   },
   {
     id: "bavarian-sausage",
-    name: "Баварская колбаска",
-    description:
-      "Свиная колбаска на гриле с картофелем фри, тушеной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
+    name: "Бокс со свиными сосисками",
+    description: "Бокс со свиными сосисками на гриле.",
+    price: 140000,
     category: "grill",
-    image: IMG("Bavarian Sausage.png"),
-    imageFocusY: 52,
+    image: IMG("SOS_PORK.jpg?v=20260726-01"),
   },
   {
     id: "cheddar-jalapeno-sausage",
-    name: "Колбаска Чеддер и Халапеньо",
-    description:
-      "Свиная колбаска с сыром чеддер и халапеньо, подается с картофелем фри, тушеной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
+    name: "Бокс со свиными сосисками с сыром",
+    description: "Бокс со свиными сосисками с сыром на гриле.",
+    price: 140000,
     category: "grill",
-    image: IMG("Cheddar Jalapeño Sausage.png"),
-    imageFocusY: 52,
+    image: IMG("SOS_CHALAP.jpg?v=20260726-01"),
   },
   {
     id: "grilled-chicken-sausage",
-    name: "Куриная гриль-колбаска",
-    description:
-      "Куриная колбаска на гриле с картофелем фри, тушёной квашеной капустой и томатным соусом.",
-    price: null,
-    grammage: "370 г",
+    name: "Бокс с куриными сосисками",
+    description: "Бокс с куриными сосисками на гриле.",
+    price: 140000,
     category: "grill",
-    image: IMG("Grilled Chicken Sausage.png"),
-    imageFocusY: 52,
+    image: IMG("SOS_KUR.jpg?v=20260726-01"),
   },
 ];
 

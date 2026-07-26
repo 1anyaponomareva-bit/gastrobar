@@ -60,9 +60,15 @@ const FOOD_LOCAL_ENTRIES: Array<{ name: string; image: string }> = [
   { name: "CHICKEN KEBAB", image: "/food/menu/chickenkebab.jpeg" },
   { name: "Свиной шашлык", image: "/food/menu/porkkebab.jpeg" },
   { name: "PORK KEBAB", image: "/food/menu/porkkebab.jpeg" },
-  { name: "Баварская колбаска", image: "/food/menu/Bavarian Sausage.png" },
-  { name: "Колбаска Чеддер и Халапеньо", image: "/food/menu/Cheddar Jalapeño Sausage.png" },
-  { name: "Куриная гриль-колбаска", image: "/food/menu/Grilled Chicken Sausage.png" },
+  { name: "Бокс со свиными сосисками", image: "/food/menu/SOS_PORK.jpg?v=20260726-01" },
+  { name: "Бокс со свиными сосисками с сыром", image: "/food/menu/SOS_CHALAP.jpg?v=20260726-01" },
+  { name: "Бокс с куриными сосисками", image: "/food/menu/SOS_KUR.jpg?v=20260726-01" },
+  { name: "Баварская колбаска", image: "/food/menu/SOS_PORK.jpg?v=20260726-01" },
+  { name: "Колбаска Чеддер и Халапеньо", image: "/food/menu/SOS_CHALAP.jpg?v=20260726-01" },
+  { name: "Куриная гриль-колбаска", image: "/food/menu/SOS_KUR.jpg?v=20260726-01" },
+  { name: "BAVARIAN SAUSAGE", image: "/food/menu/SOS_PORK.jpg?v=20260726-01" },
+  { name: "CHEDDAR JALAPENO SAUSAGE", image: "/food/menu/SOS_CHALAP.jpg?v=20260726-01" },
+  { name: "GRILLED CHICKEN SAUSAGE", image: "/food/menu/SOS_KUR.jpg?v=20260726-01" },
 ];
 
 for (const entry of FOOD_LOCAL_ENTRIES) {
