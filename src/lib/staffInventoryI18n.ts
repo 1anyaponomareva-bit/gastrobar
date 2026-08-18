@@ -1,7 +1,16 @@
+import staffInventoryItemNamesVn from "@/data/staffInventoryItemNamesVn.json";
 import type { AppLang } from "@/lib/i18n";
 import { translate } from "@/lib/i18n";
 
 export type StaffAppLang = "en" | "vn";
+
+export function translateStaffItemName(
+  lang: StaffAppLang,
+  name: string,
+): string {
+  if (lang === "en") return name;
+  return staffInventoryItemNamesVn[name as keyof typeof staffInventoryItemNamesVn] ?? name;
+}
 
 /** Staff UI: English and Vietnamese only. Russian from the main site maps to English. */
 export function toStaffAppLang(lang: AppLang): StaffAppLang {

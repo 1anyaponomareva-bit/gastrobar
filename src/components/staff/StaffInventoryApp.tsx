@@ -20,6 +20,7 @@ import {
   buildStaffInventoryPdfLabels,
   toStaffAppLang,
   translateStaffCategory,
+  translateStaffItemName,
 } from "@/lib/staffInventoryI18n";
 import {
   getStaffInventoryPdfFileName,
@@ -105,6 +106,11 @@ export function StaffInventoryApp() {
     [staffLang],
   );
 
+  const itemLabel = useCallback(
+    (name: string) => translateStaffItemName(staffLang, name),
+    [staffLang],
+  );
+
   useEffect(() => {
     preloadStaffInventoryPdfFonts();
   }, []);
@@ -132,8 +138,10 @@ export function StaffInventoryApp() {
       }
       if (query) {
         const translatedCategory = categoryLabel(row.category).toLowerCase();
+        const translatedName = itemLabel(row.name).toLowerCase();
         if (
           !row.name.toLowerCase().includes(query) &&
+          !translatedName.includes(query) &&
           !row.category.toLowerCase().includes(query) &&
           !translatedCategory.includes(query)
         ) {
@@ -142,7 +150,7 @@ export function StaffInventoryApp() {
       }
       return true;
     });
-  }, [rows, activeCategory, search, categoryLabel]);
+  }, [rows, activeCategory, search, categoryLabel, itemLabel]);
 
   const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
     if (nextVenue === venue) return;
@@ -234,10 +242,10 @@ export function StaffInventoryApp() {
       venueLabel,
       date,
       employee,
-      rows,
+      rows: rows.map((row) => ({ ...row, name: itemLabel(row.name) })),
       labels: pdfLabels,
     }),
-    [venueLabel, date, employee, rows, pdfLabels],
+    [venueLabel, date, employee, rows, pdfLabels, itemLabel],
   );
 
   const beginSharePreparation = useCallback(() => {
@@ -452,7 +460,7 @@ export function StaffInventoryApp() {
                       <div className="category">{categoryLabel(row.category)}</div>
                     ) : null}
                     <div className="card">
-                      <div className="name">{row.name}</div>
+                      <div className="name">{itemLabel(row.name)}</div>
                       <div className="row">
                         <div className="field">
                           <label>
