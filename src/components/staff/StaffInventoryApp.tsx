@@ -92,13 +92,13 @@ export function StaffInventoryApp() {
   const pdfLabels = useMemo(
     () =>
       buildStaffInventoryPdfLabels(
-        staffLang,
+        "en",
         venueLabel,
         date,
         employee,
         items.length,
       ),
-    [staffLang, venueLabel, date, employee, items.length],
+    [venueLabel, date, employee, items.length],
   );
 
   const categoryLabel = useCallback(
@@ -224,7 +224,6 @@ export function StaffInventoryApp() {
 
   const buildShareKey = useCallback(() => {
     return [
-      staffLang,
       venue,
       date,
       employee.trim(),
@@ -235,17 +234,17 @@ export function StaffInventoryApp() {
         )
         .join("|"),
     ].join("::");
-  }, [staffLang, venue, date, employee, rows]);
+  }, [venue, date, employee, rows]);
 
   const buildPdfOptions = useCallback(
     () => ({
       venueLabel,
       date,
       employee,
-      rows: rows.map((row) => ({ ...row, name: itemLabel(row.name) })),
+      rows,
       labels: pdfLabels,
     }),
-    [venueLabel, date, employee, rows, pdfLabels, itemLabel],
+    [venueLabel, date, employee, rows, pdfLabels],
   );
 
   const beginSharePreparation = useCallback(() => {
