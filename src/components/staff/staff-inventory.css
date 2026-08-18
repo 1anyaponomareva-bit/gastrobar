@@ -49,6 +49,12 @@
   box-shadow: 0 4px 20px #0004;
 }
 
+.staff-inventory .langRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
 .staff-inventory .venuePicker {
   display: grid;
   grid-template-columns: 1fr 1fr;

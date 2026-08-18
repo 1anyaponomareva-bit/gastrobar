@@ -14,7 +14,7 @@ export function I18nDocumentTitle() {
       return;
     }
     if (pathname === "/staff" || pathname.startsWith("/staff/")) {
-      document.title = "Inventory — GASTROBAR";
+      document.title = t("staff_meta_title");
       return;
     }
     if (pathname === "/check" || pathname.startsWith("/check/")) {

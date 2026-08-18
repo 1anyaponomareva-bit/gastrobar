@@ -7,11 +7,14 @@ import {
   type DeliverPdfResult,
 } from "@/lib/deliverPdfFile";
 
+import type { StaffInventoryPdfLabels } from "@/lib/staffInventoryI18n";
+
 export type StaffInventoryPdfOptions = {
   venueLabel: string;
   date: string;
   employee: string;
   rows: StaffInventoryRow[];
+  labels: StaffInventoryPdfLabels;
 };
 
 const PAGE_WIDTH = 595;
@@ -254,13 +257,10 @@ function drawWrappedBlock(
 }
 
 function drawHeader(ctx: PdfContext, options: StaffInventoryPdfOptions, rows: StaffInventoryRow[]) {
-  const title = `${options.venueLabel.toUpperCase()} INVENTORY CHECKLIST`;
+  const { labels } = options;
+  const title = labels.title;
   const titleBlock = measureWrappedText(title, ctx.fontBold, 20, CONTENT_WIDTH);
-  const meta = [
-    `Date: ${options.date || "-"}`,
-    `Employee: ${options.employee || "-"}`,
-    `Items: ${rows.length}`,
-  ];
+  const meta = [labels.dateLine, labels.employeeLine, labels.itemsLine];
   const metaLineHeight = 14;
   const metaHeight = meta.length * metaLineHeight + 16;
   const headerHeight =
@@ -312,7 +312,7 @@ function drawSectionTitle(ctx: PdfContext, title: string) {
   ctx.y = topY - total;
 }
 
-function drawTableHeader(ctx: PdfContext) {
+function drawTableHeader(ctx: PdfContext, labels: StaffInventoryPdfLabels) {
   const height = 20;
   const total = height + 6;
 
@@ -322,9 +322,9 @@ function drawTableHeader(ctx: PdfContext) {
 
   const baseline = topY - 14;
   drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "ITEM", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "LEFT", 350, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "NEEDED", 460, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colItem, MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colLeft, 350, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colNeeded, 460, baseline, 8, ctx.fontBold);
 
   ctx.y = topY - total;
 }
@@ -394,12 +394,12 @@ export async function makeStaffInventoryPdfBlob(
   drawHeader(ctx, options, rows);
 
   if (!rows.length) {
-    drawWrappedBlock(ctx, "No filled items in checklist.", 14, { bold: true });
+    drawWrappedBlock(ctx, options.labels.emptyMessage, 14, { bold: true });
   } else {
     const groups = groupedRows(rows);
     Object.keys(groups).forEach((category) => {
-      drawSectionTitle(ctx, category);
-      drawTableHeader(ctx);
+      drawSectionTitle(ctx, options.labels.categoryLabel(category));
+      drawTableHeader(ctx, options.labels);
       groups[category].forEach((row, index) => drawTableRow(ctx, row, index));
       ctx.y -= 4;
     });

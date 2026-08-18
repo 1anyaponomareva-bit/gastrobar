@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
 import {
   getStaffInventoryCategories,
   getStaffInventoryItems,
@@ -15,6 +16,10 @@ import {
   deliverPdfFile,
   type DeliverPdfResult,
 } from "@/lib/deliverPdfFile";
+import {
+  buildStaffInventoryPdfLabels,
+  translateStaffCategory,
+} from "@/lib/staffInventoryI18n";
 import {
   getStaffInventoryPdfFileName,
   makeStaffInventoryPdfBlob,
@@ -35,6 +40,7 @@ import {
   setStoredVenue,
   todayIsoDate,
 } from "@/lib/staffInventoryStorage";
+import { useTranslation } from "@/lib/useTranslation";
 import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
 
@@ -58,6 +64,7 @@ function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
 }
 
 export function StaffInventoryApp() {
+  const { lang, t } = useTranslation();
   const [hydrated, setHydrated] = useState(false);
   const [venue, setVenue] = useState<StaffInventoryVenue>("gastrofood");
   const [date, setDate] = useState("");
@@ -77,6 +84,15 @@ export function StaffInventoryApp() {
   const items = useMemo(() => getStaffInventoryItems(venue), [venue]);
   const categories = useMemo(() => getStaffInventoryCategories(venue), [venue]);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
+  const pdfLabels = useMemo(
+    () => buildStaffInventoryPdfLabels(lang, venueLabel, date, employee, items.length),
+    [lang, venueLabel, date, employee, items.length],
+  );
+
+  const categoryLabel = useCallback(
+    (category: string) => translateStaffCategory(lang, category),
+    [lang],
+  );
 
   useEffect(() => {
     preloadStaffInventoryPdfFonts();
@@ -103,16 +119,19 @@ export function StaffInventoryApp() {
       if (activeCategory !== "All" && row.category !== activeCategory) {
         return false;
       }
-      if (
-        query &&
-        !row.name.toLowerCase().includes(query) &&
-        !row.category.toLowerCase().includes(query)
-      ) {
-        return false;
+      if (query) {
+        const translatedCategory = categoryLabel(row.category).toLowerCase();
+        if (
+          !row.name.toLowerCase().includes(query) &&
+          !row.category.toLowerCase().includes(query) &&
+          !translatedCategory.includes(query)
+        ) {
+          return false;
+        }
       }
       return true;
     });
-  }, [rows, activeCategory, search]);
+  }, [rows, activeCategory, search, categoryLabel]);
 
   const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
     if (nextVenue === venue) return;
@@ -151,7 +170,7 @@ export function StaffInventoryApp() {
   const handleSave = () => {
     setStoredDate(date);
     setStoredEmployee(employee);
-    window.alert("Saved");
+    window.alert(t("staff_saved"));
   };
 
   const handleReset = () => {
@@ -164,7 +183,7 @@ export function StaffInventoryApp() {
   const handleNewDay = () => {
     if (
       !window.confirm(
-        `Start a new day and clear all entered LEFT and NEEDED values and employee name for ${venueLabel}?`,
+        t("staff_new_day_confirm").replace("{venue}", venueLabel),
       )
     ) {
       return;
@@ -186,6 +205,7 @@ export function StaffInventoryApp() {
 
   const buildShareKey = useCallback(() => {
     return [
+      lang,
       venue,
       date,
       employee.trim(),
@@ -196,7 +216,18 @@ export function StaffInventoryApp() {
         )
         .join("|"),
     ].join("::");
-  }, [venue, date, employee, rows]);
+  }, [lang, venue, date, employee, rows]);
+
+  const buildPdfOptions = useCallback(
+    () => ({
+      venueLabel,
+      date,
+      employee,
+      rows,
+      labels: pdfLabels,
+    }),
+    [venueLabel, date, employee, rows, pdfLabels],
+  );
 
   const beginSharePreparation = useCallback(() => {
     if (!employee.trim()) return;
@@ -204,14 +235,9 @@ export function StaffInventoryApp() {
     const key = buildShareKey();
     sharePrepareRef.current = {
       key,
-      promise: makeStaffInventoryPdfBlob({
-        venueLabel,
-        date,
-        employee,
-        rows,
-      }),
+      promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
     };
-  }, [buildShareKey, venueLabel, date, employee, rows]);
+  }, [buildShareKey, buildPdfOptions, employee]);
 
   useEffect(() => {
     if (!hydrated || !employee.trim()) {
@@ -222,20 +248,13 @@ export function StaffInventoryApp() {
     const key = buildShareKey();
     sharePrepareRef.current = {
       key,
-      promise: makeStaffInventoryPdfBlob({
-        venueLabel,
-        date,
-        employee,
-        rows,
-      }),
+      promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
     };
-  }, [hydrated, buildShareKey, venueLabel, date, employee, rows]);
+  }, [hydrated, buildShareKey, buildPdfOptions, employee, rows]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
     if (result === "cancelled" || result === "downloaded") return;
-    window.alert(
-      "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
-    );
+    window.alert(t("staff_share_pdf_error"));
   };
 
   const handleExportPdf = async () => {
@@ -261,12 +280,7 @@ export function StaffInventoryApp() {
       const blob =
         prepared?.key === key
           ? await prepared.promise
-          : await makeStaffInventoryPdfBlob({
-              venueLabel,
-              date,
-              employee,
-              rows,
-            });
+          : await makeStaffInventoryPdfBlob(buildPdfOptions());
       const result = await deliverPdfFile(blob, fileName);
 
       if (result !== "shared") {
@@ -274,9 +288,7 @@ export function StaffInventoryApp() {
       }
     } catch (error) {
       console.error(error);
-      window.alert(
-        "Could not share the PDF file. Choose Telegram or WhatsApp in the share menu — not Copy Link.",
-      );
+      window.alert(t("staff_share_pdf_error_generic"));
     } finally {
       setExportingPdf(false);
     }
@@ -285,7 +297,7 @@ export function StaffInventoryApp() {
   if (!hydrated) {
     return (
       <div className="staff-inventory flex min-h-[100dvh] items-center justify-center text-[#777]">
-        Loading...
+        {t("staff_loading")}
       </div>
     );
   }
@@ -296,6 +308,10 @@ export function StaffInventoryApp() {
     <div className="staff-inventory staff-inventory-page">
       <div className="app">
         <div className="top">
+          <div className="langRow">
+            <MenuChooserLanguageFlags />
+          </div>
+
           <div className="venuePicker">
             {STAFF_INVENTORY_VENUES.map((option) => {
               const isActive = option === venue;
@@ -319,7 +335,7 @@ export function StaffInventoryApp() {
 
           <div className="meta">
             <div className="box">
-              <label htmlFor="staff-date">Date</label>
+              <label htmlFor="staff-date">{t("staff_date")}</label>
               <input
                 id="staff-date"
                 type="date"
@@ -328,11 +344,11 @@ export function StaffInventoryApp() {
               />
             </div>
             <div className="box">
-              <label htmlFor="staff-employee">Employee</label>
+              <label htmlFor="staff-employee">{t("staff_employee")}</label>
               <input
                 id="staff-employee"
                 type="text"
-                placeholder="Name"
+                placeholder={t("staff_employee_placeholder")}
                 value={employee}
                 onChange={(event) => handleEmployeeChange(event.target.value)}
               />
@@ -341,7 +357,7 @@ export function StaffInventoryApp() {
 
           <div className="stats">
             <div className="stat">
-              <label>Total items</label>
+              <label>{t("staff_total_items")}</label>
               <b>{items.length}</b>
             </div>
           </div>
@@ -349,7 +365,7 @@ export function StaffInventoryApp() {
           <div className="actions">
             {exportEmployeeError ? (
               <div className="exportError actionsExport" role="alert">
-                <strong>Employee name is required.</strong>
+                <strong>{t("staff_export_employee_required")}</strong>
               </div>
             ) : null}
             <button
@@ -360,19 +376,18 @@ export function StaffInventoryApp() {
               onClick={handleExportPdf}
               disabled={exportingPdf}
             >
-              {exportingPdf ? "Sharing PDF..." : "Share PDF"}
+              {exportingPdf ? t("staff_sharing_pdf") : t("staff_share_pdf")}
             </button>
             <button type="button" className="dark" onClick={handleSave}>
-              Save
+              {t("staff_save")}
             </button>
             <button type="button" className="danger" onClick={handleNewDay}>
-              New Day
+              {t("staff_new_day")}
             </button>
           </div>
 
           <p className="note">
-            For the next day press New Day. It clears LEFT and NEEDED values,
-            employee name, and sets today date for {venueLabel}.
+            {t("staff_note").replace("{venue}", venueLabel)}
           </p>
         </div>
 
@@ -380,12 +395,12 @@ export function StaffInventoryApp() {
           <div className="searchRow">
             <input
               className="search"
-              placeholder="Search item or category..."
+              placeholder={t("staff_search_placeholder")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
             <button type="button" className="dark" onClick={handleReset}>
-              Reset
+              {t("staff_reset")}
             </button>
           </div>
 
@@ -397,20 +412,24 @@ export function StaffInventoryApp() {
                 className={`tab ${category === activeCategory ? "active" : ""}`}
                 onClick={() => handleCategoryChange(category)}
               >
-                {category === "All" ? `All ${items.length}` : category}
+                {category === "All"
+                  ? t("staff_tab_all").replace("{count}", String(items.length))
+                  : categoryLabel(category)}
               </button>
             ))}
           </div>
 
           <div className="mode">
             <span>
-              {venueLabel} · Showing all items - {visibleRows.length} visible
+              {t("staff_mode_visible")
+                .replace("{venue}", venueLabel)
+                .replace("{count}", String(visibleRows.length))}
             </span>
           </div>
 
           <div>
             {!visibleRows.length ? (
-              <div className="empty">No items found. Press Reset.</div>
+              <div className="empty">{t("staff_empty")}</div>
             ) : (
               visibleRows.map((row) => {
                 const showCategoryHeader = row.category !== lastCategory;
@@ -419,13 +438,15 @@ export function StaffInventoryApp() {
                 return (
                   <div key={`${venue}-${row.index}`}>
                     {showCategoryHeader ? (
-                      <div className="category">{row.category}</div>
+                      <div className="category">{categoryLabel(row.category)}</div>
                     ) : null}
                     <div className="card">
                       <div className="name">{row.name}</div>
                       <div className="row">
                         <div className="field">
-                          <label>LEFT ({row.leftUnit})</label>
+                          <label>
+                            {t("staff_left")} ({row.leftUnit})
+                          </label>
                           <input
                             inputMode="decimal"
                             value={getStoredValue(venue, row.index, "current")}
@@ -439,7 +460,9 @@ export function StaffInventoryApp() {
                           />
                         </div>
                         <div className="field">
-                          <label>NEEDED ({row.neededUnit})</label>
+                          <label>
+                            {t("staff_needed")} ({row.neededUnit})
+                          </label>
                           <input
                             inputMode="decimal"
                             value={getStoredValue(venue, row.index, "needed")}
