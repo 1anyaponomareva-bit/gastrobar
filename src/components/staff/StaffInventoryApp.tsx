@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
+import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
   getStaffInventoryCategories,
   getStaffInventoryItems,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/deliverPdfFile";
 import {
   buildStaffInventoryPdfLabels,
+  toStaffAppLang,
   translateStaffCategory,
 } from "@/lib/staffInventoryI18n";
 import {
@@ -40,6 +41,7 @@ import {
   setStoredVenue,
   todayIsoDate,
 } from "@/lib/staffInventoryStorage";
+import { translate } from "@/lib/i18n";
 import { useTranslation } from "@/lib/useTranslation";
 import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
@@ -64,7 +66,9 @@ function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
 }
 
 export function StaffInventoryApp() {
-  const { lang, t } = useTranslation();
+  const { lang } = useTranslation();
+  const staffLang = toStaffAppLang(lang);
+  const t = useCallback((key: string) => translate(staffLang, key), [staffLang]);
   const [hydrated, setHydrated] = useState(false);
   const [venue, setVenue] = useState<StaffInventoryVenue>("gastrofood");
   const [date, setDate] = useState("");
@@ -85,13 +89,20 @@ export function StaffInventoryApp() {
   const categories = useMemo(() => getStaffInventoryCategories(venue), [venue]);
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
   const pdfLabels = useMemo(
-    () => buildStaffInventoryPdfLabels(lang, venueLabel, date, employee, items.length),
-    [lang, venueLabel, date, employee, items.length],
+    () =>
+      buildStaffInventoryPdfLabels(
+        staffLang,
+        venueLabel,
+        date,
+        employee,
+        items.length,
+      ),
+    [staffLang, venueLabel, date, employee, items.length],
   );
 
   const categoryLabel = useCallback(
-    (category: string) => translateStaffCategory(lang, category),
-    [lang],
+    (category: string) => translateStaffCategory(staffLang, category),
+    [staffLang],
   );
 
   useEffect(() => {
@@ -205,7 +216,7 @@ export function StaffInventoryApp() {
 
   const buildShareKey = useCallback(() => {
     return [
-      lang,
+      staffLang,
       venue,
       date,
       employee.trim(),
@@ -216,7 +227,7 @@ export function StaffInventoryApp() {
         )
         .join("|"),
     ].join("::");
-  }, [lang, venue, date, employee, rows]);
+  }, [staffLang, venue, date, employee, rows]);
 
   const buildPdfOptions = useCallback(
     () => ({
@@ -309,7 +320,7 @@ export function StaffInventoryApp() {
       <div className="app">
         <div className="top">
           <div className="langRow">
-            <MenuChooserLanguageFlags />
+            <StaffLanguageFlags />
           </div>
 
           <div className="venuePicker">

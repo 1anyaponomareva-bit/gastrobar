@@ -1,6 +1,13 @@
 import type { AppLang } from "@/lib/i18n";
 import { translate } from "@/lib/i18n";
 
+export type StaffAppLang = "en" | "vn";
+
+/** Staff UI: English and Vietnamese only. Russian from the main site maps to English. */
+export function toStaffAppLang(lang: AppLang): StaffAppLang {
+  return lang === "vn" ? "vn" : "en";
+}
+
 const STAFF_CATEGORY_KEYS: Record<string, string> = {
   All: "staff_cat_all",
   Alcohol: "staff_cat_alcohol",

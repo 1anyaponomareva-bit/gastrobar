@@ -2,10 +2,12 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { translate } from "@/lib/i18n";
+import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 
 export function I18nDocumentTitle() {
-  const { t } = useTranslation();
+  const { lang, t } = useTranslation();
   const pathname = usePathname() ?? "/";
 
   useEffect(() => {
@@ -14,7 +16,7 @@ export function I18nDocumentTitle() {
       return;
     }
     if (pathname === "/staff" || pathname.startsWith("/staff/")) {
-      document.title = t("staff_meta_title");
+      document.title = translate(toStaffAppLang(lang), "staff_meta_title");
       return;
     }
     if (pathname === "/check" || pathname.startsWith("/check/")) {
@@ -34,7 +36,7 @@ export function I18nDocumentTitle() {
       return;
     }
     document.title = t("meta_title_default");
-  }, [t, pathname]);
+  }, [t, lang, pathname]);
 
   return null;
 }
