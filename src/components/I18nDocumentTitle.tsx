@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { translate } from "@/lib/i18n";
+import { toCheckAppLang } from "@/lib/shiftChecklistI18n";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -20,7 +21,7 @@ export function I18nDocumentTitle() {
       return;
     }
     if (pathname === "/check" || pathname.startsWith("/check/")) {
-      document.title = "Shift Checklist — GASTROBAR";
+      document.title = translate(toCheckAppLang(lang), "check_meta_title");
       return;
     }
     if (pathname === "/bar") {

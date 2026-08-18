@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
   STAFF_INVENTORY_VENUE_LABELS,
   STAFF_INVENTORY_VENUE_LOGOS,
@@ -8,11 +9,8 @@ import {
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
 import {
-  CLEANING_TYPE_LABELS,
-  getSectionTabLabel,
   getShiftChecklistItems,
   isClosingSection,
-  SHIFT_TYPE_LABELS,
   type CleaningType,
   type ShiftType,
 } from "@/data/shiftChecklistItems";
@@ -21,6 +19,13 @@ import {
   deliverPdfFile,
   type DeliverPdfResult,
 } from "@/lib/deliverPdfFile";
+import { translate } from "@/lib/i18n";
+import {
+  getCheckSectionTabLabel,
+  toCheckAppLang,
+  translateChecklistText,
+  translateChecklistTextForPdf,
+} from "@/lib/shiftChecklistI18n";
 import {
   getShiftChecklistPdfFileName,
   makeShiftChecklistPdfBlob,
@@ -47,10 +52,17 @@ import {
   todayIsoDate,
   type ChecklistItemStatus,
 } from "@/lib/shiftChecklistStorage";
+import { useTranslation } from "@/lib/useTranslation";
 import "../staff/staff-inventory.css";
 import "./shift-checklist.css";
 
 export function ShiftChecklistApp() {
+  const { lang } = useTranslation();
+  const checkLang = toCheckAppLang(lang);
+  const t = useCallback(
+    (key: string) => translate(checkLang, key),
+    [checkLang],
+  );
   const [hydrated, setHydrated] = useState(false);
   const [venue, setVenue] = useState<StaffInventoryVenue>("gastrofood");
   const [date, setDate] = useState("");
@@ -207,20 +219,18 @@ export function ShiftChecklistApp() {
   const formatIssueLabel = (
     item: (typeof exportIssues)[number],
   ): string => {
-    const sectionLabel = getSectionTabLabel(item.sectionTitle);
-    const pointLabel = item.groupTitle
-      ? `${sectionLabel} — ${item.groupTitle}: ${item.label}`
-      : `${sectionLabel}: ${item.label}`;
-
-    if (venue === "gastrobar") {
-      return item.kind === "unmarked"
-        ? `Не отмечен пункт: ${pointLabel}`
-        : `Не указана причина: ${pointLabel}`;
-    }
+    const sectionLabel = getCheckSectionTabLabel(checkLang, item.sectionTitle);
+    const groupLabel = item.groupTitle
+      ? translateChecklistText(checkLang, item.groupTitle)
+      : null;
+    const itemLabel = translateChecklistText(checkLang, item.label);
+    const pointLabel = groupLabel
+      ? `${sectionLabel} — ${groupLabel}: ${itemLabel}`
+      : `${sectionLabel}: ${itemLabel}`;
 
     return item.kind === "unmarked"
-      ? `Not marked: ${pointLabel}`
-      : `Missing reason: ${pointLabel}`;
+      ? t("check_issue_unmarked").replace("{point}", pointLabel)
+      : t("check_issue_missing_comment").replace("{point}", pointLabel);
   };
 
   const completedCount = useMemo(
@@ -344,26 +354,43 @@ export function ShiftChecklistApp() {
   }, [venue, items, shift, sections, bump]);
 
   const handleResetChecks = () => {
-    if (!window.confirm("Сбросить весь чеклист: отметки, комментарии, имя и дату?")) {
+    if (!window.confirm(t("check_reset_confirm"))) {
       return;
     }
 
     performChecklistReset();
   };
 
+  const shiftLabel = t(
+    shift === "day" ? "check_shift_day" : "check_shift_evening",
+  );
+  const cleaningLabel = t(
+    cleaning === "regular" ? "check_cleaning_regular" : "check_cleaning_general",
+  );
+
   const pdfExportOptions = useMemo(
     () => ({
       venueLabel,
-      locale: (venue === "gastrobar" ? "ru" : "en") as "ru" | "en",
+      locale: "en" as const,
       date,
       employee,
-      shiftLabel: SHIFT_TYPE_LABELS[shift],
-      cleaningLabel: CLEANING_TYPE_LABELS[cleaning],
+      shiftLabel: translate(
+        "en",
+        shift === "day" ? "check_shift_day" : "check_shift_evening",
+      ),
+      cleaningLabel: translate(
+        "en",
+        cleaning === "regular"
+          ? "check_cleaning_regular"
+          : "check_cleaning_general",
+      ),
       sections: sections.map((section) => ({
-        title: section.title,
+        title: translateChecklistTextForPdf(section.title),
         items: section.groups.flatMap((group) =>
           group.items.map((item) => ({
-            label: group.title ? `${group.title}: ${item.label}` : item.label,
+            label: group.title
+              ? `${translateChecklistTextForPdf(group.title)}: ${translateChecklistTextForPdf(item.label)}`
+              : translateChecklistTextForPdf(item.label),
             status: item.status,
             comment: item.comment,
             penaltyPoints: item.penaltyPoints,
@@ -371,7 +398,7 @@ export function ShiftChecklistApp() {
         ),
       })),
     }),
-    [venueLabel, venue, date, employee, shift, cleaning, sections],
+    [venueLabel, date, employee, shift, cleaning, sections],
   );
 
   const buildShareKey = useCallback(() => {
@@ -404,11 +431,7 @@ export function ShiftChecklistApp() {
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
     if (result === "cancelled" || result === "downloaded") return;
-    window.alert(
-      venue === "gastrobar"
-        ? "Не удалось отправить PDF. Нажмите Share PDF ещё раз и выберите Telegram или WhatsApp, не «Скопировать ссылку»."
-        : "Could not share the PDF file. Tap Share PDF again and choose Telegram or WhatsApp — not Copy Link.",
-    );
+    window.alert(t("check_share_pdf_error"));
   };
 
   useEffect(() => {
@@ -479,11 +502,7 @@ export function ShiftChecklistApp() {
       }
     } catch (error) {
       console.error(error);
-      window.alert(
-        venue === "gastrobar"
-          ? "Не удалось отправить PDF-файл. В меню «Поделиться» выберите Telegram или WhatsApp, не «Скопировать ссылку»."
-          : "Could not share the PDF file. Choose Telegram or WhatsApp in the share menu — not Copy Link.",
-      );
+      window.alert(t("check_share_pdf_error_generic"));
     } finally {
       setExportingPdf(false);
     }
@@ -492,7 +511,7 @@ export function ShiftChecklistApp() {
   if (!hydrated) {
     return (
       <div className="staff-inventory flex min-h-[100dvh] items-center justify-center text-[#777]">
-        Loading...
+        {t("check_loading")}
       </div>
     );
   }
@@ -501,6 +520,10 @@ export function ShiftChecklistApp() {
     <div className="staff-inventory shift-checklist">
       <div className="app">
         <div className="top">
+          <div className="langRow">
+            <StaffLanguageFlags />
+          </div>
+
           <div className="venuePicker">
             {STAFF_INVENTORY_VENUES.map((option) => (
               <button
@@ -521,7 +544,7 @@ export function ShiftChecklistApp() {
 
           <div className="meta">
             <div className="box">
-              <label htmlFor="check-date">Date</label>
+              <label htmlFor="check-date">{t("check_date")}</label>
               <input
                 id="check-date"
                 type="date"
@@ -533,11 +556,11 @@ export function ShiftChecklistApp() {
               />
             </div>
             <div className="box">
-              <label htmlFor="check-employee">Employee</label>
+              <label htmlFor="check-employee">{t("check_employee")}</label>
               <input
                 id="check-employee"
                 type="text"
-                placeholder="Name"
+                placeholder={t("check_employee_placeholder")}
                 value={employee}
                 onChange={(event) => {
                   setEmployee(event.target.value);
@@ -549,7 +572,7 @@ export function ShiftChecklistApp() {
           </div>
 
           <div>
-            <span className="segmentLabel">Shift</span>
+            <span className="segmentLabel">{t("check_shift_label")}</span>
             <div className="segmentPicker">
               {(["day", "evening"] as ShiftType[]).map((option) => (
                 <button
@@ -558,14 +581,16 @@ export function ShiftChecklistApp() {
                   className={`segmentBtn ${shift === option ? "active" : ""}`}
                   onClick={() => handleShiftChange(option)}
                 >
-                  {SHIFT_TYPE_LABELS[option]}
+                  {t(
+                    option === "day" ? "check_shift_day" : "check_shift_evening",
+                  )}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <span className="segmentLabel">Cleaning</span>
+            <span className="segmentLabel">{t("check_cleaning_label")}</span>
             <div className="segmentPicker">
               {(["regular", "general"] as CleaningType[]).map((option) => (
                 <button
@@ -574,7 +599,11 @@ export function ShiftChecklistApp() {
                   className={`segmentBtn ${cleaning === option ? "active" : ""}`}
                   onClick={() => handleCleaningChange(option)}
                 >
-                  {CLEANING_TYPE_LABELS[option]}
+                  {t(
+                    option === "regular"
+                      ? "check_cleaning_regular"
+                      : "check_cleaning_general",
+                  )}
                 </button>
               ))}
             </div>
@@ -582,15 +611,15 @@ export function ShiftChecklistApp() {
 
           <div className="stats">
             <div className="stat">
-              <label>Done</label>
+              <label>{t("check_stat_done")}</label>
               <b>{completedCount}</b>
             </div>
             <div className="stat">
-              <label>Not done</label>
+              <label>{t("check_stat_not_done")}</label>
               <b className="statRed">{failedCount}</b>
             </div>
             <div className="stat">
-              <label>Total</label>
+              <label>{t("check_stat_total")}</label>
               <b>{items.length}</b>
             </div>
           </div>
@@ -599,11 +628,13 @@ export function ShiftChecklistApp() {
         <div className="main">
           <div className="mode">
             <span>
-              {venueLabel} · {SHIFT_TYPE_LABELS[shift]} ·{" "}
-              {CLEANING_TYPE_LABELS[cleaning]}
+              {t("check_mode_line")
+                .replace("{venue}", venueLabel)
+                .replace("{shift}", shiftLabel)
+                .replace("{cleaning}", cleaningLabel)}
             </span>
             <button type="button" className="dark" onClick={handleResetChecks}>
-              Reset
+              {t("check_reset")}
             </button>
           </div>
 
@@ -611,7 +642,10 @@ export function ShiftChecklistApp() {
             <div className="tabs">
               {sections.map((section) => {
                 const progress = sectionProgress.get(section.title);
-                const tabLabel = getSectionTabLabel(section.title);
+                const tabLabel = getCheckSectionTabLabel(
+                  checkLang,
+                  section.title,
+                );
                 const countLabel = progress
                   ? `${progress.done}/${progress.total}`
                   : "";
@@ -638,29 +672,33 @@ export function ShiftChecklistApp() {
               <span className="statusBox doneBox active" aria-hidden="true">
                 ✓
               </span>
-              Done
+              {t("check_legend_done")}
             </span>
             <span className="legendItem">
               <span className="statusBox failBox active" aria-hidden="true">
                 ✕
               </span>
-              Not done
+              {t("check_legend_not_done")}
             </span>
           </div>
 
           {activeSectionData ? (
             <div key={activeSectionData.title}>
-              <div className="checkSection">{activeSectionData.title}</div>
+              <div className="checkSection">
+                {translateChecklistText(checkLang, activeSectionData.title)}
+              </div>
               {activeSectionData.groups.map((group) => (
                 <div key={group.title ?? "__default"}>
                   {group.title ? (
-                    <div className="checkGroup">{group.title}</div>
+                    <div className="checkGroup">
+                      {translateChecklistText(checkLang, group.title)}
+                    </div>
                   ) : null}
                   {group.items.map((item) => (
                     <ChecklistRow
                       key={item.id}
                       itemId={item.id}
-                      label={item.label}
+                      label={translateChecklistText(checkLang, item.label)}
                       penaltyPoints={item.penaltyPoints}
                       status={item.status}
                       comment={item.comment}
@@ -668,11 +706,15 @@ export function ShiftChecklistApp() {
                         exportBlocked &&
                         exportIssues.some((issue) => issue.id === item.id)
                       }
-                      failPlaceholder={
-                        venue === "gastrobar"
-                          ? "Укажите причину, почему не выполнено"
-                          : "Why was this not completed?"
-                      }
+                      failPlaceholder={t("check_fail_placeholder")}
+                      penaltyPointsAriaLabel={t("check_aria_penalty_points").replace(
+                        "{points}",
+                        String(item.penaltyPoints ?? 0),
+                      )}
+                      ariaMarkDone={t("check_aria_mark_done")}
+                      ariaMarkNotSelected={t("check_aria_mark_not_selected")}
+                      ariaMarkNotDone={t("check_aria_mark_not_done")}
+                      ariaClearNotDone={t("check_aria_clear_not_done")}
                       onMarkDone={() => markDone(item.id)}
                       onMarkFailed={() => markFailed(item.id)}
                       onCommentChange={(value) =>
@@ -687,18 +729,10 @@ export function ShiftChecklistApp() {
                 <div className="exportOnly">
                   {exportBlocked && (exportEmployeeError || exportIssues.length) ? (
                     <div className="exportError" role="alert">
-                      <strong>
-                        {venue === "gastrobar"
-                          ? "Нельзя сформировать PDF:"
-                          : "Cannot export PDF:"}
-                      </strong>
+                      <strong>{t("check_export_blocked_title")}</strong>
                       <ul>
                         {exportEmployeeError ? (
-                          <li>
-                            {venue === "gastrobar"
-                              ? "Не указано имя сотрудника"
-                              : "Employee name is required"}
-                          </li>
+                          <li>{t("check_export_employee_required")}</li>
                         ) : null}
                         {exportIssues.map((item) => (
                           <li key={`${item.id}-${item.kind}`}>
@@ -716,38 +750,34 @@ export function ShiftChecklistApp() {
                     onClick={handleExportPdf}
                     disabled={exportingPdf}
                   >
-                    {exportingPdf ? "Sharing PDF..." : "Share PDF"}
+                    {exportingPdf ? t("check_sharing_pdf") : t("check_share_pdf")}
                   </button>
                   {hasPenaltyScoring && failedCount > 0 ? (
                     <p className="penaltyTotal" role="status">
-                      Штрафные баллы: <strong>{penaltyPointsTotal}</strong>
+                      {t("check_penalty_points").replace(
+                        "{points}",
+                        String(penaltyPointsTotal),
+                      )}
                     </p>
                   ) : null}
                   <div className="penaltiesBlock">
-                    <h3 className="penaltiesTitle">Таблица штрафов</h3>
+                    <h3 className="penaltiesTitle">{t("check_penalties_title")}</h3>
                     <ul className="penaltiesList">
-                      <li>1–11 баллов — замечание.</li>
-                      <li>12–21 балл — удержание 100&nbsp;000 VND.</li>
-                      <li>22–31 балл — удержание 300&nbsp;000 VND.</li>
-                      <li>32–41 балл — удержание 500&nbsp;000 VND.</li>
-                      <li>42 балла и выше — удержание 1&nbsp;000&nbsp;000 VND.</li>
+                      <li>{t("check_penalty_tier_remark")}</li>
+                      <li>{t("check_penalty_tier_12")}</li>
+                      <li>{t("check_penalty_tier_22")}</li>
+                      <li>{t("check_penalty_tier_32")}</li>
+                      <li>{t("check_penalty_tier_42")}</li>
                     </ul>
                   </div>
-                  <p className="note">
-                    {venue === "gastrobar"
-                      ? "Для PDF отметьте каждый пункт: галочка или крестик с причиной."
-                      : "For PDF, mark every item: done or not done with a reason."}
-                  </p>
+                  <p className="note">{t("check_note_pdf")}</p>
                 </div>
               ) : null}
             </div>
           ) : null}
 
           {!showExportPdf ? (
-            <p className="note">
-              Tap ✓ on the left if done, ✕ on the right if not done. Add a reason
-              when marking not done.
-            </p>
+            <p className="note">{t("check_note_items")}</p>
           ) : null}
         </div>
       </div>
@@ -763,6 +793,11 @@ function ChecklistRow({
   comment,
   failPlaceholder,
   highlightMissing,
+  penaltyPointsAriaLabel,
+  ariaMarkDone,
+  ariaMarkNotSelected,
+  ariaMarkNotDone,
+  ariaClearNotDone,
   onMarkDone,
   onMarkFailed,
   onCommentChange,
@@ -774,6 +809,11 @@ function ChecklistRow({
   comment: string;
   failPlaceholder: string;
   highlightMissing?: boolean;
+  penaltyPointsAriaLabel: string;
+  ariaMarkDone: string;
+  ariaMarkNotSelected: string;
+  ariaMarkNotDone: string;
+  ariaClearNotDone: string;
   onMarkDone: () => void;
   onMarkFailed: () => void;
   onCommentChange: (value: string) => void;
@@ -793,7 +833,7 @@ function ChecklistRow({
           className={`statusBox doneBox ${status === "done" ? "active" : ""}`}
           onClick={onMarkDone}
           aria-pressed={status === "done"}
-          aria-label={status === "done" ? "Mark as not selected" : "Mark as done"}
+          aria-label={status === "done" ? ariaMarkNotSelected : ariaMarkDone}
         >
           {status === "done" ? "✓" : ""}
         </button>
@@ -806,7 +846,7 @@ function ChecklistRow({
           onClick={onMarkFailed}
           aria-pressed={status === "failed"}
           aria-label={
-            status === "failed" ? "Clear not done" : "Mark as not done"
+            status === "failed" ? ariaClearNotDone : ariaMarkNotDone
           }
         >
           {status === "failed" ? "✕" : ""}
@@ -821,7 +861,7 @@ function ChecklistRow({
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-label={`${penaltyPoints} penalty points`}
+            aria-label={penaltyPointsAriaLabel}
           >
             {penaltyPoints}
           </span>
