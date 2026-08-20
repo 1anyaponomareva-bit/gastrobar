@@ -61,6 +61,9 @@ const DESCS_EN: Record<string, string> = {
   blueberry: "Forest berry with a deep, rounded sweetness.",
   "cherry-chocolate": "Cherry and cocoa in a rich, short pour.",
   "strawberry-cream": "Strawberry and cream in a truly dessert forward shot.",
+  applekivi: "Green kiwi freshness and juicy apple—a light, refreshing duet.",
+  dragonfrukt: "Exotic pitaya—soft sweetness and vivid color.",
+  lichi: "Delicate, fragrant lychee—floral sweetness from Asia.",
   kahlua: "Single 50 ml pour at the bar.",
   "sambuca-vaccari": "Single 50 ml pour at the bar.",
   "rhum-chauvet": "Single 50 ml pour at the bar.",
@@ -174,6 +177,9 @@ const DESCS_VN: Record<string, string> = {
   blueberry: "Việt tím, vị sâu, ngọt tròn.",
   "cherry-chocolate": "Anh đào và ca cao, đậm.",
   "strawberry-cream": "Dâu, kem, kiểu tráng miệng.",
+  applekivi: "Kiwi xanh tươi và táo mọng nước — nhẹ, sảng khoái.",
+  dragonfrukt: "Thanh long kỳ lạ — ngọt dịu và màu sắc rực rỡ.",
+  lichi: "Vải thơm dịu — ngọt hoa nồng từ châu Á.",
   b52:
     "B-52 kinh điển: ba lớp — rượu cà phê, rượu kem và triple sec, rót chồng trong ly shot. Khẩu phần 60 ml.",
   kahlua: "Một phần 50 ml tại quầy bar.",
@@ -300,6 +306,9 @@ const TASTE_EN: Record<string, string> = {
   blueberry: "Blueberry, berry",
   "cherry-chocolate": "Cherry, cocoa",
   "strawberry-cream": "Strawberry, cream",
+  applekivi: "Apple, kiwi",
+  dragonfrukt: "Pitaya, tropics",
+  lichi: "Lychee, floral",
   b52: "60 ml · coffee liqueur, cream liqueur, triple sec",
 };
 
@@ -339,6 +348,9 @@ const TASTE_VN: Record<string, string> = {
   blueberry: "Việt, mọng",
   "cherry-chocolate": "Anh đào, sô cô la",
   "strawberry-cream": "Dâu, kem",
+  applekivi: "Táo, kiwi",
+  dragonfrukt: "Thanh long, nhiệt đới",
+  lichi: "Vải, hoa",
   b52: "60 ml · cà phê, kem, triple sec",
 };
 
