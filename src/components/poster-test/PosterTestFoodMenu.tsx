@@ -18,6 +18,7 @@ import {
   foodSausageOptionLabel,
 } from "@/lib/poster/foodMenuI18n";
 import { useTranslation } from "@/lib/useTranslation";
+import { readPosterTestFoodSectionFromLocation } from "@/lib/posterTestBonusNav";
 import {
   BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
   HOT_DOG_SAUCES,
@@ -264,6 +265,14 @@ export function PosterTestFoodMenu() {
 
   useEffect(() => {
     setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    const section = readPosterTestFoodSectionFromLocation();
+    if (!section) return;
+    if (section === "all" || CATEGORY_ORDER.includes(section as (typeof CATEGORY_ORDER)[number])) {
+      setActiveCategory(section);
+    }
   }, []);
 
   useEffect(() => {

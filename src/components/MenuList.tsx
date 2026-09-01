@@ -22,6 +22,7 @@ import {
   POSTER_TEST_WHEEL_BONUS_SYNC_EVENT,
   syncPosterTestActiveBonus,
 } from "@/lib/posterTestWheelClientReset";
+import { readPosterTestBarCategoryFromLocation } from "@/lib/posterTestBonusNav";
 import { wheelNavBannerShowTitle } from "@/lib/bonusCopy";
 import {
   barSectionDisplayNameT,
@@ -140,6 +141,11 @@ export function MenuList({
       });
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    const categoryFromUrl = readPosterTestBarCategoryFromLocation();
+    if (categoryFromUrl) setBarCategory(categoryFromUrl);
+  }, []);
 
   useEffect(() => {
     const sync = () => setActiveBonus(getActiveBonus(activeBonusStorageKey));

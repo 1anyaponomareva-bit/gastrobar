@@ -5,6 +5,11 @@ import type { MenuPeriod } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeProvider";
 import { getListNavForProductId } from "@/lib/bonusProductNav";
 import { goToGastrofoodSnacks, isGastrofoodSnackProductId } from "@/lib/gastrofoodNav";
+import {
+  isPosterTestBonusNavigation,
+  navigatePosterTestBonusCategory,
+  navigatePosterTestBonusProduct,
+} from "@/lib/posterTestBonusNav";
 import type { BarCategoryId } from "@/components/CategoryTabs";
 
 export type PendingListCategory = { bar: BarCategoryId };
@@ -31,6 +36,10 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
 
   const goToProduct = useCallback(
     (period: MenuPeriod, productId: string) => {
+      if (isPosterTestBonusNavigation()) {
+        navigatePosterTestBonusProduct(period, productId);
+        return;
+      }
       if (isGastrofoodSnackProductId(productId)) {
         goToGastrofoodSnacks();
         return;
@@ -51,6 +60,10 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
 
   const goToBarCategory = useCallback(
     (categoryTab: BarCategoryId) => {
+      if (isPosterTestBonusNavigation()) {
+        navigatePosterTestBonusCategory(categoryTab);
+        return;
+      }
       if (categoryTab === "snacks") {
         goToGastrofoodSnacks();
         return;

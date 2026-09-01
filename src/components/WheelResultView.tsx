@@ -21,6 +21,8 @@ import {
 import type { BonusTypeKey } from "@/lib/bonusCopy";
 import { useTranslation } from "@/lib/useTranslation";
 import { wheelSegmentWinTitleT } from "@/lib/wheelCopyI18n";
+import { isPosterTestBonusNavigation } from "@/lib/posterTestBonusNav";
+import { POSTER_TEST_BAR_PATH } from "@/lib/posterTestRoutes";
 
 function formatLeft(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -249,6 +251,11 @@ export function WheelResultView({
       <button
         type="button"
         onClick={() => {
+          if (isPosterTestBonusNavigation()) {
+            window.location.assign(POSTER_TEST_BAR_PATH);
+            onAction("menu");
+            return;
+          }
           setPeriod("bar");
           onAction("menu");
         }}
