@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAuthSuccessResponse } from "@/lib/poster-test-auth/api";
-import { isPosterTestDbConfigured } from "@/lib/poster-test-auth/db";import { getTelegramBotToken } from "@/lib/poster-test-auth/oauth";
+import { isPosterTestDbConfigured } from "@/lib/poster-test-auth/db";
+import { getTelegramBotToken } from "@/lib/poster-test-auth/oauth";
 import {
   createPosterTestSessionToken,
   sessionCookieOptions,
@@ -63,20 +64,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = await upsertTelegramUser({
+  const upsert = await upsertTelegramUser({
     telegramId: payload.id,
     name: telegramDisplayName(payload),
     avatar: payload.photo_url ?? null,
   });
 
-  if (!user) {
+  if (!upsert.ok) {
     return NextResponse.json(
-      { success: false, message: "Не удалось создать пользователя." },
+      {
+        success: false,
+        error: upsert.code,
+        message:
+          upsert.code === "db_schema_missing"
+            ? "Таблица poster_test_users не создана в Supabase."
+            : "Не удалось создать пользователя.",
+      },
       { status: 500 },
     );
   }
 
-  const token = createPosterTestSessionToken(user.id);
+  const token = createPosterTestSessionToken(upsert.user.id);
   if (!token) {
     return NextResponse.json(
       {
@@ -88,7 +96,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = createAuthSuccessResponse(user);
+  const response = createAuthSuccessResponse(upsert.user);
   response.cookies.set(sessionCookieOptions(token));
   return response;
 }

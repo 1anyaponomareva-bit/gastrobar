@@ -1,6 +1,7 @@
-create extension if not exists pgcrypto;
+-- Paste into Supabase → SQL → New query → Run
+-- Creates poster-test account tables for /poster-test Google login.
 
--- Poster-test accounts (isolated from main site; used only on /poster-test).
+create extension if not exists pgcrypto;
 
 create table if not exists public.poster_test_users (
   id uuid primary key default gen_random_uuid(),
@@ -64,7 +65,6 @@ create trigger poster_test_orders_updated_at
 alter table public.poster_test_users enable row level security;
 alter table public.poster_test_orders enable row level security;
 
--- Server uses service_role; anon/authenticated have no direct access.
 revoke all on public.poster_test_users from anon, authenticated;
 revoke all on public.poster_test_orders from anon, authenticated;
 

@@ -9,8 +9,22 @@ export const metadata: Metadata = {
 };
 
 function formatLoginError(error: string): string {
-  const label = error.replaceAll("_", " ");
-  return `Не удалось войти (${label}). Попробуйте снова.`;
+  switch (error) {
+    case "google_cancelled":
+      return "Вход через Google отменён.";
+    case "google_failed":
+      return "Google не вернул профиль. Проверьте redirect URI в Google Cloud Console.";
+    case "db_not_configured":
+      return "На сервере не настроена база (SUPABASE_SERVICE_ROLE_KEY).";
+    case "db_schema_missing":
+      return "Таблица аккаунтов не создана в Supabase. Нужно выполнить миграцию poster_test_users.";
+    case "auth_secret_missing":
+      return "На сервере не настроен POSTER_TEST_AUTH_SECRET (минимум 32 символа).";
+    case "user_create_failed":
+      return "Не удалось сохранить пользователя в базе. Попробуйте снова или обратитесь к администратору.";
+    default:
+      return `Не удалось войти (${error.replaceAll("_", " ")}). Попробуйте снова.`;
+  }
 }
 
 export default async function PosterTestLoginPage({

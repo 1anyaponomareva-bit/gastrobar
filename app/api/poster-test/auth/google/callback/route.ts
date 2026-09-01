@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { exchangeGoogleCode } from "@/lib/poster-test-auth/oauth";
 import {
   createPosterTestSessionToken,
+  parseOAuthState,
   sessionCookieOptions,
 } from "@/lib/poster-test-auth/session";
 import { upsertGoogleUser } from "@/lib/poster-test-auth/userService";
@@ -15,17 +16,27 @@ function getRedirectUri(request: Request): string {
   return `${url.origin}/api/poster-test/auth/google/callback`;
 }
 
+function loginRedirect(origin: string, error: string, returnTo?: string) {
+  const params = new URLSearchParams({ error });
+  if (returnTo?.startsWith("/poster-test")) {
+    params.set("returnTo", returnTo);
+  }
+  return NextResponse.redirect(`${origin}/poster-test/login?${params.toString()}`);
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const returnTo = POSTER_TEST_ACCOUNT_PATH;
+  const state = url.searchParams.get("state");
+  const parsedState = parseOAuthState(state);
+  const returnTo = parsedState?.returnTo ?? POSTER_TEST_ACCOUNT_PATH;
 
   if (!code) {
-    return NextResponse.redirect(`${url.origin}/poster-test/login?error=google_cancelled`);
+    return loginRedirect(url.origin, "google_cancelled", returnTo);
   }
 
   if (!isPosterTestDbConfigured()) {
-    return NextResponse.redirect(`${url.origin}/poster-test/login?error=db_not_configured`);
+    return loginRedirect(url.origin, "db_not_configured", returnTo);
   }
 
   const profile = await exchangeGoogleCode({
@@ -34,17 +45,24 @@ export async function GET(request: Request) {
   });
 
   if (!profile) {
-    return NextResponse.redirect(`${url.origin}/poster-test/login?error=google_failed`);
+    return loginRedirect(url.origin, "google_failed", returnTo);
   }
 
-  const user = await upsertGoogleUser(profile);
-  if (!user) {
-    return NextResponse.redirect(`${url.origin}/poster-test/login?error=user_create_failed`);
+  const upsert = await upsertGoogleUser(profile);
+  if (!upsert.ok) {
+    const errorCode =
+      upsert.code === "db_schema_missing"
+        ? "db_schema_missing"
+        : upsert.code === "db_not_configured"
+          ? "db_not_configured"
+          : "user_create_failed";
+    console.error("[poster-test-auth] Google callback upsert failed:", upsert.code, upsert.message);
+    return loginRedirect(url.origin, errorCode, returnTo);
   }
 
-  const token = createPosterTestSessionToken(user.id);
+  const token = createPosterTestSessionToken(upsert.user.id);
   if (!token) {
-    return NextResponse.redirect(`${url.origin}/poster-test/login?error=auth_secret_missing`);
+    return loginRedirect(url.origin, "auth_secret_missing", returnTo);
   }
 
   const response = NextResponse.redirect(`${url.origin}${returnTo}`);

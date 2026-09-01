@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac, randomBytes } from "crypto";
 import type { PosterTestAuthProvider, PosterTestUser } from "@/lib/poster-test-auth/types";
 import { getPosterTestAdminClient } from "@/lib/poster-test-auth/db";
 
@@ -16,6 +16,10 @@ type UserRow = {
   updated_at: string;
 };
 
+export type UpsertPosterTestUserResult =
+  | { ok: true; user: PosterTestUser }
+  | { ok: false; code: "db_not_configured" | "db_schema_missing" | "db_error"; message: string };
+
 function mapUser(row: UserRow): PosterTestUser {
   return {
     id: row.id,
@@ -30,6 +34,35 @@ function mapUser(row: UserRow): PosterTestUser {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function logDbError(context: string, error: { message?: string; code?: string } | null) {
+  if (!error) return;
+  console.error(`[poster-test-auth] ${context}:`, error.code ?? "unknown", error.message ?? error);
+}
+
+function classifyDbError(error: { message?: string; code?: string } | null): UpsertPosterTestUserResult {
+  const message = error?.message ?? "Database error";
+  const code = String(error?.code ?? "");
+  const missingTable =
+    code === "PGRST205" ||
+    (/poster_test_users/.test(message) &&
+      /does not exist|Could not find the table|schema cache/i.test(message));
+
+  if (missingTable) {
+    return {
+      ok: false,
+      code: "db_schema_missing",
+      message:
+        "Table poster_test_users is missing. Apply migration 20260701120000_poster_test_accounts.sql in Supabase.",
+    };
+  }
+
+  return { ok: false, code: "db_error", message };
+}
+
+function newQrSlug(): string {
+  return randomBytes(16).toString("hex");
 }
 
 export async function getPosterTestUserById(userId: string): Promise<PosterTestUser | null> {
@@ -64,9 +97,11 @@ export async function upsertGoogleUser(input: {
   email: string;
   name: string;
   avatar?: string | null;
-}): Promise<PosterTestUser | null> {
+}): Promise<UpsertPosterTestUserResult> {
   const client = getPosterTestAdminClient();
-  if (!client) return null;
+  if (!client) {
+    return { ok: false, code: "db_not_configured", message: "Poster-test database is not configured." };
+  }
 
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim() || email.split("@")[0] || "Guest";
@@ -77,7 +112,10 @@ export async function upsertGoogleUser(input: {
     .eq("email", email)
     .maybeSingle();
 
-  if (existingError) return null;
+  if (existingError) {
+    logDbError("upsertGoogleUser select", existingError);
+    return classifyDbError(existingError);
+  }
 
   if (existing) {
     const { data, error } = await client
@@ -90,8 +128,11 @@ export async function upsertGoogleUser(input: {
       .eq("id", (existing as UserRow).id)
       .select("*")
       .single();
-    if (error || !data) return null;
-    return mapUser(data as UserRow);
+    if (error || !data) {
+      logDbError("upsertGoogleUser update", error);
+      return classifyDbError(error);
+    }
+    return { ok: true, user: mapUser(data as UserRow) };
   }
 
   const { data, error } = await client
@@ -102,21 +143,27 @@ export async function upsertGoogleUser(input: {
       email,
       provider: "google",
       role: "guest",
+      qr_slug: newQrSlug(),
     })
     .select("*")
     .single();
 
-  if (error || !data) return null;
-  return mapUser(data as UserRow);
+  if (error || !data) {
+    logDbError("upsertGoogleUser insert", error);
+    return classifyDbError(error);
+  }
+  return { ok: true, user: mapUser(data as UserRow) };
 }
 
 export async function upsertTelegramUser(input: {
   telegramId: number;
   name: string;
   avatar?: string | null;
-}): Promise<PosterTestUser | null> {
+}): Promise<UpsertPosterTestUserResult> {
   const client = getPosterTestAdminClient();
-  if (!client) return null;
+  if (!client) {
+    return { ok: false, code: "db_not_configured", message: "Poster-test database is not configured." };
+  }
 
   const name = input.name.trim() || "Telegram user";
 
@@ -126,7 +173,10 @@ export async function upsertTelegramUser(input: {
     .eq("telegram_id", input.telegramId)
     .maybeSingle();
 
-  if (existingError) return null;
+  if (existingError) {
+    logDbError("upsertTelegramUser select", existingError);
+    return classifyDbError(existingError);
+  }
 
   if (existing) {
     const { data, error } = await client
@@ -139,8 +189,11 @@ export async function upsertTelegramUser(input: {
       .eq("id", (existing as UserRow).id)
       .select("*")
       .single();
-    if (error || !data) return null;
-    return mapUser(data as UserRow);
+    if (error || !data) {
+      logDbError("upsertTelegramUser update", error);
+      return classifyDbError(error);
+    }
+    return { ok: true, user: mapUser(data as UserRow) };
   }
 
   const { data, error } = await client
@@ -151,12 +204,16 @@ export async function upsertTelegramUser(input: {
       telegram_id: input.telegramId,
       provider: "telegram",
       role: "guest",
+      qr_slug: newQrSlug(),
     })
     .select("*")
     .single();
 
-  if (error || !data) return null;
-  return mapUser(data as UserRow);
+  if (error || !data) {
+    logDbError("upsertTelegramUser insert", error);
+    return classifyDbError(error);
+  }
+  return { ok: true, user: mapUser(data as UserRow) };
 }
 
 export type TelegramAuthPayload = {
