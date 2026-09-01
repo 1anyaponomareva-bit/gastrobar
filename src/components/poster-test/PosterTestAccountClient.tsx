@@ -8,7 +8,7 @@ export function PosterTestAccountClient({ user }: { user: PosterTestUser }) {
   const { signOut } = usePosterTestAuth();
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-28 pt-6 text-white">
+    <div className="poster-test-page-pad-top mx-auto max-w-md px-4 pb-28 pt-6 text-white">
       <section className="poster-test-account-bonuses" aria-labelledby="poster-test-bonuses-title">
         <h1 id="poster-test-bonuses-title" className="poster-test-account-bonuses__title">
           <span aria-hidden="true">🎁</span> Мои бонусы

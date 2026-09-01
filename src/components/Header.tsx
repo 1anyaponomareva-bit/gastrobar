@@ -92,8 +92,8 @@ export function Header({
         width: "100%",
         zIndex: 1000,
         background: "#000",
-        /* Один раз: вырез/status bar; полоса контента 96px — как Gastrofood. */
-        paddingTop: "env(safe-area-inset-top, 0px)",
+        /* Poster-test top bar already reserves safe area above the logo strip. */
+        paddingTop: layoutOffsetPx > 0 ? 0 : "env(safe-area-inset-top, 0px)",
         boxSizing: "content-box",
       }}
     >

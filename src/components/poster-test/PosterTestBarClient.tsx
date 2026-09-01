@@ -10,7 +10,7 @@ import { TikTokButton } from "@/components/TikTokButton";
 import type { MenuItem } from "@/data/menu";
 import { menuItemDisplayName } from "@/lib/menuItemI18n";
 import { barUnitPrice } from "@/lib/poster/posterTestCartHelpers";
-import { POSTER_TEST_BANNER_HEIGHT_PX } from "@/lib/posterTestRoutes";
+import { usePosterTestTopBarOffset } from "@/lib/poster/usePosterTestTopBarOffset";
 import { useTranslation } from "@/lib/useTranslation";
 
 function PosterTestBarCartControl({ item }: { item: MenuItem }) {
@@ -46,6 +46,7 @@ export function PosterTestBarClient({
   items: MenuItem[];
   loadError?: string | null;
 }) {
+  const topBarOffsetPx = usePosterTestTopBarOffset();
   const renderBarCartControl = useCallback(
     (item: MenuItem) => <PosterTestBarCartControl item={item} />,
     [],
@@ -53,7 +54,7 @@ export function PosterTestBarClient({
 
   return (
     <>
-      <Header layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX} hideLanguageMenu />
+      <Header layoutOffsetPx={topBarOffsetPx} hideLanguageMenu />
       <main className="mx-auto grid min-h-[100dvh] max-w-md grid-cols-1 bg-black pt-0">
         {loadError ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">
@@ -63,7 +64,7 @@ export function PosterTestBarClient({
         ) : (
           <MenuList
             items={items}
-            layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX}
+            layoutOffsetPx={topBarOffsetPx}
             renderBarCartControl={renderBarCartControl}
           />
         )}

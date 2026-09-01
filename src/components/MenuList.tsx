@@ -71,6 +71,8 @@ export function MenuList({
   const headerTopPx = HEADER_HEIGHT + layoutOffsetPx;
   const barListTopPx = BAR_LIST_TOP + layoutOffsetPx;
   const hookahListTopPx = HOOKAH_LIST_TOP + layoutOffsetPx;
+  const withSafeTop = (px: number) =>
+    layoutOffsetPx > 0 ? `${px}px` : `calc(${px}px + env(safe-area-inset-top, 0px))`;
 
   const [barCategory, setBarCategory] = useState<BarCategoryId>("all");
   const [hookahCategory, setHookahCategory] = useState<HookahCategoryId>("all");
@@ -259,7 +261,7 @@ export function MenuList({
               <div
                 className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
                 style={{
-                  top: `calc(${headerTopPx}px + env(safe-area-inset-top, 0px))`,
+                  top: withSafeTop(headerTopPx),
                 }}
               >
                 <HookahCategoryTabs value={hookahCategory} onChange={setHookahCategory} />
@@ -269,7 +271,7 @@ export function MenuList({
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
                 style={{
-                  scrollPaddingTop: `calc(${headerTopPx + TABS_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                  scrollPaddingTop: withSafeTop(headerTopPx + TABS_HEIGHT),
                 }}
               >
                 <div
@@ -285,7 +287,7 @@ export function MenuList({
                     aria-hidden
                     className="shrink-0 bg-[#030303]"
                     style={{
-                      minHeight: `calc(${hookahListTopPx}px + env(safe-area-inset-top, 0px))`,
+                      minHeight: withSafeTop(hookahListTopPx),
                     }}
                   />
                   {hookahFiltered.map((item, index) => (
@@ -324,7 +326,7 @@ export function MenuList({
               <div
                 className="fixed left-0 right-0 z-[999] max-h-[72px] overflow-hidden"
                 style={{
-                  top: `calc(${headerTopPx}px + env(safe-area-inset-top, 0px))`,
+                  top: withSafeTop(headerTopPx),
                 }}
               >
                 <CategoryTabs value={barCategory} onChange={setBarCategory} />
@@ -334,7 +336,7 @@ export function MenuList({
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overscroll-y-contain bg-[#030303]"
                 style={{
-                  scrollPaddingTop: `calc(${headerTopPx + TABS_HEIGHT}px + env(safe-area-inset-top, 0px))`,
+                  scrollPaddingTop: withSafeTop(headerTopPx + TABS_HEIGHT),
                 }}
               >
                 <div
@@ -350,7 +352,7 @@ export function MenuList({
                     aria-hidden
                     className="shrink-0 bg-[#030303]"
                     style={{
-                      minHeight: `calc(${barListTopPx}px + env(safe-area-inset-top, 0px))`,
+                      minHeight: withSafeTop(barListTopPx),
                     }}
                   />
                   {showWheelNavBanner && activeBonus && (
