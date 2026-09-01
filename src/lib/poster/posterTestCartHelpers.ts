@@ -51,6 +51,10 @@ export function getHotDogSausageOptions(item: PosterFoodMenuItem): HotDogSausage
   return item.sausageOptions ?? [];
 }
 
+export function barUnitPrice(item: { price: string }): number {
+  return Number(item.price) || 0;
+}
+
 export function cartKey(
   itemId: string,
   selectedSausageId?: string,

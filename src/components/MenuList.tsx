@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/ThemeProvider";
 import { useFavorites } from "@/components/FavoritesProvider";
@@ -55,9 +55,11 @@ function filterHookahItems(items: MenuItem[], categoryId: HookahCategoryId): Men
 export function MenuList({
   items,
   layoutOffsetPx = 0,
+  renderBarCartControl,
 }: {
   items: MenuItem[];
   layoutOffsetPx?: number;
+  renderBarCartControl?: (item: MenuItem) => ReactNode;
 }) {
   const { t } = useTranslation();
   const { period } = useTheme();
@@ -404,6 +406,7 @@ export function MenuList({
                       bonusProductId={bonusProductId}
                       highlightProductId={highlightProductId}
                       onClick={() => openDetail(item, index)}
+                      cartSlot={renderBarCartControl?.(item)}
                     />
                   ))}
                 </div>
@@ -418,6 +421,7 @@ export function MenuList({
                 items={filtered}
                 initialIndex={selectedIndex}
                 onClose={closeDetail}
+                renderDetailCartAction={renderBarCartControl}
               />
             )}
           </AnimatePresence>

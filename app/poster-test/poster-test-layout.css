@@ -381,6 +381,114 @@
   min-height: 0;
 }
 
+/* Bar menu — quick add to cart (poster-test only). */
+.poster-test-bar-cart-control {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.375rem;
+  height: 2.375rem;
+  overflow: hidden;
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poster-test-bar-cart-control--expanded {
+  width: 5.125rem;
+}
+
+.poster-test-bar-cart-control__view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: menu-card-cart-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poster-test-bar-cart-control__add,
+.poster-test-bar-cart-control__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid rgba(212, 175, 55, 0.22);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(212, 175, 55, 0.92);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 120ms ease;
+}
+
+.poster-test-bar-cart-control__add {
+  width: 2.375rem;
+  height: 2.375rem;
+  padding: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.poster-test-bar-cart-control__add:hover,
+.poster-test-bar-cart-control__btn:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.36);
+}
+
+.poster-test-bar-cart-control__add:active,
+.poster-test-bar-cart-control__btn:active {
+  transform: scale(0.96);
+}
+
+.poster-test-bar-cart-control__add:disabled,
+.poster-test-bar-cart-control__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.poster-test-bar-cart-control__qty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 5.125rem;
+  height: 2.375rem;
+}
+
+.poster-test-bar-cart-control__btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.poster-test-bar-cart-control__btn--plus {
+  color: rgba(212, 175, 55, 0.92);
+}
+
+.poster-test-bar-cart-control__btn--plus:hover {
+  background: rgba(212, 175, 55, 0.12);
+  color: rgba(212, 175, 55, 1);
+}
+
+.poster-test-bar-cart-control__value {
+  min-width: 1.25rem;
+  padding: 0 0.125rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (min-height: 740px) {
   .poster-test-menu-choice__content {
     justify-content: center;

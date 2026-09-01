@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import {
+  barUnitPrice,
   cartKey,
   displayFoodName,
   formatVnd,
@@ -30,6 +31,11 @@ type PosterTestCartContextValue = {
     item: PosterFoodMenuItem,
     selectedSausageId: string,
     options?: { openCart?: boolean; selectedOptionIds?: string[] },
+  ) => string | null;
+  addBarItemToCart: (
+    item: { id: string; price: string },
+    displayName: string,
+    options?: { openCart?: boolean },
   ) => string | null;
   updateCartQuantity: (key: string, nextQuantity: number) => void;
 };
@@ -214,6 +220,44 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     return null;
   }, [openCart]);
 
+  const addBarItemToCart = useCallback(
+    (
+      item: { id: string; price: string },
+      displayName: string,
+      options?: { openCart?: boolean },
+    ) => {
+      const unitPrice = barUnitPrice(item);
+      if (unitPrice <= 0) {
+        return "Для этой позиции не удалось определить цену.";
+      }
+
+      const key = item.id;
+      setCartItems((current) => {
+        const existing = current.find((entry) => entry.key === key);
+        if (existing) {
+          return current.map((entry) =>
+            entry.key === key ? { ...entry, quantity: entry.quantity + 1 } : entry,
+          );
+        }
+        return [
+          ...current,
+          {
+            key,
+            id: item.id,
+            name: displayName,
+            quantity: 1,
+            unitPrice,
+          },
+        ];
+      });
+      if (options?.openCart !== false) {
+        openCart("cart");
+      }
+      return null;
+    },
+    [openCart],
+  );
+
   const updateCartQuantity = useCallback((key: string, nextQuantity: number) => {
     setCartItems((current) => {
       if (nextQuantity <= 0) return current.filter((item) => item.key !== key);
@@ -246,9 +290,11 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       openCart,
       closeCart,
       addItemToCart,
+      addBarItemToCart,
       updateCartQuantity,
     }),
     [
+      addBarItemToCart,
       addItemToCart,
       cartCount,
       cartItems,
@@ -346,7 +392,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                       <span className="text-3xl" aria-hidden="true">
                         🛒
                       </span>
-                      <p>Корзина пуста. Выберите блюда в меню и покажите заказ бармену.</p>
+                      <p>Корзина пуста. Выберите блюда или напитки в меню и покажите заказ бармену.</p>
                       <button
                         type="button"
                         className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-white/80"

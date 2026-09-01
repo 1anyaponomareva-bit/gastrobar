@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
 import { TINCTURE_RIM_FOCUS_IDS, FUZZY_BEER_MENU_IDS } from "@/data/menu";
@@ -26,10 +26,12 @@ export function MenuDetailView({
   items,
   initialIndex,
   onClose,
+  renderDetailCartAction,
 }: {
   items: MenuItem[];
   initialIndex: number;
   onClose: () => void;
+  renderDetailCartAction?: (item: MenuItem) => ReactNode;
 }) {
   const { t, lang } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(
@@ -219,9 +221,12 @@ export function MenuDetailView({
                 {item.grammage && (
                   <p className="text-base text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">{item.grammage}</p>
                 )}
-                <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
-                  {formatVnd(item.price)} VND
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
+                    {formatVnd(item.price)} VND
+                  </p>
+                  {renderDetailCartAction?.(item)}
+                </div>
               </div>
             ) : isSpirits ? (
               <div className="space-y-2">
@@ -231,9 +236,12 @@ export function MenuDetailView({
                 <p className="text-base text-white/75 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
                   {item.grammage ?? t("unit_vol_short")}
                 </p>
-                <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
-                  {formatVnd(item.price)} VND
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
+                    {formatVnd(item.price)} VND
+                  </p>
+                  {renderDetailCartAction?.(item)}
+                </div>
               </div>
             ) : (
             <div className="space-y-3">
@@ -314,7 +322,7 @@ export function MenuDetailView({
                     .join(", ")}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <p className="text-xl font-semibold text-[#D4AF37] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] sm:text-2xl">
                   {formatVnd(item.price)} VND
                 </p>
@@ -330,6 +338,7 @@ export function MenuDetailView({
                             : t("unit_glass")
                         : t("unit_food")))}
                 </p>
+                {renderDetailCartAction?.(item)}
               </div>
             </div>
             )}

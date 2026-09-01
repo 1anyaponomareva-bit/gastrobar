@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import type { ReactNode } from "react";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
 import { TINCTURE_RIM_FOCUS_IDS, FUZZY_BEER_MENU_IDS } from "@/data/menu";
@@ -40,12 +41,14 @@ export function MenuListItem({
   bonusProductId,
   highlightProductId,
   onClick,
+  cartSlot,
 }: {
   item: MenuItem;
   index: number;
   bonusProductId?: string | null;
   highlightProductId?: string | null;
   onClick: () => void;
+  cartSlot?: React.ReactNode;
 }) {
   const { t, lang } = useTranslation();
   const displayName = menuItemDisplayName(item, lang);
@@ -219,12 +222,15 @@ export function MenuListItem({
               {t(strengthKey)}
             </span>
           )}
-          <span
-            className={`inline-flex w-fit max-w-full shrink-0 rounded-full px-3 py-1 text-sm font-medium text-white/90 ${isTincture ? "mt-1" : "mt-2"}`}
-            style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-          >
-            {priceFormatted} VND
-          </span>
+          <div className={`flex flex-wrap items-center gap-2 ${isTincture ? "mt-1" : "mt-2"}`}>
+            <span
+              className="inline-flex w-fit max-w-full shrink-0 rounded-full px-3 py-1 text-sm font-medium text-white/90"
+              style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+            >
+              {priceFormatted} VND
+            </span>
+            {cartSlot}
+          </div>
         </div>
       </div>
 
