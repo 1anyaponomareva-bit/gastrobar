@@ -2,6 +2,7 @@
 
 import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import { PosterTestBeerClubCard } from "@/components/poster-test/PosterTestBeerClubCard";
+import { PosterTestWheelBonusCard } from "@/components/poster-test/PosterTestWheelBonusCard";
 import type { PosterTestUser } from "@/lib/poster-test-auth/types";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -15,7 +16,8 @@ export function PosterTestAccountClient({ user }: { user: PosterTestUser }) {
         <h1 id="poster-test-bonuses-title" className="poster-test-account-bonuses__title">
           <span aria-hidden="true">🎁</span> {t("poster_test_my_bonuses")}
         </h1>
-        <div className="poster-test-account-bonuses__card">
+        <div className="poster-test-account-bonuses__card space-y-4">
+          <PosterTestWheelBonusCard />
           <PosterTestBeerClubCard variant="full" />
         </div>
       </section>

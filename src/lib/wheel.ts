@@ -27,6 +27,8 @@ function resolveWheelStorageKeys(keys?: WheelStorageKeys): WheelStorageKeys {
 
 const WIN_EXPIRY_MIN = 120;
 
+export { WIN_EXPIRY_MIN as WHEEL_BONUS_EXPIRY_MINUTES };
+
 export type WheelSegmentKind = "discount" | "product" | "other";
 
 export type WheelSegmentData = {
@@ -213,9 +215,30 @@ function markHasPlayed(keys?: WheelStorageKeys): void {
   } catch {}
 }
 
-export function computeSpinOutcome(keys?: WheelStorageKeys): SpinOutcome {
-  const played = hasPlayedWheelBefore(keys);
-  const { lastSpinWasLoss, lastWinSegmentIndex, consecutiveWinsSinceLoss } = getStorage(keys);
+export function normalizeWheelStorage(raw: Partial<WheelStorage> | null | undefined): WheelStorage {
+  if (!raw) return { lastSpinAt: 0 };
+  const rawWin = raw.lastWinSegmentIndex;
+  const lastWinSegmentIndex =
+    typeof rawWin === "number" && WIN_SEGMENT_INDICES.includes(rawWin) ? rawWin : undefined;
+  const rawStreak = raw.consecutiveWinsSinceLoss;
+  const consecutiveWinsSinceLoss =
+    typeof rawStreak === "number" && rawStreak >= 0 && Number.isFinite(rawStreak)
+      ? Math.floor(rawStreak)
+      : undefined;
+  return {
+    lastSpinAt: typeof raw.lastSpinAt === "number" ? raw.lastSpinAt : 0,
+    lastSpinWasLoss: raw.lastSpinWasLoss === true,
+    lastWinSegmentIndex,
+    consecutiveWinsSinceLoss,
+  };
+}
+
+export function computeSpinOutcomeFromStorage(
+  prev: WheelStorage,
+  playedBefore: boolean,
+): SpinOutcome {
+  const { lastSpinWasLoss, lastWinSegmentIndex, consecutiveWinsSinceLoss } =
+    normalizeWheelStorage(prev);
   const winPool = winCandidatesExcludingLast(lastWinSegmentIndex);
   const winStreak = consecutiveWinsSinceLoss ?? 0;
 
@@ -237,8 +260,45 @@ export function computeSpinOutcome(keys?: WheelStorageKeys): SpinOutcome {
     segmentId: WHEEL_SEGMENTS[idx]!.id,
     bonusType: isLoss ? null : bonusType,
     isLoss,
-    isFirstWheel: !played,
+    isFirstWheel: !playedBefore,
   };
+}
+
+export function nextWheelStorageAfterSpin(prev: WheelStorage, outcome: SpinOutcome): WheelStorage {
+  const normalized = normalizeWheelStorage(prev);
+  const prevStreak = normalized.consecutiveWinsSinceLoss ?? 0;
+  return {
+    lastSpinAt: Date.now(),
+    lastSpinWasLoss: outcome.isLoss,
+    lastWinSegmentIndex: outcome.isLoss
+      ? normalized.lastWinSegmentIndex
+      : outcome.segmentIndex,
+    consecutiveWinsSinceLoss: outcome.isLoss ? 0 : prevStreak + 1,
+  };
+}
+
+export function getMsUntilNextSpinFromStorage(storage: WheelStorage): number {
+  const { lastSpinAt } = normalizeWheelStorage(storage);
+  if (lastSpinAt <= 0) return 0;
+  const end = lastSpinAt + WHEEL_SPIN_COOLDOWN_MS;
+  return Math.max(0, end - Date.now());
+}
+
+export function canSpinFromStorage(storage: WheelStorage): boolean {
+  return getMsUntilNextSpinFromStorage(storage) === 0;
+}
+
+export function createBonusFromSpinOutcome(outcome: SpinOutcome): Bonus | null {
+  if (outcome.isLoss || !outcome.bonusType) return null;
+  const expiresAt = Date.now() + WIN_EXPIRY_MIN * 60 * 1000;
+  const productId = segmentProductIdForBonus(outcome.segmentIndex);
+  const navBarCategory = segmentNavBarCategoryForBonus(outcome.segmentIndex);
+  return createBonus(outcome.bonusType, expiresAt, productId, navBarCategory);
+}
+
+export function computeSpinOutcome(keys?: WheelStorageKeys): SpinOutcome {
+  const played = hasPlayedWheelBefore(keys);
+  return computeSpinOutcomeFromStorage(getStorage(keys), played);
 }
 
 export type WheelStorage = {
@@ -329,18 +389,7 @@ export function saveSpinOutcome(
   activeBonusStorageKey?: string,
 ): Bonus | null {
   const prev = getStorage(keys);
-  const prevStreak = prev.consecutiveWinsSinceLoss ?? 0;
-  setStorage(
-    {
-      lastSpinAt: Date.now(),
-      lastSpinWasLoss: outcome.isLoss,
-      lastWinSegmentIndex: outcome.isLoss
-        ? prev.lastWinSegmentIndex
-        : outcome.segmentIndex,
-      consecutiveWinsSinceLoss: outcome.isLoss ? 0 : prevStreak + 1,
-    },
-    keys,
-  );
+  setStorage(nextWheelStorageAfterSpin(prev, outcome), keys);
   markHasPlayed(keys);
 
   if (outcome.isLoss || !outcome.bonusType) return null;

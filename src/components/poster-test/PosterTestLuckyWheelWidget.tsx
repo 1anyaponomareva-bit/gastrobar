@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LuckyWheelButton } from "@/components/LuckyWheelButton";
-import { LuckyWheelPopup } from "@/components/LuckyWheelPopup";
+import { PosterTestLuckyWheelPopup } from "@/components/poster-test/PosterTestLuckyWheelPopup";
 import { MyBonusesScreen } from "@/components/MyBonusesScreen";
 import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import { usePosterTestWheelScope } from "@/components/poster-test/PosterTestWheelScopeContext";
-import { getActiveBonus, formatRemainingTime } from "@/services/bonusService";
+import {
+  formatRemainingTime,
+  getActiveBonus,
+  saveActiveBonus,
+  type Bonus,
+} from "@/services/bonusService";
 import { POSTER_TEST_LOGIN_PATH } from "@/lib/posterTestRoutes";
 import { posterTestUserCanSpinWheel } from "@/lib/posterTestWheelScope";
 
@@ -28,34 +33,49 @@ export function PosterTestLuckyWheelWidget() {
 
   const [wheelOpen, setWheelOpen] = useState(false);
   const [myBonusesOpen, setMyBonusesOpen] = useState(false);
-  const [activeBonus, setActiveBonus] = useState<ReturnType<typeof getActiveBonus>>(null);
+  const [activeBonus, setActiveBonus] = useState<Bonus | null>(null);
   const [remainingTime, setRemainingTime] = useState("");
   const wheelAutoOpenedRef = useRef(false);
 
   const activeBonusStorageKey = scope?.activeBonusStorageKey;
 
-  useEffect(() => {
+  const refreshWheelStatus = useCallback(async () => {
     if (!canSpinWheel) {
       setActiveBonus(null);
       return;
     }
-    setActiveBonus(getActiveBonus(activeBonusStorageKey));
-  }, [activeBonusStorageKey, canSpinWheel, user?.id]);
+    try {
+      const response = await fetch("/api/poster-test/wheel", { cache: "no-store" });
+      const data = (await response.json()) as {
+        success?: boolean;
+        activeBonus?: Bonus | null;
+      };
+      if (data.success) {
+        const bonus = data.activeBonus ?? null;
+        setActiveBonus(bonus);
+        if (bonus && activeBonusStorageKey) {
+          saveActiveBonus(bonus, activeBonusStorageKey);
+        }
+      }
+    } catch {
+      setActiveBonus(getActiveBonus(activeBonusStorageKey));
+    }
+  }, [activeBonusStorageKey, canSpinWheel]);
+
+  useEffect(() => {
+    void refreshWheelStatus();
+  }, [refreshWheelStatus, user?.id]);
 
   useEffect(() => {
     if (!activeBonus) {
       setRemainingTime("");
       return;
     }
-    const tick = () => {
-      const bonus = getActiveBonus(activeBonusStorageKey);
-      if (bonus) setRemainingTime(formatRemainingTime(bonus.expiresAt));
-      else setRemainingTime("");
-    };
+    const tick = () => setRemainingTime(formatRemainingTime(activeBonus.expiresAt));
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [activeBonus?.id, activeBonusStorageKey]);
+  }, [activeBonus]);
 
   useEffect(() => {
     if (loading || wheelAutoOpenedRef.current) return;
@@ -64,11 +84,11 @@ export function PosterTestLuckyWheelWidget() {
 
     wheelAutoOpenedRef.current = true;
 
-    if (getActiveBonus(activeBonusStorageKey)) {
-      setMyBonusesOpen(true);
-    } else {
-      setWheelOpen(true);
-    }
+    void refreshWheelStatus().then(() => {
+      const bonus = getActiveBonus(activeBonusStorageKey);
+      if (bonus) setMyBonusesOpen(true);
+      else setWheelOpen(true);
+    });
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("wheel");
@@ -79,6 +99,7 @@ export function PosterTestLuckyWheelWidget() {
     activeBonusStorageKey,
     loading,
     pathname,
+    refreshWheelStatus,
     router,
     searchParams,
     user,
@@ -88,14 +109,11 @@ export function PosterTestLuckyWheelWidget() {
     if (!posterTestUserCanSpinWheel(user)) {
       const path = pathname ?? "/poster-test";
       const returnTo = buildWheelLoginReturnTo(path, searchParams?.toString() ?? "");
-      router.push(
-        `${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`,
-      );
+      router.push(`${POSTER_TEST_LOGIN_PATH}?returnTo=${encodeURIComponent(returnTo)}`);
       return;
     }
 
-    const bonus = getActiveBonus(activeBonusStorageKey);
-    if (bonus) {
+    if (activeBonus) {
       setMyBonusesOpen(true);
     } else {
       setWheelOpen(true);
@@ -104,24 +122,13 @@ export function PosterTestLuckyWheelWidget() {
 
   const handleCloseWheel = () => {
     setWheelOpen(false);
-    setActiveBonus(getActiveBonus(activeBonusStorageKey));
+    void refreshWheelStatus();
   };
 
   const handleCloseMyBonuses = () => {
     setMyBonusesOpen(false);
-    setActiveBonus(getActiveBonus(activeBonusStorageKey));
+    void refreshWheelStatus();
   };
-
-  const wheelProps = useMemo(
-    () =>
-      scope
-        ? {
-            wheelStorageKeys: scope.wheelStorageKeys,
-            activeBonusStorageKey: scope.activeBonusStorageKey,
-          }
-        : {},
-    [scope],
-  );
 
   return (
     <>
@@ -133,10 +140,11 @@ export function PosterTestLuckyWheelWidget() {
       {(wheelOpen || myBonusesOpen) && canSpinWheel ? (
         <AnimatePresence>
           {wheelOpen ? (
-            <LuckyWheelPopup
+            <PosterTestLuckyWheelPopup
               isOpen={wheelOpen}
               onClose={handleCloseWheel}
-              {...wheelProps}
+              activeBonusStorageKey={activeBonusStorageKey}
+              onStatusChange={() => void refreshWheelStatus()}
             />
           ) : null}
           {myBonusesOpen ? (

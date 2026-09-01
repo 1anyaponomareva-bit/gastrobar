@@ -85,6 +85,13 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
 
   const handleConfirmRedeem = useCallback(() => {
     redeemBonus(bonus.id, activeBonusStorageKey);
+    if (activeBonusStorageKey?.includes("_pt_")) {
+      void fetch("/api/poster-test/wheel/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bonusId: bonus.id }),
+      });
+    }
     const current = getCurrentBonus(activeBonusStorageKey);
     if (current) setBonus(current);
     setShowConfirmModal(false);

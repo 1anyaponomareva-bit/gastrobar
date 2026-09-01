@@ -70,3 +70,7 @@ revoke all on public.poster_test_orders from anon, authenticated;
 
 grant all on public.poster_test_users to service_role;
 grant all on public.poster_test_orders to service_role;
+
+alter table public.poster_test_users
+  add column if not exists wheel_state jsonb not null default '{}'::jsonb,
+  add column if not exists wheel_active_bonus jsonb;
