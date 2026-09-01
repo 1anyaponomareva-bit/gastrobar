@@ -153,6 +153,18 @@ export function ShiftChecklistApp() {
     [sections, activeSection],
   );
 
+  const isActiveSectionAllDone = useMemo(() => {
+    if (!activeSectionData) return false;
+    let hasItems = false;
+    for (const group of activeSectionData.groups) {
+      for (const item of group.items) {
+        hasItems = true;
+        if (item.status !== "done") return false;
+      }
+    }
+    return hasItems;
+  }, [activeSectionData]);
+
   const sectionProgress = useMemo(() => {
     const map = new Map<string, { done: number; total: number }>();
     sections.forEach((section) => {
@@ -330,21 +342,23 @@ export function ShiftChecklistApp() {
     bump();
   };
 
-  const markAllSectionDone = useCallback(() => {
+  const toggleMarkAllSection = useCallback(() => {
     if (!activeSectionData || !supportsMarkAllDone(activeSectionData.title)) {
       return;
     }
 
+    const markAsDone = !isActiveSectionAllDone;
+
     activeSectionData.groups.forEach((group) => {
       group.items.forEach((item) => {
-        setChecklistItemStatus(venue, item.id, "done");
+        setChecklistItemStatus(venue, item.id, markAsDone ? "done" : "none");
         setChecklistItemComment(venue, item.id, "");
       });
     });
 
     setExportBlocked(false);
     bump();
-  }, [activeSectionData, venue, bump]);
+  }, [activeSectionData, isActiveSectionAllDone, venue, bump]);
 
   const performChecklistReset = useCallback(() => {
     clearChecklistItems(
@@ -707,11 +721,18 @@ export function ShiftChecklistApp() {
               {supportsMarkAllDone(activeSectionData.title) ? (
                 <button
                   type="button"
-                  className="markAllDoneBtn"
-                  onClick={markAllSectionDone}
-                  aria-label={t("check_aria_mark_all_done")}
+                  className={`markAllDoneBtn ${isActiveSectionAllDone ? "active" : ""}`}
+                  onClick={toggleMarkAllSection}
+                  aria-pressed={isActiveSectionAllDone}
+                  aria-label={
+                    isActiveSectionAllDone
+                      ? t("check_aria_mark_all_clear")
+                      : t("check_aria_mark_all_done")
+                  }
                 >
-                  {t("check_mark_all_done")}
+                  {isActiveSectionAllDone
+                    ? t("check_mark_all_clear")
+                    : t("check_mark_all_done")}
                 </button>
               ) : null}
               {activeSectionData.groups.map((group) => (
