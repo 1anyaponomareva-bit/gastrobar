@@ -1,9 +1,5 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
-import {
-  getPenaltyGrading,
-  getPenaltyVerdictText,
-} from "@/lib/checklistPenaltyGrading";
 import { getAssetUrl } from "@/lib/appVersion";
 import {
   deliverPdfFile,
@@ -69,8 +65,9 @@ type PdfLabels = {
   statusDone: string;
   statusFailed: string;
   statusNone: string;
-  summary: (done: number, total: number, failed: number, penaltyTotal?: number) => string;
-  penaltyPointsLabel: (points: number) => string;
+  summary: (done: number, total: number, failed: number) => string;
+  penaltiesTitle: string;
+  penaltyTiers: string[];
 };
 
 function getLabels(locale: "ru" | "en"): PdfLabels {
@@ -88,12 +85,16 @@ function getLabels(locale: "ru" | "en"): PdfLabels {
       statusDone: "Выполнено",
       statusFailed: "Не выполнено",
       statusNone: "Не отмечено",
-      summary: (done, total, failed, penaltyTotal) => {
-        const base = `Выполнено: ${done} из ${total}   Не выполнено: ${failed}`;
-        if (!penaltyTotal) return base;
-        return `${base}   Штрафные баллы: ${penaltyTotal}`;
-      },
-      penaltyPointsLabel: (points) => `Штрафные баллы: ${points}`,
+      summary: (done, total, failed) =>
+        `Выполнено: ${done} из ${total}   Не выполнено: ${failed}`,
+      penaltiesTitle: "Таблица штрафов",
+      penaltyTiers: [
+        "1–11 баллов — замечание.",
+        "12–21 балл — удержание 100 000 VND.",
+        "22–31 балл — удержание 300 000 VND.",
+        "32–41 балл — удержание 500 000 VND.",
+        "42 балла и выше — удержание 1 000 000 VND.",
+      ],
     };
   }
 
@@ -110,12 +111,16 @@ function getLabels(locale: "ru" | "en"): PdfLabels {
     statusDone: "Done",
     statusFailed: "Not done",
     statusNone: "Not marked",
-    summary: (done, total, failed, penaltyTotal) => {
-      const base = `Done: ${done} / ${total}   Not done: ${failed}`;
-      if (!penaltyTotal) return base;
-      return `${base}   Penalty points: ${penaltyTotal}`;
-    },
-    penaltyPointsLabel: (points) => `Penalty points: ${points}`,
+    summary: (done, total, failed) =>
+      `Done: ${done} / ${total}   Not done: ${failed}`,
+    penaltiesTitle: "Penalty table",
+    penaltyTiers: [
+      "1–11 points — verbal warning.",
+      "12–21 points — deduction of 100,000 VND.",
+      "22–31 points — deduction of 300,000 VND.",
+      "32–41 points — deduction of 500,000 VND.",
+      "42 points and above — deduction of 1,000,000 VND.",
+    ],
   };
 }
 
@@ -528,64 +533,34 @@ function drawFailedSummary(
   ctx.y -= SECTION_GAP - BLOCK_GAP;
 }
 
-function drawPenaltyVerdict(
-  ctx: PdfContext,
-  penaltyTotal: number,
-  locale: "ru" | "en",
-) {
-  const grading = getPenaltyGrading(penaltyTotal);
-  if (!grading) return;
-
-  const { title, verdict, tierRange } = getPenaltyVerdictText(grading, locale);
-  const pointsText = String(penaltyTotal);
-  const boxHeight = 92;
+function drawPenaltyTiersReference(ctx: PdfContext, labels: PdfLabels) {
+  const lineHeight = 13;
+  const titleHeight = 20;
+  const tiersHeight = labels.penaltyTiers.length * lineHeight;
+  const boxPad = 12;
+  const boxHeight = titleHeight + tiersHeight + boxPad * 2;
   const total = boxHeight + SECTION_GAP;
 
   ensureSpace(ctx, total);
   const topY = ctx.y;
 
-  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, boxHeight, COLORS.failedBg, COLORS.failed);
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, boxHeight, COLORS.goldSoft);
 
   drawTextLine(
     ctx,
-    title.toUpperCase(),
-    MARGIN_LEFT + 14,
-    topY - 18,
-    10,
-    ctx.fontBold,
-    COLORS.failed,
-  );
-
-  drawTextLine(
-    ctx,
-    pointsText,
-    MARGIN_LEFT + 14,
-    topY - 48,
-    26,
-    ctx.fontBold,
-    COLORS.failed,
-  );
-
-  drawTextLine(
-    ctx,
-    verdict,
-    MARGIN_LEFT + 14,
-    topY - 68,
-    13,
+    labels.penaltiesTitle,
+    MARGIN_LEFT + 12,
+    topY - boxPad - 11,
+    11,
     ctx.fontBold,
     COLORS.text,
   );
 
-  const tierWidth = ctx.font.widthOfTextAtSize(tierRange, 9);
-  drawTextLine(
-    ctx,
-    tierRange,
-    PAGE_WIDTH - MARGIN_RIGHT - 14 - tierWidth,
-    topY - 68,
-    9,
-    ctx.font,
-    COLORS.muted,
-  );
+  let baselineY = topY - boxPad - titleHeight - 2;
+  labels.penaltyTiers.forEach((tier) => {
+    drawTextLine(ctx, tier, MARGIN_LEFT + 12, baselineY, 9, ctx.font, COLORS.muted);
+    baselineY -= lineHeight;
+  });
 
   ctx.y = topY - total;
 }
@@ -658,24 +633,9 @@ export async function makeShiftChecklistPdfBlob(
     section.items
       .filter((item) => item.status === "failed")
       .map((item) => ({
-        label:
-          item.penaltyPoints != null
-            ? `${item.label} (${item.penaltyPoints})`
-            : item.label,
+        label: item.label,
         comment: item.comment,
       })),
-  );
-
-  const penaltyTotal = options.sections.reduce(
-    (sum, section) =>
-      sum +
-      section.items.reduce((itemSum, item) => {
-        if (item.status !== "failed" || item.penaltyPoints == null) {
-          return itemSum;
-        }
-        return itemSum + item.penaltyPoints;
-      }, 0),
-    0,
   );
 
   const completed = options.sections.reduce(
@@ -691,7 +651,6 @@ export async function makeShiftChecklistPdfBlob(
 
   drawHeader(ctx, options, labels);
   drawFailedSummary(ctx, failedItems, labels);
-  drawPenaltyVerdict(ctx, penaltyTotal, locale);
 
   drawWrappedBlock(ctx, labels.fullChecklist, 12, { bold: true, gapAfter: 12 });
 
@@ -707,13 +666,15 @@ export async function makeShiftChecklistPdfBlob(
   drawFilledBox(ctx, MARGIN_LEFT, summaryTop, CONTENT_WIDTH, 24, COLORS.section);
   drawTextLine(
     ctx,
-    labels.summary(completed, total, failed, penaltyTotal),
+    labels.summary(completed, total, failed),
     MARGIN_LEFT + 10,
     summaryTop - 16,
     9.5,
     ctx.fontBold,
     COLORS.text,
   );
+
+  drawPenaltyTiersReference(ctx, labels);
 
   const bytes = await pdfDoc.save();
   return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
