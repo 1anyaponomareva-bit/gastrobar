@@ -138,6 +138,7 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["CLASSIC HOT DOG", "simple-hot-dog"],
   ["KIDS HOT DOG", "simple-hot-dog"],
   ["DANISH HOT DOG", "classic-hot-dog"],
+  ["DANISH", "classic-hot-dog"],
   ["CLASSIC", "simple-hot-dog"],
   ["JALAPENO & CHEDDAR", "jalapeno-cheddar-dog"],
   ["SAUERKRAUT & MUSTARD", "bavarian-dog"],
@@ -266,6 +267,12 @@ export function isExcludedPosterProduct(categoryName: string, productName: strin
   if (/кальян|hookah|shisha/i.test(haystack)) return true;
   if (categoryName.trim().toUpperCase() === "SAUCES") return true;
   return false;
+}
+
+/** Ингредиенты (*VP) и служебные позиции (*TABLEWARE) — не продаются сами по себе. */
+export function isNonSellablePosterCategory(categoryName: string): boolean {
+  const category = categoryName.trim().toUpperCase();
+  return category === "*VP" || category === "*TABLEWARE";
 }
 
 export function matchLocalBarItem(posterName: string): MenuItem | null {

@@ -10,10 +10,12 @@ import {
   getLocalFoodCatalog,
   getLocalFoodCatalogOrder,
   isExcludedPosterProduct,
+  isNonSellablePosterCategory,
   matchLocalBarItem,
   matchLocalFoodItem,
 } from "./localMenuMatch";
 import { enrichHotDogFromPoster, type HotDogSausageOption } from "./hotDogModifiers";
+import { enrichKebabBoxItemFromPoster, isKebabBoxPosterProduct, mapKebabBoxPosterProduct } from "./kebabBoxModifiers";
 import { enrichKebabPitaFromPoster } from "./pitaModifiers";
 import { extractPosterPrice } from "./posterPrice";
 import type { PosterProduct } from "./types";
@@ -108,6 +110,7 @@ export function mapPosterProductToFoodItem(product: PosterProduct): PosterFoodMe
   const productName = product.product_name?.trim() ?? "";
   if (!productName) return null;
   if (isExcludedPosterProduct(categoryName, productName)) return null;
+  if (isNonSellablePosterCategory(categoryName)) return null;
 
   const local = matchLocalFoodItem(productName, categoryName);
   if (!local) return null;
@@ -132,14 +135,36 @@ export function buildBarMenuFromPosterProducts(products: PosterProduct[]): Poste
 
 export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): PosterFoodMenuItem[] {
   const mergedById = new Map<string, { item: PosterFoodMenuItem; product: PosterProduct }>();
+  const localCatalog = getLocalFoodCatalog();
+
+  const upsertFoodMapping = (
+    id: string,
+    item: PosterFoodMenuItem,
+    product: PosterProduct,
+  ) => {
+    const existing = mergedById.get(id);
+    const newPrice = item.price ?? 0;
+    const existingPrice = existing?.item.price ?? 0;
+    if (!existing || newPrice >= existingPrice) {
+      mergedById.set(id, { item, product });
+    }
+  };
 
   for (const product of products) {
+    const kebabBoxMappings = mapKebabBoxPosterProduct(product, localCatalog);
+    if (kebabBoxMappings.length > 0) {
+      for (const { local, item } of kebabBoxMappings) {
+        upsertFoodMapping(local.id, item, product);
+      }
+      continue;
+    }
+
     const mapped = mapPosterProductToFoodItem(product);
-    if (mapped) mergedById.set(mapped.id, { item: mapped, product });
+    if (mapped) upsertFoodMapping(mapped.id, mapped, product);
   }
 
   return sortPosterFoodItems(
-    getLocalFoodCatalog()
+    localCatalog
       .filter((local) => mergedById.has(local.id))
       .map((local) => {
         const { item, product } = mergedById.get(local.id)!;
@@ -151,6 +176,11 @@ export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): Post
           result = { ...result, ...enrichHotDogFromPoster(local, product, item) };
         } else if (local.id === "kebab-pita") {
           result = { ...result, ...enrichKebabPitaFromPoster(local, product, item) };
+        } else if (
+          (local.id === "chicken-kebab" || local.id === "pork-kebab") &&
+          isKebabBoxPosterProduct(product)
+        ) {
+          result = { ...result, ...enrichKebabBoxItemFromPoster(local, product, result) };
         }
         return result;
       }),

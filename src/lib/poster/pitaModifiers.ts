@@ -11,13 +11,13 @@ export type EnrichedKebabPitaFields = {
   priceMax?: number | null;
 };
 
-function normalizeModifierAddon(raw: number | string | undefined): number {
+export function normalizeKebabModifierAddon(raw: number | string | undefined): number {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.round(value);
 }
 
-function findKebabGroup(product: PosterProduct): PosterGroupModification | null {
+export function findKebabModifierGroup(product: PosterProduct): PosterGroupModification | null {
   const groups = product.group_modifications ?? [];
   for (const group of groups) {
     if (group.is_deleted === 1 || group.is_deleted === "1") continue;
@@ -46,7 +46,7 @@ function modifierMatchesTemplate(
   return false;
 }
 
-function findModificationForTemplate(
+export function findKebabModificationForTemplate(
   modifications: PosterDishModification[],
   templateId: string,
   index: number,
@@ -61,8 +61,8 @@ function buildKebabOptions(
   modifications: PosterDishModification[],
 ): HotDogSausageOption[] {
   return KEBAB_PITA_TEMPLATES.map((template, index) => {
-    const modification = findModificationForTemplate(modifications, template.id, index);
-    const addon = modification ? normalizeModifierAddon(modification.price) : index === 1 ? 10000 : 0;
+    const modification = findKebabModificationForTemplate(modifications, template.id, index);
+    const addon = modification ? normalizeKebabModifierAddon(modification.price) : index === 1 ? 10000 : 0;
     return {
       id: template.id,
       label: template.label,
@@ -85,7 +85,7 @@ export function enrichKebabPitaFromPoster(
   if (local.id !== "kebab-pita") return item;
 
   const basePrice = Number(extractPosterPrice(product)) || local.price || 0;
-  const kebabGroup = findKebabGroup(product);
+  const kebabGroup = findKebabModifierGroup(product);
   const modifications = kebabGroup?.modifications ?? [];
   const sausageOptions = buildKebabOptions(basePrice, modifications);
 
