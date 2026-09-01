@@ -32,7 +32,8 @@ const TITLES_EN: Record<string, string> = {
   "kids-hot-dog-combo": "Kids Hot Dog Combo",
   "chicken-kebab": "Chicken Kebab Box",
   "pork-kebab": "Pork Kebab Box",
-  "kebab-pita": "Kebab Pita",
+  "pork-kebab-pita": "Pork Kebab Pita",
+  "chicken-kebab-pita": "Chicken Kebab Pita",
   "bavarian-sausage": "Grilled Pork Sausage Box",
   "cheddar-jalapeno-sausage": "Cheddar Jalapeño Sausage Box",
   "grilled-chicken-sausage": "Grilled Chicken Sausage Box",
@@ -66,7 +67,8 @@ const TITLES_VN: Record<string, string> = {
   "kids-hot-dog-combo": "Kids Hot Dog Combo",
   "chicken-kebab": "Hộp thịt gà nướng xiên",
   "pork-kebab": "Hộp thịt heo nướng xiên",
-  "kebab-pita": "Pita thịt xiên nướng",
+  "pork-kebab-pita": "Pita thịt heo xiên nướng",
+  "chicken-kebab-pita": "Pita thịt gà xiên nướng",
   "bavarian-sausage": "Hộp xúc xích heo nướng",
   "cheddar-jalapeno-sausage": "Hộp xúc xích heo phô mai jalapeño",
   "grilled-chicken-sausage": "Hộp xúc xích gà nướng",
@@ -117,8 +119,10 @@ const DESCS_EN: Record<string, string> = {
     "Box with marinated grilled chicken kebab and tomato sauce.",
   "pork-kebab":
     "Box with juicy marinated pork kebab and tomato sauce.",
-  "kebab-pita":
-    "Pita with grilled kebab, fresh vegetables and sauce. Choose pork or chicken.",
+  "pork-kebab-pita":
+    "Pita with grilled pork kebab, fresh vegetables and sauce.",
+  "chicken-kebab-pita":
+    "Pita with grilled chicken kebab, fresh vegetables and sauce.",
   "bavarian-sausage": "Box with grilled pork sausages.",
   "cheddar-jalapeno-sausage": "Box with grilled pork sausages with cheese.",
   "grilled-chicken-sausage": "Box with grilled chicken sausages.",
@@ -169,8 +173,10 @@ const DESCS_VN: Record<string, string> = {
     "Hộp thịt gà xiên nướng ướp gia vị, kèm sốt cà chua.",
   "pork-kebab":
     "Hộp thịt heo xiên nướng mọng nước ướp gia vị, kèm sốt cà chua.",
-  "kebab-pita":
-    "Pita thịt xiên nướng, rau tươi và sốt. Chọn heo hoặc gà.",
+  "pork-kebab-pita":
+    "Pita thịt heo xiên nướng, rau tươi và sốt.",
+  "chicken-kebab-pita":
+    "Pita thịt gà xiên nướng, rau tươi và sốt.",
   "bavarian-sausage": "Hộp xúc xích heo nướng trên lò.",
   "cheddar-jalapeno-sausage": "Hộp xúc xích heo phô mai nướng trên lò.",
   "grilled-chicken-sausage": "Hộp xúc xích gà nướng trên lò.",

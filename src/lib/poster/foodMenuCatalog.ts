@@ -278,15 +278,20 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     image: foodMenuImage("PORK_KEBAB_1.jpg?v=20260726-01"),
   },
   {
-    id: "kebab-pita",
-    name: "Пита с шашлыком",
-    description:
-      "Пита с шашлыком на гриле, свежими овощами и соусом. Выберите свиной или куриный шашлык.",
+    id: "pork-kebab-pita",
+    name: "Пита со свиным шашлыком",
+    description: "Пита со свиным шашлыком на гриле, свежими овощами и соусом.",
     price: 110000,
-    priceMin: 110000,
-    priceMax: 120000,
     category: "grill",
     image: foodMenuImage("PORK_PITA.jpg?v=20260726-01"),
+  },
+  {
+    id: "chicken-kebab-pita",
+    name: "Пита с куриным шашлыком",
+    description: "Пита с куриным шашлыком на гриле, свежими овощами и соусом.",
+    price: 120000,
+    category: "grill",
+    image: foodMenuImage("CHICK_PITA.jpg?v=20260726-01"),
   },
   {
     id: "bavarian-sausage",

@@ -1,15 +1,26 @@
 import type { LocalFoodCatalogItem } from "./foodMenuCatalog";
-import { KEBAB_PITA_TEMPLATES } from "./foodPitaConfig";
 import type { HotDogSausageOption } from "./hotDogModifiers";
 import { extractPosterPrice } from "./posterPrice";
 import type { PosterDishModification, PosterGroupModification, PosterProduct } from "./types";
+import type { FoodMenuCategoryId } from "./categoryMap";
 
-export type EnrichedKebabPitaFields = {
-  sausageOptions?: HotDogSausageOption[];
+export type KebabPitaMenuItem = {
+  id: string;
+  posterProductId: string;
+  name: string;
+  description: string;
   price: number | null;
   priceMin?: number | null;
   priceMax?: number | null;
+  grammage?: string;
+  category: FoodMenuCategoryId;
+  image: string;
+  badge?: "hit";
+  sausageOptions?: HotDogSausageOption[];
 };
+
+const KEBAB_PITA_LOCAL_IDS = ["pork-kebab-pita", "chicken-kebab-pita"] as const;
+export type KebabPitaLocalId = (typeof KEBAB_PITA_LOCAL_IDS)[number];
 
 export function normalizeKebabModifierAddon(raw: number | string | undefined): number {
   const value = Number(raw);
@@ -56,57 +67,81 @@ export function findKebabModificationForTemplate(
   return modifications[index];
 }
 
-function buildKebabOptions(
-  basePrice: number,
-  modifications: PosterDishModification[],
-): HotDogSausageOption[] {
-  return KEBAB_PITA_TEMPLATES.map((template, index) => {
-    const modification = findKebabModificationForTemplate(modifications, template.id, index);
-    const addon = modification ? normalizeKebabModifierAddon(modification.price) : index === 1 ? 10000 : 0;
-    return {
-      id: template.id,
-      label: template.label,
-      shortLabel: template.shortLabel,
-      posterModifierId:
-        modification?.dish_modification_id != null
-          ? String(modification.dish_modification_id)
-          : undefined,
-      price: basePrice + addon,
-      addon: addon > 0 ? addon : undefined,
-    };
-  });
+export function isKebabPitaPosterProduct(product: PosterProduct): boolean {
+  const key = (product.product_name ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return key === "kebabpita";
 }
 
-export function enrichKebabPitaFromPoster(
+export function enrichKebabPitaItemFromPoster(
   local: LocalFoodCatalogItem,
   product: PosterProduct,
-  item: EnrichedKebabPitaFields,
-): EnrichedKebabPitaFields {
-  if (local.id !== "kebab-pita") return item;
+  item: KebabPitaMenuItem,
+): KebabPitaMenuItem {
+  if (local.id !== "pork-kebab-pita" && local.id !== "chicken-kebab-pita") return item;
 
+  const templateId = local.id === "chicken-kebab-pita" ? "chicken" : "pork";
   const basePrice = Number(extractPosterPrice(product)) || local.price || 0;
   const kebabGroup = findKebabModifierGroup(product);
   const modifications = kebabGroup?.modifications ?? [];
-  const sausageOptions = buildKebabOptions(basePrice, modifications);
+  const modification = findKebabModificationForTemplate(
+    modifications,
+    templateId,
+    templateId === "chicken" ? 1 : 0,
+  );
+  const addon = modification
+    ? normalizeKebabModifierAddon(modification.price)
+    : templateId === "chicken"
+      ? 10000
+      : 0;
+  const price = basePrice + addon;
 
-  if (sausageOptions.length === 0) {
-    return {
-      ...item,
-      price: basePrice > 0 ? basePrice : item.price,
-      priceMin: local.priceMin,
-      priceMax: local.priceMax,
-    };
-  }
-
-  const prices = sausageOptions.map((option) => option.price);
-  const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
+  const sausageOption: HotDogSausageOption = {
+    id: templateId,
+    label: local.name,
+    shortLabel: local.name,
+    posterModifierId:
+      modification?.dish_modification_id != null
+        ? String(modification.dish_modification_id)
+        : undefined,
+    price,
+    addon: addon > 0 ? addon : undefined,
+  };
 
   return {
     ...item,
-    sausageOptions,
-    price: sausageOptions[0]?.price ?? item.price,
-    priceMin: minPrice !== maxPrice ? minPrice : undefined,
-    priceMax: minPrice !== maxPrice ? maxPrice : undefined,
+    posterProductId: product.product_id,
+    price,
+    sausageOptions: [sausageOption],
   };
+}
+
+export function mapKebabPitaPosterProduct(
+  product: PosterProduct,
+  catalog: LocalFoodCatalogItem[],
+): Array<{ local: LocalFoodCatalogItem; item: KebabPitaMenuItem }> {
+  if (!isKebabPitaPosterProduct(product)) return [];
+
+  return catalog
+    .filter((local): local is LocalFoodCatalogItem & { id: KebabPitaLocalId } =>
+      KEBAB_PITA_LOCAL_IDS.includes(local.id as KebabPitaLocalId),
+    )
+    .map((local) => {
+      const base: KebabPitaMenuItem = {
+        id: local.id,
+        posterProductId: product.product_id,
+        name: local.name,
+        description: local.description,
+        grammage: local.grammage,
+        image: local.image,
+        category: local.category,
+        badge: local.badge,
+        price: local.price ?? null,
+      };
+      return {
+        local,
+        item: enrichKebabPitaItemFromPoster(local, product, base),
+      };
+    });
 }

@@ -16,7 +16,11 @@ import {
 } from "./localMenuMatch";
 import { enrichHotDogFromPoster, type HotDogSausageOption } from "./hotDogModifiers";
 import { enrichKebabBoxItemFromPoster, isKebabBoxPosterProduct, mapKebabBoxPosterProduct } from "./kebabBoxModifiers";
-import { enrichKebabPitaFromPoster } from "./pitaModifiers";
+import {
+  enrichKebabPitaItemFromPoster,
+  isKebabPitaPosterProduct,
+  mapKebabPitaPosterProduct,
+} from "./pitaModifiers";
 import { extractPosterPrice } from "./posterPrice";
 import type { PosterProduct } from "./types";
 
@@ -159,6 +163,14 @@ export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): Post
       continue;
     }
 
+    const kebabPitaMappings = mapKebabPitaPosterProduct(product, localCatalog);
+    if (kebabPitaMappings.length > 0) {
+      for (const { local, item } of kebabPitaMappings) {
+        upsertFoodMapping(local.id, item, product);
+      }
+      continue;
+    }
+
     const mapped = mapPosterProductToFoodItem(product);
     if (mapped) upsertFoodMapping(mapped.id, mapped, product);
   }
@@ -174,8 +186,11 @@ export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): Post
         };
         if (local.category === "hot-dogs") {
           result = { ...result, ...enrichHotDogFromPoster(local, product, item) };
-        } else if (local.id === "kebab-pita") {
-          result = { ...result, ...enrichKebabPitaFromPoster(local, product, item) };
+        } else if (
+          (local.id === "pork-kebab-pita" || local.id === "chicken-kebab-pita") &&
+          isKebabPitaPosterProduct(product)
+        ) {
+          result = { ...result, ...enrichKebabPitaItemFromPoster(local, product, result) };
         } else if (
           (local.id === "chicken-kebab" || local.id === "pork-kebab") &&
           isKebabBoxPosterProduct(product)

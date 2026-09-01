@@ -47,11 +47,11 @@ function formatItemPrice(item: PosterFoodMenuItem): string {
 
 function hasModifierPicker(item: PosterFoodMenuItem): boolean {
   if (isBuildYourOwnHotDog(item.id)) return false;
-  return getHotDogSausageOptions(item).length > 0;
+  return getHotDogSausageOptions(item).length > 1;
 }
 
 function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
-  return hasModifierPicker(item) && (item.category === "hot-dogs" || item.id === "kebab-pita");
+  return hasModifierPicker(item) && item.category === "hot-dogs";
 }
 
 function formatListPrice(item: PosterFoodMenuItem): string {
@@ -416,7 +416,7 @@ export function PosterTestFoodMenu() {
                     key={item.id}
                     className={`menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
                       isHotDogPicker ? " menu-card--hot-dog" : ""
-                    }${item.id === "kebab-pita" ? " menu-card--hot-dog" : ""}`}
+                    }`}
                     role="listitem button"
                     tabIndex={0}
                     style={{ animationDelay: `${index * 0.03}s` }}
