@@ -160,3 +160,23 @@ export async function clearPosterTestWheelBonus(userId: string): Promise<void> {
     .update({ wheel_active_bonus: null, updated_at: new Date().toISOString() })
     .eq("id", userId);
 }
+
+export async function resetPosterTestWheel(userId: string): Promise<boolean> {
+  const client = getPosterTestAdminClient();
+  if (!client) return false;
+
+  const { error } = await client
+    .from("poster_test_users")
+    .update({
+      wheel_state: { lastSpinAt: 0 },
+      wheel_active_bonus: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("[poster-test-wheel] reset failed:", error);
+    return false;
+  }
+  return true;
+}

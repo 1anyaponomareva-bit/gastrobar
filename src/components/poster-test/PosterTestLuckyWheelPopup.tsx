@@ -13,6 +13,7 @@ import {
 import type { Bonus } from "@/services/bonusService";
 import { saveActiveBonus } from "@/services/bonusService";
 import { useTranslation } from "@/lib/useTranslation";
+import { PosterTestWheelTestResetButton } from "@/components/poster-test/PosterTestWheelTestResetButton";
 
 type View = "wheel" | "result";
 
@@ -36,6 +37,8 @@ type Props = {
   onClose: () => void;
   activeBonusStorageKey?: string;
   onStatusChange?: () => void;
+  testMode?: boolean;
+  onTestReset?: () => void | Promise<void>;
 };
 
 export function PosterTestLuckyWheelPopup({
@@ -43,6 +46,8 @@ export function PosterTestLuckyWheelPopup({
   onClose,
   activeBonusStorageKey,
   onStatusChange,
+  testMode = false,
+  onTestReset,
 }: Props) {
   const { t } = useTranslation();
   const { openBonusScreen } = useBonusScreen();
@@ -55,6 +60,7 @@ export function PosterTestLuckyWheelPopup({
   const [allowedToSpin, setAllowedToSpin] = useState(false);
   const [msUntilNext, setMsUntilNext] = useState(0);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [resetting, setResetting] = useState(false);
   const sessionIdRef = useRef(0);
 
   const segments = getWheelSegments(true);
@@ -145,6 +151,26 @@ export function PosterTestLuckyWheelPopup({
     }
   }, [allowedToSpin, isSpinning, syncLocalBonus]);
 
+  const handleTestReset = useCallback(async () => {
+    if (!testMode || resetting) return;
+    setResetting(true);
+    try {
+      await onTestReset?.();
+      setView("wheel");
+      setResultOutcome(null);
+      setWonBonus(null);
+      setSpinSession(null);
+      setSpinActive(false);
+      setIsSpinning(false);
+      setAllowedToSpin(true);
+      setMsUntilNext(0);
+      await refreshStatus();
+      onStatusChange?.();
+    } finally {
+      setResetting(false);
+    }
+  }, [onStatusChange, onTestReset, refreshStatus, resetting, testMode]);
+
   if (!isOpen) return null;
 
   return (
@@ -171,6 +197,17 @@ export function PosterTestLuckyWheelPopup({
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
+          {testMode ? (
+            <div className="ml-auto flex items-center gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/70">
+                {t("poster_test_wheel_test_mode")}
+              </span>
+              <PosterTestWheelTestResetButton
+                onReset={handleTestReset}
+                disabled={resetting || isSpinning}
+              />
+            </div>
+          ) : null}
         </div>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-4">
           {view === "result" && resultOutcome ? (

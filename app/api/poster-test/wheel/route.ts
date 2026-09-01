@@ -3,7 +3,9 @@ import { requirePosterTestUser } from "@/lib/poster-test-auth/api";
 import {
   executePosterTestWheelSpin,
   getPosterTestWheelStatus,
+  resetPosterTestWheel,
 } from "@/lib/poster-test-auth/wheelService";
+import { isPosterTestWheelTestMode } from "@/lib/poster-test-auth/wheelTestMode";
 import type { SpinOutcome } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
 
@@ -51,6 +53,7 @@ export async function GET() {
     canSpin: status.canSpin,
     msUntilNextSpin: status.msUntilNextSpin,
     activeBonus: serializeBonus(status.activeBonus),
+    testMode: isPosterTestWheelTestMode(),
   });
 }
 
@@ -84,5 +87,34 @@ export async function POST() {
     bonus: serializeBonus(result.bonus),
     msUntilNextSpin: result.msUntilNextSpin,
     canSpin: false,
+    testMode: isPosterTestWheelTestMode(),
+  });
+}
+
+export async function DELETE() {
+  if (!isPosterTestWheelTestMode()) {
+    return NextResponse.json(
+      { success: false, message: "Wheel test mode is disabled." },
+      { status: 403 },
+    );
+  }
+
+  const auth = await requirePosterTestUser();
+  if (auth.errorResponse) return auth.errorResponse;
+
+  const ok = await resetPosterTestWheel(auth.user.id);
+  if (!ok) {
+    return NextResponse.json(
+      { success: false, message: "Could not reset wheel state." },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    canSpin: true,
+    msUntilNextSpin: 0,
+    activeBonus: null,
+    testMode: true,
   });
 }

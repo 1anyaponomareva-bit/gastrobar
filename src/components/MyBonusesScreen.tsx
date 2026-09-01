@@ -17,10 +17,14 @@ import type { BonusTypeKey } from "@/lib/bonusCopy";
 import { useBonusScreen } from "@/components/BonusScreenContext";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
 import { useTranslation } from "@/lib/useTranslation";
+import { PosterTestWheelTestResetButton } from "@/components/poster-test/PosterTestWheelTestResetButton";
 
 type Props = {
   onClose: () => void;
   activeBonusStorageKey?: string;
+  testMode?: boolean;
+  onTestReset?: () => void | Promise<void>;
+  resettingWheel?: boolean;
 };
 
 function statusToLabel(t: (k: string) => string, status: BonusStatus) {
@@ -29,7 +33,13 @@ function statusToLabel(t: (k: string) => string, status: BonusStatus) {
   return t("bonus_status_expired");
 }
 
-export function MyBonusesScreen({ onClose, activeBonusStorageKey }: Props) {
+export function MyBonusesScreen({
+  onClose,
+  activeBonusStorageKey,
+  testMode = false,
+  onTestReset,
+  resettingWheel = false,
+}: Props) {
   const { t, lang } = useTranslation();
   const [bonus, setBonus] = useState<Bonus | null>(() => getActiveBonus(activeBonusStorageKey));
   const { openBonusScreen } = useBonusScreen();
@@ -126,6 +136,19 @@ export function MyBonusesScreen({ onClose, activeBonusStorageKey }: Props) {
     onClose();
   };
 
+  const testResetBar =
+    testMode && onTestReset ? (
+      <div className="flex items-center justify-between gap-3 border-b border-amber-500/20 px-4 py-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/70">
+          {t("poster_test_wheel_test_mode")}
+        </span>
+        <PosterTestWheelTestResetButton
+          onReset={onTestReset}
+          disabled={resettingWheel}
+        />
+      </div>
+    ) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -151,6 +174,7 @@ export function MyBonusesScreen({ onClose, activeBonusStorageKey }: Props) {
           </svg>
         </button>
       </div>
+      {testResetBar}
 
       <div className="flex-1 overflow-y-auto px-4 pb-6">
         <div className="mx-auto max-w-sm">
