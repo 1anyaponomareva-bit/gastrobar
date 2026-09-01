@@ -363,8 +363,6 @@ export function PosterTestFoodMenu() {
 
   return (
     <>
-      <link rel="stylesheet" href="/food/styles.css?v=byo-fix-20260726" />
-
       <PosterTestFoodHeader />
 
       <div className="category-tabs-wrap">
