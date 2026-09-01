@@ -264,6 +264,14 @@ export function PosterTestLuckyWheelPopup({
                   >
                     {formatWheelCooldownRemaining(msUntilNext)}
                   </p>
+                  {testMode ? (
+                    <div className="mt-4">
+                      <PosterTestWheelTestResetButton
+                        onReset={handleTestReset}
+                        disabled={resetting}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {isSpinning ? (

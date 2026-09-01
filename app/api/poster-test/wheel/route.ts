@@ -53,7 +53,7 @@ export async function GET() {
     canSpin: status.canSpin,
     msUntilNextSpin: status.msUntilNextSpin,
     activeBonus: serializeBonus(status.activeBonus),
-    testMode: isPosterTestWheelTestMode(),
+    testMode: isPosterTestWheelTestMode(auth.user.email),
   });
 }
 
@@ -71,6 +71,7 @@ export async function POST() {
           error: "COOLDOWN",
           msUntilNextSpin: result.msUntilNextSpin,
           message: "Wheel spin is on cooldown.",
+          testMode: isPosterTestWheelTestMode(auth.user.email),
         },
         { status: 429 },
       );
@@ -87,20 +88,20 @@ export async function POST() {
     bonus: serializeBonus(result.bonus),
     msUntilNextSpin: result.msUntilNextSpin,
     canSpin: false,
-    testMode: isPosterTestWheelTestMode(),
+    testMode: isPosterTestWheelTestMode(auth.user.email),
   });
 }
 
 export async function DELETE() {
-  if (!isPosterTestWheelTestMode()) {
+  const auth = await requirePosterTestUser();
+  if (auth.errorResponse) return auth.errorResponse;
+
+  if (!isPosterTestWheelTestMode(auth.user.email)) {
     return NextResponse.json(
       { success: false, message: "Wheel test mode is disabled." },
       { status: 403 },
     );
   }
-
-  const auth = await requirePosterTestUser();
-  if (auth.errorResponse) return auth.errorResponse;
 
   const ok = await resetPosterTestWheel(auth.user.id);
   if (!ok) {

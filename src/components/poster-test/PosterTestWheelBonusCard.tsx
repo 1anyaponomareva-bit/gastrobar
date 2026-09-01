@@ -16,12 +16,15 @@ import { usePosterTestWheelScope } from "@/components/poster-test/PosterTestWhee
 import { formatWheelCooldownRemaining } from "@/lib/wheel";
 import { POSTER_TEST_BAR_PATH } from "@/lib/posterTestRoutes";
 import { useTranslation } from "@/lib/useTranslation";
+import { PosterTestWheelTestResetButton } from "@/components/poster-test/PosterTestWheelTestResetButton";
+import { clearPosterTestWheelClientState } from "@/lib/posterTestWheelClientReset";
 
 type WheelStatusResponse = {
   success: boolean;
   canSpin?: boolean;
   msUntilNextSpin?: number;
   activeBonus?: Bonus | null;
+  testMode?: boolean;
 };
 
 export function PosterTestWheelBonusCard() {
@@ -31,6 +34,8 @@ export function PosterTestWheelBonusCard() {
   const [bonus, setBonus] = useState<Bonus | null>(null);
   const [canSpin, setCanSpin] = useState(false);
   const [msUntilNext, setMsUntilNext] = useState(0);
+  const [testMode, setTestMode] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const syncLocalBonus = useCallback(
@@ -50,11 +55,32 @@ export function PosterTestWheelBonusCard() {
       setBonus(activeBonus);
       setCanSpin(Boolean(data.canSpin));
       setMsUntilNext(data.msUntilNextSpin ?? 0);
+      setTestMode(Boolean(data.testMode));
       syncLocalBonus(activeBonus);
     } finally {
       setLoading(false);
     }
   }, [syncLocalBonus]);
+
+  const handleTestReset = useCallback(async () => {
+    if (!testMode || resetting) return;
+    setResetting(true);
+    try {
+      const response = await fetch("/api/poster-test/wheel", { method: "DELETE" });
+      const data = (await response.json()) as WheelStatusResponse;
+      if (!data.success) return;
+      clearPosterTestWheelClientState({
+        activeBonusStorageKey: scope?.activeBonusStorageKey,
+        wheelStorageKeys: scope?.wheelStorageKeys,
+      });
+      setBonus(null);
+      setCanSpin(true);
+      setMsUntilNext(0);
+      await refresh();
+    } finally {
+      setResetting(false);
+    }
+  }, [refresh, resetting, scope, testMode]);
 
   useEffect(() => {
     void refresh();
@@ -118,6 +144,14 @@ export function PosterTestWheelBonusCard() {
             {t("bar")}
           </Link>
         </div>
+        {testMode ? (
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-amber-500/20 pt-4">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/70">
+              {t("poster_test_wheel_test_mode")}
+            </span>
+            <PosterTestWheelTestResetButton onReset={handleTestReset} disabled={resetting} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -132,6 +166,14 @@ export function PosterTestWheelBonusCard() {
           {t("poster_test_wheel_next_spin")}:{" "}
           <span className="font-mono text-amber-200/90">{formatWheelCooldownRemaining(msUntilNext)}</span>
         </p>
+      ) : null}
+      {testMode ? (
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-amber-500/20 pt-4">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/70">
+            {t("poster_test_wheel_test_mode")}
+          </span>
+          <PosterTestWheelTestResetButton onReset={handleTestReset} disabled={resetting} />
+        </div>
       ) : null}
     </div>
   );
