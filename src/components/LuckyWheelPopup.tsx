@@ -15,6 +15,7 @@ import {
   getMsUntilNextSpin,
   formatWheelCooldownRemaining,
   type SpinOutcome,
+  type WheelStorageKeys,
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
 import { sendSpin } from "@/lib/sendWheelSpin";
@@ -25,9 +26,16 @@ type View = "wheel" | "result";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  wheelStorageKeys?: WheelStorageKeys;
+  activeBonusStorageKey?: string;
 };
 
-export function LuckyWheelPopup({ isOpen, onClose }: Props) {
+export function LuckyWheelPopup({
+  isOpen,
+  onClose,
+  wheelStorageKeys,
+  activeBonusStorageKey,
+}: Props) {
   const { t } = useTranslation();
   const { openBonusScreen } = useBonusScreen();
   const [view, setView] = useState<View>("wheel");
@@ -39,7 +47,7 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
   const [cooldownTick, setCooldownTick] = useState(0);
   const sessionIdRef = useRef(0);
 
-  const isFirstWheel = !hasPlayedWheelBefore();
+  const isFirstWheel = !hasPlayedWheelBefore(wheelStorageKeys);
   const segments = getWheelSegments(isFirstWheel);
 
   useEffect(() => {
@@ -49,8 +57,8 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
   }, [isOpen]);
 
   void cooldownTick;
-  const allowedToSpin = canSpin();
-  const msUntilNext = allowedToSpin ? 0 : getMsUntilNextSpin();
+  const allowedToSpin = canSpin(wheelStorageKeys);
+  const msUntilNext = allowedToSpin ? 0 : getMsUntilNextSpin(wheelStorageKeys);
 
   const handleClose = useCallback(() => {
     setView("wheel");
@@ -63,9 +71,9 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
   }, [onClose]);
 
   const handleSpinComplete = useCallback((outcome: SpinOutcome) => {
-    let bonus = saveSpinOutcome(outcome);
+    let bonus = saveSpinOutcome(outcome, wheelStorageKeys, activeBonusStorageKey);
     if (!bonus && !outcome.isLoss) {
-      bonus = saveSpinOutcome(outcome);
+      bonus = saveSpinOutcome(outcome, wheelStorageKeys, activeBonusStorageKey);
     }
     const spinResult =
       WHEEL_SEGMENTS[outcome.segmentIndex]?.id ?? String(outcome.segmentId);
@@ -77,16 +85,16 @@ export function LuckyWheelPopup({ isOpen, onClose }: Props) {
     setSpinActive(false);
     setSpinSession(null);
     setView("result");
-  }, []);
+  }, [activeBonusStorageKey, wheelStorageKeys]);
 
   const handleStartSpin = useCallback(() => {
-    if (!canSpin() || isSpinning) return;
-    const outcome = computeSpinOutcome();
+    if (!canSpin(wheelStorageKeys) || isSpinning) return;
+    const outcome = computeSpinOutcome(wheelStorageKeys);
     sessionIdRef.current += 1;
     setSpinSession({ id: sessionIdRef.current, outcome });
     setSpinActive(true);
     setIsSpinning(true);
-  }, [isSpinning]);
+  }, [isSpinning, wheelStorageKeys]);
 
   if (!isOpen) return null;
 

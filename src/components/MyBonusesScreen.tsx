@@ -18,7 +18,10 @@ import { useBonusScreen } from "@/components/BonusScreenContext";
 import { useHighlightProduct } from "@/components/HighlightProductContext";
 import { useTranslation } from "@/lib/useTranslation";
 
-type Props = { onClose: () => void };
+type Props = {
+  onClose: () => void;
+  activeBonusStorageKey?: string;
+};
 
 function statusToLabel(t: (k: string) => string, status: BonusStatus) {
   if (status === "active") return t("bonus_status_active");
@@ -26,30 +29,30 @@ function statusToLabel(t: (k: string) => string, status: BonusStatus) {
   return t("bonus_status_expired");
 }
 
-export function MyBonusesScreen({ onClose }: Props) {
+export function MyBonusesScreen({ onClose, activeBonusStorageKey }: Props) {
   const { t, lang } = useTranslation();
-  const [bonus, setBonus] = useState<Bonus | null>(() => getActiveBonus());
+  const [bonus, setBonus] = useState<Bonus | null>(() => getActiveBonus(activeBonusStorageKey));
   const { openBonusScreen } = useBonusScreen();
   const { goToProduct, goToBarCategory } = useHighlightProduct();
 
   useEffect(() => {
-    const b = getActiveBonus();
+    const b = getActiveBonus(activeBonusStorageKey);
     setBonus(b);
-  }, []);
+  }, [activeBonusStorageKey]);
 
   useEffect(() => {
     if (!bonus) return;
     const id = setInterval(() => {
       if (isBonusExpired(bonus)) {
-        removeActiveBonus();
+        removeActiveBonus(activeBonusStorageKey);
         setBonus(null);
         return;
       }
-      const current = getActiveBonus();
+      const current = getActiveBonus(activeBonusStorageKey);
       setBonus(current ?? null);
     }, 1000);
     return () => clearInterval(id);
-  }, [bonus?.id, bonus?.expiresAt]);
+  }, [activeBonusStorageKey, bonus?.id, bonus?.expiresAt]);
 
   if (!bonus) {
     return (

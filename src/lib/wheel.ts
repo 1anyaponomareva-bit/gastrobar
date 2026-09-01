@@ -11,6 +11,20 @@ export const WHEEL_STORAGE_KEY = "gastrobar_wheel";
 export const WHEEL_SPIN_COOLDOWN_MS = 16 * 60 * 60 * 1000;
 export const HAS_PLAYED_BEFORE_KEY = "hasPlayedBefore";
 
+export type WheelStorageKeys = {
+  wheel: string;
+  hasPlayed: string;
+};
+
+export const DEFAULT_WHEEL_STORAGE_KEYS: WheelStorageKeys = {
+  wheel: WHEEL_STORAGE_KEY,
+  hasPlayed: HAS_PLAYED_BEFORE_KEY,
+};
+
+function resolveWheelStorageKeys(keys?: WheelStorageKeys): WheelStorageKeys {
+  return keys ?? DEFAULT_WHEEL_STORAGE_KEYS;
+}
+
 const WIN_EXPIRY_MIN = 120;
 
 export type WheelSegmentKind = "discount" | "product" | "other";
@@ -182,24 +196,26 @@ export function getSectorCount(isFirstWheel: boolean): number {
   return WHEEL_SEGMENTS.length;
 }
 
-export function hasPlayedWheelBefore(): boolean {
+export function hasPlayedWheelBefore(keys?: WheelStorageKeys): boolean {
   if (typeof window === "undefined") return true;
+  const storageKeys = resolveWheelStorageKeys(keys);
   try {
-    return localStorage.getItem(HAS_PLAYED_BEFORE_KEY) === "true";
+    return localStorage.getItem(storageKeys.hasPlayed) === "true";
   } catch {
     return true;
   }
 }
 
-function markHasPlayed(): void {
+function markHasPlayed(keys?: WheelStorageKeys): void {
+  const storageKeys = resolveWheelStorageKeys(keys);
   try {
-    localStorage.setItem(HAS_PLAYED_BEFORE_KEY, "true");
+    localStorage.setItem(storageKeys.hasPlayed, "true");
   } catch {}
 }
 
-export function computeSpinOutcome(): SpinOutcome {
-  const played = hasPlayedWheelBefore();
-  const { lastSpinWasLoss, lastWinSegmentIndex, consecutiveWinsSinceLoss } = getStorage();
+export function computeSpinOutcome(keys?: WheelStorageKeys): SpinOutcome {
+  const played = hasPlayedWheelBefore(keys);
+  const { lastSpinWasLoss, lastWinSegmentIndex, consecutiveWinsSinceLoss } = getStorage(keys);
   const winPool = winCandidatesExcludingLast(lastWinSegmentIndex);
   const winStreak = consecutiveWinsSinceLoss ?? 0;
 
@@ -235,10 +251,11 @@ export type WheelStorage = {
   consecutiveWinsSinceLoss?: number;
 };
 
-export function getStorage(): WheelStorage {
+export function getStorage(keys?: WheelStorageKeys): WheelStorage {
   if (typeof window === "undefined") return { lastSpinAt: 0 };
+  const storageKeys = resolveWheelStorageKeys(keys);
   try {
-    const raw = localStorage.getItem(WHEEL_STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeys.wheel);
     if (!raw) return { lastSpinAt: 0 };
     const data = JSON.parse(raw) as WheelStorage;
     const rawWin = data.lastWinSegmentIndex;
@@ -262,24 +279,25 @@ export function getStorage(): WheelStorage {
   }
 }
 
-function setStorage(data: WheelStorage): void {
+function setStorage(data: WheelStorage, keys?: WheelStorageKeys): void {
   if (typeof window === "undefined") return;
+  const storageKeys = resolveWheelStorageKeys(keys);
   try {
-    localStorage.setItem(WHEEL_STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(storageKeys.wheel, JSON.stringify(data));
   } catch {}
 }
 
 /** Сколько ждать до следующего вращения (0 — можно крутить). */
-export function getMsUntilNextSpin(): number {
+export function getMsUntilNextSpin(keys?: WheelStorageKeys): number {
   if (typeof window === "undefined") return 0;
-  const { lastSpinAt } = getStorage();
+  const { lastSpinAt } = getStorage(keys);
   if (lastSpinAt <= 0) return 0;
   const end = lastSpinAt + WHEEL_SPIN_COOLDOWN_MS;
   return Math.max(0, end - Date.now());
 }
 
-export function canSpin(): boolean {
-  return getMsUntilNextSpin() === 0;
+export function canSpin(keys?: WheelStorageKeys): boolean {
+  return getMsUntilNextSpin(keys) === 0;
 }
 
 /** Оставшееся время кулдауна как `H:MM:SS` (для таймера). */
@@ -305,23 +323,30 @@ function segmentNavBarCategoryForBonus(segmentIndex: number): BarCategoryId | nu
   return null;
 }
 
-export function saveSpinOutcome(outcome: SpinOutcome): Bonus | null {
-  const prev = getStorage();
+export function saveSpinOutcome(
+  outcome: SpinOutcome,
+  keys?: WheelStorageKeys,
+  activeBonusStorageKey?: string,
+): Bonus | null {
+  const prev = getStorage(keys);
   const prevStreak = prev.consecutiveWinsSinceLoss ?? 0;
-  setStorage({
-    lastSpinAt: Date.now(),
-    lastSpinWasLoss: outcome.isLoss,
-    lastWinSegmentIndex: outcome.isLoss
-      ? prev.lastWinSegmentIndex
-      : outcome.segmentIndex,
-    consecutiveWinsSinceLoss: outcome.isLoss ? 0 : prevStreak + 1,
-  });
-  markHasPlayed();
+  setStorage(
+    {
+      lastSpinAt: Date.now(),
+      lastSpinWasLoss: outcome.isLoss,
+      lastWinSegmentIndex: outcome.isLoss
+        ? prev.lastWinSegmentIndex
+        : outcome.segmentIndex,
+      consecutiveWinsSinceLoss: outcome.isLoss ? 0 : prevStreak + 1,
+    },
+    keys,
+  );
+  markHasPlayed(keys);
 
   if (outcome.isLoss || !outcome.bonusType) return null;
   const expiresAt = Date.now() + WIN_EXPIRY_MIN * 60 * 1000;
   const productId = segmentProductIdForBonus(outcome.segmentIndex);
   const navBarCategory = segmentNavBarCategoryForBonus(outcome.segmentIndex);
-  return createBonus(outcome.bonusType, expiresAt, productId, navBarCategory);
+  return createBonus(outcome.bonusType, expiresAt, productId, navBarCategory, activeBonusStorageKey);
 }
 

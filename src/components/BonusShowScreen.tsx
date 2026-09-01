@@ -14,6 +14,7 @@ import {
 import { bonusDisplayTitleT, bonusDisplayDescriptionT } from "@/lib/bonusCopyI18n";
 import type { BonusTypeKey } from "@/lib/bonusCopy";
 import { useTranslation } from "@/lib/useTranslation";
+import { useActiveBonusStorageKey } from "@/components/ActiveBonusStorageKeyContext";
 
 const HOLD_DURATION_MS = 1800; // 1.8 сек long press
 
@@ -21,6 +22,7 @@ type Props = { bonus: Bonus; onClose: () => void };
 
 export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
   const { t, lang } = useTranslation();
+  const activeBonusStorageKey = useActiveBonusStorageKey();
   const [bonus, setBonus] = useState(initialBonus);
   const status = getBonusStatus(bonus);
   const title = bonusDisplayTitleT(t, bonus.type as BonusTypeKey, bonus.productId ?? null, lang);
@@ -35,21 +37,21 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
   const isActive = status === "active";
 
   useEffect(() => {
-    const current = getCurrentBonus();
+    const current = getCurrentBonus(activeBonusStorageKey);
     if (current && current.id === bonus.id) setBonus(current);
-  }, [bonus.id]);
+  }, [activeBonusStorageKey, bonus.id]);
 
   // Live timer из bonus.expiresAt (после reload таймер продолжает корректно)
   useEffect(() => {
     const tick = () => {
-      const current = getCurrentBonus();
+      const current = getCurrentBonus(activeBonusStorageKey);
       if (current && current.id === bonus.id) setBonus(current);
-      if (isBonusExpired(initialBonus)) removeActiveBonus();
+      if (isBonusExpired(initialBonus)) removeActiveBonus(activeBonusStorageKey);
     };
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [initialBonus.expiresAt, initialBonus.id, bonus.id]);
+  }, [activeBonusStorageKey, initialBonus.expiresAt, initialBonus.id, bonus.id]);
 
   const cancelHold = useCallback(() => {
     if (holdTimerRef.current) {
@@ -82,11 +84,11 @@ export function BonusShowScreen({ bonus: initialBonus, onClose }: Props) {
   }, []);
 
   const handleConfirmRedeem = useCallback(() => {
-    redeemBonus(bonus.id);
-    const current = getCurrentBonus();
+    redeemBonus(bonus.id, activeBonusStorageKey);
+    const current = getCurrentBonus(activeBonusStorageKey);
     if (current) setBonus(current);
     setShowConfirmModal(false);
-  }, [bonus.id]);
+  }, [activeBonusStorageKey, bonus.id]);
 
   const isHolding = holdProgress > 0 && holdProgress < 1;
 

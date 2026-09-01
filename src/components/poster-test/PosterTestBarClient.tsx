@@ -7,6 +7,7 @@ import { PosterTestHeaderActions } from "@/components/poster-test/PosterTestHead
 import { PosterTestBottomNav } from "@/components/poster-test/PosterTestBottomNav";
 import { PosterTestQuickCartControl } from "@/components/poster-test/PosterTestQuickCartControl";
 import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
+import { usePosterTestWheelScope } from "@/components/poster-test/PosterTestWheelScopeContext";
 import { TikTokButton } from "@/components/TikTokButton";
 import type { MenuItem } from "@/data/menu";
 import { menuItemDisplayName } from "@/lib/menuItemI18n";
@@ -46,6 +47,7 @@ export function PosterTestBarClient({
   items: MenuItem[];
   loadError?: string | null;
 }) {
+  const { scope } = usePosterTestWheelScope();
   const renderBarCartControl = useCallback(
     (item: MenuItem) => <PosterTestBarCartControl item={item} />,
     [],
@@ -61,7 +63,11 @@ export function PosterTestBarClient({
             <p className="mt-2 text-xs text-white/60">{loadError}</p>
           </div>
         ) : (
-          <MenuList items={items} renderBarCartControl={renderBarCartControl} />
+          <MenuList
+            items={items}
+            renderBarCartControl={renderBarCartControl}
+            activeBonusStorageKey={scope?.activeBonusStorageKey}
+          />
         )}
       </main>
       <PosterTestBottomNav />

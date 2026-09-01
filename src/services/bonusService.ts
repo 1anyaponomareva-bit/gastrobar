@@ -51,6 +51,10 @@ export type Bonus = {
 
 const ACTIVE_BONUS_KEY = "activeBonus";
 
+function resolveActiveBonusKey(storageKey?: string): string {
+  return storageKey ?? ACTIVE_BONUS_KEY;
+}
+
 const PREFIX: Record<BonusType, string> = {
   beer: "BEER",
   free_shot: "SHOT",
@@ -234,10 +238,10 @@ export function getBonusStatus(bonus: Bonus): BonusStatus {
 
 // --- Хранилище ---
 
-function readFromStorage(): Bonus | null {
+function readFromStorage(storageKey?: string): Bonus | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(ACTIVE_BONUS_KEY);
+    const raw = localStorage.getItem(resolveActiveBonusKey(storageKey));
     if (!raw) return null;
     const data = JSON.parse(raw) as Bonus;
     if (!data || typeof data.expiresAt !== "number") return null;
@@ -257,36 +261,36 @@ function readFromStorage(): Bonus | null {
 }
 
 /** Получить активный бонус (не погашен, не истёк). При истечении — удаляет из localStorage. */
-export function getActiveBonus(): Bonus | null {
-  const bonus = readFromStorage();
+export function getActiveBonus(storageKey?: string): Bonus | null {
+  const bonus = readFromStorage(storageKey);
   if (!bonus) return null;
   if (bonus.redeemed) return null;
   if (isBonusExpired(bonus)) {
-    removeActiveBonus();
+    removeActiveBonus(storageKey);
     return null;
   }
   return bonus;
 }
 
 /** Сохранить бонус в localStorage (ключ activeBonus). */
-export function saveActiveBonus(bonus: Bonus): void {
+export function saveActiveBonus(bonus: Bonus, storageKey?: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ACTIVE_BONUS_KEY, JSON.stringify(bonus));
+    localStorage.setItem(resolveActiveBonusKey(storageKey), JSON.stringify(bonus));
   } catch {}
 }
 
 /** Удалить бонус из localStorage. */
-export function removeActiveBonus(): void {
+export function removeActiveBonus(storageKey?: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(ACTIVE_BONUS_KEY);
+    localStorage.removeItem(resolveActiveBonusKey(storageKey));
   } catch {}
 }
 
 /** Текущий сохранённый бонус (для экрана билетика; может быть использован или сгоревший). */
-export function getCurrentBonus(): Bonus | null {
-  return readFromStorage();
+export function getCurrentBonus(storageKey?: string): Bonus | null {
+  return readFromStorage(storageKey);
 }
 
 /** Описание бонуса (для экрана бармену). */
@@ -311,7 +315,8 @@ export function createBonus(
   type: BonusType,
   expiresAt: number,
   productId?: string | null,
-  navBarCategory?: BarCategoryId | null
+  navBarCategory?: BarCategoryId | null,
+  activeBonusStorageKey?: string,
 ): Bonus {
   const pid = resolveProductId(type, productId);
   const bonus: Bonus = {
@@ -325,15 +330,15 @@ export function createBonus(
     expiresAt,
     redeemed: false,
   };
-  saveActiveBonus(bonus);
+  saveActiveBonus(bonus, activeBonusStorageKey);
   return bonus;
 }
 
 /** Погасить бонус (бармен). Сохраняет redeemed = true в localStorage. */
-export function redeemBonus(id: string): void {
-  const bonus = readFromStorage();
+export function redeemBonus(id: string, storageKey?: string): void {
+  const bonus = readFromStorage(storageKey);
   if (!bonus || bonus.id !== id) return;
-  saveActiveBonus({ ...bonus, redeemed: true });
+  saveActiveBonus({ ...bonus, redeemed: true }, storageKey);
 }
 
 /** @deprecated Использовать removeActiveBonus */

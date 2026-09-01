@@ -56,10 +56,12 @@ export function MenuList({
   items,
   layoutOffsetPx = 0,
   renderBarCartControl,
+  activeBonusStorageKey,
 }: {
   items: MenuItem[];
   layoutOffsetPx?: number;
   renderBarCartControl?: (item: MenuItem) => ReactNode;
+  activeBonusStorageKey?: string;
 }) {
   const { t } = useTranslation();
   const { period } = useTheme();
@@ -136,11 +138,11 @@ export function MenuList({
   }, [viewMode]);
 
   useEffect(() => {
-    const sync = () => setActiveBonus(getActiveBonus());
+    const sync = () => setActiveBonus(getActiveBonus(activeBonusStorageKey));
     sync();
     const t = setInterval(sync, 2000);
     return () => clearInterval(t);
-  }, []);
+  }, [activeBonusStorageKey]);
 
   useEffect(() => {
     if (!pendingListCategory) return;
