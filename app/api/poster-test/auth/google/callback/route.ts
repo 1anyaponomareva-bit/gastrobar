@@ -55,7 +55,9 @@ export async function GET(request: Request) {
         ? "db_schema_missing"
         : upsert.code === "db_not_configured"
           ? "db_not_configured"
-          : "user_create_failed";
+          : /fetch failed|ENOTFOUND|connection/i.test(upsert.message)
+            ? "db_connection_failed"
+            : "user_create_failed";
     console.error("[poster-test-auth] Google callback upsert failed:", upsert.code, upsert.message);
     return loginRedirect(url.origin, errorCode, returnTo);
   }

@@ -70,3 +70,8 @@ revoke all on public.poster_test_orders from anon, authenticated;
 
 grant all on public.poster_test_users to service_role;
 grant all on public.poster_test_orders to service_role;
+
+-- === Verify (should return poster_test_users, not null) ===
+select to_regclass('public.poster_test_users') as poster_test_users_table;
+select to_regclass('public.poster_test_orders') as poster_test_orders_table;
+select count(*)::int as users_count from public.poster_test_users;

@@ -3,7 +3,7 @@ import {
   getGoogleOAuthConfig,
   getTelegramBotUsername,
 } from "@/lib/poster-test-auth/oauth";
-import { isPosterTestDbConfigured, probePosterTestDbSchema } from "@/lib/poster-test-auth/db";
+import { isPosterTestDbConfigured, probePosterTestDbSchema, getPosterTestSupabaseHost } from "@/lib/poster-test-auth/db";
 
 export const runtime = "nodejs";
 
@@ -21,6 +21,7 @@ export async function GET() {
     dbSchemaReady: schema?.ok ?? false,
     dbSchemaError: schema?.error ?? null,
     dbSchemaHint: schema?.hint ?? null,
+    supabaseHost: schema?.supabaseHost ?? getPosterTestSupabaseHost(),
     authSecretConfigured: authSecretConfigured(),
     googleConfigured: getGoogleOAuthConfig().configured,
     telegramBotUsername: getTelegramBotUsername(),

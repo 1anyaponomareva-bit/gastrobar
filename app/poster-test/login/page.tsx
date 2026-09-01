@@ -17,7 +17,9 @@ function formatLoginError(error: string): string {
     case "db_not_configured":
       return "На сервере не настроена база (SUPABASE_SERVICE_ROLE_KEY).";
     case "db_schema_missing":
-      return "Таблица аккаунтов не создана в Supabase. Нужно выполнить миграцию poster_test_users.";
+      return "Таблица аккаунтов не создана в Supabase. Выполните SQL из supabase/sql/poster_test_accounts_apply.sql.";
+    case "db_connection_failed":
+      return "Сервер не может подключиться к Supabase. Проверьте NEXT_PUBLIC_SUPABASE_URL в Vercel — возможно, указан удалённый или неверный проект.";
     case "auth_secret_missing":
       return "На сервере не настроен POSTER_TEST_AUTH_SECRET (минимум 32 символа).";
     case "user_create_failed":

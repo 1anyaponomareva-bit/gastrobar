@@ -54,7 +54,15 @@ function classifyDbError(error: { message?: string; code?: string } | null): Ups
       ok: false,
       code: "db_schema_missing",
       message:
-        "Table poster_test_users is missing. Apply migration 20260701120000_poster_test_accounts.sql in Supabase.",
+        "Table poster_test_users is missing. Apply supabase/sql/poster_test_accounts_apply.sql in Supabase.",
+    };
+  }
+
+  if (/fetch failed|ENOTFOUND|getaddrinfo/i.test(message)) {
+    return {
+      ok: false,
+      code: "db_error",
+      message: `Supabase connection failed: ${message}`,
     };
   }
 
