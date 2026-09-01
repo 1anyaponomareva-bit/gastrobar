@@ -1,20 +1,25 @@
+import staffInventoryItemNamesRu from "@/data/staffInventoryItemNamesRu.json";
 import staffInventoryItemNamesVn from "@/data/staffInventoryItemNamesVn.json";
 import type { AppLang } from "@/lib/i18n";
 import { translate } from "@/lib/i18n";
 
-export type StaffAppLang = "en" | "vn";
+export type StaffAppLang = "ru" | "en" | "vn";
 
 export function translateStaffItemName(
   lang: StaffAppLang,
   name: string,
 ): string {
   if (lang === "en") return name;
+  if (lang === "ru") {
+    return staffInventoryItemNamesRu[name as keyof typeof staffInventoryItemNamesRu] ?? name;
+  }
   return staffInventoryItemNamesVn[name as keyof typeof staffInventoryItemNamesVn] ?? name;
 }
 
-/** Staff UI: English and Vietnamese only. Russian from the main site maps to English. */
 export function toStaffAppLang(lang: AppLang): StaffAppLang {
-  return lang === "vn" ? "vn" : "en";
+  if (lang === "ru") return "ru";
+  if (lang === "vn") return "vn";
+  return "en";
 }
 
 const STAFF_CATEGORY_KEYS: Record<string, string> = {

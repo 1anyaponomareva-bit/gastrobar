@@ -6,12 +6,13 @@ import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import { cn } from "@/lib/utils";
 
-const FLAG_SRC: Record<"en" | "vn", string> = {
+const FLAG_SRC: Record<"ru" | "en" | "vn", string> = {
+  ru: "/flags/ru.svg",
   en: "/flags/gb.svg",
   vn: "/flags/vn.svg",
 };
 
-const LANGS: Array<"en" | "vn"> = ["en", "vn"];
+const LANGS: Array<"ru" | "en" | "vn"> = ["ru", "en", "vn"];
 
 function langOptionKey(id: AppLang): `lang_option_${AppLang}` {
   return `lang_option_${id}`;
