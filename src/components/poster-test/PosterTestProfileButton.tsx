@@ -7,14 +7,18 @@ import {
   POSTER_TEST_ACCOUNT_PATH,
   POSTER_TEST_LOGIN_PATH,
 } from "@/lib/posterTestRoutes";
+import { useTranslation } from "@/lib/useTranslation";
 
 const PROFILE_BUTTON_CLASS =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
 
 export function PosterTestProfileButton({ className }: { className?: string }) {
   const { user } = usePosterTestAuth();
+  const { t } = useTranslation();
   const href = user ? POSTER_TEST_ACCOUNT_PATH : POSTER_TEST_LOGIN_PATH;
-  const label = user ? `Бонусы: ${user.name}` : "Войти для бонусов";
+  const label = user
+    ? t("poster_test_profile_bonuses").replace("{name}", user.name)
+    : t("poster_test_profile_login");
 
   return (
     <Link

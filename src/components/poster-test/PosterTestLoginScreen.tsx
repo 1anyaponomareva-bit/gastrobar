@@ -9,9 +9,7 @@ import {
   POSTER_TEST_ACCOUNT_PATH,
   POSTER_TEST_BANNER_HEIGHT_PX,
 } from "@/lib/posterTestRoutes";
-
-const LOGIN_SUBTITLE =
-  "Войдите через Google, чтобы копить бонусы и участвовать в программе лояльности Gastrobar.";
+import { useTranslation } from "@/lib/useTranslation";
 
 type PosterTestLoginScreenProps = {
   returnTo?: string;
@@ -22,6 +20,7 @@ export function PosterTestLoginScreen({
   returnTo = POSTER_TEST_ACCOUNT_PATH,
   errorMessage = null,
 }: PosterTestLoginScreenProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const googleHref = `/api/poster-test/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
 
@@ -53,13 +52,13 @@ export function PosterTestLoginScreen({
 
           <div className="text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
-              БОНУСЫ
+              {t("poster_test_bonuses_heading")}
             </p>
             <h1 className="mt-3 text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-[1.75rem]">
-              Войдите в аккаунт
+              {t("poster_test_login_title")}
             </h1>
             <p className="mt-4 text-sm leading-[1.65] text-white/58 sm:text-[15px]">
-              {LOGIN_SUBTITLE}
+              {t("poster_test_login_subtitle")}
             </p>
           </div>
 

@@ -367,7 +367,7 @@ export function PosterTestFoodMenu() {
 
       <div className="category-tabs-wrap">
         <div className="category-tabs-wrap__inner">
-          <div className="category-tabs" role="tablist" aria-label="Категории меню">
+          <div className="category-tabs" role="tablist" aria-label={t("food_categories_aria")}>
             {categories.map((category) => (
               <button
                 key={category.id}
@@ -384,7 +384,7 @@ export function PosterTestFoodMenu() {
         </div>
       </div>
 
-      <main className="app-shell" aria-label="Меню">
+      <main className="app-shell" aria-label={t("menu")}>
         <div className="menu-scroll" id="menu-scroll">
           {loadError ? (
             <div className="menu-empty">
@@ -537,7 +537,7 @@ export function PosterTestFoodMenu() {
             <button
               type="button"
               className="detail-back"
-              aria-label="Назад"
+              aria-label={t("back")}
               onClick={() => setDetailItem(null)}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

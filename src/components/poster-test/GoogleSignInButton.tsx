@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/useTranslation";
+
 function GoogleLogo({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -32,6 +34,8 @@ export function GoogleSignInButton({
   loading?: boolean;
   onClick?: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <a
       href={href}
@@ -40,7 +44,7 @@ export function GoogleSignInButton({
       className="group flex h-[52px] w-full items-center justify-center gap-3 rounded-full border border-[#dadce0] bg-white px-5 text-[15px] font-medium text-[#3c4043] shadow-[0_1px_2px_rgba(60,64,67,0.18),0_1px_3px_rgba(60,64,67,0.08)] transition-[background-color,box-shadow,transform] duration-150 hover:bg-[#f8f9fa] hover:shadow-[0_2px_6px_rgba(60,64,67,0.18),0_1px_3px_rgba(60,64,67,0.12)] active:scale-[0.99] active:bg-[#f1f3f4] active:shadow-[0_1px_2px_rgba(60,64,67,0.16)]"
     >
       <GoogleLogo className="h-5 w-5 shrink-0" />
-      <span>{loading ? "Переход в Google..." : "Continue with Google"}</span>
+      <span>{loading ? t("poster_test_google_loading") : t("poster_test_google_signin")}</span>
     </a>
   );
 }

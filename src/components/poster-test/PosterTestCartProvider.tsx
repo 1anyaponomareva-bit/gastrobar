@@ -60,11 +60,13 @@ function CheckoutBackButton({
   onBack: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
       className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/80"
-      aria-label={step === "show" ? "Назад к корзине" : "К меню"}
+      aria-label={step === "show" ? t("poster_test_back_to_cart") : t("poster_test_to_menu")}
       onClick={step === "show" ? onBack : onClose}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
@@ -83,11 +85,16 @@ function CartItemRow({
   onUpdateQuantity?: (key: string, nextQuantity: number) => void;
   large?: boolean;
 }) {
+  const { t } = useTranslation();
+
   if (large) {
     return (
       <div className="poster-test-order-show__item">
         <div className="poster-test-order-show__item-main">
-          <span className="poster-test-order-show__qty" aria-label={`Количество: ${item.quantity}`}>
+          <span
+            className="poster-test-order-show__qty"
+            aria-label={t("poster_test_qty_aria").replace("{qty}", String(item.quantity))}
+          >
             {item.quantity}×
           </span>
           <div className="min-w-0 flex-1">
@@ -128,7 +135,7 @@ function CartItemRow({
             className="h-8 rounded-full px-2 text-xs text-white/45"
             onClick={() => onUpdateQuantity(item.key, 0)}
           >
-            Удалить
+            {t("poster_test_remove")}
           </button>
         ) : null}
       </div>
@@ -161,7 +168,7 @@ function CartItemRow({
 }
 
 export function PosterTestCartProvider({ children }: { children: ReactNode }) {
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
@@ -190,7 +197,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     const selectedOptionIds = options?.selectedOptionIds ?? [];
     const price = selectedCartPrice(item, selectedSausageId, selectedOptionIds);
     if (price.unitPrice <= 0) {
-      return "Для этой позиции не удалось определить цену.";
+      return t("poster_test_price_error");
     }
 
     const key = cartKey(item.id, price.selectedSausageId, selectedOptionIds);
@@ -220,7 +227,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       openCart("cart");
     }
     return null;
-  }, [lang, openCart]);
+  }, [lang, openCart, t]);
 
   const addBarItemToCart = useCallback(
     (
@@ -230,7 +237,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
     ) => {
       const unitPrice = barUnitPrice(item);
       if (unitPrice <= 0) {
-        return "Для этой позиции не удалось определить цену.";
+        return t("poster_test_price_error");
       }
 
       const key = item.id;
@@ -257,7 +264,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       }
       return null;
     },
-    [openCart],
+    [openCart, t],
   );
 
   const updateCartQuantity = useCallback((key: string, nextQuantity: number) => {
@@ -320,7 +327,9 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
           className="fixed inset-0 z-[2200] flex items-end justify-center bg-black/80 px-0 pb-0 pt-[env(safe-area-inset-top,0px)] backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
           role="dialog"
           aria-modal="true"
-          aria-label={checkoutStep === "show" ? "Ваш заказ" : "Корзина"}
+          aria-label={
+            checkoutStep === "show" ? t("poster_test_order_title") : t("poster_test_cart_title")
+          }
           onClick={(event) => {
             if (event.target === event.currentTarget) closeCart();
           }}
@@ -337,10 +346,14 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
               <CheckoutBackButton step={checkoutStep} onBack={handleCheckoutBack} onClose={closeCart} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/45">
-                  {checkoutStep === "show" ? "Для бармена" : "Соберите заказ"}
+                  {checkoutStep === "show"
+                    ? t("poster_test_for_bartender")
+                    : t("poster_test_build_order")}
                 </p>
                 <h2 className="truncate text-lg font-semibold">
-                  {checkoutStep === "show" ? "Ваш заказ" : "Корзина"}
+                  {checkoutStep === "show"
+                    ? t("poster_test_order_title")
+                    : t("poster_test_cart_title")}
                 </h2>
               </div>
             </div>
@@ -348,9 +361,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
             {checkoutStep === "show" ? (
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-                  <p className="poster-test-order-show__hint">
-                    Покажите этот экран бармену — он оформит заказ и примет оплату на месте.
-                  </p>
+                  <p className="poster-test-order-show__hint">{t("poster_test_order_show_hint")}</p>
                   <div className="poster-test-order-show__list">
                     {cartItems.map((item) => (
                       <CartItemRow key={item.key} item={item} large />
@@ -358,14 +369,16 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                   </div>
                   {trimmedComment ? (
                     <div className="poster-test-order-show__comment">
-                      <p className="poster-test-order-show__comment-label">Комментарий</p>
+                      <p className="poster-test-order-show__comment-label">
+                        {t("poster_test_comment_label")}
+                      </p>
                       <p className="poster-test-order-show__comment-text">{trimmedComment}</p>
                     </div>
                   ) : null}
                 </div>
                 <div className="shrink-0 border-t border-white/10 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-4">
                   <div className="poster-test-order-show__total-row">
-                    <span>Итого</span>
+                    <span>{t("food_byo_total")}</span>
                     <span className="poster-test-order-show__total">{formatVnd(cartTotal)} VND</span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3">
@@ -374,14 +387,14 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                       className="rounded-2xl border border-white/10 px-5 py-3.5 text-sm font-semibold text-white/75"
                       onClick={() => setCheckoutStep("cart")}
                     >
-                      Изменить
+                      {t("poster_test_edit")}
                     </button>
                     <button
                       type="button"
                       className="rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-black"
                       onClick={closeCart}
                     >
-                      Готово
+                      {t("poster_test_done")}
                     </button>
                   </div>
                 </div>
@@ -394,13 +407,13 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                       <span className="text-3xl" aria-hidden="true">
                         🛒
                       </span>
-                      <p>Корзина пуста. Выберите блюда или напитки в меню и покажите заказ бармену.</p>
+                      <p>{t("poster_test_cart_empty")}</p>
                       <button
                         type="button"
                         className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-white/80"
                         onClick={closeCart}
                       >
-                        К меню
+                        {t("poster_test_to_menu")}
                       </button>
                     </div>
                   ) : (
@@ -414,13 +427,13 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                       ))}
                       <label className="mt-2 block">
                         <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">
-                          Комментарий к заказу
+                          {t("poster_test_order_comment_label")}
                         </span>
                         <textarea
                           value={orderComment}
                           onChange={(event) => setOrderComment(event.target.value)}
                           className="min-h-[88px] w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
-                          placeholder="Например: без лука, острое"
+                          placeholder={t("poster_test_order_comment_placeholder")}
                         />
                       </label>
                     </div>
@@ -430,7 +443,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                 <div className="shrink-0 border-t border-white/10 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-5 sm:pb-4">
                   {cartItems.length > 0 ? (
                     <div className="mb-4 flex items-center justify-between">
-                      <span className="text-sm text-white/55">Итого</span>
+                      <span className="text-sm text-white/55">{t("food_byo_total")}</span>
                       <span className="text-lg font-semibold">{formatVnd(cartTotal)} VND</span>
                     </div>
                   ) : null}
@@ -440,7 +453,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                     disabled={cartItems.length === 0}
                     onClick={showToBartender}
                   >
-                    Показать бармену
+                    {t("show_to_bartender")}
                   </button>
                 </div>
               </>

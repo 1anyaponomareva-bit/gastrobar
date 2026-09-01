@@ -17,14 +17,14 @@ import {
 type NavTab =
   | { id: "food"; tkey: "tab_food"; icon: string; href: string }
   | { id: "bar"; tkey: "bar"; icon: string; href: string }
-  | { id: "cart"; icon: string; label: string }
-  | { id: "bonuses"; icon: string; label: string };
+  | { id: "cart"; tkey: "tab_cart"; icon: string }
+  | { id: "bonuses"; tkey: "tab_bonuses"; icon: string };
 
 const NAV_TABS: NavTab[] = [
   { id: "food", tkey: "tab_food", icon: "🍔", href: POSTER_TEST_FOOD_PATH },
   { id: "bar", tkey: "bar", icon: "🍸", href: POSTER_TEST_BAR_PATH },
-  { id: "cart", icon: "🛒", label: "Корзина" },
-  { id: "bonuses", icon: "🎁", label: "Бонусы" },
+  { id: "cart", tkey: "tab_cart", icon: "🛒" },
+  { id: "bonuses", tkey: "tab_bonuses", icon: "🎁" },
 ];
 
 export function PosterTestBottomNav() {
@@ -48,7 +48,7 @@ export function PosterTestBottomNav() {
     router.push(user ? POSTER_TEST_ACCOUNT_PATH : POSTER_TEST_LOGIN_PATH);
   };
 
-  const tabLabel = (tab: NavTab) => ("tkey" in tab ? t(tab.tkey) : tab.label);
+  const tabLabel = (tab: NavTab) => t(tab.tkey);
 
   const tabClass = (active: boolean) =>
     cn(

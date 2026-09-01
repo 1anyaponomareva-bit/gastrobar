@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/useTranslation";
+
 type PosterTestQuickCartControlProps = {
   label: string;
   quantity: number;
@@ -17,6 +19,7 @@ export function PosterTestQuickCartControl({
   onDecrease,
   variant = "bar",
 }: PosterTestQuickCartControlProps) {
+  const { t } = useTranslation();
   const expanded = quantity > 0;
   const rootClass =
     variant === "food"
@@ -34,12 +37,12 @@ export function PosterTestQuickCartControl({
           <div
             className="poster-test-bar-cart-control__qty"
             role="group"
-            aria-label={`Количество: ${label}`}
+            aria-label={t("food_qty_group").replace("{name}", label)}
           >
             <button
               type="button"
               className="poster-test-bar-cart-control__btn"
-              aria-label={`Уменьшить количество ${label}`}
+              aria-label={t("food_decrease_qty").replace("{name}", label)}
               onClick={onDecrease}
             >
               −
@@ -50,7 +53,7 @@ export function PosterTestQuickCartControl({
             <button
               type="button"
               className="poster-test-bar-cart-control__btn poster-test-bar-cart-control__btn--plus"
-              aria-label={`Добавить ещё ${label}`}
+              aria-label={t("food_increase_qty").replace("{name}", label)}
               onClick={onAdd}
               disabled={!canAdd}
             >
@@ -61,7 +64,7 @@ export function PosterTestQuickCartControl({
           <button
             type="button"
             className="poster-test-bar-cart-control__add"
-            aria-label={`Добавить ${label} в корзину`}
+            aria-label={t("food_add_to_cart").replace("{name}", label)}
             onClick={onAdd}
             disabled={!canAdd}
           >
