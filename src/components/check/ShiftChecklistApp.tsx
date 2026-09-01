@@ -277,32 +277,6 @@ export function ShiftChecklistApp() {
     [sections],
   );
 
-  const penaltyPointsTotal = useMemo(
-    () =>
-      sections.reduce(
-        (sum, section) =>
-          sum +
-          section.groups.reduce(
-            (groupSum, group) =>
-              groupSum +
-              group.items.reduce((itemSum, item) => {
-                if (item.status !== "failed" || item.penaltyPoints == null) {
-                  return itemSum;
-                }
-                return itemSum + item.penaltyPoints;
-              }, 0),
-            0,
-          ),
-        0,
-      ),
-    [sections],
-  );
-
-  const hasPenaltyScoring = useMemo(
-    () => items.some((item) => item.penaltyPoints != null),
-    [items],
-  );
-
   const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
     if (nextVenue === venue) return;
     setVenue(nextVenue);
@@ -800,14 +774,6 @@ export function ShiftChecklistApp() {
                   >
                     {exportingPdf ? t("check_sharing_pdf") : t("check_share_pdf")}
                   </button>
-                  {hasPenaltyScoring && failedCount > 0 ? (
-                    <p className="penaltyTotal" role="status">
-                      {t("check_penalty_points").replace(
-                        "{points}",
-                        String(penaltyPointsTotal),
-                      )}
-                    </p>
-                  ) : null}
                   <div className="penaltiesBlock">
                     <h3 className="penaltiesTitle">{t("check_penalties_title")}</h3>
                     <ul className="penaltiesList">
