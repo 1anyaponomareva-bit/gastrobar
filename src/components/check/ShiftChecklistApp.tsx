@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
+import { CheckLanguageFlags } from "@/components/check/CheckLanguageFlags";
 import {
   STAFF_INVENTORY_VENUE_LABELS,
   STAFF_INVENTORY_VENUE_LOGOS,
@@ -22,6 +22,7 @@ import {
 import { translate } from "@/lib/i18n";
 import {
   getCheckSectionTabLabel,
+  supportsMarkAllDone,
   toCheckAppLang,
   translateChecklistText,
   translateChecklistTextForPdf,
@@ -329,6 +330,22 @@ export function ShiftChecklistApp() {
     bump();
   };
 
+  const markAllSectionDone = useCallback(() => {
+    if (!activeSectionData || !supportsMarkAllDone(activeSectionData.title)) {
+      return;
+    }
+
+    activeSectionData.groups.forEach((group) => {
+      group.items.forEach((item) => {
+        setChecklistItemStatus(venue, item.id, "done");
+        setChecklistItemComment(venue, item.id, "");
+      });
+    });
+
+    setExportBlocked(false);
+    bump();
+  }, [activeSectionData, venue, bump]);
+
   const performChecklistReset = useCallback(() => {
     clearChecklistItems(
       venue,
@@ -521,7 +538,7 @@ export function ShiftChecklistApp() {
       <div className="app">
         <div className="top">
           <div className="langRow">
-            <StaffLanguageFlags />
+            <CheckLanguageFlags />
           </div>
 
           <div className="venuePicker">
@@ -687,6 +704,16 @@ export function ShiftChecklistApp() {
               <div className="checkSection">
                 {translateChecklistText(checkLang, activeSectionData.title)}
               </div>
+              {supportsMarkAllDone(activeSectionData.title) ? (
+                <button
+                  type="button"
+                  className="markAllDoneBtn"
+                  onClick={markAllSectionDone}
+                  aria-label={t("check_aria_mark_all_done")}
+                >
+                  {t("check_mark_all_done")}
+                </button>
+              ) : null}
               {activeSectionData.groups.map((group) => (
                 <div key={group.title ?? "__default"}>
                   {group.title ? (

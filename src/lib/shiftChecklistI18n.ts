@@ -3,17 +3,19 @@ import shiftChecklistStringsVn from "@/data/shiftChecklistStringsVn.json";
 import type { AppLang } from "@/lib/i18n";
 import { translate } from "@/lib/i18n";
 
-export type CheckAppLang = "en" | "vn";
+export type CheckAppLang = "ru" | "en" | "vn";
 
-/** Check UI: English and Vietnamese only. Russian from the main site maps to English. */
 export function toCheckAppLang(lang: AppLang): CheckAppLang {
-  return lang === "vn" ? "vn" : "en";
+  if (lang === "ru") return "ru";
+  if (lang === "vn") return "vn";
+  return "en";
 }
 
 export function translateChecklistText(
   lang: CheckAppLang,
   source: string,
 ): string {
+  if (lang === "ru") return source;
   if (lang === "vn") {
     return (
       shiftChecklistStringsVn[source as keyof typeof shiftChecklistStringsVn] ??
@@ -54,4 +56,13 @@ export function getCheckSectionTabLabel(
   return word
     ? translateChecklistText(lang, word)
     : translateChecklistText(lang, sectionTitle);
+}
+
+/** Opening / Control / Closing sections support bulk “all done”. */
+export function supportsMarkAllDone(sectionTitle: string): boolean {
+  return (
+    sectionTitle.startsWith("Открытие") ||
+    sectionTitle.startsWith("Контроль") ||
+    sectionTitle.startsWith("Закрытие")
+  );
 }

@@ -66,6 +66,25 @@
   letter-spacing: 0.35px;
 }
 
+.staff-inventory .markAllDoneBtn {
+  display: block;
+  width: calc(100% - 8px);
+  margin: 0 4px 12px;
+  padding: 12px 14px;
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  background: #fffbeb;
+  color: #111;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+  cursor: pointer;
+}
+
+.staff-inventory .markAllDoneBtn:active {
+  background: var(--gold);
+}
+
 .staff-inventory .statusLegend {
   display: flex;
   gap: 16px;
