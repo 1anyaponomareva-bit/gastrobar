@@ -5,38 +5,39 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
+import { useTranslation } from "@/lib/useTranslation";
 import { cn } from "@/lib/utils";
 import {
   POSTER_TEST_ACCOUNT_PATH,
   POSTER_TEST_BAR_PATH,
   POSTER_TEST_FOOD_PATH,
   POSTER_TEST_LOGIN_PATH,
-  POSTER_TEST_ROOT,
 } from "@/lib/posterTestRoutes";
 
 type NavTab =
-  | { id: "menu"; label: string; icon: string; href: string }
-  | { id: "cart"; label: string; icon: string }
-  | { id: "bonuses"; label: string; icon: string };
+  | { id: "food"; tkey: "tab_food"; icon: string; href: string }
+  | { id: "bar"; tkey: "bar"; icon: string; href: string }
+  | { id: "cart"; icon: string; label: string }
+  | { id: "bonuses"; icon: string; label: string };
 
 const NAV_TABS: NavTab[] = [
-  { id: "menu", label: "Меню", icon: "📋", href: POSTER_TEST_FOOD_PATH },
-  { id: "cart", label: "Корзина", icon: "🛒" },
-  { id: "bonuses", label: "Бонусы", icon: "🎁" },
+  { id: "food", tkey: "tab_food", icon: "🍔", href: POSTER_TEST_FOOD_PATH },
+  { id: "bar", tkey: "bar", icon: "🍸", href: POSTER_TEST_BAR_PATH },
+  { id: "cart", icon: "🛒", label: "Корзина" },
+  { id: "bonuses", icon: "🎁", label: "Бонусы" },
 ];
 
 export function PosterTestBottomNav() {
+  const { t } = useTranslation();
   const { user } = usePosterTestAuth();
   const { cartCount, checkoutOpen, openCart } = usePosterTestCart();
   const pathname = usePathname();
   const router = useRouter();
   const path = pathname ?? "";
 
-  const onMenu =
-    path === POSTER_TEST_ROOT ||
-    path === POSTER_TEST_FOOD_PATH ||
-    path.startsWith(`${POSTER_TEST_FOOD_PATH}?`) ||
-    path === POSTER_TEST_BAR_PATH;
+  const onFood =
+    path === POSTER_TEST_FOOD_PATH || path.startsWith(`${POSTER_TEST_FOOD_PATH}?`);
+  const onBar = path === POSTER_TEST_BAR_PATH;
   const onBonuses = path === POSTER_TEST_ACCOUNT_PATH || path === POSTER_TEST_LOGIN_PATH;
 
   const openCartFromNav = () => {
@@ -46,6 +47,8 @@ export function PosterTestBottomNav() {
   const goBonuses = () => {
     router.push(user ? POSTER_TEST_ACCOUNT_PATH : POSTER_TEST_LOGIN_PATH);
   };
+
+  const tabLabel = (tab: NavTab) => ("tkey" in tab ? t(tab.tkey) : tab.label);
 
   const tabClass = (active: boolean) =>
     cn(
@@ -95,16 +98,18 @@ export function PosterTestBottomNav() {
         checkoutOpen ? "z-[30]" : "z-40",
       )}
     >
-      <div className="pointer-events-auto mx-auto flex w-[min(22rem,calc(100vw-1.5rem))] max-w-none items-center justify-between gap-1 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(24rem,calc(100vw-2rem))] sm:gap-2 sm:px-2 sm:py-2">
+      <div className="pointer-events-auto mx-auto flex w-[min(26rem,calc(100vw-1.5rem))] max-w-none items-center justify-between gap-1 rounded-full bg-white/10 px-1.5 py-1.5 text-sm text-white shadow-[0_18px_60px_rgba(0,0,0,0.9)] backdrop-blur-md sm:w-[min(28rem,calc(100vw-2rem))] sm:gap-2 sm:px-2 sm:py-2">
         {NAV_TABS.map((tab) => {
           const active =
-            tab.id === "menu"
-              ? onMenu && !checkoutOpen
-              : tab.id === "cart"
-                ? checkoutOpen
-                : tab.id === "bonuses"
-                  ? onBonuses
-                  : false;
+            tab.id === "food"
+              ? onFood && !checkoutOpen
+              : tab.id === "bar"
+                ? onBar && !checkoutOpen
+                : tab.id === "cart"
+                  ? checkoutOpen
+                  : tab.id === "bonuses"
+                    ? onBonuses
+                    : false;
 
           if (tab.id === "cart") {
             return (
@@ -115,7 +120,7 @@ export function PosterTestBottomNav() {
                 className={tabClass(active)}
               >
                 {iconMotion(tab.id, active)}
-                <span className={labelClass}>{tab.label}</span>
+                <span className={labelClass}>{tabLabel(tab)}</span>
               </button>
             );
           }
@@ -129,7 +134,7 @@ export function PosterTestBottomNav() {
                 className={tabClass(active)}
               >
                 {iconMotion(tab.id, active)}
-                <span className={labelClass}>{tab.label}</span>
+                <span className={labelClass}>{tabLabel(tab)}</span>
               </button>
             );
           }
@@ -137,7 +142,7 @@ export function PosterTestBottomNav() {
           return (
             <Link key={tab.id} href={tab.href} className={tabClass(active)}>
               {iconMotion(tab.id, active)}
-              <span className={labelClass}>{tab.label}</span>
+              <span className={labelClass}>{tabLabel(tab)}</span>
             </Link>
           );
         })}

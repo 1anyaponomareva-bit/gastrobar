@@ -6,10 +6,8 @@ import { CONFIG } from "@/lib/config";
 import { getAssetUrl } from "@/lib/appVersion";
 import { GASTROBAR_LOGO_WIDTH_PX } from "@/lib/appShellLayout";
 import { useTranslation } from "@/lib/useTranslation";
-import { MenuChooserLanguageFlags } from "@/components/MenuChooserLanguageFlags";
 import {
   POSTER_TEST_BAR_PATH,
-  POSTER_TEST_BANNER_HEIGHT_PX,
   POSTER_TEST_FOOD_PATH,
 } from "@/lib/posterTestRoutes";
 import { cn } from "@/lib/utils";
@@ -114,17 +112,13 @@ export function PosterTestMenuChoiceScreen() {
     <main
       className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       style={{
-        paddingTop: `calc(${POSTER_TEST_BANNER_HEIGHT_PX}px + max(1.25rem, env(safe-area-inset-top)))`,
+        paddingTop: `calc(var(--poster-test-top-bar-reserve) + 0.5rem)`,
       }}
     >
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-10%,rgba(248,214,109,0.16),transparent_55%),radial-gradient(ellipse_70%_45%_at_100%_100%,rgba(127,180,255,0.12),transparent_50%),radial-gradient(ellipse_55%_40%_at_0%_85%,rgba(255,179,71,0.08),transparent_45%)]"
         aria-hidden
       />
-
-      <div className="relative z-20 flex w-full justify-end pb-2">
-        <MenuChooserLanguageFlags />
-      </div>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 py-1">
         <motion.div

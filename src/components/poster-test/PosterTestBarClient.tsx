@@ -16,7 +16,7 @@ export function PosterTestBarClient({
 }) {
   return (
     <>
-      <Header layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX} />
+      <Header layoutOffsetPx={POSTER_TEST_BANNER_HEIGHT_PX} hideLanguageMenu />
       <main className="mx-auto grid min-h-[100dvh] max-w-md grid-cols-1 bg-black pt-0">
         {loadError ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">

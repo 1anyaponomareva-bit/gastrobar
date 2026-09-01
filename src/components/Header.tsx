@@ -55,7 +55,13 @@ function LocationIcon({ className }: { className?: string }) {
   );
 }
 
-export function Header({ layoutOffsetPx = 0 }: { layoutOffsetPx?: number }) {
+export function Header({
+  layoutOffsetPx = 0,
+  hideLanguageMenu = false,
+}: {
+  layoutOffsetPx?: number;
+  hideLanguageMenu?: boolean;
+}) {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   useTheme();
@@ -165,7 +171,7 @@ export function Header({ layoutOffsetPx = 0 }: { layoutOffsetPx?: number }) {
         </div>
 
         <div className="flex w-[5.5rem] shrink-0 justify-end">
-          <LanguageMenu />
+          {hideLanguageMenu ? <span className="h-10 w-10" aria-hidden /> : <LanguageMenu />}
         </div>
       </div>
     </motion.header>

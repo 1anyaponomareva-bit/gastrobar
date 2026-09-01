@@ -1,6 +1,7 @@
 /* Poster-test layout offsets (food menu uses food/styles.css vars). */
 .poster-test-shell {
   --poster-test-banner-height: 0px;
+  --poster-test-top-bar-reserve: calc(env(safe-area-inset-top, 0px) + 3.25rem);
   --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
   --app-tabs-top: var(--app-main-padding-top);
   --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 8px);
@@ -293,12 +294,30 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Profile button (poster-test only). */
-.poster-test-profile-btn {
+/* Top bar: language flags (left) + profile (right). */
+.poster-test-top-bar {
   position: fixed;
-  right: max(1rem, env(safe-area-inset-right, 0px));
-  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  left: 0;
+  right: 0;
+  top: 0;
   z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 0.75rem)
+    max(1rem, env(safe-area-inset-right, 0px))
+    0.5rem
+    max(1rem, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+
+.poster-test-top-bar > * {
+  pointer-events: auto;
+}
+
+.poster-test-top-bar__profile {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -313,20 +332,20 @@
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-.poster-test-profile-btn:hover {
+.poster-test-top-bar__profile:hover {
   background: rgba(255, 255, 255, 0.12);
 }
 
-.poster-test-profile-btn:active {
+.poster-test-top-bar__profile:active {
   transform: scale(0.95);
 }
 
-.poster-test-profile-btn__icon {
+.poster-test-top-bar__icon {
   font-size: 1.05rem;
   line-height: 1;
 }
 
-.poster-test-profile-btn__avatar {
+.poster-test-top-bar__avatar {
   width: 100%;
   height: 100%;
   border-radius: 9999px;
