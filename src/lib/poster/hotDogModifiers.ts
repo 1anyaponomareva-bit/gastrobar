@@ -153,14 +153,12 @@ export function enrichHotDogFromPoster(
   }
 
   if (config.hotDogNoSausage) {
-    const addon = modifications[0] ? normalizeModifierAddon(modifications[0].price) : 0;
-    const total = basePrice + addon;
     return {
       ...item,
       hotDogNoSausage: true,
       hotDogPrefix: config.hotDogPrefix !== false,
       sausageOptions: undefined,
-      price: total > 0 ? total : item.price,
+      price: basePrice > 0 ? basePrice : item.price,
       priceMin: undefined,
       priceMax: undefined,
       grammage: local.grammage,
