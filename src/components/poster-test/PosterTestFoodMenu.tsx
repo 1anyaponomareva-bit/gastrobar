@@ -19,6 +19,7 @@ import {
   isBuildYourOwnHotDog,
 } from "@/lib/poster/buildYourOwnHotDog";
 import { BuildYourOwnHotDogBuilder } from "@/components/poster-test/BuildYourOwnHotDogBuilder";
+import { PosterTestFoodHeader } from "@/components/poster-test/PosterTestFoodHeader";
 
 const CATEGORY_LABELS: Record<string, string> = {
   appetizers: "Закуски",
@@ -365,20 +366,7 @@ export function PosterTestFoodMenu() {
     <>
       <link rel="stylesheet" href="/food/styles.css?v=byo-fix-20260726" />
 
-      <header className="site-header">
-        <div className="header-inner">
-          <div className="header-logo">
-            <img
-              src="/food/menu/GASTROFOOD.png"
-              alt="GASTROFOOD"
-              className="header-logo__img"
-              width={220}
-              height={76}
-              draggable={false}
-            />
-          </div>
-        </div>
-      </header>
+      <PosterTestFoodHeader />
 
       <div className="category-tabs-wrap">
         <div className="category-tabs-wrap__inner">

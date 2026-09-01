@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,9 +58,11 @@ function LocationIcon({ className }: { className?: string }) {
 export function Header({
   layoutOffsetPx = 0,
   hideLanguageMenu = false,
+  headerRight,
 }: {
   layoutOffsetPx?: number;
   hideLanguageMenu?: boolean;
+  headerRight?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
@@ -170,8 +172,8 @@ export function Header({
           )}
         </div>
 
-        <div className="flex w-[5.5rem] shrink-0 justify-end">
-          {hideLanguageMenu ? <span className="h-10 w-10" aria-hidden /> : <LanguageMenu />}
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          {headerRight ?? (hideLanguageMenu ? <span className="h-10 w-10" aria-hidden /> : <LanguageMenu />)}
         </div>
       </div>
     </motion.header>

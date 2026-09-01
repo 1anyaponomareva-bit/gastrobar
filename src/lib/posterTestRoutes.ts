@@ -20,3 +20,8 @@ export const POSTER_TEST_BANNER_HEIGHT_PX = 0;
 export function isPosterTestPath(path: string): boolean {
   return path === POSTER_TEST_ROOT || path.startsWith(`${POSTER_TEST_ROOT}/`);
 }
+
+/** Food/bar menus embed flags + profile in the logo header instead of the floating top bar. */
+export function isPosterTestIntegratedHeaderPath(path: string): boolean {
+  return path === POSTER_TEST_BAR_PATH || path === POSTER_TEST_FOOD_PATH;
+}

@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { Header } from "@/components/Header";
 import { MenuList } from "@/components/MenuList";
+import { PosterTestHeaderActions } from "@/components/poster-test/PosterTestHeaderActions";
 import { PosterTestBottomNav } from "@/components/poster-test/PosterTestBottomNav";
 import { PosterTestQuickCartControl } from "@/components/poster-test/PosterTestQuickCartControl";
 import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvider";
@@ -10,7 +11,6 @@ import { TikTokButton } from "@/components/TikTokButton";
 import type { MenuItem } from "@/data/menu";
 import { menuItemDisplayName } from "@/lib/menuItemI18n";
 import { barUnitPrice } from "@/lib/poster/posterTestCartHelpers";
-import { usePosterTestTopBarOffset } from "@/lib/poster/usePosterTestTopBarOffset";
 import { useTranslation } from "@/lib/useTranslation";
 
 function PosterTestBarCartControl({ item }: { item: MenuItem }) {
@@ -46,7 +46,6 @@ export function PosterTestBarClient({
   items: MenuItem[];
   loadError?: string | null;
 }) {
-  const topBarOffsetPx = usePosterTestTopBarOffset();
   const renderBarCartControl = useCallback(
     (item: MenuItem) => <PosterTestBarCartControl item={item} />,
     [],
@@ -54,7 +53,7 @@ export function PosterTestBarClient({
 
   return (
     <>
-      <Header layoutOffsetPx={topBarOffsetPx} hideLanguageMenu />
+      <Header hideLanguageMenu headerRight={<PosterTestHeaderActions />} />
       <main className="mx-auto grid min-h-[100dvh] max-w-md grid-cols-1 bg-black pt-0">
         {loadError ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">
@@ -62,11 +61,7 @@ export function PosterTestBarClient({
             <p className="mt-2 text-xs text-white/60">{loadError}</p>
           </div>
         ) : (
-          <MenuList
-            items={items}
-            layoutOffsetPx={topBarOffsetPx}
-            renderBarCartControl={renderBarCartControl}
-          />
+          <MenuList items={items} renderBarCartControl={renderBarCartControl} />
         )}
       </main>
       <PosterTestBottomNav />

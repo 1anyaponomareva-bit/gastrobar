@@ -1,35 +1,40 @@
 /* Poster-test layout offsets (food menu uses food/styles.css vars). */
 .poster-test-shell {
-  --poster-test-banner-height: var(--poster-test-top-bar-reserve);
+  --poster-test-banner-height: 0px;
   --poster-test-safe-top: max(env(safe-area-inset-top, 0px), 12px);
   --poster-test-top-bar-content: 2.75rem;
   --poster-test-top-bar-reserve: calc(
     var(--poster-test-safe-top) + var(--poster-test-top-bar-content) + 1.25rem
   );
-  --app-main-padding-top: calc(
-    var(--poster-test-top-bar-reserve) + var(--app-header-bar)
-  );
+  --app-main-padding-top: calc(var(--app-header-bar) + env(safe-area-inset-top, 0px));
   --app-tabs-top: var(--app-main-padding-top);
-  --app-list-top: calc(
-    var(--poster-test-top-bar-reserve) + var(--app-header-bar) + var(--app-tabs-height) + 8px
-  );
+  --app-list-top: calc(var(--app-header-bar) + var(--app-tabs-height) + 8px);
+  --header-logo-max-width: min(220px, calc(100vw - 9.5rem));
 }
 
-/* Logo header always sits below flags + profile (safe area handled by top bar). */
 .poster-test-shell .site-header {
-  top: var(--poster-test-top-bar-reserve);
+  top: 0;
   margin-top: 0;
-  padding-top: 0;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .poster-test-shell .menu-scroll {
   scroll-padding-top: calc(
-    var(--poster-test-top-bar-reserve) + var(--app-header-bar) + var(--app-tabs-height)
+    var(--app-header-bar) + var(--app-tabs-height) + env(safe-area-inset-top, 0px)
   );
 }
 
 .poster-test-shell .menu-list__spacer {
-  min-height: var(--app-list-top);
+  min-height: calc(var(--app-list-top) + env(safe-area-inset-top, 0px));
+}
+
+.poster-test-shell .header-side--right.poster-test-header-actions-wrap {
+  width: auto;
+  min-width: 5.5rem;
+}
+
+.poster-test-shell .poster-test-header-actions {
+  pointer-events: auto;
 }
 
 .poster-test-shell .poster-test-page-pad-top {
@@ -81,7 +86,7 @@
   max-height: 62vh;
   inset: unset;
   width: 100%;
-  padding-top: calc(var(--poster-test-top-bar-reserve) + 0.5rem);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.25rem);
   padding-bottom: 0.5rem;
   background: #000;
 }
