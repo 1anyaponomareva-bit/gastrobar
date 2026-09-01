@@ -18,6 +18,7 @@ import {
   type CartItem,
   type CheckoutStep,
 } from "@/lib/poster/posterTestCartHelpers";
+import { useTranslation } from "@/lib/useTranslation";
 
 type PosterTestCartContextValue = {
   cartItems: CartItem[];
@@ -160,6 +161,7 @@ function CartItemRow({
 }
 
 export function PosterTestCartProvider({ children }: { children: ReactNode }) {
+  const { lang } = useTranslation();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("cart");
@@ -204,7 +206,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
         {
           key,
           id: item.id,
-          name: displayFoodName(item),
+          name: displayFoodName(item, lang),
           quantity: 1,
           unitPrice: price.unitPrice,
           selectedSausageId: price.selectedSausageId,
@@ -218,7 +220,7 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
       openCart("cart");
     }
     return null;
-  }, [openCart]);
+  }, [lang, openCart]);
 
   const addBarItemToCart = useCallback(
     (

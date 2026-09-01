@@ -1,5 +1,6 @@
 "use client";
 
+import type { AppLang } from "@/lib/i18n";
 import type { PosterFoodMenuItem } from "@/lib/poster/mapProducts";
 import { getAssetUrl } from "@/lib/appVersion";
 import {
@@ -10,7 +11,12 @@ import {
   type BuildYourOwnHotDogOption,
 } from "@/lib/poster/buildYourOwnHotDog";
 import {
-  displayFoodName,
+  foodBuildYourOwnOptionLabel,
+  foodMenuDisplayName,
+  foodSausageOptionLabel,
+} from "@/lib/poster/foodMenuI18n";
+import { useTranslation } from "@/lib/useTranslation";
+import {
   formatVnd,
   getHotDogSausageOptions,
   selectedCartPrice,
@@ -35,6 +41,7 @@ function OptionGroup({
   group,
   selectedOptionIds,
   onToggleOption,
+  lang,
 }: {
   title: string;
   hint: string;
@@ -43,7 +50,9 @@ function OptionGroup({
   group: "toppings" | "sauces";
   selectedOptionIds: string[];
   onToggleOption: (id: string, group: "toppings" | "sauces") => void;
+  lang: AppLang;
 }) {
+  const { t } = useTranslation();
   const selectedCount = options.filter((option) => selectedOptionIds.includes(option.id)).length;
 
   return (
@@ -80,9 +89,11 @@ function OptionGroup({
               >
                 {active ? "✓" : ""}
               </span>
-              <span className="min-w-0 flex-1 text-[15px]">{option.label}</span>
+              <span className="min-w-0 flex-1 text-[15px]">
+                {foodBuildYourOwnOptionLabel(option.id, option.label, lang)}
+              </span>
               <span className="text-xs tabular-nums text-white/55">
-                {option.price > 0 ? `+${formatVnd(option.price)}` : "вкл."}
+                {option.price > 0 ? `+${formatVnd(option.price)}` : t("food_byo_included")}
               </span>
             </button>
           );
@@ -102,6 +113,7 @@ export function BuildYourOwnHotDogBuilder({
   onAddToCart,
   onClose,
 }: Props) {
+  const { t, lang } = useTranslation();
   const fromItem = getHotDogSausageOptions(item);
   const options =
     fromItem.length > 0
@@ -130,11 +142,11 @@ export function BuildYourOwnHotDogBuilder({
       className="fixed inset-0 z-[3000] flex flex-col overflow-hidden bg-[#050505] text-white"
       role="dialog"
       aria-modal="true"
-      aria-label={displayFoodName(item)}
+      aria-label={foodMenuDisplayName(item, lang)}
     >
       <button
         type="button"
-        aria-label="Назад"
+        aria-label={t("back")}
         onClick={onClose}
         className="absolute left-3 top-[max(12px,calc(env(safe-area-inset-top,0px)+8px))] z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white"
       >
@@ -162,13 +174,13 @@ export function BuildYourOwnHotDogBuilder({
           />
           <div className="absolute inset-x-4 bottom-4 z-[2]">
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-300">
-              Конструктор
+              {t("food_byo_builder")}
             </p>
             <h2 className="text-[26px] font-extrabold leading-tight text-white drop-shadow">
-              {displayFoodName(item)}
+              {foodMenuDisplayName(item, lang)}
             </h2>
             <p className="mt-2 text-[13px] leading-snug text-white/80">
-              База {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)} · сосиска, добавки и соусы
+              {t("food_byo_base_hint").replace("{price}", formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE))}
             </p>
           </div>
         </div>
@@ -177,11 +189,11 @@ export function BuildYourOwnHotDogBuilder({
           <section className="mb-6">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-[17px] font-extrabold text-white">1. Сосиска</h3>
-                <p className="mt-1 text-xs text-white/55">Обязательно · выберите одну</p>
+                <h3 className="text-[17px] font-extrabold text-white">{t("food_byo_sausage_step")}</h3>
+                <p className="mt-1 text-xs text-white/55">{t("food_byo_sausage_required")}</p>
               </div>
               <span className="shrink-0 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300">
-                Выберите 1
+                {t("food_byo_pick_one")}
               </span>
             </div>
             <div className="flex flex-col gap-2">
@@ -203,11 +215,11 @@ export function BuildYourOwnHotDogBuilder({
                     }`}
                   >
                     <span className="text-[15px] font-bold leading-snug text-white">
-                      {option.shortLabel || option.label}
+                      {foodSausageOptionLabel(option, lang)}
                     </span>
                     <span className="text-xs text-amber-300">
                       {option.grammage}
-                      {addon > 0 ? ` · +${formatVnd(addon)}` : " · в базе"}
+                      {addon > 0 ? ` · +${formatVnd(addon)}` : ` · ${t("food_byo_in_base")}`}
                     </span>
                   </button>
                 );
@@ -216,23 +228,25 @@ export function BuildYourOwnHotDogBuilder({
           </section>
 
           <OptionGroup
-            title="2. Добавки"
-            hint="Необязательно · максимум 3"
+            title={t("food_byo_toppings_step")}
+            hint={t("food_byo_toppings_optional")}
             options={HOT_DOG_TOPPINGS}
             max={3}
             group="toppings"
             selectedOptionIds={selectedOptionIds}
             onToggleOption={onToggleOption}
+            lang={lang}
           />
 
           <OptionGroup
-            title="3. Соусы"
-            hint="Необязательно · максимум 5"
+            title={t("food_byo_sauces_step")}
+            hint={t("food_byo_sauces_optional")}
             options={HOT_DOG_SAUCES}
             max={5}
             group="sauces"
             selectedOptionIds={selectedOptionIds}
             onToggleOption={onToggleOption}
+            lang={lang}
           />
 
           <section
@@ -240,22 +254,26 @@ export function BuildYourOwnHotDogBuilder({
             aria-live="polite"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-base font-extrabold text-white">Ваш хот-дог</h3>
+              <h3 className="text-base font-extrabold text-white">{t("food_byo_your_hotdog")}</h3>
               <span className="rounded-full bg-amber-300/15 px-2.5 py-1 text-[11px] font-bold text-amber-300">
-                Готово к заказу
+                {t("food_byo_ready")}
               </span>
             </div>
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               <li className="flex items-baseline justify-between gap-3 text-sm text-white/80">
-                <span>База</span>
+                <span>{t("food_byo_base")}</span>
                 <span className="tabular-nums text-white/55">
                   {formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE)}
                 </span>
               </li>
               <li className="flex items-baseline justify-between gap-3 text-sm text-white/80">
-                <span>{selected?.shortLabel || selected?.label || "Сосиска"}</span>
+                <span>
+                  {selected
+                    ? foodSausageOptionLabel(selected, lang)
+                    : t("food_byo_sausage_fallback")}
+                </span>
                 <span className="tabular-nums text-white/55">
-                  {sausageAddon > 0 ? `+${formatVnd(sausageAddon)}` : "вкл."}
+                  {sausageAddon > 0 ? `+${formatVnd(sausageAddon)}` : t("food_byo_included")}
                 </span>
               </li>
               {selectedExtras.map((extra) => (
@@ -263,15 +281,15 @@ export function BuildYourOwnHotDogBuilder({
                   key={extra.id}
                   className="flex items-baseline justify-between gap-3 text-sm text-white/80"
                 >
-                  <span>{extra.label}</span>
+                  <span>{foodBuildYourOwnOptionLabel(extra.id, extra.label, lang)}</span>
                   <span className="tabular-nums text-white/55">
-                    {extra.price > 0 ? `+${formatVnd(extra.price)}` : "вкл."}
+                    {extra.price > 0 ? `+${formatVnd(extra.price)}` : t("food_byo_included")}
                   </span>
                 </li>
               ))}
             </ul>
             <div className="mt-3.5 flex items-baseline justify-between gap-3 border-t border-white/12 pt-3.5 text-sm text-white/65">
-              <span>Итого</span>
+              <span>{t("food_byo_total")}</span>
               <strong className="text-[22px] font-extrabold text-amber-300">
                 {formatVnd(price.unitPrice)} VND
               </strong>
@@ -282,7 +300,7 @@ export function BuildYourOwnHotDogBuilder({
 
       <div className="shrink-0 border-t border-white/10 bg-[#0a0a0a] px-4 pb-[calc(14px+env(safe-area-inset-bottom,0px))] pt-3">
         <div className="mb-2.5 flex items-baseline justify-between gap-3 text-[13px] text-white/55">
-          <span>Итоговая цена</span>
+          <span>{t("food_byo_final_price")}</span>
           <strong className="text-xl font-extrabold text-white">
             {formatVnd(price.unitPrice)} VND
           </strong>
@@ -292,7 +310,7 @@ export function BuildYourOwnHotDogBuilder({
           onClick={onAddToCart}
           className="w-full rounded-[14px] bg-gradient-to-br from-amber-300 to-amber-500 px-4 py-3.5 text-[15px] font-extrabold text-black"
         >
-          Добавить в корзину · {formatVnd(price.unitPrice)}
+          {t("food_byo_add_to_cart").replace("{price}", formatVnd(price.unitPrice))}
         </button>
         {addToCartError ? (
           <p className="mt-2.5 text-center text-[13px] text-red-300">{addToCartError}</p>

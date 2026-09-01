@@ -7,11 +7,17 @@ import { usePosterTestCart } from "@/components/poster-test/PosterTestCartProvid
 import { getAssetUrl } from "@/lib/appVersion";
 import {
   cartKey,
-  displayFoodName,
   formatVnd,
   getHotDogSausageOptions,
   selectedCartPrice,
 } from "@/lib/poster/posterTestCartHelpers";
+import {
+  foodCategoryLabelKey,
+  foodMenuDisplayDescription,
+  foodMenuDisplayName,
+  foodSausageOptionLabel,
+} from "@/lib/poster/foodMenuI18n";
+import { useTranslation } from "@/lib/useTranslation";
 import {
   BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
   HOT_DOG_SAUCES,
@@ -20,16 +26,6 @@ import {
 } from "@/lib/poster/buildYourOwnHotDog";
 import { BuildYourOwnHotDogBuilder } from "@/components/poster-test/BuildYourOwnHotDogBuilder";
 import { PosterTestFoodHeader } from "@/components/poster-test/PosterTestFoodHeader";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  appetizers: "Закуски",
-  snacks: "Снеки",
-  "hot-dogs": "Hot Dogs",
-  burgers: "Бургеры",
-  grill: "Гриль",
-  combos: "Комбо наборы",
-  kids: "Детские комбо",
-};
 
 const CATEGORY_ORDER = [
   "hot-dogs",
@@ -78,20 +74,20 @@ function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
 }
 
 function HotDogSausageListNote({ item }: { item: PosterFoodMenuItem }) {
+  const { t, lang } = useTranslation();
   const options = getHotDogSausageOptions(item);
   if (options.length === 0) return null;
 
   return (
-    <div className="menu-card__sausage" aria-label="Сосиска на выбор">
-      <span className="menu-card__sausage-label">Сосиска на выбор</span>
+    <div className="menu-card__sausage" aria-label={t("food_sausage_pick_label")}>
+      <span className="menu-card__sausage-label">{t("food_sausage_pick_label")}</span>
       <span className="menu-card__sausage-options">
         {options.map((option) => {
           const meta = [option.grammage, `${formatVnd(option.price)} VND`].filter(Boolean).join(" · ");
+          const label = foodSausageOptionLabel(option, lang);
           return (
             <span key={option.id} className="menu-card__sausage-chip">
-              <span className="menu-card__sausage-chip-label">
-                {option.shortLabel || option.label}
-              </span>
+              <span className="menu-card__sausage-chip-label">{label}</span>
               {meta ? <span className="menu-card__sausage-chip-meta">{meta}</span> : null}
             </span>
           );
@@ -102,10 +98,11 @@ function HotDogSausageListNote({ item }: { item: PosterFoodMenuItem }) {
 }
 
 function HitBadge() {
+  const { t } = useTranslation();
   return (
     <span className="hit-badge" aria-hidden="true">
       <span className="hit-badge__icon">🔥</span>
-      <span className="hit-badge__text">Хит</span>
+      <span className="hit-badge__text">{t("food_hit_badge")}</span>
     </span>
   );
 }
@@ -125,11 +122,12 @@ function MenuCardCartControl({
   onAdd: () => void;
   onDecrease: () => void;
 }) {
-  const label = displayFoodName(item);
+  const { t, lang } = useTranslation();
+  const label = foodMenuDisplayName(item, lang);
   const expanded = quantity > 0;
   const addLabel = opensPicker
-    ? `Выбрать сосиску для ${label}`
-    : `Добавить ${label} в корзину`;
+    ? t("food_choose_sausage_for").replace("{name}", label)
+    : t("food_add_to_cart").replace("{name}", label);
 
   return (
     <div
@@ -142,11 +140,11 @@ function MenuCardCartControl({
         className="menu-card__cart-control-view"
       >
         {expanded ? (
-          <div className="menu-card__cart-qty" role="group" aria-label={`Количество: ${label}`}>
+          <div className="menu-card__cart-qty" role="group" aria-label={t("food_qty_group").replace("{name}", label)}>
             <button
               type="button"
               className="menu-card__cart-qty-btn"
-              aria-label={`Уменьшить количество ${label}`}
+              aria-label={t("food_decrease_qty").replace("{name}", label)}
               onClick={onDecrease}
             >
               −
@@ -157,7 +155,7 @@ function MenuCardCartControl({
             <button
               type="button"
               className="menu-card__cart-qty-btn menu-card__cart-qty-btn--plus"
-              aria-label={`Добавить ещё ${label}`}
+              aria-label={t("food_increase_qty").replace("{name}", label)}
               onClick={onAdd}
               disabled={!canAdd}
             >
@@ -189,6 +187,7 @@ function HotDogDetailPanel({
   selectedSausageId: string;
   onSelectSausage: (id: string) => void;
 }) {
+  const { t, lang } = useTranslation();
   const options = getHotDogSausageOptions(item);
   const hasSausage = options.length > 0;
   const selected =
@@ -199,11 +198,11 @@ function HotDogDetailPanel({
 
   return (
     <>
-      <h2 className="detail-info__title">{displayFoodName(item)}</h2>
+      <h2 className="detail-info__title">{foodMenuDisplayName(item, lang)}</h2>
       {hasSausage ? (
         <>
           <p className="detail-info__sausage" id="detail-hotdog-sausage-label">
-            {selected?.label ?? ""}
+            {selected ? foodSausageOptionLabel(selected, lang) : ""}
           </p>
           <p className="detail-info__grammage" id="detail-hotdog-grammage">
             {selected?.grammage ?? ""}
@@ -212,20 +211,21 @@ function HotDogDetailPanel({
       ) : item.grammage ? (
         <p className="detail-info__grammage">{item.grammage}</p>
       ) : null}
-      <p className="detail-info__desc">{item.description || ""}</p>
+      <p className="detail-info__desc">{foodMenuDisplayDescription(item, lang)}</p>
       {hasSausage ? (
         <div
           className="detail-sausage-picker"
           id="detail-sausage-picker"
-          aria-label="Выберите сосиску"
+          aria-label={t("food_sausage_pick_title")}
         >
-          <p className="detail-sausage-picker__title">Выберите сосиску</p>
+          <p className="detail-sausage-picker__title">{t("food_sausage_pick_title")}</p>
           <div className="detail-sausage-picker__options">
             {options.map((option) => {
               const meta = [option.grammage, `${formatVnd(option.price)} VND`]
                 .filter(Boolean)
                 .join(" · ");
               const active = option.id === (selected?.id ?? "");
+              const optionLabel = foodSausageOptionLabel(option, lang);
               return (
                 <button
                   key={option.id}
@@ -235,9 +235,7 @@ function HotDogDetailPanel({
                   onClick={() => onSelectSausage(option.id)}
                   aria-pressed={active}
                 >
-                  <span className="detail-sausage-option__label">
-                    {option.shortLabel || option.label}
-                  </span>
+                  <span className="detail-sausage-option__label">{optionLabel}</span>
                   {meta ? <span className="detail-sausage-option__meta">{meta}</span> : null}
                 </button>
               );
@@ -253,6 +251,7 @@ function HotDogDetailPanel({
 }
 
 export function PosterTestFoodMenu() {
+  const { t, lang } = useTranslation();
   const { addItemToCart, cartItems, updateCartQuantity } = usePosterTestCart();
   const [items, setItems] = useState<PosterFoodMenuItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -313,12 +312,12 @@ export function PosterTestFoodMenu() {
 
   const categories = useMemo(
     () => [
-      { id: "all", label: "Все" },
+      { id: "all", label: t("cat_all") },
       ...CATEGORY_ORDER.filter((id) => items.some((item) => item.category === id)).map(
-        (id) => ({ id, label: CATEGORY_LABELS[id] ?? id }),
+        (id) => ({ id, label: t(foodCategoryLabelKey(id)) }),
       ),
     ],
-    [items],
+    [items, t],
   );
 
   const visibleItems = useMemo(() => {
@@ -391,13 +390,13 @@ export function PosterTestFoodMenu() {
         <div className="menu-scroll" id="menu-scroll">
           {loadError ? (
             <div className="menu-empty">
-              <p className="menu-empty__text">Не удалось загрузить меню из Poster</p>
+              <p className="menu-empty__text">{t("food_menu_load_error")}</p>
               <p className="menu-empty__sub">{loadError}</p>
             </div>
           ) : visibleItems.length === 0 ? (
             <div className="menu-empty">
-              <p className="menu-empty__text">Скоро здесь появятся блюда</p>
-              <p className="menu-empty__sub">Poster не вернул позиции для этой категории</p>
+              <p className="menu-empty__text">{t("food_menu_empty_category")}</p>
+              <p className="menu-empty__sub">{t("food_menu_empty_sub")}</p>
             </div>
           ) : (
             <div className="menu-list" role="list">
@@ -442,16 +441,16 @@ export function PosterTestFoodMenu() {
                         )}
                       </div>
                       <div className="menu-card__content">
-                        <h3 className="menu-card__name">{displayFoodName(item)}</h3>
+                        <h3 className="menu-card__name">{foodMenuDisplayName(item, lang)}</h3>
                         {!isHotDogPicker && !isBuildYourOwnHotDog(item.id) && item.grammage ? (
                           <p className="menu-card__grammage">{item.grammage}</p>
                         ) : null}
                         {isBuildYourOwnHotDog(item.id) ? (
                           <p className="menu-card__desc menu-card__desc--cta">
-                            Нажми на карточку и собери свой Hot Dog: сосиска, добавки и соусы
+                            {t("food_byo_card_cta")}
                           </p>
                         ) : (
-                          <p className="menu-card__desc">{item.description || ""}</p>
+                          <p className="menu-card__desc">{foodMenuDisplayDescription(item, lang)}</p>
                         )}
                         {hasSausageModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
@@ -490,7 +489,7 @@ export function PosterTestFoodMenu() {
                           decoding="async"
                         />
                       ) : (
-                        <div className="menu-card__no-image">нет изображения</div>
+                        <div className="menu-card__no-image">{t("food_no_image")}</div>
                       )}
                       <span className="menu-card__open" aria-hidden="true">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

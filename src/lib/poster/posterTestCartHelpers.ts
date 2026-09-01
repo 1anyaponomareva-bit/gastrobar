@@ -1,12 +1,12 @@
 import type { HotDogSausageOption, PosterFoodMenuItem } from "@/lib/poster/mapProducts";
+import type { AppLang } from "@/lib/i18n";
+import { foodMenuDisplayName } from "@/lib/poster/foodMenuI18n";
 import {
   BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE,
   getBuildYourOwnOptions,
   getBuildYourOwnSausageOptions,
   isBuildYourOwnHotDog,
 } from "@/lib/poster/buildYourOwnHotDog";
-
-const HOT_DOG_LABEL = "Hot Dog";
 
 export type CartItem = {
   key: string;
@@ -32,14 +32,8 @@ export function formatVnd(price: number | null | undefined): string {
   return vnd.toString();
 }
 
-export function displayFoodName(item: PosterFoodMenuItem): string {
-  if (item.category === "hot-dogs") {
-    if (item.hotDogPrefix === false) return item.name;
-    if (!item.name.toLowerCase().includes("hot dog")) {
-      return `${HOT_DOG_LABEL} ${item.name}`;
-    }
-  }
-  return item.name;
+export function displayFoodName(item: PosterFoodMenuItem, lang: AppLang = "ru"): string {
+  return foodMenuDisplayName(item, lang);
 }
 
 export function getHotDogSausageOptions(item: PosterFoodMenuItem): HotDogSausageOption[] {
