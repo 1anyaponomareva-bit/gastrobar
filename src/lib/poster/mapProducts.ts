@@ -14,6 +14,7 @@ import {
   matchLocalFoodItem,
 } from "./localMenuMatch";
 import { enrichHotDogFromPoster, type HotDogSausageOption } from "./hotDogModifiers";
+import { enrichKebabPitaFromPoster } from "./pitaModifiers";
 import { extractPosterPrice } from "./posterPrice";
 import type { PosterProduct } from "./types";
 
@@ -148,6 +149,8 @@ export function buildFoodMenuFromPosterProducts(products: PosterProduct[]): Post
         };
         if (local.category === "hot-dogs") {
           result = { ...result, ...enrichHotDogFromPoster(local, product, item) };
+        } else if (local.id === "kebab-pita") {
+          result = { ...result, ...enrichKebabPitaFromPoster(local, product, item) };
         }
         return result;
       }),

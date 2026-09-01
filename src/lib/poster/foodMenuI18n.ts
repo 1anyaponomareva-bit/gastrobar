@@ -10,9 +10,6 @@ const TITLES_EN: Record<string, string> = {
   "chicken-nuggets": "Chicken Nuggets",
   "crispy-fish-bites": "Crispy Fish Bites",
   "french-fries": "French Fries",
-  "creamy-chicken-soup": "Creamy Chicken Soup",
-  "chicken-jerky": "Chicken Jerky",
-  "beef-jerky": "Beef Jerky",
   pistachios: "Pistachios",
   peanuts: "Peanuts",
   "simple-hot-dog": "Build Your Own Hot Dog",
@@ -35,8 +32,7 @@ const TITLES_EN: Record<string, string> = {
   "kids-hot-dog-combo": "Kids Hot Dog Combo",
   "chicken-kebab": "Chicken Kebab Box",
   "pork-kebab": "Pork Kebab Box",
-  "pork-kebab-pita": "Pork Kebab Pita",
-  "chicken-kebab-pita": "Chicken Kebab Pita",
+  "kebab-pita": "Kebab Pita",
   "bavarian-sausage": "Grilled Pork Sausage Box",
   "cheddar-jalapeno-sausage": "Cheddar Jalapeño Sausage Box",
   "grilled-chicken-sausage": "Grilled Chicken Sausage Box",
@@ -48,9 +44,6 @@ const TITLES_VN: Record<string, string> = {
   "chicken-nuggets": "Nuggets gà",
   "crispy-fish-bites": "Miếng cá giòn",
   "french-fries": "Khoai tây chiên",
-  "creamy-chicken-soup": "Súp gà kem",
-  "chicken-jerky": "Jerky gà",
-  "beef-jerky": "Jerky bò",
   pistachios: "Hạt dẻ cười rang muối",
   peanuts: "Đậu phộng rang muối",
   "simple-hot-dog": "Build Your Own Hot Dog",
@@ -73,8 +66,7 @@ const TITLES_VN: Record<string, string> = {
   "kids-hot-dog-combo": "Kids Hot Dog Combo",
   "chicken-kebab": "Hộp thịt gà nướng xiên",
   "pork-kebab": "Hộp thịt heo nướng xiên",
-  "pork-kebab-pita": "Pita thịt heo nướng xiên",
-  "chicken-kebab-pita": "Pita thịt gà nướng xiên",
+  "kebab-pita": "Pita thịt xiên nướng",
   "bavarian-sausage": "Hộp xúc xích heo nướng",
   "cheddar-jalapeno-sausage": "Hộp xúc xích heo phô mai jalapeño",
   "grilled-chicken-sausage": "Hộp xúc xích gà nướng",
@@ -89,10 +81,6 @@ const DESCS_EN: Record<string, string> = {
   "crispy-fish-bites":
     "Crispy basa fish bites in breading, served with tartar sauce.",
   "french-fries": "Crispy french fries.",
-  "creamy-chicken-soup":
-    "Tender chicken soup with vermicelli and a velvety yogurt-based broth.",
-  "chicken-jerky": "Spicy air-dried chicken jerky — perfect with beer.",
-  "beef-jerky": "Cured beef with spices — rich and hearty with beer.",
   pistachios: "Roasted salted pistachios for beer and cocktails.",
   peanuts: "Crunchy salted peanuts — a classic bar snack.",
   "simple-hot-dog": "Pick your sausage, toppings and sauces.",
@@ -129,10 +117,8 @@ const DESCS_EN: Record<string, string> = {
     "Box with marinated grilled chicken kebab and tomato sauce.",
   "pork-kebab":
     "Box with juicy marinated pork kebab and tomato sauce.",
-  "pork-kebab-pita":
-    "Pita with grilled pork kebab, fresh vegetables and sauce.",
-  "chicken-kebab-pita":
-    "Pita with grilled chicken kebab, fresh vegetables and sauce.",
+  "kebab-pita":
+    "Pita with grilled kebab, fresh vegetables and sauce. Choose pork or chicken.",
   "bavarian-sausage": "Box with grilled pork sausages.",
   "cheddar-jalapeno-sausage": "Box with grilled pork sausages with cheese.",
   "grilled-chicken-sausage": "Box with grilled chicken sausages.",
@@ -147,10 +133,6 @@ const DESCS_VN: Record<string, string> = {
   "crispy-fish-bites":
     "Miếng cá basa chiên giòn, kèm sốt tartar.",
   "french-fries": "Khoai tây chiên giòn.",
-  "creamy-chicken-soup":
-    "Súp gà mềm với mì sợi nhỏ và nước dùng kem từ sữa chua.",
-  "chicken-jerky": "Jerky gà cay sấy — ăn kèm bia rất hợp.",
-  "beef-jerky": "Thịt bò sấy thơm gia vị — đậm vị, hợp bia.",
   pistachios: "Hạt dẻ cười rang muối — kèm bia và cocktail.",
   peanuts: "Đậu phộng giòn muối — món quen ở bar.",
   "simple-hot-dog": "Chọn xúc xích, topping và sốt theo ý bạn.",
@@ -187,10 +169,8 @@ const DESCS_VN: Record<string, string> = {
     "Hộp thịt gà xiên nướng ướp gia vị, kèm sốt cà chua.",
   "pork-kebab":
     "Hộp thịt heo xiên nướng mọng nước ướp gia vị, kèm sốt cà chua.",
-  "pork-kebab-pita":
-    "Pita thịt heo xiên nướng, rau tươi và sốt.",
-  "chicken-kebab-pita":
-    "Pita thịt gà xiên nướng, rau tươi và sốt.",
+  "kebab-pita":
+    "Pita thịt xiên nướng, rau tươi và sốt. Chọn heo hoặc gà.",
   "bavarian-sausage": "Hộp xúc xích heo nướng trên lò.",
   "cheddar-jalapeno-sausage": "Hộp xúc xích heo phô mai nướng trên lò.",
   "grilled-chicken-sausage": "Hộp xúc xích gà nướng trên lò.",
@@ -204,6 +184,8 @@ const SAUSAGE_LABEL_BY_ID: Record<AppLang, Record<string, string>> = {
     "craft-chicken": "Craft chicken sausage",
     "craft-pork": "Craft pork sausage",
     "craft-pork-cheese": "Craft pork sausage with cheese",
+    pork: "Pork kebab",
+    chicken: "Chicken kebab",
   },
   vn: {
     "standard-pork": "Xúc xích heo tiêu chuẩn",
@@ -211,6 +193,8 @@ const SAUSAGE_LABEL_BY_ID: Record<AppLang, Record<string, string>> = {
     "craft-chicken": "Xúc xích craft gà",
     "craft-pork": "Xúc xích craft heo",
     "craft-pork-cheese": "Xúc xích craft heo phô mai",
+    pork: "Thịt heo xiên nướng",
+    chicken: "Thịt gà xiên nướng",
   },
 };
 
@@ -227,6 +211,8 @@ const SAUSAGE_LABEL_BY_RU: Record<AppLang, Record<string, string>> = {
     "Куриная крафтовая сосиска": "Craft chicken sausage",
     "Свиная крафтовая сосиска": "Craft pork sausage",
     "Свиная крафтовая сосиска с сыром": "Craft pork sausage with cheese",
+    "Свиной шашлык": "Pork kebab",
+    "Куриный шашлык": "Chicken kebab",
   },
   vn: {
     "Стандартная свиная сосиска": "Xúc xích heo tiêu chuẩn",
@@ -239,6 +225,8 @@ const SAUSAGE_LABEL_BY_RU: Record<AppLang, Record<string, string>> = {
     "Куриная крафтовая сосиска": "Xúc xích craft gà",
     "Свиная крафтовая сосиска": "Xúc xích craft heo",
     "Свиная крафтовая сосиска с сыром": "Xúc xích craft heo phô mai",
+    "Свиной шашлык": "Thịt heo xiên nướng",
+    "Куриный шашлык": "Thịt gà xiên nướng",
   },
 };
 

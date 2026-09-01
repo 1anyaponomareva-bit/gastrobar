@@ -258,34 +258,8 @@ const MENU_ITEMS = [
     image: IMG("FRENCH-FRIES.png"),
     imageFocusY: 42,
   },
-  {
-    id: "creamy-chicken-soup",
-    name: "Куриный суп",
-    description:
-      "Нежный куриный суп с вермишелью и бархатистым бульоном на основе йогурта.",
-    price: 90000,
-    grammage: "350 г",
-    category: "appetizers",
-    image: IMG("Creamy Chicken Soup.png?v=20260722-02"),
-  },
 
   // ——— СНЕКИ ———
-  {
-    id: "chicken-jerky",
-    name: "Джерки куриные",
-    description: "Пряные вяленые куриные джерки. Идеально к пиву.",
-    price: 95000,
-    category: "snacks",
-    image: BAR_MENU_IMG("/menu/food-chicken-jerky-horizontal-hero.png"),
-  },
-  {
-    id: "beef-jerky",
-    name: "Джерки говядина",
-    description: "Вяленая говядина с пряностями. Насыщенный вкус к пиву.",
-    price: 115000,
-    category: "snacks",
-    image: BAR_MENU_IMG("/menu/food-beef-jerky-horizontal-hero.png"),
-  },
   {
     id: "pistachios",
     name: "Фисташки",
@@ -527,20 +501,15 @@ const MENU_ITEMS = [
     image: IMG("PORK_KEBAB_1.jpg?v=20260726-01"),
   },
   {
-    id: "pork-kebab-pita",
-    name: "Пита со свиным шашлыком",
-    description: "Пита со свиным шашлыком на гриле, свежими овощами и соусом.",
+    id: "kebab-pita",
+    name: "Пита с шашлыком",
+    description:
+      "Пита с шашлыком на гриле, свежими овощами и соусом. Выберите свиной или куриный шашлык.",
     price: 110000,
+    priceMin: 110000,
+    priceMax: 120000,
     category: "grill",
     image: IMG("PORK_PITA.jpg?v=20260726-01"),
-  },
-  {
-    id: "chicken-kebab-pita",
-    name: "Пита с куриным шашлыком",
-    description: "Пита с куриным шашлыком на гриле, свежими овощами и соусом.",
-    price: 120000,
-    category: "grill",
-    image: IMG("CHICK_PITA.jpg?v=20260726-01"),
   },
   {
     id: "bavarian-sausage",

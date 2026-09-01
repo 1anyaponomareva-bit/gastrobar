@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getPosterApiToken } from "@/lib/poster/client";
 import { POSTER_API_BASE_URL } from "@/lib/poster/constants";
-import { getPosterMenuForVenue, getUnmatchedPosterProducts, type PosterMenuVenue } from "@/lib/poster/menuService";
+import {
+  getPosterMenuForVenue,
+  getPosterProductsWithModifiers,
+  getUnmatchedPosterProducts,
+  type PosterMenuVenue,
+} from "@/lib/poster/menuService";
 
 export const runtime = "nodejs";
 
@@ -38,6 +43,18 @@ export async function GET(request: Request) {
       venue,
       unmatched,
       unmatchedCount: unmatched.length,
+    });
+  }
+
+  if (searchParams.get("debug") === "modifiers") {
+    const query = searchParams.get("q") ?? "pita";
+    const products = await getPosterProductsWithModifiers(query);
+    return NextResponse.json({
+      success: true,
+      venue,
+      query,
+      productCount: products.length,
+      products,
     });
   }
 

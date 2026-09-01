@@ -45,7 +45,16 @@ function formatItemPrice(item: PosterFoodMenuItem): string {
   return formatVnd(item.price);
 }
 
-function formatHotDogListPrice(item: PosterFoodMenuItem): string {
+function hasModifierPicker(item: PosterFoodMenuItem): boolean {
+  if (isBuildYourOwnHotDog(item.id)) return false;
+  return getHotDogSausageOptions(item).length > 0;
+}
+
+function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
+  return hasModifierPicker(item) && (item.category === "hot-dogs" || item.id === "kebab-pita");
+}
+
+function formatListPrice(item: PosterFoodMenuItem): string {
   if (isBuildYourOwnHotDog(item.id)) {
     return formatVnd(BUILD_YOUR_OWN_HOT_DOG_BASE_PRICE);
   }
@@ -60,17 +69,8 @@ function formatHotDogListPrice(item: PosterFoodMenuItem): string {
   return formatItemPrice(item);
 }
 
-function hasSausageModifierPicker(item: PosterFoodMenuItem): boolean {
-  if (isBuildYourOwnHotDog(item.id)) return false;
-  return getHotDogSausageOptions(item).length > 0;
-}
-
 function needsDetailBuilder(item: PosterFoodMenuItem): boolean {
   return isBuildYourOwnHotDog(item.id) || getHotDogSausageOptions(item).length > 0;
-}
-
-function hasPickerCardLayout(item: PosterFoodMenuItem): boolean {
-  return item.category === "hot-dogs" && hasSausageModifierPicker(item);
 }
 
 function HotDogSausageListNote({ item }: { item: PosterFoodMenuItem }) {
@@ -403,8 +403,8 @@ export function PosterTestFoodMenu() {
                 const isHotDogPicker = hasPickerCardLayout(item);
                 const opensDetail = needsDetailBuilder(item);
                 const priceLabel =
-                  item.category === "hot-dogs"
-                    ? `${formatHotDogListPrice(item)} VND`
+                  hasModifierPicker(item)
+                    ? `${formatListPrice(item)} VND`
                     : `${formatItemPrice(item)} VND`;
                 const quickKey = quickCartKey(item);
                 const quickQuantity = opensDetail ? 0 : quickCartQuantity(item);
@@ -416,7 +416,7 @@ export function PosterTestFoodMenu() {
                     key={item.id}
                     className={`menu-card${item.badge === "hit" ? " menu-card--has-hit" : ""}${
                       isHotDogPicker ? " menu-card--hot-dog" : ""
-                    }`}
+                    }${item.id === "kebab-pita" ? " menu-card--hot-dog" : ""}`}
                     role="listitem button"
                     tabIndex={0}
                     style={{ animationDelay: `${index * 0.03}s` }}
@@ -450,7 +450,7 @@ export function PosterTestFoodMenu() {
                         ) : (
                           <p className="menu-card__desc">{foodMenuDisplayDescription(item, lang)}</p>
                         )}
-                        {hasSausageModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
+                        {hasModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
                         <div className="menu-card__price-row">
                           <div className="menu-card__price-action">
                             <span className="menu-card__price">{priceLabel}</span>

@@ -60,6 +60,36 @@ async function fetchPosterProducts(): Promise<{
   };
 }
 
+export async function getPosterProductsWithModifiers(
+  query?: string,
+): Promise<
+  Array<{
+    product_id: string;
+    product_name: string;
+    category_name?: string;
+    base_price: string | undefined;
+    group_modifications: PosterProduct["group_modifications"];
+  }>
+> {
+  const fetched = await fetchPosterProducts();
+  if (!fetched.ok) return [];
+
+  const needle = query?.trim().toLowerCase();
+  return fetched.products
+    .filter((product) => {
+      if (isHiddenProduct(product)) return false;
+      if (!needle) return (product.group_modifications?.length ?? 0) > 0;
+      return product.product_name?.toLowerCase().includes(needle);
+    })
+    .map((product) => ({
+      product_id: product.product_id,
+      product_name: product.product_name,
+      category_name: product.category_name,
+      base_price: product.spots?.[0]?.price,
+      group_modifications: product.group_modifications,
+    }));
+}
+
 export async function getPosterMenuForVenue(venue: PosterMenuVenue): Promise<PosterMenuPayload> {
   const fetched = await fetchPosterProducts();
   if (!fetched.ok) {
