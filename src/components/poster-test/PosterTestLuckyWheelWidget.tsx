@@ -11,12 +11,14 @@ import { usePosterTestWheelScope } from "@/components/poster-test/PosterTestWhee
 import {
   formatRemainingTime,
   getActiveBonus,
-  saveActiveBonus,
   type Bonus,
 } from "@/services/bonusService";
 import { POSTER_TEST_LOGIN_PATH } from "@/lib/posterTestRoutes";
 import { posterTestUserCanSpinWheel } from "@/lib/posterTestWheelScope";
-import { clearPosterTestWheelClientState } from "@/lib/posterTestWheelClientReset";
+import {
+  clearPosterTestWheelClientState,
+  syncPosterTestActiveBonus,
+} from "@/lib/posterTestWheelClientReset";
 
 function buildWheelLoginReturnTo(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
@@ -59,9 +61,7 @@ export function PosterTestLuckyWheelWidget() {
         const bonus = data.activeBonus ?? null;
         setActiveBonus(bonus);
         setWheelTestMode(Boolean(data.testMode));
-        if (bonus && activeBonusStorageKey) {
-          saveActiveBonus(bonus, activeBonusStorageKey);
-        }
+        syncPosterTestActiveBonus(bonus, activeBonusStorageKey);
       }
     } catch {
       setActiveBonus(getActiveBonus(activeBonusStorageKey));

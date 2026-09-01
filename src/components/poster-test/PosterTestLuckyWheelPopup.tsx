@@ -11,7 +11,7 @@ import {
   type SpinOutcome,
 } from "@/lib/wheel";
 import type { Bonus } from "@/services/bonusService";
-import { saveActiveBonus } from "@/services/bonusService";
+import { syncPosterTestActiveBonus } from "@/lib/posterTestWheelClientReset";
 import { useTranslation } from "@/lib/useTranslation";
 import { PosterTestWheelTestResetButton } from "@/components/poster-test/PosterTestWheelTestResetButton";
 
@@ -67,8 +67,7 @@ export function PosterTestLuckyWheelPopup({
 
   const syncLocalBonus = useCallback(
     (bonus: Bonus | null) => {
-      if (!activeBonusStorageKey) return;
-      if (bonus) saveActiveBonus(bonus, activeBonusStorageKey);
+      syncPosterTestActiveBonus(bonus, activeBonusStorageKey);
     },
     [activeBonusStorageKey],
   );

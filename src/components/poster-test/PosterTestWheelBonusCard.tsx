@@ -7,7 +7,6 @@ import {
   formatRemainingTime,
   getBonusStatus,
   isBonusExpired,
-  saveActiveBonus,
 } from "@/services/bonusService";
 import { bonusDisplayDescriptionT, bonusDisplayTitleT } from "@/lib/bonusCopyI18n";
 import type { BonusTypeKey } from "@/lib/bonusCopy";
@@ -17,7 +16,7 @@ import { formatWheelCooldownRemaining } from "@/lib/wheel";
 import { POSTER_TEST_BAR_PATH } from "@/lib/posterTestRoutes";
 import { useTranslation } from "@/lib/useTranslation";
 import { PosterTestWheelTestResetButton } from "@/components/poster-test/PosterTestWheelTestResetButton";
-import { clearPosterTestWheelClientState } from "@/lib/posterTestWheelClientReset";
+import { clearPosterTestWheelClientState, syncPosterTestActiveBonus } from "@/lib/posterTestWheelClientReset";
 
 type WheelStatusResponse = {
   success: boolean;
@@ -40,8 +39,7 @@ export function PosterTestWheelBonusCard() {
 
   const syncLocalBonus = useCallback(
     (nextBonus: Bonus | null) => {
-      if (!scope?.activeBonusStorageKey) return;
-      if (nextBonus) saveActiveBonus(nextBonus, scope.activeBonusStorageKey);
+      syncPosterTestActiveBonus(nextBonus, scope?.activeBonusStorageKey);
     },
     [scope?.activeBonusStorageKey],
   );

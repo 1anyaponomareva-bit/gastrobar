@@ -18,6 +18,10 @@ import {
   BONUS_PERIOD,
   isWheelNavBannerType,
 } from "@/services/bonusService";
+import {
+  POSTER_TEST_WHEEL_BONUS_SYNC_EVENT,
+  syncPosterTestActiveBonus,
+} from "@/lib/posterTestWheelClientReset";
 import { wheelNavBannerShowTitle } from "@/lib/bonusCopy";
 import {
   barSectionDisplayNameT,
@@ -140,8 +144,40 @@ export function MenuList({
   useEffect(() => {
     const sync = () => setActiveBonus(getActiveBonus(activeBonusStorageKey));
     sync();
-    const t = setInterval(sync, 2000);
-    return () => clearInterval(t);
+
+    const onBonusSync = () => sync();
+    window.addEventListener(POSTER_TEST_WHEEL_BONUS_SYNC_EVENT, onBonusSync);
+
+    const interval = setInterval(sync, 2000);
+
+    let cancelled = false;
+    const syncFromServer = async () => {
+      if (!activeBonusStorageKey?.includes("_pt_")) return;
+      try {
+        const response = await fetch("/api/poster-test/wheel", { cache: "no-store" });
+        const data = (await response.json()) as {
+          success?: boolean;
+          activeBonus?: ReturnType<typeof getActiveBonus>;
+        };
+        if (cancelled || !data.success) return;
+        syncPosterTestActiveBonus(data.activeBonus ?? null, activeBonusStorageKey);
+        sync();
+      } catch {
+        // ignore network errors; local cache remains fallback
+      }
+    };
+
+    void syncFromServer();
+    const serverInterval = setInterval(() => {
+      void syncFromServer();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(POSTER_TEST_WHEEL_BONUS_SYNC_EVENT, onBonusSync);
+      clearInterval(interval);
+      clearInterval(serverInterval);
+    };
   }, [activeBonusStorageKey]);
 
   useEffect(() => {
