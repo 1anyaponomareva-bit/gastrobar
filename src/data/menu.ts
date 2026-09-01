@@ -233,42 +233,6 @@ export const MENU_ITEMS: MenuItem[] = [
     strength: "weak",
   },
   {
-    id: "fuzzy-wheat-beer",
-    name: "Пиво BIERE BLANCHE · Wheat Beer",
-    description: "Пшеничное пиво: мягкое, с лёгкой фруктовой нотой и сливочным телом.",
-    image: "/menu/BIEREBLANCHE.png",
-    imageList: "/menu/BIEREBLANCHE.png",
-    category: "cocktail",
-    price: "65000",
-    barSubcategory: "beer",
-    taste: "пшеничное, мягкое",
-    strength: "weak",
-  },
-  {
-    id: "fuzzy-lemon-cider",
-    name: "Сидр LEMON CIDER · FUZZY",
-    description: "Освежающий лимонный сидр с яркой кислинкой и лёгкой сладостью.",
-    image: "/menu/FUZZY.png",
-    imageList: "/menu/FUZZY.png",
-    category: "cocktail",
-    price: "65000",
-    barSubcategory: "beer",
-    taste: "лимон, сидр",
-    strength: "weak",
-  },
-  {
-    id: "fuzzy-lager",
-    name: "Пиво FUZZY Lager",
-    description: "Светлое: чистый солод, лёгкое питьё.",
-    image: "/menu/FUZZY.png",
-    imageList: "/menu/FUZZY.png",
-    category: "cocktail",
-    price: "60000",
-    barSubcategory: "beer",
-    taste: "солод, лёгкий",
-    strength: "weak",
-  },
-  {
     id: "pineapple-ginger-honey",
     name: "Ананас · Имбирь · Мёд",
     description: "Сладость ананаса, пряный имбирь и мягкий мёд.",
@@ -865,13 +829,6 @@ export const MENU_ITEMS: MenuItem[] = [
     barSubcategory: "soft",
   },
 ];
-
-/** Пиво FUZZY — отдельное оформление карточки (картинка целиком в кадре). */
-export const FUZZY_BEER_MENU_IDS = new Set<string>([
-  "fuzzy-wheat-beer",
-  "fuzzy-lemon-cider",
-  "fuzzy-lager",
-]);
 
 /** Кальяны: те же бейджи хит / крепость; табак и вкус — на правой колонке карточки. Фото — `public/hookah/`. */
 const HOOKAH_PRICE = "490000";

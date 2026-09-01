@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { MenuItem } from "@/data/menu";
-import { TINCTURE_RIM_FOCUS_IDS, FUZZY_BEER_MENU_IDS } from "@/data/menu";
+import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { hookahDescriptionForCard } from "@/lib/hookahDescriptionTrim";
 import { strengthLabelKey } from "@/lib/menuStrengthLabel";
 import { menuItemDisplayDescription, menuItemDisplayName, menuItemDisplayTaste } from "@/lib/menuItemI18n";
@@ -104,7 +104,6 @@ export function MenuDetailView({
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
   const isBeer = item.barSubcategory === "beer";
-  const isFuzzyBeer = FUZZY_BEER_MENU_IDS.has(item.id);
   const isWine = item.barSubcategory === "wine";
   const isMinimalBarCard = isSoftDrink || isSpirits;
   /** Пиво и вино — целиком в кадре, без кропа как у коктейлей с object-cover */
@@ -176,9 +175,7 @@ export function MenuDetailView({
                         tinctureDetailRimFocus ? "object-[50%_42%]" : "object-center"
                       }`
                     : detailImageContain
-                      ? isFuzzyBeer
-                        ? "h-full w-full origin-center object-contain object-[58%_50%] scale-110 will-change-transform"
-                        : isWine
+                      ? isWine
                           ? "h-full w-full object-contain object-bottom"
                           : "h-full w-full object-contain object-center"
                       : "h-full w-full object-cover object-center"

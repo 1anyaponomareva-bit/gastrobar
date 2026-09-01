@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { useFavorites } from "@/components/FavoritesProvider";
 import type { MenuItem } from "@/data/menu";
-import { TINCTURE_RIM_FOCUS_IDS, FUZZY_BEER_MENU_IDS } from "@/data/menu";
+import { TINCTURE_RIM_FOCUS_IDS } from "@/data/menu";
 import { strengthLabelKey } from "@/lib/menuStrengthLabel";
 import {
   menuItemDisplayName,
@@ -63,7 +63,6 @@ export function MenuListItem({
   const tinctureListRimFocus = isTincture && TINCTURE_RIM_FOCUS_IDS.has(item.id);
   const isSoftDrink = item.barSubcategory === "soft";
   const isSpirits = item.barSubcategory === "spirits";
-  const isFuzzyBeer = FUZZY_BEER_MENU_IDS.has(item.id);
   const isWine = item.barSubcategory === "wine";
   /** Безалкоголь и шоты — тот же каркас, что у коктейлей: текст слева, фото справа, без отдельного оформления */
   const isBarCompact = isSoftDrink || isSpirits;
@@ -249,11 +248,9 @@ export function MenuListItem({
               ? `h-full w-full origin-center scale-[1.12] object-cover will-change-transform ${
                   tinctureListRimFocus ? "object-[50%_40%]" : "object-center"
                 }`
-              : isFuzzyBeer
-                ? "h-full min-h-[120px] w-full origin-center object-contain object-[58%_50%] scale-[1.2] will-change-transform"
-                : isWine
-                  ? "h-full min-h-[120px] w-full object-contain object-bottom"
-                  : "h-full min-h-[120px] w-full object-contain object-center"
+              : isWine
+                ? "h-full min-h-[120px] w-full object-contain object-bottom"
+                : "h-full min-h-[120px] w-full object-contain object-center"
           }
           style={
             isTincture
