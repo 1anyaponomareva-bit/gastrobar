@@ -74,11 +74,12 @@
   background: var(--theme-bg);
 }
 
-/* Cards — one surface like bar, sharp food photos (no edge fade on white) */
+/* Cards — flat on page background, no frame */
 .poster-test-food-light .menu-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: transparent;
+  border: none;
   box-shadow: none;
+  border-radius: 0;
 }
 
 .poster-test-food-light .menu-card__media:not(.menu-card__media--sharp) > img,
@@ -99,6 +100,7 @@
   width: 46%;
   max-width: 172px;
   min-width: 108px;
+  border-radius: 0;
 }
 
 .poster-test-food-light .menu-card__media > img,
