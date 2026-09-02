@@ -1,0 +1,125 @@
+/* Poster-test food tab: light GastroFood board (bar stays dark). */
+
+.poster-test-shell:has(.poster-test-food-light) {
+  background: #f5f2ec;
+}
+
+.poster-test-food-light {
+  --theme-bg: #f5f2ec;
+  --theme-surface: #ffffff;
+  --theme-accent: #d4a837;
+  --theme-text: #161616;
+  --theme-text-muted: #5c5c5c;
+  min-height: 100dvh;
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+.poster-test-food-light .site-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.poster-test-food-light .icon-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  color: #161616;
+}
+
+.poster-test-food-light .icon-btn:hover {
+  background: #f3f3f3;
+}
+
+.poster-test-food-light .lang-menu__trigger {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  color: #161616;
+}
+
+.poster-test-food-light .lang-menu__dropdown {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.poster-test-food-light .lang-menu__option {
+  color: #161616;
+}
+
+.poster-test-food-light .category-tabs-wrap {
+  background: rgba(245, 242, 236, 0.96);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.poster-test-food-light .category-tab {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #333;
+}
+
+.poster-test-food-light .category-tab.is-active {
+  background: #fff;
+  border-color: rgba(212, 168, 55, 0.55);
+  color: #111;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.poster-test-food-light .menu-list__spacer,
+.poster-test-food-light .menu-scroll {
+  background: var(--theme-bg);
+}
+
+.poster-test-food-light .menu-card {
+  background: #ffffff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
+}
+
+.poster-test-food-light .menu-card__name,
+.poster-test-food-light .menu-card__price,
+.poster-test-food-light .detail-info__title,
+.poster-test-food-light .detail-info__desc {
+  color: #161616;
+}
+
+.poster-test-food-light .menu-card__desc,
+.poster-test-food-light .menu-card__grammage,
+.poster-test-food-light .menu-card__sausage-label {
+  color: #5c5c5c;
+}
+
+.poster-test-food-light .menu-card__cart-btn,
+.poster-test-food-light .detail-add-btn {
+  background: #fbbf24;
+  color: #111;
+}
+
+.poster-test-food-light .detail-overlay {
+  background: rgba(245, 242, 236, 0.98);
+}
+
+.poster-test-food-light .detail-panel {
+  background: #ffffff;
+  color: #161616;
+}
+
+.poster-test-food-light .detail-sausage-option {
+  background: #fafafa;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #161616;
+}
+
+.poster-test-food-light .detail-sausage-option.is-active {
+  border-color: rgba(212, 168, 55, 0.65);
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.poster-test-food-light .menu-card__media > img,
+.poster-test-food-light .detail-media > img {
+  background: #ffffff;
+}
+
+.poster-test-food-light .menu-status,
+.poster-test-food-light .menu-error {
+  color: #5c5c5c;
+}

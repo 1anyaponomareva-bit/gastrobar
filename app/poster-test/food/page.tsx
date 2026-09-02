@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 
 export default function PosterTestFoodPage() {
   return (
-    <>
+    <div className="poster-test-food-light">
       <PosterTestFoodMenu />
       <PosterTestBottomNav />
-    </>
+    </div>
   );
 }
