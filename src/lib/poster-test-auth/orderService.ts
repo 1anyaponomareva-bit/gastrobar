@@ -1,10 +1,10 @@
-import type { PosterTestOrder, PosterTestOrderItem } from "@/lib/poster-test-auth/types";
+import type { PosterTestOrder, PosterTestOrderItem, PosterTestOrderStatus } from "@/lib/poster-test-auth/types";
 import { getPosterTestAdminClient } from "@/lib/poster-test-auth/db";
 
 type OrderRow = {
   id: string;
   user_id: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: PosterTestOrderStatus;
   fulfillment: "pickup" | "table" | "delivery";
   customer_name: string;
   customer_phone: string;
@@ -91,6 +91,69 @@ export async function updatePosterTestDbOrderPosterId(
     .update({
       poster_order_id: posterOrderId,
     })
+    .eq("id", orderId)
+    .select("*")
+    .single();
+
+  if (error || !data) return null;
+  return mapOrder(data as OrderRow);
+}
+
+export async function listPosterTestOrdersForMerchant(input?: {
+  since?: string;
+  limit?: number;
+}): Promise<PosterTestOrder[]> {
+  const client = getPosterTestAdminClient();
+  if (!client) return [];
+
+  const limit = Math.min(200, Math.max(1, input?.limit ?? 100));
+  let query = client
+    .from("poster_test_orders")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (input?.since) {
+    query = query.gte("updated_at", input.since);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+  return (data as OrderRow[]).map(mapOrder);
+}
+
+const MERCHANT_STATUS_TRANSITIONS: Record<PosterTestOrderStatus, PosterTestOrderStatus[]> = {
+  pending: ["preparing", "cancelled"],
+  preparing: ["ready", "cancelled"],
+  ready: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+export async function updatePosterTestOrderStatus(
+  orderId: string,
+  nextStatus: PosterTestOrderStatus,
+): Promise<PosterTestOrder | null> {
+  const client = getPosterTestAdminClient();
+  if (!client) return null;
+
+  const { data: existing, error: existingError } = await client
+    .from("poster_test_orders")
+    .select("*")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (existingError || !existing) return null;
+
+  const currentStatus = (existing as OrderRow).status;
+  const allowed = MERCHANT_STATUS_TRANSITIONS[currentStatus] ?? [];
+  if (!allowed.includes(nextStatus)) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("poster_test_orders")
+    .update({ status: nextStatus })
     .eq("id", orderId)
     .select("*")
     .single();

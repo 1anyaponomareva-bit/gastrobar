@@ -6,6 +6,7 @@ import {
 } from "@/lib/poster-test-auth/session";
 import { getPosterTestUserById } from "@/lib/poster-test-auth/userService";
 import type { PosterTestUser } from "@/lib/poster-test-auth/types";
+import { isPosterTestMerchantUser } from "@/lib/poster-test-auth/merchantAccess";
 
 export async function requirePosterTestUser(): Promise<
   | { user: PosterTestUser; errorResponse: null }
@@ -56,6 +57,30 @@ export async function requirePosterTestUser(): Promise<
   }
 
   return { user, errorResponse: null };
+}
+
+export async function requirePosterTestStaff(): Promise<
+  | { user: PosterTestUser; errorResponse: null }
+  | { user: null; errorResponse: NextResponse }
+> {
+  const auth = await requirePosterTestUser();
+  if (auth.errorResponse) return auth;
+
+  if (!isPosterTestMerchantUser({ role: auth.user.role, email: auth.user.email })) {
+    return {
+      user: null,
+      errorResponse: NextResponse.json(
+        {
+          success: false,
+          error: "FORBIDDEN",
+          message: "Нет доступа к панели заказов.",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return auth;
 }
 
 export function createAuthSuccessResponse(user: PosterTestUser) {

@@ -28,7 +28,7 @@ create index if not exists poster_test_users_qr_slug_idx on public.poster_test_u
 create table if not exists public.poster_test_orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.poster_test_users (id) on delete cascade,
-  status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled')),
+  status text not null default 'pending' check (status in ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
   fulfillment text not null default 'pickup' check (fulfillment in ('pickup', 'table', 'delivery')),
   customer_name text not null,
   customer_phone text not null,
@@ -41,6 +41,9 @@ create table if not exists public.poster_test_orders (
 );
 
 create index if not exists poster_test_orders_user_id_idx on public.poster_test_orders (user_id, created_at desc);
+
+create index if not exists poster_test_orders_status_created_idx
+  on public.poster_test_orders (status, created_at desc);
 
 create or replace function public.poster_test_touch_updated_at()
 returns trigger

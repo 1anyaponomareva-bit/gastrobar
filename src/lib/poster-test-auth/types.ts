@@ -1,3 +1,10 @@
+export type PosterTestOrderStatus =
+  | "pending"
+  | "preparing"
+  | "ready"
+  | "completed"
+  | "cancelled";
+
 export type PosterTestUserRole = "guest" | "staff" | "admin";
 
 export type PosterTestAuthProvider = "google" | "telegram";
@@ -28,7 +35,7 @@ export type PosterTestOrderItem = {
 export type PosterTestOrder = {
   id: string;
   userId: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: PosterTestOrderStatus;
   fulfillment: "pickup" | "table" | "delivery";
   customerName: string;
   customerPhone: string;

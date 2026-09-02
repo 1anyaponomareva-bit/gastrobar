@@ -24,7 +24,9 @@ function shortOrderId(order: PosterTestOrder): string {
 }
 
 function statusLabel(t: (key: string) => string, status: PosterTestOrder["status"]): string {
-  if (status === "confirmed") return t("poster_test_order_status_confirmed");
+  if (status === "preparing") return t("poster_test_order_status_preparing");
+  if (status === "ready") return t("poster_test_order_status_ready");
+  if (status === "completed") return t("poster_test_order_status_completed");
   if (status === "cancelled") return t("poster_test_order_status_cancelled");
   return t("poster_test_order_status_pending");
 }
