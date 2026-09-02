@@ -139,12 +139,9 @@ export function WheelOfFortune({
           maxWidth: "100%",
         }}
       >
-        {/* Круг: обрезка по окружности — колесо не «выкатывается» за край */}
+        {/* Круг: обрезка по окружности — без отдельной подложки за PNG */}
         <div
-          className="relative isolate z-10 flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0a0a0a] ring-1 ring-white/10"
-          style={{
-            boxShadow: "0 12px 48px rgba(0,0,0,0.45)",
-          }}
+          className="relative isolate z-10 flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-full"
         >
           {/* Лёгкое покачивание до спина; вращение спина внутри, относительно центра */}
           <motion.div

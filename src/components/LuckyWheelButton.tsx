@@ -35,7 +35,6 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
           ? "var(--fab-bottom-nav-stack-ribbon)"
           : "var(--fab-bottom-nav-stack)",
         right: "max(16px, env(safe-area-inset-right, 0px) + 16px)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
       }}
       aria-label={
         hasBonus
@@ -49,9 +48,7 @@ export function LuckyWheelButton({ onClick, hasBonus, remainingTime }: Props) {
         <div className="relative h-16 w-16 max-h-[64px] max-w-[64px] shrink-0 overflow-visible">
           <span
             className={`relative flex h-full w-full items-center justify-center overflow-hidden rounded-full ${
-              hasBonus
-                ? "bg-[#2a0a0f] ring-2 ring-amber-400/55"
-                : "bg-black/20 ring-1 ring-amber-500/40"
+              hasBonus ? "ring-2 ring-amber-400/55" : "ring-1 ring-amber-500/40"
             }`}
           >
             {!showFallbackGradient ? (
