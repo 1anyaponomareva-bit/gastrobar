@@ -490,7 +490,7 @@ const MENU_ITEMS = [
     description: "Бокс с маринованным куриным шашлыком на гриле с томатным соусом.",
     price: 130000,
     category: "grill",
-    image: IMG("KUR_KEBAB_1.jpg?v=20260726-01"),
+    image: IMG("grab/chicken-kebab.png"),
   },
   {
     id: "pork-kebab",
@@ -498,7 +498,7 @@ const MENU_ITEMS = [
     description: "Бокс с сочным маринованным шашлыком из свинины с томатным соусом.",
     price: 120000,
     category: "grill",
-    image: IMG("PORK_KEBAB_1.jpg?v=20260726-01"),
+    image: IMG("grab/pork-kebab.png"),
   },
   {
     id: "pork-kebab-pita",

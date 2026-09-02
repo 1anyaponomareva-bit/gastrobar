@@ -275,7 +275,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Бокс с сочным маринованным шашлыком из свинины с томатным соусом.",
     price: 120000,
     category: "grill",
-    image: foodMenuImage("PORK_KEBAB_1.jpg?v=20260726-01"),
+    image: foodMenuImage("grab/pork-kebab.png"),
   },
   {
     id: "pork-kebab-pita",
