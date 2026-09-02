@@ -1,8 +1,6 @@
 export const GASTROFOOD_SNACK_IDS = new Set([
   "chicken-jerky",
   "beef-jerky",
-  "pistachios",
-  "peanuts",
 ]);
 
 export const GASTROFOOD_SNACKS_PATH = "/food?category=snacks";

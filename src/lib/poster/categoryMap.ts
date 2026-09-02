@@ -127,6 +127,7 @@ export function isLikelyBarProduct(categoryName: string, productName: string): b
   if (isPosterBarCategory(categoryName)) return true;
 
   const haystack = `${categoryName} ${productName}`;
+  if (/pistach|peanut|фисташ|арахис/i.test(haystack)) return true;
   if (FOOD_VENUE_HINT.test(haystack) && !BAR_VENUE_HINT.test(haystack)) return false;
   return BAR_VENUE_HINT.test(haystack) || BAR_CATEGORY_RULES.some((r) => r.pattern.test(haystack));
 }

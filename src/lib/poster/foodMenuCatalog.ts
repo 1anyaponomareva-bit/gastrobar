@@ -1,5 +1,5 @@
 import type { FoodMenuCategoryId } from "./categoryMap";
-import { barMenuImage, foodMenuImage } from "./foodMenuImage";
+import { foodMenuImage } from "./foodMenuImage";
 
 /** Локальное gastrofood-меню (как на /food) — только для poster-test. */
 export type LocalFoodCatalogItem = {
@@ -66,22 +66,6 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     image: foodMenuImage("grab/french-fries.jpg"),
   },
   {
-    id: "pistachios",
-    name: "Фисташки",
-    description: "Обжаренные солёные фисташки к пиву и коктейлям.",
-    price: 90000,
-    category: "snacks",
-    image: barMenuImage("/menu/food-pistachios-horizontal-hero.png"),
-  },
-  {
-    id: "peanuts",
-    name: "Арахис",
-    description: "Хрустящий солёный арахис. Классический барный снэк.",
-    price: 50000,
-    category: "snacks",
-    image: barMenuImage("/menu/food-peanuts-horizontal-hero.png"),
-  },
-  {
     id: "simple-hot-dog",
     name: "Собери свой Hot Dog",
     description: "Выберите сосиску, добавки и соусы по своему вкусу.",
@@ -109,7 +93,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     priceMax: 120000,
     category: "hot-dogs",
     badge: "hit",
-    image: foodMenuImage("grab/cheddar-bacon-dog.jpg"),
+    image: foodMenuImage("grab/cheddar-bacon-dog.png"),
   },
   {
     id: "jalapeno-cheddar-dog",
@@ -150,7 +134,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     grammage: "280 г",
     category: "hot-dogs",
     badge: "hit",
-    image: foodMenuImage("grab/philly-cheesesteak.jpg"),
+    image: foodMenuImage("grab/philly-cheesesteak.png"),
   },
   {
     id: "classic-burger",
@@ -283,7 +267,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Пита со свиным шашлыком на гриле, свежими овощами и соусом.",
     price: 110000,
     category: "grill",
-    image: foodMenuImage("grab/pork-kebab-pita.jpg"),
+    image: foodMenuImage("grab/pork-kebab-pita.png"),
   },
   {
     id: "chicken-kebab-pita",
@@ -291,7 +275,7 @@ export const FOOD_MENU_CATALOG: LocalFoodCatalogItem[] = [
     description: "Пита с куриным шашлыком на гриле, свежими овощами и соусом.",
     price: 120000,
     category: "grill",
-    image: foodMenuImage("grab/chicken-kebab-pita.jpg"),
+    image: foodMenuImage("grab/chicken-kebab-pita.png"),
   },
   {
     id: "bavarian-sausage",

@@ -19,7 +19,6 @@ const MAIN_MENU_CATEGORY_ORDER = [
   "burgers",
   "grill",
   "appetizers",
-  "snacks",
   ...COMBO_CATEGORY_IDS,
 ];
 
@@ -259,23 +258,6 @@ const MENU_ITEMS = [
     imageFocusY: 42,
   },
 
-  // ——— СНЕКИ ———
-  {
-    id: "pistachios",
-    name: "Фисташки",
-    description: "Обжаренные солёные фисташки к пиву и коктейлям.",
-    price: 90000,
-    category: "snacks",
-    image: BAR_MENU_IMG("/menu/food-pistachios-horizontal-hero.png"),
-  },
-  {
-    id: "peanuts",
-    name: "Арахис",
-    description: "Хрустящий солёный арахис. Классический барный снэк.",
-    price: 50000,
-    category: "snacks",
-    image: BAR_MENU_IMG("/menu/food-peanuts-horizontal-hero.png"),
-  },
 
   // ——— ХОТ-ДОГИ ———
   {

@@ -42,8 +42,12 @@ const BAR_LIST_TOP = APP_LIST_TOP_PX;
 const HOOKAH_LIST_TOP = APP_LIST_TOP_PX;
 const LIST_BOTTOM_PADDING = "calc(7rem + env(safe-area-inset-bottom, 0px))";
 
-/** Напитки */
+/** Напитки и барные снеки */
 function filterBarItems(items: MenuItem[], categoryId: BarCategoryId): MenuItem[] {
+  if (categoryId === "snacks") {
+    return items.filter((item) => item.category === "food" && item.menuSubcategory === "snack");
+  }
+
   const drinks = items.filter((i) => i.category === "cocktail");
 
   if (categoryId === "all") {

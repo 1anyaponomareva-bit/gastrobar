@@ -828,6 +828,28 @@ export const MENU_ITEMS: MenuItem[] = [
     grammage: "350 мл",
     barSubcategory: "soft",
   },
+  {
+    id: "pistachios",
+    name: "Фисташки",
+    description: "Обжаренные солёные фисташки к пиву и коктейлям.",
+    image: "/menu/food-pistachios-horizontal-hero.png",
+    imageList: "/menu/food-pistachios-horizontal-hero.png",
+    category: "food",
+    menuSubcategory: "snack",
+    price: "90000",
+    pairing: ["beer", "cocktail"],
+  },
+  {
+    id: "peanuts",
+    name: "Арахис",
+    description: "Хрустящий солёный арахис. Классический барный снэк.",
+    image: "/menu/food-peanuts-horizontal-hero.png",
+    imageList: "/menu/food-peanuts-horizontal-hero.png",
+    category: "food",
+    menuSubcategory: "snack",
+    price: "50000",
+    pairing: ["beer", "cocktail"],
+  },
 ];
 
 /** Кальяны: те же бейджи хит / крепость; табак и вкус — на правой колонке карточки. Фото — `public/hookah/`. */

@@ -7,6 +7,10 @@ export function getListNavForProductId(productId: string): {
   period: "bar";
   categoryTab: BarCategoryId;
 } | null {
+  if (productId === "pistachios" || productId === "peanuts") {
+    return { period: "bar", categoryTab: "snacks" };
+  }
+
   if (isGastrofoodSnackProductId(productId)) return null;
 
   const item = MENU_ITEMS.find((i) => i.id === productId);

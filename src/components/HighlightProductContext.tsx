@@ -65,7 +65,9 @@ export function HighlightProductProvider({ children }: { children: React.ReactNo
         return;
       }
       if (categoryTab === "snacks") {
-        goToGastrofoodSnacks();
+        setPeriod("bar");
+        setPendingListCategory({ bar: "snacks" });
+        setHighlightProductId(null);
         return;
       }
       setPeriod("bar");

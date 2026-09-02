@@ -123,6 +123,10 @@ const BAR_POSTER_ALIASES: Array<[string, string]> = [
   ["PASSION MINT", "lemonade-passionfruit-mint"],
   ["LEMONADE PASSION MINT", "lemonade-passionfruit-mint"],
   ["ВОДА LA VIE", "water-350"],
+  ["PISTACHIOS", "pistachios"],
+  ["PEANUTS", "peanuts"],
+  ["ФИСТАШКИ", "pistachios"],
+  ["АРАХИС", "peanuts"],
 ];
 
 const FOOD_POSTER_ALIASES: Array<[string, string]> = [
@@ -132,8 +136,6 @@ const FOOD_POSTER_ALIASES: Array<[string, string]> = [
   ["CRISPY FISH BITES", "crispy-fish-bites"],
   ["FISH BITES", "crispy-fish-bites"],
   ["FRENCH FRIES", "french-fries"],
-  ["PISTACHIOS", "pistachios"],
-  ["PEANUTS", "peanuts"],
   ["SIMPLE HOT DOG", "simple-hot-dog"],
   ["CLASSIC HOT DOG", "simple-hot-dog"],
   ["KIDS HOT DOG", "simple-hot-dog"],

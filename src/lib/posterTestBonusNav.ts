@@ -33,7 +33,6 @@ export function posterTestFoodSectionPath(section: string): string {
 }
 
 export function posterTestBarCategoryPath(category: BarCategoryId): string {
-  if (category === "snacks") return posterTestFoodSectionPath("snacks");
   return `${POSTER_TEST_BAR_PATH}?category=${encodeURIComponent(category)}`;
 }
 
@@ -46,7 +45,7 @@ export function navigatePosterTestBonusProduct(period: MenuPeriod, productId: st
   if (typeof window === "undefined") return;
 
   if (isGastrofoodSnackProductId(productId)) {
-    window.location.assign(posterTestFoodSectionPath("snacks"));
+    window.location.assign(posterTestBarCategoryPath("snacks"));
     return;
   }
 
@@ -63,7 +62,7 @@ export function readPosterTestBarCategoryFromLocation(): BarCategoryId | null {
   if (typeof window === "undefined") return null;
   if (!window.location.pathname.startsWith(POSTER_TEST_BAR_PATH)) return null;
   const category = new URLSearchParams(window.location.search).get("category");
-  if (!category || !isBarCategoryId(category) || category === "snacks") return null;
+  if (!category || !isBarCategoryId(category)) return null;
   return category;
 }
 

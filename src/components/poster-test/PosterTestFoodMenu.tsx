@@ -33,10 +33,16 @@ const CATEGORY_ORDER = [
   "burgers",
   "grill",
   "appetizers",
-  "snacks",
   "combos",
   "kids",
 ] as const;
+
+const CUTOUT_MENU_IMAGE_IDS = new Set([
+  "cheddar-bacon-dog",
+  "philly-cheesesteak",
+  "pork-kebab-pita",
+  "chicken-kebab-pita",
+]);
 
 function formatItemPrice(item: PosterFoodMenuItem): string {
   if (item.priceMin != null && item.priceMax != null) {
@@ -420,6 +426,8 @@ export function PosterTestFoodMenu() {
                 const quickPrice = selectedCartPrice(item, quickSausageId(item));
                 const canQuickAdd = quickPrice.unitPrice > 0;
 
+                const isCutoutImage = CUTOUT_MENU_IMAGE_IDS.has(item.id);
+
                 return (
                   <article
                     key={item.id}
@@ -456,7 +464,7 @@ export function PosterTestFoodMenu() {
                           <p className="menu-card__desc menu-card__desc--cta">
                             {t("food_byo_card_cta")}
                           </p>
-                        ) : (
+                        ) : isHotDogPicker ? null : (
                           <p className="menu-card__desc">{foodMenuDisplayDescription(item, lang)}</p>
                         )}
                         {hasModifierPicker(item) ? <HotDogSausageListNote item={item} /> : null}
@@ -486,7 +494,7 @@ export function PosterTestFoodMenu() {
                     <div
                       className={`menu-card__media${
                         !item.image ? " menu-card__media--no-photo" : ""
-                      }`}
+                      }${isCutoutImage ? " menu-card__media--cutout menu-card__media--sharp" : ""}`}
                     >
                       {item.image ? (
                         <img
