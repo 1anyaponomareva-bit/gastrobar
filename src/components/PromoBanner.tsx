@@ -68,6 +68,10 @@ function isCheckPath(path: string): boolean {
   return path === "/check" || path.startsWith("/check/");
 }
 
+function isStaffTestPath(path: string): boolean {
+  return path === "/test" || path.startsWith("/test/");
+}
+
 export function PromoBanner() {
   const { t } = useTranslation();
   const pathname = usePathname() ?? "";
@@ -84,7 +88,7 @@ export function PromoBanner() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (isDurakPath(pathname) || isMenuChooserPath(pathname) || isStaffPath(pathname) || isCheckPath(pathname)) return;
+    if (isDurakPath(pathname) || isMenuChooserPath(pathname) || isStaffPath(pathname) || isCheckPath(pathname) || isStaffTestPath(pathname)) return;
 
     const last = getLastShownAt();
     if (last != null && isOnCooldown(last)) return;

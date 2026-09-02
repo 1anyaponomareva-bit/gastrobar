@@ -25,6 +25,8 @@ export const config = {
     "/bar",
     "/check",
     "/check/:path*",
+    "/test",
+    "/test/:path*",
     "/staff",
     "/staff/:path*",
     /* supabase-proxy: без лишнего edge-hop перед Node Route Handler (меньше сбоев fetch). */

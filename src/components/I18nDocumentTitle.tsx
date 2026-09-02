@@ -3,8 +3,10 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { translate } from "@/lib/i18n";
+import { getStaffTestDefinitionByPath } from "@/data/staffTests";
 import { toCheckAppLang } from "@/lib/shiftChecklistI18n";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
+import { toStaffTestAppLang } from "@/lib/staffTestI18n";
 import { useTranslation } from "@/lib/useTranslation";
 
 export function I18nDocumentTitle() {
@@ -22,6 +24,15 @@ export function I18nDocumentTitle() {
     }
     if (pathname === "/check" || pathname.startsWith("/check/")) {
       document.title = translate(toCheckAppLang(lang), "check_meta_title");
+      return;
+    }
+    if (pathname === "/test" || pathname.startsWith("/test/")) {
+      const definition = getStaffTestDefinitionByPath(pathname);
+      if (definition) {
+        document.title = translate(toStaffTestAppLang(lang), definition.metaTitleKey);
+        return;
+      }
+      document.title = translate(toStaffTestAppLang(lang), "staff_test_meta_title");
       return;
     }
     if (pathname === "/bar") {

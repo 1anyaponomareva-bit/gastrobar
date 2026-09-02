@@ -1,0 +1,239 @@
+.staff-inventory.staff-test {
+  --gold: #f2ad00;
+  --green: #16a34a;
+  --red: #d60000;
+}
+
+.staff-inventory.staff-test .testHeader {
+  margin-bottom: 4px;
+}
+
+.staff-inventory.staff-test .testTitle {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.25;
+  margin: 10px 0 4px;
+}
+
+.staff-inventory.staff-test .testSubtitle {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.staff-inventory.staff-test .testInstruction {
+  font-size: 12px;
+  color: #bbb;
+  line-height: 1.4;
+  margin: 0 4px 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #151515;
+  border: 1px solid #282828;
+}
+
+.staff-inventory.staff-test .stat b.statGreen {
+  color: var(--green);
+}
+
+.staff-inventory.staff-test .stat b.statRed {
+  color: var(--red);
+}
+
+.staff-inventory.staff-test .questionCard {
+  margin: 0 4px 14px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: #151515;
+  border: 1px solid #282828;
+}
+
+.staff-inventory.staff-test .questionCard.missing {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 1px rgba(214, 0, 0, 0.25);
+}
+
+.staff-inventory.staff-test .questionNumber {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+}
+
+.staff-inventory.staff-test .questionPrompt {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.staff-inventory.staff-test .questionPromptVn {
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.staff-inventory.staff-test .optionList {
+  display: grid;
+  gap: 8px;
+}
+
+.staff-inventory.staff-test .optionBtn {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-inventory.staff-test .optionBtn.active {
+  border-color: var(--gold);
+  background: rgba(242, 173, 0, 0.12);
+}
+
+.staff-inventory.staff-test .optionKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #222;
+  font-size: 13px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.staff-inventory.staff-test .optionBtn.active .optionKey {
+  background: var(--gold);
+  color: #111;
+}
+
+.staff-inventory.staff-test .optionText {
+  display: grid;
+  gap: 2px;
+}
+
+.staff-inventory.staff-test .optionTextRu {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.staff-inventory.staff-test .optionTextVn {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.3;
+}
+
+.staff-inventory.staff-test .passBadge {
+  display: inline-block;
+  margin: 0 4px 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.staff-inventory.staff-test .passBadge.passed {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+
+.staff-inventory.staff-test .passBadge.failed {
+  background: rgba(214, 0, 0, 0.12);
+  color: #f87171;
+}
+
+.staff-inventory.staff-test .venueLogo {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 8px;
+}
+
+.staff-inventory.staff-test .venueLogo img {
+  height: 42px;
+  width: auto;
+}
+
+.staff-inventory.staff-test .testBackLink {
+  display: inline-block;
+  margin: 0 4px 10px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.staff-inventory.staff-test .testChooserGrid {
+  display: grid;
+  gap: 14px;
+  margin: 0 4px 16px;
+}
+
+.staff-inventory.staff-test .testChooserCard {
+  display: grid;
+  gap: 8px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: #151515;
+  border: 1px solid #282828;
+  color: #fff;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.staff-inventory.staff-test .testChooserCard:hover,
+.staff-inventory.staff-test .testChooserCard:focus-visible {
+  border-color: var(--gold);
+  background: rgba(242, 173, 0, 0.08);
+}
+
+.staff-inventory.staff-test .testChooserBadge {
+  display: inline-flex;
+  align-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(242, 173, 0, 0.15);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.staff-inventory.staff-test .testChooserCardTitle {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.staff-inventory.staff-test .testChooserCardSubtitle {
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.35;
+}
+
+.staff-inventory.staff-test .testChooserMeta {
+  font-size: 12px;
+  color: #888;
+  font-weight: 700;
+}
+
+.staff-inventory.staff-test .testChooserCta {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--gold);
+}
