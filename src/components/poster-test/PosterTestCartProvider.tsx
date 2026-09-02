@@ -32,6 +32,7 @@ import {
   setStoredCustomerPhone,
 } from "@/lib/poster/posterTestCartStorage";
 import { POSTER_TEST_LOGIN_PATH } from "@/lib/posterTestRoutes";
+import { PosterTestDeliveryAddressField } from "@/components/poster-test/PosterTestDeliveryAddressField";
 import { useTranslation } from "@/lib/useTranslation";
 
 type PlacedOrderResult = {
@@ -609,17 +610,10 @@ export function PosterTestCartProvider({ children }: { children: ReactNode }) {
                     </div>
 
                     {fulfillment === "delivery" ? (
-                      <label className="block">
-                        <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-white/45">
-                          {t("poster_test_delivery_address")}
-                        </span>
-                        <textarea
-                          value={deliveryAddress}
-                          onChange={(event) => setDeliveryAddress(event.target.value)}
-                          className="min-h-[80px] w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm outline-none focus:border-amber-300/60"
-                          placeholder={t("poster_test_delivery_address_placeholder")}
-                        />
-                      </label>
+                      <PosterTestDeliveryAddressField
+                        value={deliveryAddress}
+                        onChange={setDeliveryAddress}
+                      />
                     ) : null}
 
                     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
