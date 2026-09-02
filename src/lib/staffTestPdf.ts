@@ -39,7 +39,9 @@ const COLORS = {
   goldSoft: rgb(1, 0.97, 0.9),
   line: rgb(0.86, 0.86, 0.86),
   pass: rgb(0.1, 0.52, 0.24),
+  passBg: rgb(0.94, 0.98, 0.95),
   fail: rgb(0.75, 0.08, 0.08),
+  failBg: rgb(1, 0.96, 0.96),
   white: rgb(1, 1, 1),
 };
 
@@ -221,23 +223,52 @@ function drawWrappedBlock(
   return height + gapAfter;
 }
 
+function countAnswerStats(answers: StaffTestPdfAnswer[]): {
+  correct: number;
+  wrong: number;
+  unanswered: number;
+} {
+  return answers.reduce(
+    (stats, answer) => {
+      if (!answer.selected) {
+        stats.unanswered += 1;
+        return stats;
+      }
+      if (answer.selected === answer.question.correct) {
+        stats.correct += 1;
+      } else {
+        stats.wrong += 1;
+      }
+      return stats;
+    },
+    { correct: 0, wrong: 0, unanswered: 0 },
+  );
+}
+
 function drawHeader(ctx: PdfContext, options: StaffTestPdfOptions) {
   const passed = options.score >= options.passingScore;
+  const stats = countAnswerStats(options.answers);
   const titleLines = [options.testTitleRu, options.testTitleVn];
   const subtitleLines = [options.testSubtitleRu, options.testSubtitleVn];
+  const scoreSummary = `Баллы / Điểm: ${options.score} / ${options.totalQuestions}`;
+  const breakdown = `Верно / Đúng: ${stats.correct}   |   Неверно / Sai: ${stats.wrong}${
+    stats.unanswered ? `   |   Без ответа / Chưa trả lời: ${stats.unanswered}` : ""
+  }`;
+  const statusLine = passed
+    ? "Тест пройден / ĐẠT"
+    : "Тест не пройден / CHƯA ĐẠT";
   const meta = [
     `Date / Ngày: ${options.date || "-"}`,
     `Name / Họ tên: ${options.employee || "-"}`,
     `Position / Vị trí: ${options.position || "-"}`,
-    `Result / Kết quả: ${options.score}/${options.totalQuestions} — ${
-      passed ? "PASSED / ĐẠT" : "NOT PASSED / CHƯA ĐẠT"
-    }`,
   ];
 
   const titleHeight = titleLines.length * 18 + 8;
   const subtitleHeight = subtitleLines.length * 13 + 6;
+  const scoreBoxHeight = 54;
   const metaHeight = meta.length * 14 + 16;
-  const headerHeight = 8 + titleHeight + subtitleHeight + metaHeight + 20;
+  const headerHeight =
+    8 + titleHeight + subtitleHeight + scoreBoxHeight + metaHeight + 20;
 
   ensureSpace(ctx, headerHeight);
   const headerTop = ctx.y;
@@ -255,18 +286,50 @@ function drawHeader(ctx: PdfContext, options: StaffTestPdfOptions) {
     topY -= 13;
   });
 
-  const metaTop = topY - 6;
+  const scoreTop = topY - 8;
+  drawFilledBox(
+    ctx,
+    MARGIN_LEFT,
+    scoreTop,
+    CONTENT_WIDTH,
+    scoreBoxHeight,
+    passed ? COLORS.passBg : COLORS.failBg,
+  );
+
+  drawTextLine(
+    ctx,
+    scoreSummary,
+    MARGIN_LEFT + 12,
+    scoreTop - 18,
+    16,
+    ctx.fontBold,
+    passed ? COLORS.pass : COLORS.fail,
+  );
+  drawTextLine(
+    ctx,
+    breakdown,
+    MARGIN_LEFT + 12,
+    scoreTop - 34,
+    9.5,
+    ctx.font,
+    COLORS.text,
+  );
+  drawTextLine(
+    ctx,
+    statusLine,
+    MARGIN_LEFT + 12,
+    scoreTop - 48,
+    10,
+    ctx.fontBold,
+    passed ? COLORS.pass : COLORS.fail,
+  );
+
+  const metaTop = scoreTop - scoreBoxHeight - 8;
   drawFilledBox(ctx, MARGIN_LEFT, metaTop, CONTENT_WIDTH, metaHeight, COLORS.goldSoft);
 
   let metaBaseline = metaTop - 14;
   meta.forEach((line) => {
-    const color =
-      line.includes("PASSED") || line.includes("ĐẠT")
-        ? COLORS.pass
-        : line.includes("NOT PASSED") || line.includes("CHƯA ĐẠT")
-          ? COLORS.fail
-          : COLORS.text;
-    drawTextLine(ctx, line, MARGIN_LEFT + 12, metaBaseline, 10, ctx.font, color);
+    drawTextLine(ctx, line, MARGIN_LEFT + 12, metaBaseline, 10, ctx.font, COLORS.text);
     metaBaseline -= 14;
   });
 
@@ -283,26 +346,86 @@ function formatAnswerText(
   return `${selected}. ${option.textRu} / ${option.textVn}`;
 }
 
+function getQuestionStatus(answer: StaffTestPdfAnswer): "correct" | "wrong" | "unanswered" {
+  if (!answer.selected) return "unanswered";
+  return answer.selected === answer.question.correct ? "correct" : "wrong";
+}
+
 function drawQuestion(ctx: PdfContext, answer: StaffTestPdfAnswer) {
   const { question, selected } = answer;
+  const status = getQuestionStatus(answer);
   const prompt = `${question.number}. ${question.promptRu} / ${question.promptVn}`;
-  const answerLine = `Answer / Đáp án: ${formatAnswerText(question, selected)}`;
+
+  const statusLine =
+    status === "correct"
+      ? "✓ Верно / Đúng"
+      : status === "wrong"
+        ? "✗ Неверно / Sai"
+        : "— Без ответа / Chưa trả lời";
+
+  const answerLine = `Ответ сотрудника / Đáp án: ${formatAnswerText(question, selected)}`;
+  const correctLine =
+    status === "wrong"
+      ? `Правильный ответ / Đáp án đúng: ${formatAnswerText(question, question.correct)}`
+      : null;
 
   const promptBlock = measureWrappedText(prompt, ctx.fontBold, 9.5, CONTENT_WIDTH);
+  const statusBlock = measureWrappedText(statusLine, ctx.fontBold, 9, CONTENT_WIDTH);
   const answerBlock = measureWrappedText(answerLine, ctx.font, 9, CONTENT_WIDTH);
-  const blockHeight = promptBlock.height + answerBlock.height + 18;
+  const correctBlock = correctLine
+    ? measureWrappedText(correctLine, ctx.fontBold, 9, CONTENT_WIDTH)
+    : { lines: [] as string[], height: 0 };
+  const blockHeight =
+    promptBlock.height +
+    statusBlock.height +
+    answerBlock.height +
+    correctBlock.height +
+    24;
 
   ensureSpace(ctx, blockHeight);
   const topY = ctx.y;
 
-  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, blockHeight - 6, COLORS.white);
+  const boxFill =
+    status === "wrong"
+      ? COLORS.failBg
+      : status === "correct"
+        ? COLORS.passBg
+        : COLORS.white;
+
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, blockHeight - 6, boxFill);
+
+  if (status === "wrong") {
+    ctx.page.drawRectangle({
+      x: MARGIN_LEFT,
+      y: topY - (blockHeight - 6),
+      width: CONTENT_WIDTH,
+      height: blockHeight - 6,
+      borderColor: COLORS.fail,
+      borderWidth: 1.2,
+    });
+  }
+
   let baseline = topY - 12;
   drawWrappedLines(ctx, promptBlock.lines, baseline, { size: 9.5, bold: true });
-  baseline -= promptBlock.height + 6;
+  baseline -= promptBlock.height + 4;
+  drawWrappedLines(ctx, statusBlock.lines, baseline, {
+    size: 9,
+    bold: true,
+    color: status === "wrong" ? COLORS.fail : status === "correct" ? COLORS.pass : COLORS.muted,
+  });
+  baseline -= statusBlock.height + 4;
   drawWrappedLines(ctx, answerBlock.lines, baseline, {
     size: 9,
-    color: COLORS.muted,
+    color: status === "wrong" ? COLORS.fail : COLORS.muted,
   });
+  if (correctLine) {
+    baseline -= answerBlock.height + 4;
+    drawWrappedLines(ctx, correctBlock.lines, baseline, {
+      size: 9,
+      bold: true,
+      color: COLORS.pass,
+    });
+  }
 
   ctx.y = topY - blockHeight;
 }
