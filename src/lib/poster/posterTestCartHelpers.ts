@@ -20,7 +20,9 @@ export type CartItem = {
   selectedOptionLabels?: string[];
 };
 
-export type CheckoutStep = "cart" | "show";
+export type CheckoutStep = "cart" | "checkout" | "success";
+
+export type OrderFulfillment = "pickup" | "delivery";
 
 export function formatVnd(price: number | null | undefined): string {
   if (price == null) return "—";

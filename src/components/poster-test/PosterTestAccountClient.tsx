@@ -1,5 +1,6 @@
 "use client";
 
+import { PosterTestOrderHistory } from "@/components/poster-test/PosterTestOrderHistory";
 import { usePosterTestAuth } from "@/components/poster-test/PosterTestAuthProvider";
 import { PosterTestBeerClubCard } from "@/components/poster-test/PosterTestBeerClubCard";
 import { PosterTestWheelBonusCard } from "@/components/poster-test/PosterTestWheelBonusCard";
@@ -21,6 +22,8 @@ export function PosterTestAccountClient({ user }: { user: PosterTestUser }) {
           <PosterTestBeerClubCard variant="full" />
         </div>
       </section>
+
+      <PosterTestOrderHistory />
 
       <section className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.05] p-5">
         <h2 className="mb-4 text-xs uppercase tracking-[0.18em] text-white/45">

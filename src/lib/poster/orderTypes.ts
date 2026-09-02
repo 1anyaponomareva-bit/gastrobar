@@ -10,7 +10,8 @@ export type PosterTestOrderCustomer = {
   name: string;
   phone: string;
   comment?: string;
-  fulfillment: "pickup" | "table";
+  fulfillment: "pickup" | "table" | "delivery";
+  deliveryAddress?: string;
 };
 
 export type PosterTestOrderRequest = {

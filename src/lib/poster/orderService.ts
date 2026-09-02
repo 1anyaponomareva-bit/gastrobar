@@ -6,6 +6,7 @@ import type {
   PosterIncomingOrderPayload,
   PosterIncomingOrderProduct,
   PosterIncomingOrderResponse,
+  PosterTestOrderCustomer,
   PosterTestOrderLine,
   PosterTestOrderRequest,
   PosterTestValidatedOrder,
@@ -61,10 +62,16 @@ function validateOrderRequest(input: unknown): PosterTestOrderRequest {
   const name = cleanText(customer.name);
   const phone = cleanText(customer.phone);
   const comment = cleanText(customer.comment);
-  const fulfillment = customer.fulfillment === "table" ? "table" : "pickup";
+  const deliveryAddress = cleanText(customer.deliveryAddress);
+  let fulfillment: PosterTestOrderCustomer["fulfillment"] = "pickup";
+  if (customer.fulfillment === "table") fulfillment = "table";
+  if (customer.fulfillment === "delivery") fulfillment = "delivery";
 
   if (!name) throw new Error("Введите имя.");
   if (!phone) throw new Error("Введите телефон.");
+  if (fulfillment === "delivery" && !deliveryAddress) {
+    throw new Error("Введите адрес доставки.");
+  }
   if (!Array.isArray(raw.items) || raw.items.length === 0) {
     throw new Error("Корзина пуста.");
   }
@@ -75,6 +82,7 @@ function validateOrderRequest(input: unknown): PosterTestOrderRequest {
       phone,
       comment,
       fulfillment,
+      deliveryAddress: fulfillment === "delivery" ? deliveryAddress : undefined,
     },
     items: raw.items.map((item) => ({
       id: cleanText(item.id),
@@ -96,7 +104,14 @@ function buildComment(
 ): string {
   const source = "Источник: Website";
   const fulfillment =
-    order.customer.fulfillment === "table" ? "Способ получения: За столик" : "Способ получения: Самовывоз";
+    order.customer.fulfillment === "delivery"
+      ? "Способ получения: Доставка"
+      : order.customer.fulfillment === "table"
+        ? "Способ получения: За столик"
+        : "Способ получения: Самовывоз";
+  const deliveryAddress = order.customer.deliveryAddress
+    ? `Адрес доставки: ${order.customer.deliveryAddress}`
+    : "";
   const customer = `Клиент: ${order.customer.name}`;
   const phone = `Телефон: ${order.customer.phone}`;
   const items = lines
@@ -117,6 +132,7 @@ function buildComment(
   return [
     source,
     fulfillment,
+    deliveryAddress,
     customer,
     phone,
     userComment,

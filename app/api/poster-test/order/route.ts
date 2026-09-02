@@ -16,6 +16,7 @@ type OrderBody = {
     phone?: string;
     comment?: string;
     fulfillment?: string;
+    deliveryAddress?: string;
   };
   items?: Array<{
     id?: string;
@@ -26,6 +27,10 @@ type OrderBody = {
     selectedSausageLabel?: string;
   }>;
 };
+
+function normalizeFulfillment(raw: string | undefined): "pickup" | "delivery" {
+  return raw === "delivery" ? "delivery" : "pickup";
+}
 
 function normalizeItems(raw: OrderBody["items"]): PosterTestOrderItem[] {
   if (!Array.isArray(raw)) return [];
@@ -75,6 +80,8 @@ export async function POST(request: Request) {
   const customerName = body.customer?.name?.trim() ?? "";
   const customerPhone = body.customer?.phone?.trim() ?? "";
   const customerComment = body.customer?.comment?.trim() ?? "";
+  const fulfillment = normalizeFulfillment(body.customer?.fulfillment);
+  const deliveryAddress = body.customer?.deliveryAddress?.trim() ?? "";
 
   if (!customerName) {
     return NextResponse.json(
@@ -88,6 +95,19 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (fulfillment === "delivery" && !deliveryAddress) {
+    return NextResponse.json(
+      { success: false, message: "Введите адрес доставки." },
+      { status: 400 },
+    );
+  }
+
+  const combinedComment = [
+    fulfillment === "delivery" ? `Адрес доставки: ${deliveryAddress}` : null,
+    customerComment,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const items = normalizeItems(body.items);
   if (items.length === 0) {
@@ -101,10 +121,10 @@ export async function POST(request: Request) {
 
   const order = await createPosterTestDbOrder({
     userId: auth.user.id,
-    fulfillment: "pickup",
+    fulfillment,
     customerName,
     customerPhone,
-    customerComment,
+    customerComment: combinedComment || undefined,
     items,
     totalVnd,
   });
@@ -126,8 +146,9 @@ export async function POST(request: Request) {
         customer: {
           name: customerName,
           phone: customerPhone,
-          comment: customerComment,
-          fulfillment: "pickup",
+          comment: combinedComment || undefined,
+          fulfillment,
+          deliveryAddress: fulfillment === "delivery" ? deliveryAddress : undefined,
         },
         items: items.map((item) => ({
           id: item.id,
