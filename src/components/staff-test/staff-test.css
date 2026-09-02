@@ -30,13 +30,13 @@
 
 .staff-inventory.staff-test .testInstruction {
   font-size: 12px;
-  color: #bbb;
+  color: #555;
   line-height: 1.4;
   margin: 0 4px 14px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #151515;
-  border: 1px solid #282828;
+  background: #fff;
+  border: 1px solid #ddd;
 }
 
 .staff-inventory.staff-test .stat b.statGreen {
@@ -51,29 +51,31 @@
   margin: 0 4px 14px;
   padding: 14px 12px;
   border-radius: 14px;
-  background: #151515;
-  border: 1px solid #282828;
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #111;
 }
 
 .staff-inventory.staff-test .questionCard.missing {
-  border-color: #b91c1c;
-  box-shadow: 0 0 0 1px rgba(214, 0, 0, 0.25);
+  border-color: #d60000;
+  box-shadow: 0 0 0 1px rgba(214, 0, 0, 0.2);
 }
 
 .staff-inventory.staff-test .questionNumber {
   font-size: 11px;
   font-weight: 900;
-  color: var(--gold);
+  color: #b45309;
   text-transform: uppercase;
   letter-spacing: 0.2px;
   margin-bottom: 8px;
 }
 
 .staff-inventory.staff-test .questionPrompt {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
   margin-bottom: 12px;
+  color: #111;
 }
 
 .staff-inventory.staff-test .optionList {
@@ -89,16 +91,16 @@
   width: 100%;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid #333;
-  background: #111;
-  color: #fff;
+  border: 1px solid #dcdcdc;
+  background: #f8f8f8;
+  color: #111;
   text-align: left;
   cursor: pointer;
 }
 
 .staff-inventory.staff-test .optionBtn.active {
   border-color: var(--gold);
-  background: rgba(242, 173, 0, 0.12);
+  background: #fff8e6;
 }
 
 .staff-inventory.staff-test .optionKey {
@@ -108,7 +110,8 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: #222;
+  background: #e8e8e8;
+  color: #111;
   font-size: 13px;
   font-weight: 900;
   flex-shrink: 0;
@@ -124,6 +127,7 @@
   font-weight: 700;
   line-height: 1.35;
   padding-top: 4px;
+  color: #111;
 }
 
 .staff-inventory.staff-test .passBadge {
