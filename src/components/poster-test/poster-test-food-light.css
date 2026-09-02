@@ -74,10 +74,17 @@
   background: var(--theme-bg);
 }
 
-/* Cards — one surface like bar: image fades into the same card background */
+/* Cards — one surface like bar, sharp food photos (no edge fade on white) */
 .poster-test-food-light .menu-card {
   background: #ffffff;
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
+}
+
+.poster-test-food-light .menu-card__media:not(.menu-card__media--sharp) > img,
+.poster-test-food-light .menu-card__media:not(.menu-card__media--sharp) .menu-card__box-scale img,
+.poster-test-food-light .menu-card__media:not(.menu-card__media--sharp) .menu-card__scale-frame img {
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .poster-test-shell:has(.poster-test-food-light) .menu-card__body {
