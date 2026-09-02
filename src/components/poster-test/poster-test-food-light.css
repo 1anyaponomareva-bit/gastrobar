@@ -25,20 +25,34 @@
   filter: none;
 }
 
-.poster-test-food-light .icon-btn {
-  border-color: rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.95);
-  color: #161616;
+/* Header chips — same light pills as category tabs (Burgers, Grill, …) */
+.poster-test-shell:has(.poster-test-food-light) .site-header .icon-btn {
+  border-color: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
+  color: #333333;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-.poster-test-food-light .icon-btn:hover {
-  background: #f3f3f3;
+.poster-test-shell:has(.poster-test-food-light) .site-header .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .poster-test-food-light .lang-menu__trigger {
-  border-color: rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.95);
-  color: #161616;
+  border-color: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
+  color: #333333;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.poster-test-food-light .lang-menu__trigger:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.poster-test-food-light .lang-menu__chevron {
+  color: rgba(51, 51, 51, 0.75);
 }
 
 .poster-test-food-light .lang-menu__dropdown {

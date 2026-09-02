@@ -9,10 +9,19 @@ import {
 } from "@/lib/posterTestRoutes";
 import { useTranslation } from "@/lib/useTranslation";
 
-const PROFILE_BUTTON_CLASS =
+const PROFILE_BUTTON_DARK =
   "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white backdrop-blur-md transition hover:bg-white/20";
 
-export function PosterTestProfileButton({ className }: { className?: string }) {
+const PROFILE_BUTTON_LIGHT =
+  "pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/[0.06] bg-black/[0.03] text-[#333] transition hover:bg-black/[0.06]";
+
+export function PosterTestProfileButton({
+  className,
+  tone = "dark",
+}: {
+  className?: string;
+  tone?: "dark" | "light";
+}) {
   const { user } = usePosterTestAuth();
   const { t } = useTranslation();
   const href = user ? POSTER_TEST_ACCOUNT_PATH : POSTER_TEST_LOGIN_PATH;
@@ -23,7 +32,7 @@ export function PosterTestProfileButton({ className }: { className?: string }) {
   return (
     <Link
       href={href}
-      className={cn(PROFILE_BUTTON_CLASS, className)}
+      className={cn(tone === "light" ? PROFILE_BUTTON_LIGHT : PROFILE_BUTTON_DARK, className)}
       aria-label={label}
       title={label}
     >

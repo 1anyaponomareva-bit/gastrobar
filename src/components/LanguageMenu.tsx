@@ -15,8 +15,17 @@ const FLAG_SRC: Record<AppLang, string> = {
 
 const LANGS: AppLang[] = ["ru", "en", "vn"];
 
-const TRIGGER_BASE =
+const TRIGGER_DARK =
   "pointer-events-auto flex h-10 min-w-[2.75rem] shrink-0 items-center justify-center gap-1 rounded-full border border-white/30 bg-black/40 px-2.5 text-white backdrop-blur-md transition hover:bg-white/20 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-400/50 touch-manipulation";
+
+const TRIGGER_LIGHT =
+  "pointer-events-auto flex h-10 min-w-[2.75rem] shrink-0 items-center justify-center gap-1 rounded-full border border-black/[0.06] bg-black/[0.03] px-2.5 text-[#333] transition hover:bg-black/[0.06] focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-400/50 touch-manipulation";
+
+const DROPDOWN_DARK =
+  "absolute right-0 top-[calc(100%+6px)] z-[1002] overflow-hidden rounded-xl border border-white/20 bg-[#0a0a0a]/98 py-1.5 pl-1.5 pr-1 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-md";
+
+const DROPDOWN_LIGHT =
+  "absolute right-0 top-[calc(100%+6px)] z-[1002] overflow-hidden rounded-xl border border-black/10 bg-white py-1.5 pl-1.5 pr-1 shadow-[0_12px_40px_rgba(0,0,0,0.12)]";
 
 type FlagProps = {
   code: AppLang;
@@ -44,11 +53,14 @@ function langOptionKey(id: AppLang): `lang_option_${AppLang}` {
   return `lang_option_${id}`;
 }
 
-export function LanguageMenu() {
+export function LanguageMenu({ tone = "dark" }: { tone?: "dark" | "light" }) {
   const { lang, changeLang, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+  const isLight = tone === "light";
+  const triggerClass = isLight ? TRIGGER_LIGHT : TRIGGER_DARK;
+  const dropdownClass = isLight ? DROPDOWN_LIGHT : DROPDOWN_DARK;
 
   useEffect(() => {
     if (!open) return;
@@ -73,17 +85,26 @@ export function LanguageMenu() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={TRIGGER_BASE}
+        className={triggerClass}
         aria-label={`${t("aria_language_menu")}: ${t(langOptionKey(lang))}`}
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={listId}
       >
-        <span className="block overflow-hidden rounded-[3px] ring-1 ring-white/20">
+        <span
+          className={cn(
+            "block overflow-hidden rounded-[3px] ring-1",
+            isLight ? "ring-black/10" : "ring-white/20",
+          )}
+        >
           <LangFlag code={lang} width={30} height={20} className="block" />
         </span>
         <ChevronDown
-          className={cn("h-3.5 w-3.5 shrink-0 text-white/80 transition", open && "rotate-180")}
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition",
+            isLight ? "text-[#333]/75" : "text-white/80",
+            open && "rotate-180",
+          )}
           aria-hidden
         />
       </button>
@@ -93,7 +114,7 @@ export function LanguageMenu() {
           id={listId}
           role="listbox"
           aria-label={t("aria_language_list")}
-          className="absolute right-0 top-[calc(100%+6px)] z-[1002] overflow-hidden rounded-xl border border-white/20 bg-[#0a0a0a]/98 py-1.5 pl-1.5 pr-1 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-md"
+          className={dropdownClass}
         >
           {LANGS.map((id) => {
             const active = id === lang;
@@ -110,13 +131,21 @@ export function LanguageMenu() {
                 }}
                 className={cn(
                   "flex w-full min-w-[4.5rem] items-center justify-center px-2 py-2 transition",
-                  active ? "bg-amber-500/15" : "hover:bg-white/10",
+                  active
+                    ? "bg-amber-500/15"
+                    : isLight
+                      ? "hover:bg-black/[0.04]"
+                      : "hover:bg-white/10",
                 )}
               >
                 <span
                   className={cn(
                     "block overflow-hidden rounded-[3px] ring-1 ring-inset",
-                    active ? "ring-amber-400/60" : "ring-white/15",
+                    active
+                      ? "ring-amber-400/60"
+                      : isLight
+                        ? "ring-black/10"
+                        : "ring-white/15",
                   )}
                 >
                   <LangFlag code={id} width={44} height={30} className="block" />

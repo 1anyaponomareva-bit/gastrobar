@@ -69,7 +69,7 @@ export function PosterTestFoodHeader() {
         </div>
 
         <div className="header-side header-side--right poster-test-header-actions-wrap">
-          <PosterTestHeaderActions />
+          <PosterTestHeaderActions tone="light" />
         </div>
       </div>
     </header>
