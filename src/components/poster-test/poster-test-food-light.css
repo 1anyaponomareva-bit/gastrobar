@@ -1,11 +1,11 @@
 /* Poster-test food tab: light GastroFood board (bar stays dark). */
 
 .poster-test-shell:has(.poster-test-food-light) {
-  background: #f5f2ec;
+  background: #f2f2f2;
 }
 
 .poster-test-food-light {
-  --theme-bg: #f5f2ec;
+  --theme-bg: #f2f2f2;
   --theme-surface: #ffffff;
   --theme-accent: #d4a837;
   --theme-text: #161616;
@@ -48,7 +48,7 @@
 }
 
 .poster-test-food-light .category-tabs-wrap {
-  background: rgba(245, 242, 236, 0.96);
+  background: rgba(242, 242, 242, 0.96);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -70,34 +70,29 @@
   background: var(--theme-bg);
 }
 
-/* Cards — same split layout as bar, white surfaces + image fades into white */
+/* Cards — one surface like bar: image fades into the same card background */
 .poster-test-food-light .menu-card {
   background: #ffffff;
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.06);
 }
 
 .poster-test-shell:has(.poster-test-food-light) .menu-card__body {
-  background: linear-gradient(
-    90deg,
-    #ffffff 0%,
-    #ffffff 88%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
-  box-shadow: 6px 0 20px rgba(0, 0, 0, 0.06);
+  background: transparent;
+  box-shadow: none;
 }
 
 .poster-test-shell:has(.poster-test-food-light) .menu-card__media {
-  background: #ffffff;
+  background: transparent;
 }
 
 .poster-test-food-light .menu-card__media > img,
 .poster-test-food-light .menu-card__media .menu-card__box-scale img,
 .poster-test-food-light .menu-card__media .menu-card__scale-frame img {
-  background: #ffffff;
+  background: transparent;
 }
 
 .poster-test-food-light .menu-card__media--no-photo {
-  background: #f3f3f3;
+  background: transparent;
 }
 
 .poster-test-food-light .menu-card__name,
@@ -193,7 +188,7 @@
 
 /* Detail overlay */
 .poster-test-food-light .detail-overlay {
-  background: #f5f2ec;
+  background: #f2f2f2;
 }
 
 .poster-test-shell:has(.poster-test-food-light) .detail-overlay .poster-test-detail-image-wrap {
