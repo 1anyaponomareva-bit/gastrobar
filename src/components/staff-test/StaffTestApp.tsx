@@ -13,7 +13,7 @@ import {
 } from "@/lib/deliverPdfFile";
 import { translate } from "@/lib/i18n";
 import { STAFF_TEST_PATH } from "@/lib/routes";
-import { toStaffTestAppLang } from "@/lib/staffTestI18n";
+import { toStaffTestAppLang, getStaffTestQuestionPrompt, getStaffTestOptionText } from "@/lib/staffTestI18n";
 import {
   getStaffTestPdfFileName,
   makeStaffTestPdfBlob,
@@ -384,8 +384,9 @@ export function StaffTestApp({ testId }: StaffTestAppProps) {
                     String(question.number),
                   )}
                 </div>
-                <div className="questionPrompt">{question.promptRu}</div>
-                <div className="questionPromptVn">{question.promptVn}</div>
+                <div className="questionPrompt">
+                  {getStaffTestQuestionPrompt(testLang, question)}
+                </div>
                 <div className="optionList" role="radiogroup">
                   {question.options.map((option) => {
                     const active = selected === option.key;
@@ -400,8 +401,7 @@ export function StaffTestApp({ testId }: StaffTestAppProps) {
                       >
                         <span className="optionKey">{option.key}</span>
                         <span className="optionText">
-                          <span className="optionTextRu">{option.textRu}</span>
-                          <span className="optionTextVn">{option.textVn}</span>
+                          {getStaffTestOptionText(testLang, option)}
                         </span>
                       </button>
                     );
