@@ -1,6 +1,8 @@
 "use client";
 
 import { CONFIG } from "@/lib/config";
+import { getAssetUrl } from "@/lib/appVersion";
+import { POSTER_FOOD_LOGO_LIGHT } from "@/lib/poster/constants";
 import { useTranslation } from "@/lib/useTranslation";
 import { PosterTestHeaderActions } from "@/components/poster-test/PosterTestHeaderActions";
 
@@ -57,7 +59,7 @@ export function PosterTestFoodHeader() {
 
         <div className="header-logo">
           <img
-            src="/food/menu/GASTROFOOD.png"
+            src={getAssetUrl(POSTER_FOOD_LOGO_LIGHT)}
             alt="GASTROFOOD"
             className="header-logo__img"
             width={220}
