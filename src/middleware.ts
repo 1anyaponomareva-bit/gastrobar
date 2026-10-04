@@ -9,9 +9,24 @@ function getMenuPeriodFromHour(hour: number): string {
   return "dinner";
 }
 
+function isKitchenHost(host: string): boolean {
+  const hostname = host.split(":")[0]?.toLowerCase() ?? "";
+  return hostname === "kitchen" || hostname.startsWith("kitchen.");
+}
+
 export function middleware(request: NextRequest) {
   const hour = new Date().getHours();
   const period = getMenuPeriodFromHour(hour);
+  const host = request.headers.get("host") ?? "";
+
+  if (isKitchenHost(host) && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/kitchen";
+    const response = NextResponse.rewrite(url);
+    response.headers.set("x-menu-period", period);
+    return response;
+  }
+
   const response = NextResponse.next();
   response.headers.set("x-menu-period", period);
   return response;
@@ -25,6 +40,8 @@ export const config = {
     "/bar",
     "/check",
     "/check/:path*",
+    "/kitchen",
+    "/kitchen/:path*",
     "/test",
     "/test/:path*",
     "/staff",

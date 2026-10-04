@@ -26,6 +26,10 @@ export function I18nDocumentTitle() {
       document.title = translate(toCheckAppLang(lang), "check_meta_title");
       return;
     }
+    if (pathname === "/kitchen" || pathname.startsWith("/kitchen/")) {
+      document.title = "GASTROFOOD — Kitchen checklist";
+      return;
+    }
     if (pathname === "/test" || pathname.startsWith("/test/")) {
       const definition = getStaffTestDefinitionByPath(pathname);
       if (definition) {
