@@ -107,7 +107,7 @@ export async function makeKitchenChecklistPdf(options: {
     color: COLORS.gold,
   });
   state.y -= 22;
-  state.page.drawText("Утренний чек-лист подготовки кухни", {
+  state.page.drawText("Чек-лист подготовки кухни", {
     x: MARGIN_X,
     y: state.y,
     size: 16,

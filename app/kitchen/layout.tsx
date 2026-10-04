@@ -7,7 +7,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Kitchen checklist — GASTROFOOD",
-  description: "Morning kitchen preparation checklist for GastroFood staff.",
+  description: "Kitchen preparation checklist for GastroFood staff.",
   applicationName: "Kitchen",
   robots: { index: false, follow: false },
   appleWebApp: {

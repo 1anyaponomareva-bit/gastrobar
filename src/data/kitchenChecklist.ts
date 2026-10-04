@@ -18,9 +18,9 @@ export type KitchenCheckItem = {
 
 export const KITCHEN_UI: Record<string, KitchenText> = {
   title: {
-    ru: "Утренний чек-лист подготовки кухни",
-    en: "Morning kitchen prep checklist",
-    vn: "Checklist chuẩn bị bếp buổi sáng",
+    ru: "Чек-лист подготовки кухни",
+    en: "Kitchen prep checklist",
+    vn: "Checklist chuẩn bị bếp",
   },
   date: { ru: "Дата", en: "Date", vn: "Ngày" },
   employee: { ru: "Сотрудник", en: "Employee", vn: "Nhân viên" },
