@@ -7,9 +7,19 @@ const extraDevOrigins =
     .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
-  /** Gastrofood: отдаём index.html по /food (ассеты — абсолютные пути /food/…). */
+  /**
+   * /food stays on this site. /schedule is a separate Vercel project.
+   * fallback runs only when this app has no matching page, so the homepage,
+   * /staff, /kitchen and /food are left untouched.
+   */
   async rewrites() {
-    return [{ source: "/food", destination: "/food/index.html" }];
+    return {
+      afterFiles: [{ source: "/food", destination: "/food/index.html" }],
+      fallback: [
+        { source: "/schedule", destination: "https://gastrofood-schedule.vercel.app/schedule" },
+        { source: "/schedule/:path*", destination: "https://gastrofood-schedule.vercel.app/schedule/:path*" },
+      ],
+    };
   },
   /** PostgREST прокси (если кто-то бьёт в `/supabase-proxy`): `app/supabase-proxy/[[...path]]/route.ts`. */
   images: {
