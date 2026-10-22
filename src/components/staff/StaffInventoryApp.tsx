@@ -378,24 +378,34 @@ export function StaffInventoryApp() {
       <div className={`row ${item.noWarehouse ? "single" : ""}`}>
         <div className="field">
           <label>{t("staff_stock_restaurant")}</label>
-          <input
-            inputMode="decimal"
-            value={getStoredStockValue(venue, item.id, "restaurant")}
-            onChange={(event) =>
-              handleStockFieldChange(item.id, "restaurant", event.target.value)
-            }
-          />
+          <div className="unitInput">
+            <input
+              inputMode="decimal"
+              value={getStoredStockValue(venue, item.id, "restaurant")}
+              onChange={(event) =>
+                handleStockFieldChange(item.id, "restaurant", event.target.value)
+              }
+            />
+            <span className="unitSuffix">packs</span>
+          </div>
         </div>
         {item.noWarehouse ? null : (
           <div className="field">
             <label>{t("staff_stock_warehouse")}</label>
-            <input
-              inputMode="decimal"
-              value={getStoredStockValue(venue, item.id, "warehouse")}
-              onChange={(event) =>
-                handleStockFieldChange(item.id, "warehouse", event.target.value)
-              }
-            />
+            <div className="unitInput">
+              <input
+                inputMode="decimal"
+                value={getStoredStockValue(venue, item.id, "warehouse")}
+                onChange={(event) =>
+                  handleStockFieldChange(
+                    item.id,
+                    "warehouse",
+                    event.target.value,
+                  )
+                }
+              />
+              <span className="unitSuffix">packs</span>
+            </div>
           </div>
         )}
       </div>

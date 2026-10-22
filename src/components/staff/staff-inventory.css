@@ -407,6 +407,25 @@
   gap: 8px;
 }
 
+.staff-inventory .unitInput {
+  position: relative;
+}
+
+.staff-inventory .unitInput input {
+  padding-right: 52px;
+}
+
+.staff-inventory .unitSuffix {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a9a9a;
+  pointer-events: none;
+}
+
 .staff-inventory .row.single {
   grid-template-columns: 1fr;
 }

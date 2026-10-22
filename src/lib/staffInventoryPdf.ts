@@ -403,7 +403,7 @@ function drawStockTableHeader(ctx: PdfContext, labels: StaffInventoryPdfLabels) 
   drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, labels.colItem, MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
   drawTextLine(ctx, labels.colRestaurant, 350, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, labels.colWarehouse, 460, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colWarehouse, 440, baseline, 8, ctx.fontBold);
 
   ctx.y = topY - total;
 }
@@ -430,11 +430,11 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
   drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
   if (needsOrder) {
-    drawTextLine(ctx, "FOOD ORDER", 482, baseline, 9, ctx.fontBold, COLORS.red);
+    drawTextLine(ctx, "FOOD ORDER", 484, baseline, 9, ctx.fontBold, COLORS.red);
   }
   drawTextLine(
     ctx,
-    row.hasRestaurant ? money(row.restaurant) : "",
+    row.hasRestaurant ? `${money(row.restaurant)} packs` : "",
     350,
     baseline,
     9,
@@ -442,8 +442,12 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   );
   drawTextLine(
     ctx,
-    row.noWarehouse ? "—" : row.hasWarehouse ? money(row.warehouse) : "",
-    460,
+    row.noWarehouse
+      ? "—"
+      : row.hasWarehouse
+        ? `${money(row.warehouse)} packs`
+        : "",
+    440,
     baseline,
     9,
     needsOrder ? ctx.fontBold : ctx.font,
