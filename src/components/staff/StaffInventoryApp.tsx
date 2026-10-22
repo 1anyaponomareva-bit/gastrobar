@@ -246,12 +246,6 @@ export function StaffInventoryApp() {
     setStoredActiveCategory(venue, category);
   };
 
-  const handleSave = () => {
-    setStoredDate(date);
-    setStoredEmployee(employee);
-    window.alert(t("staff_saved"));
-  };
-
   const handleReset = () => {
     setSearch("");
     setActiveCategory("All");
@@ -445,18 +439,12 @@ export function StaffInventoryApp() {
             </div>
           </div>
 
-          <div className="stats">
-            <div className="stat">
-              <label>{t("staff_total_items")}</label>
-              <b>{items.length}</b>
-            </div>
-          </div>
-
           <div className="actions">
-            <button type="button" className="dark" onClick={handleSave}>
-              {t("staff_save")}
-            </button>
-            <button type="button" className="danger" onClick={handleNewDay}>
+            <button
+              type="button"
+              className="danger actionsExport"
+              onClick={handleNewDay}
+            >
               {t("staff_new_day")}
             </button>
           </div>
