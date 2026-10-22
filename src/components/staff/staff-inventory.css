@@ -199,6 +199,11 @@
   color: #111;
 }
 
+.staff-inventory .success {
+  background: #00a651;
+  color: #fff;
+}
+
 .staff-inventory .danger {
   background: #d60000;
   color: #fff;
