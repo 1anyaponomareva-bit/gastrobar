@@ -9,7 +9,11 @@ import {
   STAFF_INVENTORY_VENUE_LABELS,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
-import { getStaffStockItems, staffStockUnit } from "@/data/staffInStockItems";
+import {
+  evaluateStaffStock,
+  getStaffStockItems,
+  staffStockUnit,
+} from "@/data/staffInStockItems";
 import { getAssetUrl } from "@/lib/appVersion";
 import { deliverPdfFile, type DeliverPdfResult } from "@/lib/deliverPdfFile";
 import {
@@ -56,21 +60,28 @@ function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
   return getStaffStockItems(venue).map((item) => {
     const restaurantValue = getStoredStockValue(venue, item.id, "restaurant");
     const warehouseValue = getStoredStockValue(venue, item.id, "warehouse");
-    const restaurant = parseNumber(restaurantValue);
     const hasRestaurant = restaurantValue.trim() !== "";
+    const hasWarehouse = !item.noWarehouse && warehouseValue.trim() !== "";
+    const restaurant = parseNumber(restaurantValue);
+    const warehouse = parseNumber(warehouseValue);
+    const { lowInHouse, lowWarehouse, task } = evaluateStaffStock(
+      item,
+      hasRestaurant ? restaurant : null,
+      hasWarehouse ? warehouse : null,
+    );
     return {
       id: item.id,
       name: item.name.en,
       unit: staffStockUnit(item),
-      needsPrepOrder:
-        item.prepOrderAtOrBelow !== undefined &&
-        hasRestaurant &&
-        restaurant <= item.prepOrderAtOrBelow,
       restaurant,
-      warehouse: parseNumber(warehouseValue),
-      hasRestaurant: restaurantValue.trim() !== "",
-      hasWarehouse: !item.noWarehouse && warehouseValue.trim() !== "",
+      warehouse,
+      hasRestaurant,
+      hasWarehouse,
       noWarehouse: Boolean(item.noWarehouse),
+      filled: hasRestaurant || hasWarehouse,
+      lowInHouse,
+      lowWarehouse,
+      task,
     };
   });
 }
@@ -664,13 +675,7 @@ export function StaffInventoryApp() {
             onClick={handleExportPdf}
             disabled={exportingPdf}
           >
-            {exportingPdf
-              ? t("staff_sharing_pdf")
-              : `${t("staff_share_pdf")} · ${t(
-                  isStockSection
-                    ? "staff_section_stock"
-                    : "staff_section_purchase",
-                )}`}
+            {exportingPdf ? t("staff_sharing_pdf") : t("staff_share_pdf")}
           </button>
         </div>
       </div>

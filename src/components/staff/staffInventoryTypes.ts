@@ -19,5 +19,8 @@ export type StaffStockRow = {
   hasWarehouse: boolean;
   noWarehouse: boolean;
   unit: string;
-  needsPrepOrder: boolean;
+  filled: boolean;
+  lowInHouse: boolean;
+  lowWarehouse: boolean;
+  task: string | null;
 };

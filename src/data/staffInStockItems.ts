@@ -26,6 +26,29 @@ export function staffStockUnit(item: StaffStockItem): StaffStockUnit {
   return item.unit ?? "bags";
 }
 
+export type StaffStockTask = "FOOD ORDER" | "PREP ORDER";
+
+/** Items without a warehouse and without a prep threshold are reordered at this level. */
+const NO_WAREHOUSE_ORDER_AT_OR_BELOW = 1;
+
+export function evaluateStaffStock(
+  item: StaffStockItem,
+  restaurant: number | null,
+  warehouse: number | null,
+): { lowInHouse: boolean; lowWarehouse: boolean; task: StaffStockTask | null } {
+  if (item.prepOrderAtOrBelow !== undefined) {
+    const lowInHouse = restaurant !== null && restaurant <= item.prepOrderAtOrBelow;
+    return { lowInHouse, lowWarehouse: false, task: lowInHouse ? "PREP ORDER" : null };
+  }
+  if (item.noWarehouse) {
+    const lowInHouse =
+      restaurant !== null && restaurant <= NO_WAREHOUSE_ORDER_AT_OR_BELOW;
+    return { lowInHouse, lowWarehouse: false, task: lowInHouse ? "FOOD ORDER" : null };
+  }
+  const lowWarehouse = (warehouse ?? 0) === 0;
+  return { lowInHouse: false, lowWarehouse, task: lowWarehouse ? "FOOD ORDER" : null };
+}
+
 const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   { id: "bacon", name: { en: "Bacon", ru: "Бекон", vn: "Thịt xông khói" } },
   {

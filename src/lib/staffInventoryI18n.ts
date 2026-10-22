@@ -57,6 +57,7 @@ export type StaffInventoryPdfLabels = {
   stockTitle: string;
   colRestaurant: string;
   colWarehouse: string;
+  colTask: string;
   categoryLabel: (category: string) => string;
 };
 
@@ -85,6 +86,7 @@ export function buildStaffInventoryPdfLabels(
     stockTitle: t("staff_pdf_stock_title"),
     colRestaurant: t("staff_stock_restaurant").toUpperCase(),
     colWarehouse: t("staff_stock_warehouse").toUpperCase(),
+    colTask: "TASK",
     categoryLabel: (category) => translateStaffCategory(lang, category),
   };
 }
