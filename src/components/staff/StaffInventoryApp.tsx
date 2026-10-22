@@ -7,7 +7,6 @@ import {
   getStaffInventoryItems,
   getStaffInventoryUnits,
   STAFF_INVENTORY_VENUE_LABELS,
-  STAFF_INVENTORY_VENUE_LOGOS,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
 import { getStaffStockItems } from "@/data/staffInStockItems";
@@ -419,7 +418,7 @@ export function StaffInventoryApp() {
 
           <div className="venueLogo">
             <img
-              src={getAssetUrl(STAFF_INVENTORY_VENUE_LOGOS[venue])}
+              src={getAssetUrl("/food/menu/GASTROFOOD-line.png")}
               alt={venueLabel}
             />
           </div>

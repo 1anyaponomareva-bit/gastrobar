@@ -296,13 +296,13 @@
 .staff-inventory .venueLogo {
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  margin: 4px 0 14px;
 }
 
 .staff-inventory .venueLogo img {
-  height: 48px;
-  max-width: 100%;
-  object-fit: contain;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
 }
 
 .staff-inventory button.sectionShare:not(.statusBox) {
