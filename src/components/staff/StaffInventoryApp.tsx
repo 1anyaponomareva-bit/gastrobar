@@ -487,23 +487,6 @@ export function StaffInventoryApp() {
             </div>
           ) : null}
 
-          <button
-            type="button"
-            className="gold sectionShare"
-            onPointerDown={beginSharePreparation}
-            onTouchStart={beginSharePreparation}
-            onClick={handleExportPdf}
-            disabled={exportingPdf}
-          >
-            {exportingPdf
-              ? t("staff_sharing_pdf")
-              : `${t("staff_share_pdf")} · ${t(
-                  isStockSection
-                    ? "staff_section_stock"
-                    : "staff_section_purchase",
-                )}`}
-          </button>
-
           {activeSection === "stock" ? (
             <>
               <div className="mode">
@@ -668,6 +651,23 @@ export function StaffInventoryApp() {
               </div>
             </>
           )}
+
+          <button
+            type="button"
+            className="gold sectionShare"
+            onPointerDown={beginSharePreparation}
+            onTouchStart={beginSharePreparation}
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+          >
+            {exportingPdf
+              ? t("staff_sharing_pdf")
+              : `${t("staff_share_pdf")} · ${t(
+                  isStockSection
+                    ? "staff_section_stock"
+                    : "staff_section_purchase",
+                )}`}
+          </button>
         </div>
       </div>
     </div>

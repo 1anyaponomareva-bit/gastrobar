@@ -305,9 +305,11 @@
   object-fit: contain;
 }
 
-.staff-inventory .sectionShare {
+.staff-inventory button.sectionShare:not(.statusBox) {
   width: 100%;
-  margin-bottom: 12px;
+  margin-top: 18px;
+  padding: 16px 8px;
+  font-size: 17px;
 }
 
 .staff-inventory .sectionShare:disabled {
