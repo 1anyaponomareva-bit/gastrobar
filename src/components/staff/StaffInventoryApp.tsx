@@ -226,16 +226,17 @@ export function StaffInventoryApp() {
   };
 
   const handleStockPasteApply = () => {
-    const { values, unrecognized } = parseStockMessage(stockPaste, stockItems);
-    values.forEach(({ itemId, restaurant, warehouse }) => {
-      if (restaurant !== undefined) {
-        setStoredStockValue(venue, itemId, "restaurant", restaurant);
-      }
-      if (warehouse !== undefined) {
-        setStoredStockValue(venue, itemId, "warehouse", warehouse);
-      }
+    const { values, unrecognized, noWarehouse } = parseStockMessage(
+      stockPaste,
+      stockItems,
+    );
+    values.forEach(({ itemId, warehouse }) => {
+      setStoredStockValue(venue, itemId, "warehouse", warehouse);
     });
-    setStockPasteResult({ filled: values.length, unrecognized });
+    setStockPasteResult({
+      filled: values.length,
+      unrecognized: [...unrecognized, ...noWarehouse],
+    });
     if (values.length) setStockPaste("");
     bump();
   };

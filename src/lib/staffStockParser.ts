@@ -2,13 +2,14 @@ import type { StaffStockItem } from "@/data/staffInStockItems";
 
 export type ParsedStockValue = {
   itemId: string;
-  restaurant?: string;
-  warehouse?: string;
+  warehouse: string;
 };
 
 export type ParsedStockMessage = {
   values: ParsedStockValue[];
   unrecognized: string[];
+  /** Lines naming items that have no warehouse stock. */
+  noWarehouse: string[];
 };
 
 const NUMBER = String.raw`(\d+(?:[.,]\d+)?|\?)`;
@@ -41,7 +42,8 @@ function normalizeMessage(text: string): string {
     .replace(/[\u00A0\u2007\u202F]/g, " ")
     .replace(/[／∕⁄⧸]/g, "/")
     .replace(/[−‒‐‑]/g, "-")
-    .replace(RECORD_START_RE, "\n");
+    .replace(RECORD_START_RE, "\n")
+    .replace(/([-–—:=]\s*\d+(?:[.,]\d+)?)[ \t]+(?=\p{L})/gu, "$1\n");
 }
 
 function extractWarehouse(line: string): { rest: string; warehouse?: string } {
@@ -97,6 +99,22 @@ function findItemId(
   rawName: string,
   lookup: Map<string, string>,
 ): string | undefined {
+  const direct = findExactItemId(rawName, lookup);
+  if (direct) return direct;
+
+  // Tolerate a header glued to the first item, e.g. "Warehouse: Bacon".
+  const words = rawName.trim().split(/\s+/);
+  for (let i = 1; i < words.length; i += 1) {
+    const id = findExactItemId(words.slice(i).join(" "), lookup);
+    if (id) return id;
+  }
+  return undefined;
+}
+
+function findExactItemId(
+  rawName: string,
+  lookup: Map<string, string>,
+): string | undefined {
   const key = normalize(rawName);
   if (!key) return undefined;
   const exact = lookup.get(key);
@@ -118,12 +136,11 @@ export function parseStockMessage(
   const values = new Map<string, ParsedStockValue>();
   const unrecognized: string[] = [];
 
+  const noWarehouse: string[] = [];
   let lastItemId: string | undefined;
 
-  const applyWarehouse = (itemId: string, raw: string) => {
-    if (byId.get(itemId)?.noWarehouse) return;
-    const parsed = values.get(itemId);
-    if (parsed) parsed.warehouse = normalizeNumber(raw);
+  const setWarehouse = (itemId: string, raw: string) => {
+    values.set(itemId, { itemId, warehouse: normalizeNumber(raw) });
   };
 
   normalizeMessage(text)
@@ -138,20 +155,18 @@ export function parseStockMessage(
 
       if (!mainPart.trim()) {
         if (keywordWarehouse !== undefined && lastItemId) {
-          applyWarehouse(lastItemId, keywordWarehouse);
+          setWarehouse(lastItemId, keywordWarehouse);
         }
         return;
       }
 
       const match = mainPart.match(LEADING_RE);
       const trailing = match ? null : mainPart.match(TRAILING_RE);
-      const restaurantRaw = match ? match[1] : trailing?.[2];
+      const numberRaw = match ? match[1] : trailing?.[2];
       const nameRaw = match ? match[2] : trailing?.[1];
 
-      if (restaurantRaw === undefined || nameRaw === undefined) {
-        if (/\d/.test(line) && (afterSlash.length || keywordWarehouse)) {
-          unrecognized.push(line);
-        }
+      if (numberRaw === undefined || nameRaw === undefined) {
+        if (/\d/.test(line)) unrecognized.push(line);
         return;
       }
 
@@ -160,17 +175,18 @@ export function parseStockMessage(
         unrecognized.push(line);
         return;
       }
-
-      values.set(itemId, {
-        itemId,
-        restaurant: normalizeNumber(restaurantRaw),
-      });
+      if (byId.get(itemId)?.noWarehouse) {
+        noWarehouse.push(line);
+        return;
+      }
       lastItemId = itemId;
 
       const warehouseRaw =
-        keywordWarehouse ?? afterSlash.join("/").match(ANY_NUMBER_RE)?.[1];
-      if (warehouseRaw !== undefined) applyWarehouse(itemId, warehouseRaw);
+        keywordWarehouse ??
+        afterSlash.join("/").match(ANY_NUMBER_RE)?.[1] ??
+        numberRaw;
+      setWarehouse(itemId, warehouseRaw);
     });
 
-  return { values: Array.from(values.values()), unrecognized };
+  return { values: Array.from(values.values()), unrecognized, noWarehouse };
 }
