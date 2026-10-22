@@ -4,6 +4,7 @@ import type { StaffAppLang } from "@/lib/staffInventoryI18n";
 export type StaffStockItem = {
   id: string;
   name: Record<StaffAppLang, string>;
+  noWarehouse?: boolean;
 };
 
 const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
@@ -34,6 +35,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "chicken-nuggets",
+    noWarehouse: true,
     name: { en: "Chicken Nuggets", ru: "Куриные наггетсы", vn: "Gà viên chiên" },
   },
   {
@@ -58,18 +60,22 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "french-fries",
+    noWarehouse: true,
     name: { en: "French Fries", ru: "Картофель фри", vn: "Khoai tây chiên" },
   },
   {
     id: "fish-bites",
+    noWarehouse: true,
     name: { en: "Fish Bites", ru: "Рыбные кусочки", vn: "Cá viên" },
   },
   {
     id: "fish-patties",
+    noWarehouse: true,
     name: { en: "Fish Patties", ru: "Рыбные котлеты", vn: "Chả cá" },
   },
   {
     id: "mozzarella-sticks",
+    noWarehouse: true,
     name: {
       en: "Mozzarella Sticks",
       ru: "Палочки моцареллы",
@@ -90,10 +96,12 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "pita-bread",
+    noWarehouse: true,
     name: { en: "Pita Bread", ru: "Пита", vn: "Bánh mì pita" },
   },
   {
     id: "tortilla",
+    noWarehouse: true,
     name: { en: "Tortilla", ru: "Тортилья", vn: "Bánh tortilla" },
   },
 ];

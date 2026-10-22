@@ -337,6 +337,10 @@
   gap: 8px;
 }
 
+.staff-inventory .row.single {
+  grid-template-columns: 1fr;
+}
+
 .staff-inventory .field label {
   font-size: 10px;
   font-weight: 900;

@@ -421,7 +421,7 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   );
   drawTextLine(
     ctx,
-    row.hasWarehouse ? money(row.warehouse) : "",
+    row.noWarehouse ? "—" : row.hasWarehouse ? money(row.warehouse) : "",
     460,
     baseline,
     9,
