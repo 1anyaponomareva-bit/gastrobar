@@ -442,7 +442,7 @@ export function StaffInventoryApp() {
           <div className="actions">
             <button
               type="button"
-              className="danger actionsExport"
+              className="success actionsExport"
               onClick={handleNewDay}
             >
               {t("staff_new_day")}
