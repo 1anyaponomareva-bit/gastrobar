@@ -88,6 +88,14 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
     id: "pork-sausage",
     name: { en: "Pork Sausage", ru: "Свиная сосиска", vn: "Xúc xích heo" },
   },
+  {
+    id: "pita-bread",
+    name: { en: "Pita Bread", ru: "Пита", vn: "Bánh mì pita" },
+  },
+  {
+    id: "tortilla",
+    name: { en: "Tortilla", ru: "Тортилья", vn: "Bánh tortilla" },
+  },
 ];
 
 export const STAFF_STOCK_ITEMS_BY_VENUE: Record<
