@@ -47,6 +47,7 @@ import {
   type StaffInventorySection,
   type StaffStockField,
 } from "@/lib/staffInventoryStorage";
+import { parseStockMessage } from "@/lib/staffStockParser";
 import { translate } from "@/lib/i18n";
 import { useTranslation } from "@/lib/useTranslation";
 import type {
@@ -104,6 +105,11 @@ export function StaffInventoryApp() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [section, setSection] = useState<StaffInventorySection>("purchase");
   const [search, setSearch] = useState("");
+  const [stockPaste, setStockPaste] = useState("");
+  const [stockPasteResult, setStockPasteResult] = useState<{
+    filled: number;
+    unrecognized: string[];
+  } | null>(null);
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportEmployeeError, setExportEmployeeError] = useState(false);
@@ -213,6 +219,21 @@ export function StaffInventoryApp() {
     value: string,
   ) => {
     setStoredStockValue(venue, itemId, field, value);
+    bump();
+  };
+
+  const handleStockPasteApply = () => {
+    const { values, unrecognized } = parseStockMessage(stockPaste, stockItems);
+    values.forEach(({ itemId, restaurant, warehouse }) => {
+      if (restaurant !== undefined) {
+        setStoredStockValue(venue, itemId, "restaurant", restaurant);
+      }
+      if (warehouse !== undefined) {
+        setStoredStockValue(venue, itemId, "warehouse", warehouse);
+      }
+    });
+    setStockPasteResult({ filled: values.length, unrecognized });
+    if (values.length) setStockPaste("");
     bump();
   };
 
@@ -531,6 +552,52 @@ export function StaffInventoryApp() {
                     .replace("{venue}", venueLabel)
                     .replace("{count}", String(stockItems.length))}
                 </span>
+              </div>
+              <div className="stockPaste">
+                <label htmlFor="staff-stock-paste">
+                  {t("staff_stock_paste_title")}
+                </label>
+                <textarea
+                  id="staff-stock-paste"
+                  rows={5}
+                  placeholder={t("staff_stock_paste_placeholder")}
+                  value={stockPaste}
+                  onChange={(event) => {
+                    setStockPaste(event.target.value);
+                    setStockPasteResult(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="gold"
+                  onClick={handleStockPasteApply}
+                  disabled={!stockPaste.trim()}
+                >
+                  {t("staff_stock_paste_apply")}
+                </button>
+                {stockPasteResult ? (
+                  <div
+                    className={`stockPasteResult ${stockPasteResult.filled ? "" : "error"}`}
+                    role="status"
+                  >
+                    {stockPasteResult.filled
+                      ? t("staff_stock_paste_filled").replace(
+                          "{count}",
+                          String(stockPasteResult.filled),
+                        )
+                      : t("staff_stock_paste_nothing")}
+                    {stockPasteResult.unrecognized.length ? (
+                      <div className="stockPasteUnknown">
+                        {t("staff_stock_paste_unrecognized")}
+                        <ul>
+                          {stockPasteResult.unrecognized.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               {stockCards}
             </>

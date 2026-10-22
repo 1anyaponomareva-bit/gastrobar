@@ -232,6 +232,67 @@
   color: var(--gold);
 }
 
+.staff-inventory .stockPaste {
+  display: grid;
+  gap: 8px;
+  background: #fff;
+  border: 1px dashed #c9c9c9;
+  border-radius: 18px;
+  padding: 13px;
+  margin-bottom: 14px;
+}
+
+.staff-inventory .stockPaste label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.staff-inventory .stockPaste textarea {
+  width: 100%;
+  min-height: 110px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  outline: 0;
+}
+
+.staff-inventory .stockPaste button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.staff-inventory .stockPasteResult {
+  background: #f1faf1;
+  border: 1px solid #b7dfb7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #1d5e1d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.staff-inventory .stockPasteResult.error {
+  background: #fff5f5;
+  border-color: #efb0b0;
+  color: #8f1010;
+}
+
+.staff-inventory .stockPasteUnknown {
+  margin-top: 6px;
+  color: #8f1010;
+  font-weight: 600;
+}
+
+.staff-inventory .stockPasteUnknown ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
 .staff-inventory .stockBlock {
   margin-top: 26px;
   padding-top: 16px;
