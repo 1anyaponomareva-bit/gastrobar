@@ -5,7 +5,26 @@ export type StaffStockItem = {
   id: string;
   name: Record<StaffAppLang, string>;
   noWarehouse?: boolean;
+  unit?: StaffStockUnit;
+  /** In-house amount below this value is flagged as PREP ORDER. */
+  prepOrderBelow?: number;
 };
+
+export type StaffStockUnit = "bags" | "pcs" | "btl";
+
+function sauce(id: string, en: string, ru: string, vn: string): StaffStockItem {
+  return {
+    id,
+    noWarehouse: true,
+    unit: "btl",
+    prepOrderBelow: 1,
+    name: { en, ru, vn },
+  };
+}
+
+export function staffStockUnit(item: StaffStockItem): StaffStockUnit {
+  return item.unit ?? "bags";
+}
 
 const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   { id: "bacon", name: { en: "Bacon", ru: "Бекон", vn: "Thịt xông khói" } },
@@ -97,13 +116,40 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   {
     id: "pita-bread",
     noWarehouse: true,
+    unit: "pcs",
+    prepOrderBelow: 20,
     name: { en: "Pita Bread", ru: "Пита", vn: "Bánh mì pita" },
   },
   {
     id: "tortilla",
     noWarehouse: true,
+    unit: "pcs",
+    prepOrderBelow: 20,
     name: { en: "Tortilla", ru: "Тортилья", vn: "Bánh tortilla" },
   },
+  sauce("sauce-cheese", "Sauce - Cheese (2L)", "Соус сырный (2 л)", "Sốt phô mai (2L)"),
+  sauce("sauce-burger", "Sauce - Burger (2L)", "Соус бургерный (2 л)", "Sốt burger (2L)"),
+  sauce("sauce-greek", "Sauce - Greek (2L)", "Соус греческий (2 л)", "Sốt Hy Lạp (2L)"),
+  sauce(
+    "sauce-tomato-herbs",
+    "Sauce - Tomato&Herbs (2L)",
+    "Соус томатный с травами (2 л)",
+    "Sốt cà chua & thảo mộc (2L)",
+  ),
+  sauce("sauce-tartar", "Sauce - Tartar (2L)", "Соус тартар (2 л)", "Sốt tartar (2L)"),
+  sauce(
+    "sauce-honey-mustard",
+    "Sauce - Honey Mustard (2L)",
+    "Соус медово-горчичный (2 л)",
+    "Sốt mù tạt mật ong (2L)",
+  ),
+  sauce(
+    "sauce-onion-spread",
+    "Sauce - Onion Spread (2L)",
+    "Луковый спред (2 л)",
+    "Sốt hành (2L)",
+  ),
+  sauce("salad-dressing", "Salad Dressing (2L)", "Заправка для салата (2 л)", "Sốt trộn salad (2L)"),
 ];
 
 export const STAFF_STOCK_ITEMS_BY_VENUE: Record<

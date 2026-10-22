@@ -18,4 +18,6 @@ export type StaffStockRow = {
   hasRestaurant: boolean;
   hasWarehouse: boolean;
   noWarehouse: boolean;
+  unit: string;
+  needsPrepOrder: boolean;
 };

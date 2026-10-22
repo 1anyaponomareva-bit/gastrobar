@@ -9,7 +9,7 @@ import {
   STAFF_INVENTORY_VENUE_LABELS,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
-import { getStaffStockItems } from "@/data/staffInStockItems";
+import { getStaffStockItems, staffStockUnit } from "@/data/staffInStockItems";
 import { getAssetUrl } from "@/lib/appVersion";
 import { deliverPdfFile, type DeliverPdfResult } from "@/lib/deliverPdfFile";
 import {
@@ -56,10 +56,17 @@ function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
   return getStaffStockItems(venue).map((item) => {
     const restaurantValue = getStoredStockValue(venue, item.id, "restaurant");
     const warehouseValue = getStoredStockValue(venue, item.id, "warehouse");
+    const restaurant = parseNumber(restaurantValue);
+    const hasRestaurant = restaurantValue.trim() !== "";
     return {
       id: item.id,
       name: item.name.en,
-      restaurant: parseNumber(restaurantValue),
+      unit: staffStockUnit(item),
+      needsPrepOrder:
+        item.prepOrderBelow !== undefined &&
+        hasRestaurant &&
+        restaurant < item.prepOrderBelow,
+      restaurant,
       warehouse: parseNumber(warehouseValue),
       hasRestaurant: restaurantValue.trim() !== "",
       hasWarehouse: !item.noWarehouse && warehouseValue.trim() !== "",
@@ -386,7 +393,7 @@ export function StaffInventoryApp() {
                 handleStockFieldChange(item.id, "restaurant", event.target.value)
               }
             />
-            <span className="unitSuffix">bags</span>
+            <span className="unitSuffix">{staffStockUnit(item)}</span>
           </div>
         </div>
         {item.noWarehouse ? null : (
@@ -404,7 +411,7 @@ export function StaffInventoryApp() {
                   )
                 }
               />
-              <span className="unitSuffix">bags</span>
+              <span className="unitSuffix">{staffStockUnit(item)}</span>
             </div>
           </div>
         )}

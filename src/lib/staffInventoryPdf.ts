@@ -413,6 +413,7 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   const total = rowHeight + 6;
 
   const needsOrder = row.hasWarehouse && row.warehouse === 0;
+  const flagged = needsOrder || row.needsPrepOrder;
 
   ensureSpace(ctx, total);
   const rowTop = ctx.y;
@@ -422,30 +423,39 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
     rowTop,
     CONTENT_WIDTH,
     rowHeight,
-    needsOrder ? COLORS.redSoft : COLORS.white,
-    needsOrder ? COLORS.redLine : COLORS.line,
+    flagged ? COLORS.redSoft : COLORS.white,
+    flagged ? COLORS.redLine : COLORS.line,
   );
 
   const baseline = rowTop - 14;
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
   drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
-  if (needsOrder) {
-    drawTextLine(ctx, "FOOD ORDER", 484, baseline, 9, ctx.fontBold, COLORS.red);
+  if (needsOrder || row.needsPrepOrder) {
+    drawTextLine(
+      ctx,
+      needsOrder ? "FOOD ORDER" : "PREP ORDER",
+      484,
+      baseline,
+      9,
+      ctx.fontBold,
+      COLORS.red,
+    );
   }
   drawTextLine(
     ctx,
-    row.hasRestaurant ? `${money(row.restaurant)} bags` : "",
+    row.hasRestaurant ? `${money(row.restaurant)} ${row.unit}` : "",
     350,
     baseline,
     9,
-    ctx.font,
+    row.needsPrepOrder ? ctx.fontBold : ctx.font,
+    row.needsPrepOrder ? COLORS.red : COLORS.text,
   );
   drawTextLine(
     ctx,
     row.noWarehouse
       ? "—"
       : row.hasWarehouse
-        ? `${money(row.warehouse)} bags`
+        ? `${money(row.warehouse)} ${row.unit}`
         : "",
     440,
     baseline,

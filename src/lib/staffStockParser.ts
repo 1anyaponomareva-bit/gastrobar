@@ -22,6 +22,14 @@ const ALIASES: Record<string, string[]> = {
   tortilla: ["tortilia", "tortila", "tortillas", "тортилья"],
   "beef-patty-200": ["beefpatty200", "beefpatty200gr"],
   "beef-patty-120": ["beefpatty120", "beefpatty120gr"],
+  "sauce-cheese": ["cheesesauce"],
+  "sauce-burger": ["burgersauce"],
+  "sauce-greek": ["greeksauce"],
+  "sauce-tomato-herbs": ["tomatoherbs", "tomatoandherbs", "tomatosauce", "saucetomatoandherbs"],
+  "sauce-tartar": ["tartarsauce", "tartar"],
+  "sauce-honey-mustard": ["honeymustard", "honeymustardsauce"],
+  "sauce-onion-spread": ["onionspread", "onionsauce"],
+  "salad-dressing": ["dressing", "saladdressing"],
 };
 
 function normalize(value: string): string {
@@ -36,7 +44,13 @@ function buildLookup(items: StaffStockItem[]): Map<string, string> {
   const lookup = new Map<string, string>();
   items.forEach((item) => {
     [...Object.values(item.name), ...(ALIASES[item.id] ?? [])].forEach(
-      (name) => lookup.set(normalize(name), item.id),
+      (name) => {
+        lookup.set(normalize(name), item.id);
+        const withoutVolume = normalize(
+          name.replace(/\(\s*\d+(?:[.,]\d+)?\s*(?:l|л)\s*\)/giu, ""),
+        );
+        if (!lookup.has(withoutVolume)) lookup.set(withoutVolume, item.id);
+      },
     );
   });
   return lookup;
