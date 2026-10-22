@@ -5,6 +5,8 @@ export type StaffStockItem = {
   id: string;
   name: Record<StaffAppLang, string>;
   noWarehouse?: boolean;
+  /** Still being produced in-house, so never flagged red. */
+  noAlerts?: boolean;
   unit?: StaffStockUnit;
   /** In-house amount at or below this value is flagged as PREP ORDER. */
   prepOrderAtOrBelow?: number;
@@ -36,6 +38,9 @@ export function evaluateStaffStock(
   restaurant: number | null,
   warehouse: number | null,
 ): { lowInHouse: boolean; lowWarehouse: boolean; task: StaffStockTask | null } {
+  if (item.noAlerts) {
+    return { lowInHouse: false, lowWarehouse: false, task: null };
+  }
   if (item.prepOrderAtOrBelow !== undefined) {
     const lowInHouse = restaurant !== null && restaurant <= item.prepOrderAtOrBelow;
     return { lowInHouse, lowWarehouse: false, task: lowInHouse ? "PREP ORDER" : null };
@@ -53,6 +58,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   { id: "bacon", name: { en: "Bacon", ru: "Бекон", vn: "Thịt xông khói" } },
   {
     id: "beef-patty-200",
+    noAlerts: true,
     name: {
       en: "Beef Patty (200g)",
       ru: "Говяжья котлета (200 г)",
@@ -61,6 +67,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "beef-patty-120",
+    noAlerts: true,
     name: {
       en: "Beef Patty (120g)",
       ru: "Говяжья котлета (120 г)",
@@ -86,6 +93,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "chicken-patty",
+    noAlerts: true,
     name: { en: "Chicken Patty", ru: "Куриная котлета", vn: "Bánh gà" },
   },
   {
@@ -130,6 +138,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "pork-patty",
+    noAlerts: true,
     name: { en: "Pork Patty", ru: "Свиная котлета", vn: "Bánh heo" },
   },
   {
