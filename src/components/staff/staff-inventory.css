@@ -293,23 +293,25 @@
   padding-left: 18px;
 }
 
-.staff-inventory .stockBlock {
-  margin-top: 26px;
-  padding-top: 16px;
-  border-top: 3px solid var(--gold);
+.staff-inventory .venueLogo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
 }
 
-.staff-inventory .stockBlockTitle {
-  display: inline-block;
-  margin: 0 0 12px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #111;
-  color: var(--gold);
-  font-size: 15px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+.staff-inventory .venueLogo img {
+  height: 48px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.staff-inventory .sectionShare {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.staff-inventory .sectionShare:disabled {
+  opacity: 0.6;
 }
 
 .staff-inventory .searchRow {

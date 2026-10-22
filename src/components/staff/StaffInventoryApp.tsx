@@ -8,7 +8,6 @@ import {
   getStaffInventoryUnits,
   STAFF_INVENTORY_VENUE_LABELS,
   STAFF_INVENTORY_VENUE_LOGOS,
-  STAFF_INVENTORY_VENUES,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
 import { getStaffStockItems } from "@/data/staffInStockItems";
@@ -34,7 +33,6 @@ import {
   getStoredSection,
   getStoredStockValue,
   getStoredValue,
-  getStoredVenue,
   parseNumber,
   setStoredActiveCategory,
   setStoredDate,
@@ -42,7 +40,6 @@ import {
   setStoredSection,
   setStoredStockValue,
   setStoredValue,
-  setStoredVenue,
   todayIsoDate,
   type StaffInventorySection,
   type StaffStockField,
@@ -99,7 +96,7 @@ export function StaffInventoryApp() {
     [staffLang],
   );
   const [hydrated, setHydrated] = useState(false);
-  const [venue, setVenue] = useState<StaffInventoryVenue>("gastrofood");
+  const venue: StaffInventoryVenue = "gastrofood";
   const [date, setDate] = useState("");
   const [employee, setEmployee] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
@@ -112,7 +109,6 @@ export function StaffInventoryApp() {
   } | null>(null);
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [exportEmployeeError, setExportEmployeeError] = useState(false);
   const sharePrepareRef = useRef<{
     key: string;
     promise: Promise<Blob>;
@@ -128,6 +124,7 @@ export function StaffInventoryApp() {
     ? section
     : "purchase";
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
+  const isStockSection = activeSection === "stock";
   const pdfLabels = useMemo(
     () =>
       buildStaffInventoryPdfLabels(
@@ -135,9 +132,10 @@ export function StaffInventoryApp() {
         venueLabel,
         date,
         employee,
-        items.length,
+        isStockSection ? stockItems.length : items.length,
+        isStockSection ? "staff_pdf_stock_doc_title" : "staff_pdf_title",
       ),
-    [venueLabel, date, employee, items.length],
+    [venueLabel, date, employee, isStockSection, stockItems.length, items.length],
   );
 
   const categoryLabel = useCallback(
@@ -155,14 +153,12 @@ export function StaffInventoryApp() {
   }, []);
 
   useEffect(() => {
-    const storedVenue = getStoredVenue();
-    setVenue(storedVenue);
     setDate(getStoredDate() || todayIsoDate());
     setEmployee(getStoredEmployee());
-    setActiveCategory(getStoredActiveCategory(storedVenue));
-    setSection(getStoredSection(storedVenue));
+    setActiveCategory(getStoredActiveCategory(venue));
+    setSection(getStoredSection(venue));
     setHydrated(true);
-  }, []);
+  }, [venue]);
 
   const rows = useMemo(() => {
     void revision;
@@ -197,16 +193,6 @@ export function StaffInventoryApp() {
       return true;
     });
   }, [rows, activeCategory, search, categoryLabel, itemLabel]);
-
-  const handleVenueChange = (nextVenue: StaffInventoryVenue) => {
-    if (nextVenue === venue) return;
-    setVenue(nextVenue);
-    setStoredVenue(nextVenue);
-    setActiveCategory(getStoredActiveCategory(nextVenue));
-    setSection(getStoredSection(nextVenue));
-    setSearch("");
-    bump();
-  };
 
   const handleSectionChange = (nextSection: StaffInventorySection) => {
     setSection(nextSection);
@@ -254,7 +240,6 @@ export function StaffInventoryApp() {
   const handleEmployeeChange = (value: string) => {
     setEmployee(value);
     setStoredEmployee(value);
-    if (exportEmployeeError) setExportEmployeeError(false);
   };
 
   const handleCategoryChange = (category: string) => {
@@ -292,7 +277,6 @@ export function StaffInventoryApp() {
     setStoredDate(today);
     setEmployee("");
     setStoredEmployee("");
-    setExportEmployeeError(false);
     setSearch("");
     setActiveCategory("All");
     setStoredActiveCategory(venue, "All");
@@ -301,49 +285,45 @@ export function StaffInventoryApp() {
   };
 
   const buildShareKey = useCallback(() => {
-    return [
-      venue,
-      date,
-      employee.trim(),
-      rows
-        .map(
-          (row) =>
-            `${row.index}:${row.current}:${row.needed}:${row.hasCurrent}:${row.hasNeeded}`,
-        )
-        .join("|"),
-      stockRows
-        .map(
+    const data = isStockSection
+      ? stockRows.map(
           (row) =>
             `${row.id}:${row.restaurant}:${row.warehouse}:${row.hasRestaurant}:${row.hasWarehouse}`,
         )
-        .join("|"),
+      : rows.map(
+          (row) =>
+            `${row.index}:${row.current}:${row.needed}:${row.hasCurrent}:${row.hasNeeded}`,
+        );
+    return [
+      activeSection,
+      date,
+      employee.trim(),
+      data.join("|"),
     ].join("::");
-  }, [venue, date, employee, rows, stockRows]);
+  }, [isStockSection, activeSection, date, employee, rows, stockRows]);
 
   const buildPdfOptions = useCallback(
     () => ({
       venueLabel,
       date,
       employee,
-      rows,
-      stockRows,
+      rows: isStockSection ? [] : rows,
+      stockRows: isStockSection ? stockRows : [],
       labels: pdfLabels,
     }),
-    [venueLabel, date, employee, rows, stockRows, pdfLabels],
+    [venueLabel, date, employee, isStockSection, rows, stockRows, pdfLabels],
   );
 
   const beginSharePreparation = useCallback(() => {
-    if (!employee.trim()) return;
-
     const key = buildShareKey();
     sharePrepareRef.current = {
       key,
       promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
     };
-  }, [buildShareKey, buildPdfOptions, employee]);
+  }, [buildShareKey, buildPdfOptions]);
 
   useEffect(() => {
-    if (!hydrated || !employee.trim()) {
+    if (!hydrated) {
       sharePrepareRef.current = null;
       return;
     }
@@ -353,7 +333,7 @@ export function StaffInventoryApp() {
       key,
       promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
     };
-  }, [hydrated, buildShareKey, buildPdfOptions, employee, rows, stockRows]);
+  }, [hydrated, buildShareKey, buildPdfOptions]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
     if (result === "cancelled" || result === "downloaded") return;
@@ -363,21 +343,13 @@ export function StaffInventoryApp() {
   const handleExportPdf = async () => {
     if (exportingPdf) return;
 
-    if (!employee.trim()) {
-      setExportEmployeeError(true);
-      window.setTimeout(() => {
-        document.getElementById("staff-employee")?.focus();
-        document
-          .getElementById("staff-employee")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
-      return;
-    }
-
-    setExportEmployeeError(false);
     setExportingPdf(true);
     try {
-      const fileName = getStaffInventoryPdfFileName(venueLabel, date);
+      const fileName = getStaffInventoryPdfFileName(
+        venueLabel,
+        date,
+        isStockSection ? "PrepStock" : "OrderList",
+      );
       const key = buildShareKey();
       const prepared = sharePrepareRef.current;
       const blob =
@@ -445,25 +417,11 @@ export function StaffInventoryApp() {
             <StaffLanguageFlags />
           </div>
 
-          <div className="venuePicker">
-            {STAFF_INVENTORY_VENUES.map((option) => {
-              const isActive = option === venue;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  className={`venueOption ${isActive ? "active" : ""}`}
-                  onClick={() => handleVenueChange(option)}
-                  aria-pressed={isActive}
-                  aria-label={STAFF_INVENTORY_VENUE_LABELS[option]}
-                >
-                  <img
-                    src={getAssetUrl(STAFF_INVENTORY_VENUE_LOGOS[option])}
-                    alt={STAFF_INVENTORY_VENUE_LABELS[option]}
-                  />
-                </button>
-              );
-            })}
+          <div className="venueLogo">
+            <img
+              src={getAssetUrl(STAFF_INVENTORY_VENUE_LOGOS[venue])}
+              alt={venueLabel}
+            />
           </div>
 
           <div className="meta">
@@ -496,21 +454,6 @@ export function StaffInventoryApp() {
           </div>
 
           <div className="actions">
-            {exportEmployeeError ? (
-              <div className="exportError actionsExport" role="alert">
-                <strong>{t("staff_export_employee_required")}</strong>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="gold actionsExport"
-              onPointerDown={beginSharePreparation}
-              onTouchStart={beginSharePreparation}
-              onClick={handleExportPdf}
-              disabled={exportingPdf}
-            >
-              {exportingPdf ? t("staff_sharing_pdf") : t("staff_share_pdf")}
-            </button>
             <button type="button" className="dark" onClick={handleSave}>
               {t("staff_save")}
             </button>
@@ -543,6 +486,23 @@ export function StaffInventoryApp() {
               ))}
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="gold sectionShare"
+            onPointerDown={beginSharePreparation}
+            onTouchStart={beginSharePreparation}
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+          >
+            {exportingPdf
+              ? t("staff_sharing_pdf")
+              : `${t("staff_share_pdf")} · ${t(
+                  isStockSection
+                    ? "staff_section_stock"
+                    : "staff_section_purchase",
+                )}`}
+          </button>
 
           {activeSection === "stock" ? (
             <>
@@ -706,15 +666,6 @@ export function StaffInventoryApp() {
                   })
                 )}
               </div>
-
-              {hasStockSection ? (
-                <div className="stockBlock">
-                  <div className="stockBlockTitle">
-                    {t("staff_section_stock")}
-                  </div>
-                  {stockCards}
-                </div>
-              ) : null}
             </>
           )}
         </div>

@@ -374,6 +374,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     staff_stock_warehouse: "Склад",
     staff_stock_mode: "{venue} · Prep stock — позиций {count}",
     staff_pdf_stock_title: "PREP STOCK",
+    staff_pdf_stock_doc_title: "{venue} — PREP STOCK",
     staff_stock_paste_title: "Вставить сообщение из Zalo",
     staff_stock_paste_placeholder:
       "4 - Bacon / 1 - Warehouse\n2 - Chicken Nuggets\n...",
@@ -1096,6 +1097,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     staff_stock_warehouse: "Warehouse",
     staff_stock_mode: "{venue} · Prep stock — {count} items",
     staff_pdf_stock_title: "PREP STOCK",
+    staff_pdf_stock_doc_title: "{venue} — PREP STOCK",
     staff_stock_paste_title: "Paste message from Zalo",
     staff_stock_paste_placeholder:
       "4 - Bacon / 1 - Warehouse\n2 - Chicken Nuggets\n...",
@@ -1798,6 +1800,7 @@ export const translations: Record<AppLang, Record<string, string>> = {
     staff_stock_warehouse: "Kho",
     staff_stock_mode: "{venue} · Prep stock — {count} món",
     staff_pdf_stock_title: "PREP STOCK",
+    staff_pdf_stock_doc_title: "{venue} — PREP STOCK",
     staff_stock_paste_title: "Dán tin nhắn từ Zalo",
     staff_stock_paste_placeholder:
       "4 - Bacon / 1 - Warehouse\n2 - Chicken Nuggets\n...",

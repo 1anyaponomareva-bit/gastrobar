@@ -88,15 +88,20 @@ function groupedRows(rows: StaffInventoryRow[]): Record<string, StaffInventoryRo
   return groups;
 }
 
-function buildPdfFileName(venueLabel: string, date: string): string {
-  return `${venueLabel.replace(/\s+/g, "")}_Inventory_${date || "checklist"}.pdf`;
+function buildPdfFileName(
+  venueLabel: string,
+  date: string,
+  docName = "Inventory",
+): string {
+  return `${venueLabel.replace(/\s+/g, "")}_${docName}_${date || "checklist"}.pdf`;
 }
 
 export function getStaffInventoryPdfFileName(
   venueLabel: string,
   date: string,
+  docName?: string,
 ): string {
-  return buildPdfFileName(venueLabel, date);
+  return buildPdfFileName(venueLabel, date, docName);
 }
 
 type PdfContext = {

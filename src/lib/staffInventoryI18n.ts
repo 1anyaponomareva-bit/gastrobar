@@ -66,11 +66,12 @@ export function buildStaffInventoryPdfLabels(
   date: string,
   employee: string,
   itemCount: number,
+  titleKey = "staff_pdf_title",
 ): StaffInventoryPdfLabels {
   const t = (key: string) => translate(lang, key);
 
   return {
-    title: t("staff_pdf_title").replace("{venue}", venueLabel.toUpperCase()),
+    title: t(titleKey).replace("{venue}", venueLabel.toUpperCase()),
     dateLine: t("staff_pdf_date").replace("{date}", date || "-"),
     employeeLine: t("staff_pdf_employee").replace(
       "{employee}",
