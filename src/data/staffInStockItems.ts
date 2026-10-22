@@ -6,8 +6,8 @@ export type StaffStockItem = {
   name: Record<StaffAppLang, string>;
   noWarehouse?: boolean;
   unit?: StaffStockUnit;
-  /** In-house amount below this value is flagged as PREP ORDER. */
-  prepOrderBelow?: number;
+  /** In-house amount at or below this value is flagged as PREP ORDER. */
+  prepOrderAtOrBelow?: number;
 };
 
 export type StaffStockUnit = "bags" | "pcs" | "btl";
@@ -17,7 +17,7 @@ function sauce(id: string, en: string, ru: string, vn: string): StaffStockItem {
     id,
     noWarehouse: true,
     unit: "btl",
-    prepOrderBelow: 1,
+    prepOrderAtOrBelow: 1,
     name: { en, ru, vn },
   };
 }
@@ -117,14 +117,14 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
     id: "pita-bread",
     noWarehouse: true,
     unit: "pcs",
-    prepOrderBelow: 20,
+    prepOrderAtOrBelow: 19,
     name: { en: "Pita Bread", ru: "Пита", vn: "Bánh mì pita" },
   },
   {
     id: "tortilla",
     noWarehouse: true,
     unit: "pcs",
-    prepOrderBelow: 20,
+    prepOrderAtOrBelow: 19,
     name: { en: "Tortilla", ru: "Тортилья", vn: "Bánh tortilla" },
   },
   sauce("sauce-cheese", "Sauce - Cheese (2L)", "Соус сырный (2 л)", "Sốt phô mai (2L)"),

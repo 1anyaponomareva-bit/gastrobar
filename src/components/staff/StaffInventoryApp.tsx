@@ -63,9 +63,9 @@ function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
       name: item.name.en,
       unit: staffStockUnit(item),
       needsPrepOrder:
-        item.prepOrderBelow !== undefined &&
+        item.prepOrderAtOrBelow !== undefined &&
         hasRestaurant &&
-        restaurant < item.prepOrderBelow,
+        restaurant <= item.prepOrderAtOrBelow,
       restaurant,
       warehouse: parseNumber(warehouseValue),
       hasRestaurant: restaurantValue.trim() !== "",
