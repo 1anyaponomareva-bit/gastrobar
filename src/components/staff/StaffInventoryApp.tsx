@@ -385,6 +385,34 @@ export function StaffInventoryApp() {
 
   let lastCategory = "";
 
+  const stockCards = stockItems.map((item) => (
+    <div key={`${venue}-stock-${item.id}`} className="card">
+      <div className="name">{item.name[staffLang]}</div>
+      <div className="row">
+        <div className="field">
+          <label>{t("staff_stock_restaurant")}</label>
+          <input
+            inputMode="decimal"
+            value={getStoredStockValue(venue, item.id, "restaurant")}
+            onChange={(event) =>
+              handleStockFieldChange(item.id, "restaurant", event.target.value)
+            }
+          />
+        </div>
+        <div className="field">
+          <label>{t("staff_stock_warehouse")}</label>
+          <input
+            inputMode="decimal"
+            value={getStoredStockValue(venue, item.id, "warehouse")}
+            onChange={(event) =>
+              handleStockFieldChange(item.id, "warehouse", event.target.value)
+            }
+          />
+        </div>
+      </div>
+    </div>
+  ));
+
   return (
     <div className="staff-inventory staff-inventory-page">
       <div className="app">
@@ -501,45 +529,7 @@ export function StaffInventoryApp() {
                     .replace("{count}", String(stockItems.length))}
                 </span>
               </div>
-              {stockItems.map((item) => (
-                <div key={`${venue}-stock-${item.id}`} className="card">
-                  <div className="name">{item.name[staffLang]}</div>
-                  <div className="row">
-                    <div className="field">
-                      <label>{t("staff_stock_restaurant")}</label>
-                      <input
-                        inputMode="decimal"
-                        value={getStoredStockValue(
-                          venue,
-                          item.id,
-                          "restaurant",
-                        )}
-                        onChange={(event) =>
-                          handleStockFieldChange(
-                            item.id,
-                            "restaurant",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="field">
-                      <label>{t("staff_stock_warehouse")}</label>
-                      <input
-                        inputMode="decimal"
-                        value={getStoredStockValue(venue, item.id, "warehouse")}
-                        onChange={(event) =>
-                          handleStockFieldChange(
-                            item.id,
-                            "warehouse",
-                            event.target.value,
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {stockCards}
             </>
           ) : (
             <>
@@ -646,6 +636,15 @@ export function StaffInventoryApp() {
                   })
                 )}
               </div>
+
+              {hasStockSection ? (
+                <div className="stockBlock">
+                  <div className="stockBlockTitle">
+                    {t("staff_section_stock")}
+                  </div>
+                  {stockCards}
+                </div>
+              ) : null}
             </>
           )}
         </div>

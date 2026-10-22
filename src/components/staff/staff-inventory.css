@@ -232,6 +232,25 @@
   color: var(--gold);
 }
 
+.staff-inventory .stockBlock {
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 3px solid var(--gold);
+}
+
+.staff-inventory .stockBlockTitle {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #111;
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 .staff-inventory .searchRow {
   display: grid;
   grid-template-columns: 1fr 94px;
