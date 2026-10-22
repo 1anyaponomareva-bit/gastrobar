@@ -66,6 +66,62 @@ export function clearStoredValues(
   }
 }
 
+export type StaffStockField = "restaurant" | "warehouse";
+
+function stockStorageKey(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  field: StaffStockField,
+): string {
+  return `${venuePrefix(venue)}stock_${itemId}_${field}`;
+}
+
+export function getStoredStockValue(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  field: StaffStockField,
+): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(stockStorageKey(venue, itemId, field)) ?? "";
+}
+
+export function setStoredStockValue(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  field: StaffStockField,
+  value: string,
+): void {
+  localStorage.setItem(stockStorageKey(venue, itemId, field), value);
+}
+
+export function clearStoredStockValues(
+  venue: StaffInventoryVenue,
+  itemIds: string[],
+): void {
+  itemIds.forEach((itemId) => {
+    localStorage.removeItem(stockStorageKey(venue, itemId, "restaurant"));
+    localStorage.removeItem(stockStorageKey(venue, itemId, "warehouse"));
+  });
+}
+
+export type StaffInventorySection = "purchase" | "stock";
+
+export function getStoredSection(
+  venue: StaffInventoryVenue,
+): StaffInventorySection {
+  if (typeof window === "undefined") return "purchase";
+  return localStorage.getItem(`${venuePrefix(venue)}section`) === "stock"
+    ? "stock"
+    : "purchase";
+}
+
+export function setStoredSection(
+  venue: StaffInventoryVenue,
+  section: StaffInventorySection,
+): void {
+  localStorage.setItem(`${venuePrefix(venue)}section`, section);
+}
+
 export function getStoredVenue(): StaffInventoryVenue {
   if (typeof window === "undefined") return "gastrofood";
   const value = localStorage.getItem(`${PREFIX}venue`);

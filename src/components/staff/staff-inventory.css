@@ -210,6 +210,28 @@
     max(10px, env(safe-area-inset-left, 0px));
 }
 
+.staff-inventory .sectionPicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  background: #e4e4e4;
+  border-radius: 15px;
+}
+
+.staff-inventory .sectionPicker .sectionBtn {
+  background: transparent;
+  color: #555;
+  padding: 11px 8px;
+  border-radius: 11px;
+}
+
+.staff-inventory .sectionPicker .sectionBtn.active {
+  background: #111;
+  color: var(--gold);
+}
+
 .staff-inventory .searchRow {
   display: grid;
   grid-template-columns: 1fr 94px;

@@ -1,6 +1,9 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFPage, type PDFFont, rgb } from "pdf-lib";
-import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
+import type {
+  StaffInventoryRow,
+  StaffStockRow,
+} from "@/components/staff/staffInventoryTypes";
 import { getAssetUrl } from "@/lib/appVersion";
 import {
   deliverPdfFile,
@@ -14,6 +17,7 @@ export type StaffInventoryPdfOptions = {
   date: string;
   employee: string;
   rows: StaffInventoryRow[];
+  stockRows?: StaffStockRow[];
   labels: StaffInventoryPdfLabels;
 };
 
@@ -379,10 +383,61 @@ function drawTableRow(
   ctx.y = rowTop - total;
 }
 
+function drawStockTableHeader(ctx: PdfContext, labels: StaffInventoryPdfLabels) {
+  const height = 20;
+  const total = height + 6;
+
+  ensureSpace(ctx, total);
+  const topY = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, height, COLORS.section);
+
+  const baseline = topY - 14;
+  drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colItem, MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colRestaurant, 350, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, labels.colWarehouse, 460, baseline, 8, ctx.fontBold);
+
+  ctx.y = topY - total;
+}
+
+function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
+  const rowHeight = 22;
+  const total = rowHeight + 6;
+
+  ensureSpace(ctx, total);
+  const rowTop = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, rowTop, CONTENT_WIDTH, rowHeight, COLORS.white);
+
+  const baseline = rowTop - 14;
+  drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
+  drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
+  drawTextLine(
+    ctx,
+    row.hasRestaurant ? money(row.restaurant) : "",
+    350,
+    baseline,
+    9,
+    ctx.font,
+  );
+  drawTextLine(
+    ctx,
+    row.hasWarehouse ? money(row.warehouse) : "",
+    460,
+    baseline,
+    9,
+    ctx.font,
+  );
+
+  ctx.y = rowTop - total;
+}
+
 export async function makeStaffInventoryPdfBlob(
   options: StaffInventoryPdfOptions,
 ): Promise<Blob> {
   const rows = options.rows.filter((row) => row.hasCurrent || row.hasNeeded);
+  const stockRows = (options.stockRows ?? []).filter(
+    (row) => row.hasRestaurant || row.hasWarehouse,
+  );
   const { regular, bold } = await loadFontBytes();
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -393,7 +448,7 @@ export async function makeStaffInventoryPdfBlob(
 
   drawHeader(ctx, options, rows);
 
-  if (!rows.length) {
+  if (!rows.length && !stockRows.length) {
     drawWrappedBlock(ctx, options.labels.emptyMessage, 14, { bold: true });
   } else {
     const groups = groupedRows(rows);
@@ -403,6 +458,13 @@ export async function makeStaffInventoryPdfBlob(
       groups[category].forEach((row, index) => drawTableRow(ctx, row, index));
       ctx.y -= 4;
     });
+
+    if (stockRows.length) {
+      drawSectionTitle(ctx, options.labels.stockTitle);
+      drawStockTableHeader(ctx, options.labels);
+      stockRows.forEach((row, index) => drawStockRow(ctx, row, index));
+      ctx.y -= 4;
+    }
   }
 
   const bytes = await pdfDoc.save();

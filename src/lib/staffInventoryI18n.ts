@@ -54,6 +54,9 @@ export type StaffInventoryPdfLabels = {
   colLeft: string;
   colNeeded: string;
   emptyMessage: string;
+  stockTitle: string;
+  colRestaurant: string;
+  colWarehouse: string;
   categoryLabel: (category: string) => string;
 };
 
@@ -78,6 +81,9 @@ export function buildStaffInventoryPdfLabels(
     colLeft: t("staff_pdf_col_left"),
     colNeeded: t("staff_pdf_col_needed"),
     emptyMessage: t("staff_pdf_empty"),
+    stockTitle: t("staff_pdf_stock_title"),
+    colRestaurant: t("staff_stock_restaurant").toUpperCase(),
+    colWarehouse: t("staff_stock_warehouse").toUpperCase(),
     categoryLabel: (category) => translateStaffCategory(lang, category),
   };
 }

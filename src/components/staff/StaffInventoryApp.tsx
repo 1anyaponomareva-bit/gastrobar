@@ -11,11 +11,9 @@ import {
   STAFF_INVENTORY_VENUES,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
+import { getStaffStockItems } from "@/data/staffInStockItems";
 import { getAssetUrl } from "@/lib/appVersion";
-import {
-  deliverPdfFile,
-  type DeliverPdfResult,
-} from "@/lib/deliverPdfFile";
+import { deliverPdfFile, type DeliverPdfResult } from "@/lib/deliverPdfFile";
 import {
   buildStaffInventoryPdfLabels,
   toStaffAppLang,
@@ -28,24 +26,49 @@ import {
   preloadStaffInventoryPdfFonts,
 } from "@/lib/staffInventoryPdf";
 import {
+  clearStoredStockValues,
   clearStoredValues,
   getStoredActiveCategory,
   getStoredDate,
   getStoredEmployee,
+  getStoredSection,
+  getStoredStockValue,
   getStoredValue,
   getStoredVenue,
   parseNumber,
   setStoredActiveCategory,
   setStoredDate,
   setStoredEmployee,
+  setStoredSection,
+  setStoredStockValue,
   setStoredValue,
   setStoredVenue,
   todayIsoDate,
+  type StaffInventorySection,
+  type StaffStockField,
 } from "@/lib/staffInventoryStorage";
 import { translate } from "@/lib/i18n";
 import { useTranslation } from "@/lib/useTranslation";
-import type { StaffInventoryRow } from "@/components/staff/staffInventoryTypes";
+import type {
+  StaffInventoryRow,
+  StaffStockRow,
+} from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
+
+function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
+  return getStaffStockItems(venue).map((item) => {
+    const restaurantValue = getStoredStockValue(venue, item.id, "restaurant");
+    const warehouseValue = getStoredStockValue(venue, item.id, "warehouse");
+    return {
+      id: item.id,
+      name: item.name.en,
+      restaurant: parseNumber(restaurantValue),
+      warehouse: parseNumber(warehouseValue),
+      hasRestaurant: restaurantValue.trim() !== "",
+      hasWarehouse: warehouseValue.trim() !== "",
+    };
+  });
+}
 
 function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
   return getStaffInventoryItems(venue).map((item, index) => {
@@ -69,12 +92,16 @@ function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
 export function StaffInventoryApp() {
   const { lang } = useTranslation();
   const staffLang = toStaffAppLang(lang);
-  const t = useCallback((key: string) => translate(staffLang, key), [staffLang]);
+  const t = useCallback(
+    (key: string) => translate(staffLang, key),
+    [staffLang],
+  );
   const [hydrated, setHydrated] = useState(false);
   const [venue, setVenue] = useState<StaffInventoryVenue>("gastrofood");
   const [date, setDate] = useState("");
   const [employee, setEmployee] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [section, setSection] = useState<StaffInventorySection>("purchase");
   const [search, setSearch] = useState("");
   const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -88,6 +115,11 @@ export function StaffInventoryApp() {
 
   const items = useMemo(() => getStaffInventoryItems(venue), [venue]);
   const categories = useMemo(() => getStaffInventoryCategories(venue), [venue]);
+  const stockItems = useMemo(() => getStaffStockItems(venue), [venue]);
+  const hasStockSection = stockItems.length > 0;
+  const activeSection: StaffInventorySection = hasStockSection
+    ? section
+    : "purchase";
   const venueLabel = STAFF_INVENTORY_VENUE_LABELS[venue];
   const pdfLabels = useMemo(
     () =>
@@ -121,6 +153,7 @@ export function StaffInventoryApp() {
     setDate(getStoredDate() || todayIsoDate());
     setEmployee(getStoredEmployee());
     setActiveCategory(getStoredActiveCategory(storedVenue));
+    setSection(getStoredSection(storedVenue));
     setHydrated(true);
   }, []);
 
@@ -128,6 +161,12 @@ export function StaffInventoryApp() {
     void revision;
     if (!hydrated) return [];
     return buildRows(venue);
+  }, [hydrated, revision, venue]);
+
+  const stockRows = useMemo(() => {
+    void revision;
+    if (!hydrated) return [];
+    return buildStockRows(venue);
   }, [hydrated, revision, venue]);
 
   const visibleRows = useMemo(() => {
@@ -157,7 +196,22 @@ export function StaffInventoryApp() {
     setVenue(nextVenue);
     setStoredVenue(nextVenue);
     setActiveCategory(getStoredActiveCategory(nextVenue));
+    setSection(getStoredSection(nextVenue));
     setSearch("");
+    bump();
+  };
+
+  const handleSectionChange = (nextSection: StaffInventorySection) => {
+    setSection(nextSection);
+    setStoredSection(venue, nextSection);
+  };
+
+  const handleStockFieldChange = (
+    itemId: string,
+    field: StaffStockField,
+    value: string,
+  ) => {
+    setStoredStockValue(venue, itemId, field, value);
     bump();
   };
 
@@ -201,14 +255,16 @@ export function StaffInventoryApp() {
 
   const handleNewDay = () => {
     if (
-      !window.confirm(
-        t("staff_new_day_confirm").replace("{venue}", venueLabel),
-      )
+      !window.confirm(t("staff_new_day_confirm").replace("{venue}", venueLabel))
     ) {
       return;
     }
 
     clearStoredValues(venue, items.length);
+    clearStoredStockValues(
+      venue,
+      stockItems.map((item) => item.id),
+    );
     const today = todayIsoDate();
     setDate(today);
     setStoredDate(today);
@@ -233,8 +289,14 @@ export function StaffInventoryApp() {
             `${row.index}:${row.current}:${row.needed}:${row.hasCurrent}:${row.hasNeeded}`,
         )
         .join("|"),
+      stockRows
+        .map(
+          (row) =>
+            `${row.id}:${row.restaurant}:${row.warehouse}:${row.hasRestaurant}:${row.hasWarehouse}`,
+        )
+        .join("|"),
     ].join("::");
-  }, [venue, date, employee, rows]);
+  }, [venue, date, employee, rows, stockRows]);
 
   const buildPdfOptions = useCallback(
     () => ({
@@ -242,9 +304,10 @@ export function StaffInventoryApp() {
       date,
       employee,
       rows,
+      stockRows,
       labels: pdfLabels,
     }),
-    [venueLabel, date, employee, rows, pdfLabels],
+    [venueLabel, date, employee, rows, stockRows, pdfLabels],
   );
 
   const beginSharePreparation = useCallback(() => {
@@ -268,7 +331,7 @@ export function StaffInventoryApp() {
       key,
       promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
     };
-  }, [hydrated, buildShareKey, buildPdfOptions, employee, rows]);
+  }, [hydrated, buildShareKey, buildPdfOptions, employee, rows, stockRows]);
 
   const handleSharePdfResult = (result: DeliverPdfResult) => {
     if (result === "cancelled" || result === "downloaded") return;
@@ -410,96 +473,181 @@ export function StaffInventoryApp() {
         </div>
 
         <div className="main">
-          <div className="searchRow">
-            <input
-              className="search"
-              placeholder={t("staff_search_placeholder")}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <button type="button" className="dark" onClick={handleReset}>
-              {t("staff_reset")}
-            </button>
-          </div>
+          {hasStockSection ? (
+            <div className="sectionPicker" role="tablist">
+              {(["purchase", "stock"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSection === option}
+                  className={`sectionBtn ${activeSection === option ? "active" : ""}`}
+                  onClick={() => handleSectionChange(option)}
+                >
+                  {option === "purchase"
+                    ? t("staff_section_purchase")
+                    : t("staff_section_stock")}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
-          <div className="tabs">
-            {categories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                className={`tab ${category === activeCategory ? "active" : ""}`}
-                onClick={() => handleCategoryChange(category)}
-              >
-                {category === "All"
-                  ? t("staff_tab_all").replace("{count}", String(items.length))
-                  : categoryLabel(category)}
-              </button>
-            ))}
-          </div>
-
-          <div className="mode">
-            <span>
-              {t("staff_mode_visible")
-                .replace("{venue}", venueLabel)
-                .replace("{count}", String(visibleRows.length))}
-            </span>
-          </div>
-
-          <div>
-            {!visibleRows.length ? (
-              <div className="empty">{t("staff_empty")}</div>
-            ) : (
-              visibleRows.map((row) => {
-                const showCategoryHeader = row.category !== lastCategory;
-                lastCategory = row.category;
-
-                return (
-                  <div key={`${venue}-${row.index}`}>
-                    {showCategoryHeader ? (
-                      <div className="category">{categoryLabel(row.category)}</div>
-                    ) : null}
-                    <div className="card">
-                      <div className="name">{itemLabel(row.name)}</div>
-                      <div className="row">
-                        <div className="field">
-                          <label>
-                            {t("staff_left")} ({row.leftUnit})
-                          </label>
-                          <input
-                            inputMode="decimal"
-                            value={getStoredValue(venue, row.index, "current")}
-                            onChange={(event) =>
-                              handleFieldChange(
-                                row.index,
-                                "current",
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="field">
-                          <label>
-                            {t("staff_needed")} ({row.neededUnit})
-                          </label>
-                          <input
-                            inputMode="decimal"
-                            value={getStoredValue(venue, row.index, "needed")}
-                            onChange={(event) =>
-                              handleFieldChange(
-                                row.index,
-                                "needed",
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
+          {activeSection === "stock" ? (
+            <>
+              <div className="mode">
+                <span>
+                  {t("staff_stock_mode")
+                    .replace("{venue}", venueLabel)
+                    .replace("{count}", String(stockItems.length))}
+                </span>
+              </div>
+              {stockItems.map((item) => (
+                <div key={`${venue}-stock-${item.id}`} className="card">
+                  <div className="name">{item.name[staffLang]}</div>
+                  <div className="row">
+                    <div className="field">
+                      <label>{t("staff_stock_restaurant")}</label>
+                      <input
+                        inputMode="decimal"
+                        value={getStoredStockValue(
+                          venue,
+                          item.id,
+                          "restaurant",
+                        )}
+                        onChange={(event) =>
+                          handleStockFieldChange(
+                            item.id,
+                            "restaurant",
+                            event.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="field">
+                      <label>{t("staff_stock_warehouse")}</label>
+                      <input
+                        inputMode="decimal"
+                        value={getStoredStockValue(venue, item.id, "warehouse")}
+                        onChange={(event) =>
+                          handleStockFieldChange(
+                            item.id,
+                            "warehouse",
+                            event.target.value,
+                          )
+                        }
+                      />
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="searchRow">
+                <input
+                  className="search"
+                  placeholder={t("staff_search_placeholder")}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+                <button type="button" className="dark" onClick={handleReset}>
+                  {t("staff_reset")}
+                </button>
+              </div>
+
+              <div className="tabs">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`tab ${category === activeCategory ? "active" : ""}`}
+                    onClick={() => handleCategoryChange(category)}
+                  >
+                    {category === "All"
+                      ? t("staff_tab_all").replace(
+                          "{count}",
+                          String(items.length),
+                        )
+                      : categoryLabel(category)}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mode">
+                <span>
+                  {t("staff_mode_visible")
+                    .replace("{venue}", venueLabel)
+                    .replace("{count}", String(visibleRows.length))}
+                </span>
+              </div>
+
+              <div>
+                {!visibleRows.length ? (
+                  <div className="empty">{t("staff_empty")}</div>
+                ) : (
+                  visibleRows.map((row) => {
+                    const showCategoryHeader = row.category !== lastCategory;
+                    lastCategory = row.category;
+
+                    return (
+                      <div key={`${venue}-${row.index}`}>
+                        {showCategoryHeader ? (
+                          <div className="category">
+                            {categoryLabel(row.category)}
+                          </div>
+                        ) : null}
+                        <div className="card">
+                          <div className="name">{itemLabel(row.name)}</div>
+                          <div className="row">
+                            <div className="field">
+                              <label>
+                                {t("staff_left")} ({row.leftUnit})
+                              </label>
+                              <input
+                                inputMode="decimal"
+                                value={getStoredValue(
+                                  venue,
+                                  row.index,
+                                  "current",
+                                )}
+                                onChange={(event) =>
+                                  handleFieldChange(
+                                    row.index,
+                                    "current",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="field">
+                              <label>
+                                {t("staff_needed")} ({row.neededUnit})
+                              </label>
+                              <input
+                                inputMode="decimal"
+                                value={getStoredValue(
+                                  venue,
+                                  row.index,
+                                  "needed",
+                                )}
+                                onChange={(event) =>
+                                  handleFieldChange(
+                                    row.index,
+                                    "needed",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

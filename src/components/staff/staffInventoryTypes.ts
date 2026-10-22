@@ -9,3 +9,12 @@ export type StaffInventoryRow = {
   hasCurrent: boolean;
   hasNeeded: boolean;
 };
+
+export type StaffStockRow = {
+  id: string;
+  name: string;
+  restaurant: number;
+  warehouse: number;
+  hasRestaurant: boolean;
+  hasWarehouse: boolean;
+};
