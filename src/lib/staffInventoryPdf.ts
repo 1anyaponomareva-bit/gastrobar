@@ -434,7 +434,7 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   }
   drawTextLine(
     ctx,
-    row.hasRestaurant ? `${money(row.restaurant)} packs` : "",
+    row.hasRestaurant ? `${money(row.restaurant)} bags` : "",
     350,
     baseline,
     9,
@@ -445,7 +445,7 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
     row.noWarehouse
       ? "—"
       : row.hasWarehouse
-        ? `${money(row.warehouse)} packs`
+        ? `${money(row.warehouse)} bags`
         : "",
     440,
     baseline,

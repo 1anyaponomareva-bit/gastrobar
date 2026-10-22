@@ -386,7 +386,7 @@ export function StaffInventoryApp() {
                 handleStockFieldChange(item.id, "restaurant", event.target.value)
               }
             />
-            <span className="unitSuffix">packs</span>
+            <span className="unitSuffix">bags</span>
           </div>
         </div>
         {item.noWarehouse ? null : (
@@ -404,7 +404,7 @@ export function StaffInventoryApp() {
                   )
                 }
               />
-              <span className="unitSuffix">packs</span>
+              <span className="unitSuffix">bags</span>
             </div>
           </div>
         )}
