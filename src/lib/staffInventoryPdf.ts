@@ -39,6 +39,9 @@ const COLORS = {
   line: rgb(0.86, 0.86, 0.86),
   section: rgb(0.95, 0.95, 0.95),
   white: rgb(1, 1, 1),
+  red: rgb(0.84, 0, 0),
+  redSoft: rgb(1, 0.93, 0.93),
+  redLine: rgb(0.94, 0.69, 0.69),
 };
 
 let fontBytesPromise: Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> | null =
@@ -404,13 +407,26 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   const rowHeight = 22;
   const total = rowHeight + 6;
 
+  const needsOrder = row.hasWarehouse && row.warehouse === 0;
+
   ensureSpace(ctx, total);
   const rowTop = ctx.y;
-  drawFilledBox(ctx, MARGIN_LEFT, rowTop, CONTENT_WIDTH, rowHeight, COLORS.white);
+  drawFilledBox(
+    ctx,
+    MARGIN_LEFT,
+    rowTop,
+    CONTENT_WIDTH,
+    rowHeight,
+    needsOrder ? COLORS.redSoft : COLORS.white,
+    needsOrder ? COLORS.redLine : COLORS.line,
+  );
 
   const baseline = rowTop - 14;
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
   drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
+  if (needsOrder) {
+    drawTextLine(ctx, "FOOD ORDER", 482, baseline, 9, ctx.fontBold, COLORS.red);
+  }
   drawTextLine(
     ctx,
     row.hasRestaurant ? money(row.restaurant) : "",
@@ -425,7 +441,8 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
     460,
     baseline,
     9,
-    ctx.font,
+    needsOrder ? ctx.fontBold : ctx.font,
+    needsOrder ? COLORS.red : COLORS.text,
   );
 
   ctx.y = rowTop - total;
