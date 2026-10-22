@@ -22,6 +22,7 @@ const ALIASES: Record<string, string[]> = {
   tortilla: ["tortilia", "tortila", "tortillas", "тортилья"],
   "beef-patty-200": ["beefpatty200", "beefpatty200gr"],
   "beef-patty-120": ["beefpatty120", "beefpatty120gr"],
+  "classic-sausage": ["classicsausage", "hotdog"],
   "sauce-cheese": ["cheesesauce"],
   "sauce-burger": ["burgersauce"],
   "sauce-greek": ["greeksauce"],

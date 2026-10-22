@@ -72,9 +72,9 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   {
     id: "classic-sausage",
     name: {
-      en: "Classic Sausage",
-      ru: "Классическая сосиска",
-      vn: "Xúc xích cổ điển",
+      en: "Hot Dog Sausage",
+      ru: "Сосиска для хот-дога",
+      vn: "Xúc xích hot dog",
     },
   },
   {
