@@ -98,6 +98,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   },
   {
     id: "chicken-wings",
+    noWarehouse: true,
     name: { en: "Chicken Wings", ru: "Куриные крылья", vn: "Cánh gà" },
   },
   {
