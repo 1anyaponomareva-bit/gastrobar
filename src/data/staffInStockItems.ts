@@ -10,6 +10,8 @@ export type StaffStockItem = {
   unit?: StaffStockUnit;
   /** In-house amount at or below this value is flagged as PREP ORDER. */
   prepOrderAtOrBelow?: number;
+  /** Warehouse amount at or below this value is flagged as FOOD ORDER (default 0). */
+  warehouseOrderAtOrBelow?: number;
 };
 
 export type StaffStockUnit = "bags" | "pcs" | "btl";
@@ -50,7 +52,7 @@ export function evaluateStaffStock(
       restaurant !== null && restaurant <= NO_WAREHOUSE_ORDER_AT_OR_BELOW;
     return { lowInHouse, lowWarehouse: false, task: lowInHouse ? "FOOD ORDER" : null };
   }
-  const lowWarehouse = (warehouse ?? 0) === 0;
+  const lowWarehouse = (warehouse ?? 0) <= (item.warehouseOrderAtOrBelow ?? 0);
   return { lowInHouse: false, lowWarehouse, task: lowWarehouse ? "FOOD ORDER" : null };
 }
 
@@ -58,7 +60,7 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
   { id: "bacon", name: { en: "Bacon", ru: "Бекон", vn: "Thịt xông khói" } },
   {
     id: "beef-patty-200",
-    noAlerts: true,
+    warehouseOrderAtOrBelow: 1,
     name: {
       en: "Beef Patty (200g)",
       ru: "Говяжья котлета (200 г)",
