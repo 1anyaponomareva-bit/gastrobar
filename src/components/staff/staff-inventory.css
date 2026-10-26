@@ -414,6 +414,37 @@
   line-height: 1.3;
 }
 
+.staff-inventory .inAppNotice {
+  background: #fff5f5;
+  border: 2px solid #d60000;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: #6b0000;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.staff-inventory .inAppNotice p {
+  margin: 6px 0 10px;
+}
+
+.staff-inventory .inAppActions {
+  display: grid;
+  gap: 8px;
+}
+
+.staff-inventory .inAppOpen {
+  display: block;
+  padding: 13px 8px;
+  border-radius: 13px;
+  background: #00a651;
+  color: #fff;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
 .staff-inventory .packHint {
   margin-top: 6px;
   font-size: 13px;

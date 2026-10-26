@@ -12,6 +12,23 @@ function isAndroidDevice(): boolean {
   return /Android/i.test(navigator.userAgent);
 }
 
+export type InAppBrowserInfo = { platform: "ios" | "android" | "other" } | null;
+
+export function detectInAppBrowser(): InAppBrowserInfo {
+  if (typeof navigator === "undefined") return null;
+  if (!/Zalo|FBAN|FBAV|Instagram|Line\/|Messenger|Telegram/i.test(navigator.userAgent)) {
+    return null;
+  }
+  if (isIosDevice()) return { platform: "ios" };
+  if (isAndroidDevice()) return { platform: "android" };
+  return { platform: "other" };
+}
+
+export function androidChromeIntentUrl(href: string): string {
+  const url = new URL(href);
+  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;end`;
+}
+
 function hasTouchScreen(): boolean {
   if (typeof navigator === "undefined") return false;
   if (navigator.maxTouchPoints > 0) return true;

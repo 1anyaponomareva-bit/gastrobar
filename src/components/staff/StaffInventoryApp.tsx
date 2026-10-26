@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { InAppBrowserNotice } from "@/components/staff/InAppBrowserNotice";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import { StaffOrderList } from "@/components/staff/StaffOrderList";
 import { STAFF_ORDER_ITEMS } from "@/data/staffOrderItems";
@@ -14,7 +15,11 @@ import {
   staffStockUnit,
 } from "@/data/staffInStockItems";
 import { getAssetUrl } from "@/lib/appVersion";
-import { deliverPdfFile, type DeliverPdfResult } from "@/lib/deliverPdfFile";
+import {
+  deliverPdfFile,
+  detectInAppBrowser,
+  type DeliverPdfResult,
+} from "@/lib/deliverPdfFile";
 import {
   buildStaffInventoryPdfLabels,
   toStaffAppLang,
@@ -255,6 +260,11 @@ export function StaffInventoryApp() {
 
   const handleExportPdf = async () => {
     if (exportingPdf) return;
+    if (detectInAppBrowser()) {
+      window.alert(t("staff_inapp_share_blocked"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     setExportingPdf(true);
     try {
@@ -383,6 +393,7 @@ export function StaffInventoryApp() {
         </div>
 
         <div className="main">
+          <InAppBrowserNotice t={t} />
           {hasStockSection ? (
             <div className="sectionPicker" role="tablist">
               {(["purchase", "stock"] as const).map((option) => (

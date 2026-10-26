@@ -12,7 +12,7 @@ import {
   type StaffOrderSupplierId,
 } from "@/data/staffOrderItems";
 import type { StaffInventoryVenue } from "@/data/staffInventoryItems";
-import { deliverPdfFile } from "@/lib/deliverPdfFile";
+import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { translate } from "@/lib/i18n";
 import {
   translateStaffCategory,
@@ -180,6 +180,11 @@ export function StaffOrderList({
 
   const handleShare = async () => {
     if (!supplier || !pdfOptions || exporting) return;
+    if (detectInAppBrowser()) {
+      window.alert(t("staff_inapp_share_blocked"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setExporting(true);
     try {
       const prepared = preparedRef.current;
