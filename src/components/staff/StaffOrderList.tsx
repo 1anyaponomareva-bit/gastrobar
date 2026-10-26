@@ -339,21 +339,22 @@ export function StaffOrderList({
             </span>
           </div>
 
-          <div className="category">{t("staff_order_marked")}</div>
-          {supplierMarked.filter(matchesSearch).length ? (
-            supplierMarked.filter(matchesSearch).map((item) => renderCard(item, false))
+          {supplierItems.filter(matchesSearch).length ? (
+            STAFF_ORDER_CATEGORIES.map((cat) => {
+              const inCategory = supplierItems.filter(
+                (item) => item.category === cat && matchesSearch(item),
+              );
+              if (!inCategory.length) return null;
+              return (
+                <div key={cat}>
+                  <div className="category">{translateStaffCategory(staffLang, cat)}</div>
+                  {inCategory.map((item) => renderCard(item, false))}
+                </div>
+              );
+            })
           ) : (
-            <div className="empty">{t("staff_order_none_marked")}</div>
+            <div className="empty">{t("staff_empty")}</div>
           )}
-
-          {supplierItems.some((item) => !isMarked(item) && matchesSearch(item)) ? (
-            <>
-              <div className="category">{t("staff_order_other")}</div>
-              {supplierItems
-                .filter((item) => !isMarked(item) && matchesSearch(item))
-                .map((item) => renderCard(item, false))}
-            </>
-          ) : null}
 
           <button
             type="button"
