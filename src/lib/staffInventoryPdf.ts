@@ -503,6 +503,7 @@ export type SupplierOrderPdfRow = {
   details: string;
   quantity: number;
   unit: string;
+  packInfo?: string;
   itemNo?: string;
 };
 
@@ -512,6 +513,7 @@ export type SupplierOrderPdfOptions = {
   employeeLine: string;
   rows: SupplierOrderPdfRow[];
   emptyMessage: string;
+  footerLines?: string[];
 };
 
 const ORDER_COL_QTY = 330;
@@ -541,7 +543,13 @@ function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) 
     ? wrapText(row.itemNo, ctx.font, 8, ORDER_ITEM_NO_WIDTH)
     : [];
   const leftHeight = nameLines.length * 12 + detailLines.length * 11;
-  const rowHeight = Math.max(22, leftHeight + 10, itemNoLines.length * 11 + 10);
+  const qtyHeight = row.packInfo ? 26 : 14;
+  const rowHeight = Math.max(
+    22,
+    leftHeight + 10,
+    itemNoLines.length * 11 + 10,
+    qtyHeight + 10,
+  );
 
   ensureSpace(ctx, rowHeight + 6);
   const rowTop = ctx.y;
@@ -557,6 +565,9 @@ function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) 
     10,
     ctx.fontBold,
   );
+  if (row.packInfo) {
+    drawTextLine(ctx, row.packInfo, ORDER_COL_QTY, baseline - 12, 8, ctx.font, COLORS.muted);
+  }
 
   let y = baseline;
   nameLines.forEach((line) => {
@@ -575,6 +586,26 @@ function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) 
   });
 
   ctx.y = rowTop - rowHeight - 6;
+}
+
+function drawOrderFooter(ctx: PdfContext, lines: string[]) {
+  const blocks = lines.map((line, index) =>
+    measureWrappedText(line, index === 0 ? ctx.fontBold : ctx.font, 10, CONTENT_WIDTH - 24, 3),
+  );
+  const height = blocks.reduce((sum, block) => sum + block.height, 0) + (lines.length - 1) * 5 + 22;
+  ensureSpace(ctx, height + SECTION_GAP);
+  const topY = ctx.y - SECTION_GAP;
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, height, COLORS.goldSoft);
+  let y = topY - 11;
+  blocks.forEach((block, index) => {
+    y -= drawWrappedLines(ctx, block.lines, y, {
+      x: MARGIN_LEFT + 12,
+      size: 10,
+      bold: index === 0,
+      lineGap: 3,
+    }) + 5;
+  });
+  ctx.y = topY - height;
 }
 
 export async function makeSupplierOrderPdfBlob(
@@ -607,6 +638,8 @@ export async function makeSupplierOrderPdfBlob(
     drawOrderTableHeader(ctx);
     options.rows.forEach((row, index) => drawOrderRow(ctx, row, index));
   }
+
+  if (options.footerLines?.length) drawOrderFooter(ctx, options.footerLines);
 
   const bytes = await pdfDoc.save();
   return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });

@@ -230,6 +230,19 @@ export const STAFF_ORDER_ITEMS: StaffOrderItem[] = STAFF_ORDER_CATEGORIES.flatMa
     })),
 );
 
+export const STAFF_ORDER_COMPANY_FOOTER = [
+  "GASTROFOOD",
+  "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa",
+  "+84 98 863 15 07",
+];
+
+export function staffOrderPackLabel(item: StaffOrderItem): string | null {
+  if (!item.pack) return null;
+  const compact = (value: string) => value.toLowerCase().replace(/\s+/g, "");
+  if (compact(item.pack) === compact(`1 ${item.unit}`)) return null;
+  return `1 ${item.unit} = ${item.pack}`;
+}
+
 export function getStaffOrderSupplier(
   id: StaffOrderSupplierId,
 ): StaffOrderSupplier {

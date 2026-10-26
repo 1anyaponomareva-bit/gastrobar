@@ -414,6 +414,13 @@
   line-height: 1.3;
 }
 
+.staff-inventory .packHint {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+}
+
 .staff-inventory .orderCard.marked {
   border: 2px solid var(--gold);
   background: #fffbea;

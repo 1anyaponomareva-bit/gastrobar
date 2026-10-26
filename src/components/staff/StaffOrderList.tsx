@@ -5,7 +5,9 @@ import {
   getStaffOrderSupplier,
   STAFF_ORDER_CATEGORIES,
   STAFF_ORDER_ITEMS,
+  STAFF_ORDER_COMPANY_FOOTER,
   STAFF_ORDER_SUPPLIERS,
+  staffOrderPackLabel,
   type StaffOrderItem,
   type StaffOrderSupplierId,
 } from "@/data/staffOrderItems";
@@ -138,9 +140,11 @@ export function StaffOrderList({
         employee.trim() || "-",
       ),
       emptyMessage: "No items marked for order.",
+      footerLines: STAFF_ORDER_COMPANY_FOOTER,
       rows: supplierMarked.map((item) => ({
         name: item.name,
-        details: [item.brand, item.pack].filter(Boolean).join(" · "),
+        details: item.brand ?? "",
+        packInfo: staffOrderPackLabel(item) ?? undefined,
         quantity: parseNumber(values.get(item.id) ?? ""),
         unit: item.unit,
         itemNo: item.itemNo,
@@ -202,9 +206,9 @@ export function StaffOrderList({
 
   const renderCard = (item: StaffOrderItem, showSupplier: boolean) => {
     const marked = isMarked(item);
+    const packLabel = staffOrderPackLabel(item);
     const details = [
       item.brand,
-      item.pack,
       showSupplier ? getStaffOrderSupplier(item.supplier).label : null,
       item.itemNo ? `#${item.itemNo}` : null,
     ].filter(Boolean);
@@ -223,6 +227,7 @@ export function StaffOrderList({
               />
               <span className="unitSuffix">{item.unit}</span>
             </div>
+            {packLabel ? <div className="packHint">{packLabel}</div> : null}
           </div>
         </div>
       </div>
