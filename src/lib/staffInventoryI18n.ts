@@ -28,6 +28,8 @@ const STAFF_CATEGORY_KEYS: Record<string, string> = {
   "Dairy Products & Eggs": "staff_cat_dairy",
   "Disposable Tableware": "staff_cat_disposable_tableware",
   "Fruits & Vegetables": "staff_cat_fruits_vegetables",
+  "Meat & Poultry": "staff_cat_meat_poultry",
+  Sauces: "staff_cat_sauces",
   Pantry: "staff_cat_pantry",
   "Sauces & Syrups": "staff_cat_sauces_syrups",
   "Semi-Finished Products": "staff_cat_semi_finished",

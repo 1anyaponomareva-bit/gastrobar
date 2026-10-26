@@ -498,6 +498,120 @@ export async function makeStaffInventoryPdfBlob(
   return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
 }
 
+export type SupplierOrderPdfRow = {
+  name: string;
+  details: string;
+  quantity: number;
+  unit: string;
+  itemNo?: string;
+};
+
+export type SupplierOrderPdfOptions = {
+  title: string;
+  dateLine: string;
+  employeeLine: string;
+  rows: SupplierOrderPdfRow[];
+  emptyMessage: string;
+};
+
+const ORDER_COL_QTY = 330;
+const ORDER_COL_ITEM_NO = 420;
+const ORDER_ITEM_WIDTH = ORDER_COL_QTY - (MARGIN_LEFT + 28) - 10;
+const ORDER_ITEM_NO_WIDTH = MARGIN_LEFT + CONTENT_WIDTH - ORDER_COL_ITEM_NO - 8;
+
+function drawOrderTableHeader(ctx: PdfContext) {
+  const height = 20;
+  ensureSpace(ctx, height + 6);
+  const topY = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, height, COLORS.section);
+  const baseline = topY - 14;
+  drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "ITEM", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "QTY", ORDER_COL_QTY, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "ITEM #", ORDER_COL_ITEM_NO, baseline, 8, ctx.fontBold);
+  ctx.y = topY - height - 6;
+}
+
+function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) {
+  const nameLines = wrapText(row.name, ctx.fontBold, 9, ORDER_ITEM_WIDTH);
+  const detailLines = row.details
+    ? wrapText(row.details, ctx.font, 8, ORDER_ITEM_WIDTH)
+    : [];
+  const itemNoLines = row.itemNo
+    ? wrapText(row.itemNo, ctx.font, 8, ORDER_ITEM_NO_WIDTH)
+    : [];
+  const leftHeight = nameLines.length * 12 + detailLines.length * 11;
+  const rowHeight = Math.max(22, leftHeight + 10, itemNoLines.length * 11 + 10);
+
+  ensureSpace(ctx, rowHeight + 6);
+  const rowTop = ctx.y;
+  drawFilledBox(ctx, MARGIN_LEFT, rowTop, CONTENT_WIDTH, rowHeight, COLORS.white);
+
+  const baseline = rowTop - 14;
+  drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
+  drawTextLine(
+    ctx,
+    `${money(row.quantity)} ${row.unit}`,
+    ORDER_COL_QTY,
+    baseline,
+    10,
+    ctx.fontBold,
+  );
+
+  let y = baseline;
+  nameLines.forEach((line) => {
+    drawTextLine(ctx, line, MARGIN_LEFT + 28, y, 9, ctx.fontBold);
+    y -= 12;
+  });
+  detailLines.forEach((line) => {
+    drawTextLine(ctx, line, MARGIN_LEFT + 28, y + 1, 8, ctx.font, COLORS.muted);
+    y -= 11;
+  });
+
+  let noY = baseline;
+  itemNoLines.forEach((line) => {
+    drawTextLine(ctx, line, ORDER_COL_ITEM_NO, noY, 8, ctx.font);
+    noY -= 11;
+  });
+
+  ctx.y = rowTop - rowHeight - 6;
+}
+
+export async function makeSupplierOrderPdfBlob(
+  options: SupplierOrderPdfOptions,
+): Promise<Blob> {
+  const { regular, bold } = await loadFontBytes();
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+  const ctx = createPdfContext(
+    pdfDoc,
+    await pdfDoc.embedFont(regular),
+    await pdfDoc.embedFont(bold),
+  );
+
+  drawHeader(
+    ctx,
+    {
+      labels: {
+        title: options.title,
+        dateLine: options.dateLine,
+        employeeLine: options.employeeLine,
+      },
+    } as StaffInventoryPdfOptions,
+    [],
+  );
+
+  if (!options.rows.length) {
+    drawWrappedBlock(ctx, options.emptyMessage, 14, { bold: true });
+  } else {
+    drawOrderTableHeader(ctx);
+    options.rows.forEach((row, index) => drawOrderRow(ctx, row, index));
+  }
+
+  const bytes = await pdfDoc.save();
+  return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+}
+
 export async function exportStaffInventoryPdf(
   options: StaffInventoryPdfOptions,
 ): Promise<DeliverPdfResult> {

@@ -104,6 +104,47 @@ export function clearStoredStockValues(
   });
 }
 
+function orderStorageKey(venue: StaffInventoryVenue, itemId: string): string {
+  return `${venuePrefix(venue)}order_${itemId}`;
+}
+
+export function getStoredOrderValue(
+  venue: StaffInventoryVenue,
+  itemId: string,
+): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(orderStorageKey(venue, itemId)) ?? "";
+}
+
+export function setStoredOrderValue(
+  venue: StaffInventoryVenue,
+  itemId: string,
+  value: string,
+): void {
+  localStorage.setItem(orderStorageKey(venue, itemId), value);
+}
+
+export function clearStoredOrderValues(
+  venue: StaffInventoryVenue,
+  itemIds: string[],
+): void {
+  itemIds.forEach((itemId) =>
+    localStorage.removeItem(orderStorageKey(venue, itemId)),
+  );
+}
+
+export function getStoredOrderTab(venue: StaffInventoryVenue): string {
+  if (typeof window === "undefined") return "all";
+  return localStorage.getItem(`${venuePrefix(venue)}order_tab`) ?? "all";
+}
+
+export function setStoredOrderTab(
+  venue: StaffInventoryVenue,
+  value: string,
+): void {
+  localStorage.setItem(`${venuePrefix(venue)}order_tab`, value);
+}
+
 export type StaffInventorySection = "purchase" | "stock";
 
 export function getStoredSection(

@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
+import { StaffOrderList } from "@/components/staff/StaffOrderList";
+import { STAFF_ORDER_ITEMS } from "@/data/staffOrderItems";
 import {
-  getStaffInventoryCategories,
-  getStaffInventoryItems,
-  getStaffInventoryUnits,
   STAFF_INVENTORY_VENUE_LABELS,
   type StaffInventoryVenue,
 } from "@/data/staffInventoryItems";
@@ -19,8 +18,6 @@ import { deliverPdfFile, type DeliverPdfResult } from "@/lib/deliverPdfFile";
 import {
   buildStaffInventoryPdfLabels,
   toStaffAppLang,
-  translateStaffCategory,
-  translateStaffItemName,
 } from "@/lib/staffInventoryI18n";
 import {
   getStaffInventoryPdfFileName,
@@ -28,21 +25,17 @@ import {
   preloadStaffInventoryPdfFonts,
 } from "@/lib/staffInventoryPdf";
 import {
+  clearStoredOrderValues,
   clearStoredStockValues,
-  clearStoredValues,
-  getStoredActiveCategory,
   getStoredDate,
   getStoredEmployee,
   getStoredSection,
   getStoredStockValue,
-  getStoredValue,
   parseNumber,
-  setStoredActiveCategory,
   setStoredDate,
   setStoredEmployee,
   setStoredSection,
   setStoredStockValue,
-  setStoredValue,
   todayIsoDate,
   type StaffInventorySection,
   type StaffStockField,
@@ -50,10 +43,7 @@ import {
 import { parseStockMessage } from "@/lib/staffStockParser";
 import { translate } from "@/lib/i18n";
 import { useTranslation } from "@/lib/useTranslation";
-import type {
-  StaffInventoryRow,
-  StaffStockRow,
-} from "@/components/staff/staffInventoryTypes";
+import type { StaffStockRow } from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
 
 function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
@@ -86,25 +76,6 @@ function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
   });
 }
 
-function buildRows(venue: StaffInventoryVenue): StaffInventoryRow[] {
-  return getStaffInventoryItems(venue).map((item, index) => {
-    const { neededUnit, leftUnit } = getStaffInventoryUnits(item);
-    const currentValue = getStoredValue(venue, index, "current");
-    const neededValue = getStoredValue(venue, index, "needed");
-    return {
-      index,
-      category: item[0],
-      name: item[1],
-      neededUnit,
-      leftUnit,
-      current: parseNumber(currentValue),
-      needed: parseNumber(neededValue),
-      hasCurrent: currentValue.trim() !== "",
-      hasNeeded: neededValue.trim() !== "",
-    };
-  });
-}
-
 export function StaffInventoryApp() {
   const { lang } = useTranslation();
   const staffLang = toStaffAppLang(lang);
@@ -116,9 +87,7 @@ export function StaffInventoryApp() {
   const venue: StaffInventoryVenue = "gastrofood";
   const [date, setDate] = useState("");
   const [employee, setEmployee] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
   const [section, setSection] = useState<StaffInventorySection>("purchase");
-  const [search, setSearch] = useState("");
   const [stockPaste, setStockPaste] = useState("");
   const [stockPasteResult, setStockPasteResult] = useState<{
     filled: number;
@@ -133,8 +102,6 @@ export function StaffInventoryApp() {
 
   const bump = useCallback(() => setRevision((value) => value + 1), []);
 
-  const items = useMemo(() => getStaffInventoryItems(venue), [venue]);
-  const categories = useMemo(() => getStaffInventoryCategories(venue), [venue]);
   const stockItems = useMemo(() => getStaffStockItems(venue), [venue]);
   const hasStockSection = stockItems.length > 0;
   const activeSection: StaffInventorySection = hasStockSection
@@ -149,20 +116,10 @@ export function StaffInventoryApp() {
         venueLabel,
         date,
         employee,
-        isStockSection ? stockItems.length : items.length,
-        isStockSection ? "staff_pdf_stock_doc_title" : "staff_pdf_title",
+        stockItems.length,
+        "staff_pdf_stock_doc_title",
       ),
-    [venueLabel, date, employee, isStockSection, stockItems.length, items.length],
-  );
-
-  const categoryLabel = useCallback(
-    (category: string) => translateStaffCategory(staffLang, category),
-    [staffLang],
-  );
-
-  const itemLabel = useCallback(
-    (name: string) => translateStaffItemName(staffLang, name),
-    [staffLang],
+    [venueLabel, date, employee, stockItems.length],
   );
 
   useEffect(() => {
@@ -172,44 +129,15 @@ export function StaffInventoryApp() {
   useEffect(() => {
     setDate(getStoredDate() || todayIsoDate());
     setEmployee(getStoredEmployee());
-    setActiveCategory(getStoredActiveCategory(venue));
     setSection(getStoredSection(venue));
     setHydrated(true);
   }, [venue]);
-
-  const rows = useMemo(() => {
-    void revision;
-    if (!hydrated) return [];
-    return buildRows(venue);
-  }, [hydrated, revision, venue]);
 
   const stockRows = useMemo(() => {
     void revision;
     if (!hydrated) return [];
     return buildStockRows(venue);
   }, [hydrated, revision, venue]);
-
-  const visibleRows = useMemo(() => {
-    const query = search.toLowerCase().trim();
-    return rows.filter((row) => {
-      if (activeCategory !== "All" && row.category !== activeCategory) {
-        return false;
-      }
-      if (query) {
-        const translatedCategory = categoryLabel(row.category).toLowerCase();
-        const translatedName = itemLabel(row.name).toLowerCase();
-        if (
-          !row.name.toLowerCase().includes(query) &&
-          !translatedName.includes(query) &&
-          !row.category.toLowerCase().includes(query) &&
-          !translatedCategory.includes(query)
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [rows, activeCategory, search, categoryLabel, itemLabel]);
 
   const handleSectionChange = (nextSection: StaffInventorySection) => {
     setSection(nextSection);
@@ -241,15 +169,6 @@ export function StaffInventoryApp() {
     bump();
   };
 
-  const handleFieldChange = (
-    index: number,
-    field: "current" | "needed",
-    value: string,
-  ) => {
-    setStoredValue(venue, index, field, value);
-    bump();
-  };
-
   const handleDateChange = (value: string) => {
     setDate(value);
     setStoredDate(value);
@@ -260,18 +179,6 @@ export function StaffInventoryApp() {
     setStoredEmployee(value);
   };
 
-  const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
-    setStoredActiveCategory(venue, category);
-  };
-
-  const handleReset = () => {
-    setSearch("");
-    setActiveCategory("All");
-    setStoredActiveCategory(venue, "All");
-    bump();
-  };
-
   const handleNewDay = () => {
     if (
       !window.confirm(t("staff_new_day_confirm").replace("{venue}", venueLabel))
@@ -279,7 +186,10 @@ export function StaffInventoryApp() {
       return;
     }
 
-    clearStoredValues(venue, items.length);
+    clearStoredOrderValues(
+      venue,
+      STAFF_ORDER_ITEMS.map((item) => item.id),
+    );
     clearStoredStockValues(
       venue,
       stockItems.map((item) => item.id),
@@ -289,41 +199,32 @@ export function StaffInventoryApp() {
     setStoredDate(today);
     setEmployee("");
     setStoredEmployee("");
-    setSearch("");
-    setActiveCategory("All");
-    setStoredActiveCategory(venue, "All");
     bump();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const buildShareKey = useCallback(() => {
-    const data = isStockSection
-      ? stockRows.map(
-          (row) =>
-            `${row.id}:${row.restaurant}:${row.warehouse}:${row.hasRestaurant}:${row.hasWarehouse}`,
-        )
-      : rows.map(
-          (row) =>
-            `${row.index}:${row.current}:${row.needed}:${row.hasCurrent}:${row.hasNeeded}`,
-        );
+    const data = stockRows.map(
+      (row) =>
+        `${row.id}:${row.restaurant}:${row.warehouse}:${row.hasRestaurant}:${row.hasWarehouse}`,
+    );
     return [
-      activeSection,
       date,
       employee.trim(),
       data.join("|"),
     ].join("::");
-  }, [isStockSection, activeSection, date, employee, rows, stockRows]);
+  }, [date, employee, stockRows]);
 
   const buildPdfOptions = useCallback(
     () => ({
       venueLabel,
       date,
       employee,
-      rows: isStockSection ? [] : rows,
-      stockRows: isStockSection ? stockRows : [],
+      rows: [],
+      stockRows,
       labels: pdfLabels,
     }),
-    [venueLabel, date, employee, isStockSection, rows, stockRows, pdfLabels],
+    [venueLabel, date, employee, stockRows, pdfLabels],
   );
 
   const beginSharePreparation = useCallback(() => {
@@ -360,7 +261,7 @@ export function StaffInventoryApp() {
       const fileName = getStaffInventoryPdfFileName(
         venueLabel,
         date,
-        isStockSection ? "PrepStock" : "OrderList",
+        "PrepStock",
       );
       const key = buildShareKey();
       const prepared = sharePrepareRef.current;
@@ -388,8 +289,6 @@ export function StaffInventoryApp() {
       </div>
     );
   }
-
-  let lastCategory = "";
 
   const stockCards = stockItems.map((item) => (
     <div key={`${venue}-stock-${item.id}`} className="card">
@@ -561,123 +460,29 @@ export function StaffInventoryApp() {
               {stockCards}
             </>
           ) : (
-            <>
-              <div className="searchRow">
-                <input
-                  className="search"
-                  placeholder={t("staff_search_placeholder")}
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-                <button type="button" className="dark" onClick={handleReset}>
-                  {t("staff_reset")}
-                </button>
-              </div>
-
-              <div className="tabs">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={`tab ${category === activeCategory ? "active" : ""}`}
-                    onClick={() => handleCategoryChange(category)}
-                  >
-                    {category === "All"
-                      ? t("staff_tab_all").replace(
-                          "{count}",
-                          String(items.length),
-                        )
-                      : categoryLabel(category)}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mode">
-                <span>
-                  {t("staff_mode_visible")
-                    .replace("{venue}", venueLabel)
-                    .replace("{count}", String(visibleRows.length))}
-                </span>
-              </div>
-
-              <div>
-                {!visibleRows.length ? (
-                  <div className="empty">{t("staff_empty")}</div>
-                ) : (
-                  visibleRows.map((row) => {
-                    const showCategoryHeader = row.category !== lastCategory;
-                    lastCategory = row.category;
-
-                    return (
-                      <div key={`${venue}-${row.index}`}>
-                        {showCategoryHeader ? (
-                          <div className="category">
-                            {categoryLabel(row.category)}
-                          </div>
-                        ) : null}
-                        <div className="card">
-                          <div className="name">{itemLabel(row.name)}</div>
-                          <div className="row">
-                            <div className="field">
-                              <label>
-                                {t("staff_left")} ({row.leftUnit})
-                              </label>
-                              <input
-                                inputMode="decimal"
-                                value={getStoredValue(
-                                  venue,
-                                  row.index,
-                                  "current",
-                                )}
-                                onChange={(event) =>
-                                  handleFieldChange(
-                                    row.index,
-                                    "current",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="field">
-                              <label>
-                                {t("staff_needed")} ({row.neededUnit})
-                              </label>
-                              <input
-                                inputMode="decimal"
-                                value={getStoredValue(
-                                  venue,
-                                  row.index,
-                                  "needed",
-                                )}
-                                onChange={(event) =>
-                                  handleFieldChange(
-                                    row.index,
-                                    "needed",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </>
+            <StaffOrderList
+              venue={venue}
+              venueLabel={venueLabel}
+              date={date}
+              employee={employee}
+              staffLang={staffLang}
+              revision={revision}
+              onChange={bump}
+            />
           )}
 
-          <button
-            type="button"
-            className="gold sectionShare"
-            onPointerDown={beginSharePreparation}
-            onTouchStart={beginSharePreparation}
-            onClick={handleExportPdf}
-            disabled={exportingPdf}
-          >
-            {exportingPdf ? t("staff_sharing_pdf") : t("staff_share_pdf")}
-          </button>
+          {isStockSection ? (
+            <button
+              type="button"
+              className="gold sectionShare"
+              onPointerDown={beginSharePreparation}
+              onTouchStart={beginSharePreparation}
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+            >
+              {exportingPdf ? t("staff_sharing_pdf") : t("staff_share_pdf")}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
