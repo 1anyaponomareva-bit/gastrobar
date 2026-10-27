@@ -7,6 +7,7 @@ export type StaffOrderSupplierId =
   | "saigon-efp"
   | "rvc"
   | "qween-pack"
+  | "anh-trinh"
   | "quang-minh"
   | "minh-nhat"
   | "atlas"
@@ -28,6 +29,7 @@ export const STAFF_ORDER_SUPPLIERS: StaffOrderSupplier[] = [
   { id: "saigon-efp", label: "Saigon EFP", zaloUrl: "https://zalo.me/g/y6ihgqi3pxuthhznlp6j" },
   { id: "rvc", label: "RVC", zaloUrl: "https://zalo.me/g/uvzqqjqtixdmgn6heykn" },
   { id: "qween-pack", label: "Qween Pack", zaloUrl: "https://zalo.me/g/gnhrwiuw2agnksuiqyk4" },
+  { id: "anh-trinh", label: "Ánh Trinh", zaloUrl: "https://zalo.me/g/wfii3wd5cput8aeb4jvx" },
   { id: "quang-minh", label: "Quang Minh", zaloUrl: "https://zalo.me/g/o2riik0esk5hg2d2yokq" },
   { id: "minh-nhat", label: "Minh Nhật Foods", zaloUrl: "https://zalo.me/g/rtjtw455q6ncpczlwowl" },
   { id: "atlas", label: "Atlas", zaloUrl: "https://zalo.me/g/e9fz5xpwzprmxq24kgml" },
@@ -84,20 +86,21 @@ const ROWS: Record<StaffOrderCategory, Row[]> = {
     ["Appetizer Box (500ml)", "", "600 pcs", "box", "rvc", "TBB500"],
     ["Burger Box", "", "400 pcs", "box", "saigon-efp", "B5"],
     ["Foil Sheet (30x17)", "", "1 kg", "kg", "shopee"],
-    ["Hotdog Box", "", "500 pcs", "box", "qween-pack", "QP-E02-K"],
+    ["Hotdog Box", "", "1000 pcs", "box", "qween-pack", "QP-E02"],
     ["Lunch Box (1000ml)", "", "300 pcs", "box", "qween-pack", "QP-HT25"],
     ["Paper Bag (Pita)", "", "8000 pcs", "box", "saigon-efp", "14GT"],
     ["Paper Wrap", "", "50 pcs", "pack", "shopee"],
     ["Plastic Gloves (Single Pack)", "", "100 pcs", "pack", "shopee"],
-    ["Plastic Cup+Lid (500ml)", "", "50 pcs", "pack", "shopee"],
+    ["Plastic Cup 95 (500ml)", "", "1000 pcs", "box", "qween-pack"],
+    ["Plastic Lid 95", "", "1000 pcs", "box", "qween-pack"],
     ["Plastic Fork and Spoon (Single Pack)", "", "100 pcs", "pack", "shopee"],
-    ["Plastic Bag (Cup)", "", "1 kg", "kg", "shopee"],
-    ["Plastic Bag (3kg)", "", "1 kg", "kg", "shopee"],
-    ["Plastic Bag (5kg)", "", "1 kg", "kg", "shopee"],
+    ["Plastic Bag (Cup 25*35)", "", "25 kg", "box", "anh-trinh"],
+    ["Plastic Bag (3kg)", "", "25 kg", "box", "anh-trinh"],
+    ["Plastic Bag (5kg)", "", "25 kg", "box", "anh-trinh"],
     ["Sauce Cup+Lid (2oz, 60ml)", "", "2500 pcs", "box", "qween-pack", "HS"],
     ["Stickers (GastroFood)", "", "10 000 pcs", "box", "quang-minh"],
     ["Wet Nupkins (Single Pack)", "", "500 pcs", "pack", "shopee"],
-    ["Straw (8mm Single Pack)", "", "", "box", "qween-pack"],
+    ["Straw (8*21)", "", "1 kg", "kg", "qween-pack", "QP-OHP6"],
   ],
   "Fruits & Vegetables": [
     ["Cucumber", "", "1 kg", "kg", "tran-anh"],
@@ -189,8 +192,8 @@ const ROWS: Record<StaffOrderCategory, Row[]> = {
     ["Cling Film (30x300m)", "Happy Price", "1 pcs", "pcs", "mm", "444169"],
     ["Cling Film (45x600m)", "Happy Price", "1 pcs", "pcs", "mm", "444172"],
     ["Dishwash Liquid", "Happy Price", "5 kg", "btl", "mm", "415853"],
-    ["Garbage Bags (45L)", "", "1 kg", "kg", "shopee"],
-    ["Garbage Bags (60L)", "", "1 kg", "kg", "shopee"],
+    ["Garbage Bags (45L 64*78)", "", "25 kg", "box", "anh-trinh"],
+    ["Garbage Bags (60L 78*92)", "", "25 kg", "box", "anh-trinh"],
     ["Gloves - Vinyl (Large)", "", "100 pcs", "pack", "shopee"],
     ["Hand Towel", "Khan Tay", "10 pcs", "pack", "mm", "190883"],
     ["Kitchen Towel", "MM Pro", "6 pcs", "pack", "mm", "466249"],
@@ -198,7 +201,7 @@ const ROWS: Record<StaffOrderCategory, Row[]> = {
     ["Patty Paper (11.4cm)", "", "100 pcs", "pack", "shopee"],
     ["Sanitizer 90%", "", "5 L", "btl", "shopee"],
     ["Sponge", "", "12 pcs", "pack", "mm", "254305"],
-    ["Steel Cleaning Liquid", "DRC", "5 L", "btl", "shopee"],
+    ["Steel Cleaning Liquid", "Dr.C", "5 L", "btl", "shopee"],
     ["Steel Scrub", "MM Pro", "6 pcs", "pack", "mm", "447688"],
     ["Stickers (35x22x50m)", "", "1 pcs", "pcs", "shopee"],
     ["Printer Paper Roll (12x40)", "", "160 pcs", "pack", "shopee"],
