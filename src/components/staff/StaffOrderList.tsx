@@ -25,6 +25,7 @@ import {
   type SupplierOrderPdfOptions,
 } from "@/lib/staffInventoryPdf";
 import {
+  clearStoredOrderValues,
   getStoredOrderTab,
   getStoredOrderValue,
   parseNumber,
@@ -173,6 +174,25 @@ export function StaffOrderList({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleReset = () => {
+    setSearch("");
+    setCategory("All");
+    const scope = supplier
+      ? STAFF_ORDER_ITEMS.filter((item) => item.supplier === supplier.id)
+      : STAFF_ORDER_ITEMS;
+    const filled = scope.filter((item) => (values.get(item.id) ?? "").trim() !== "");
+    if (!filled.length) return;
+    const message = supplier
+      ? t("staff_order_reset_supplier").replace("{supplier}", supplier.label)
+      : t("staff_order_reset_all");
+    if (!window.confirm(message)) return;
+    clearStoredOrderValues(
+      venue,
+      filled.map((item) => item.id),
+    );
+    onChange();
+  };
+
   const handleValueChange = (itemId: string, value: string) => {
     setStoredOrderValue(venue, itemId, value);
     onChange();
@@ -280,10 +300,7 @@ export function StaffOrderList({
         <button
           type="button"
           className="dark"
-          onClick={() => {
-            setSearch("");
-            setCategory("All");
-          }}
+          onClick={handleReset}
         >
           {t("staff_reset")}
         </button>
