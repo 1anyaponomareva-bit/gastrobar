@@ -162,15 +162,23 @@ const GASTROFOOD_STOCK_ITEMS: StaffStockItem[] = [
     prepOrderAtOrBelow: 19,
     name: { en: "Tortilla", ru: "Тортилья", vn: "Bánh tortilla" },
   },
-  sauce("sauce-cheese", "Sauce - Cheese (2L)", "Соус сырный (2 л)", "Sốt phô mai (2L)"),
+  {
+    ...sauce("sauce-cheese", "Sauce - Cheese (2L)", "Соус сырный (2 л)", "Sốt phô mai (2L)"),
+    unit: "bags",
+    prepOrderAtOrBelow: 5,
+  },
   sauce("sauce-burger", "Sauce - Burger (2L)", "Соус бургерный (2 л)", "Sốt burger (2L)"),
   sauce("sauce-greek", "Sauce - Greek (2L)", "Соус греческий (2 л)", "Sốt Hy Lạp (2L)"),
-  sauce(
-    "sauce-tomato-herbs",
-    "Sauce - Tomato&Herbs (2L)",
-    "Соус томатный с травами (2 л)",
-    "Sốt cà chua & thảo mộc (2L)",
-  ),
+  {
+    ...sauce(
+      "sauce-tomato-herbs",
+      "Sauce - Tomato&Herbs (2L)",
+      "Соус томатный с травами (2 л)",
+      "Sốt cà chua & thảo mộc (2L)",
+    ),
+    unit: "bags",
+    prepOrderAtOrBelow: 3,
+  },
   sauce("sauce-tartar", "Sauce - Tartar (2L)", "Соус тартар (2 л)", "Sốt tartar (2L)"),
   sauce(
     "sauce-honey-mustard",
