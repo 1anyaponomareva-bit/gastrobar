@@ -103,7 +103,7 @@ const ROWS: Record<StaffOrderCategory, Row[]> = {
     ["Straw (8*21)", "", "1 kg", "kg", "qween-pack", "QP-OHP6"],
   ],
   "Fruits & Vegetables": [
-    ["Cucumber", "", "1 kg", "kg", "tran-anh"],
+    ["Baby Cucumber", "", "1 kg", "kg", "tran-anh"],
     ["Garlic", "", "1 kg", "kg", "tran-anh"],
     ["Lemon", "", "1 kg", "kg", "tran-anh"],
     ["Salad", "", "1 kg", "kg", "tran-anh"],
@@ -113,7 +113,7 @@ const ROWS: Record<StaffOrderCategory, Row[]> = {
     ["Green Bell Pepper", "", "1 kg", "kg", "tran-anh"],
     ["Red Bell Pepper", "", "1 kg", "kg", "tran-anh"],
     ["Beef Tomatos", "", "1 kg", "kg", "tran-anh"],
-    ["Potatoes", "", "1 kg", "kg", "tran-anh"],
+    ["Baby Potato", "", "1 kg", "kg", "tran-anh"],
     ["Parsley", "", "1 kg", "kg", "tran-anh"],
   ],
   "Meat & Poultry": [
