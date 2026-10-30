@@ -42,6 +42,8 @@ export const config = {
     "/check/:path*",
     "/kitchen",
     "/kitchen/:path*",
+    "/recipes",
+    "/recipes/:path*",
     "/test",
     "/test/:path*",
     "/staff",

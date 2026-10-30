@@ -69,7 +69,12 @@ function isCheckPath(path: string): boolean {
 }
 
 function isKitchenPath(path: string): boolean {
-  return path === "/kitchen" || path.startsWith("/kitchen/");
+  return (
+    path === "/kitchen" ||
+    path.startsWith("/kitchen/") ||
+    path === "/recipes" ||
+    path.startsWith("/recipes/")
+  );
 }
 
 function isStaffTestPath(path: string): boolean {
