@@ -92,28 +92,123 @@
   margin-bottom: 12px;
 }
 
-.recipes-app .recipePhoto {
-  display: block;
-  width: 100%;
-  max-height: 340px;
-  object-fit: contain;
+.recipes-app .tcHeader {
   background: #fff;
+  border: 1px solid #ddd;
   border-radius: 18px;
+  overflow: hidden;
   margin-bottom: 12px;
 }
 
-.recipes-app .recipeName {
-  font-size: 26px;
-  font-weight: 900;
-  margin: 4px 4px 4px;
-  line-height: 1.15;
+.recipes-app .tcTitleRow {
+  display: flex;
+  align-items: stretch;
 }
 
-.recipes-app .recipeYield {
-  color: #555;
-  font-size: 15px;
+.recipes-app .tcTitle {
+  flex: 1;
+  min-width: 0;
+  background: var(--black);
+  padding: 14px 16px;
+}
+
+.recipes-app .tcTitle h1 {
+  margin: 0;
+  color: var(--gold);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.recipes-app .tcTitle span {
+  display: block;
+  margin-top: 4px;
+  color: #bbb;
+  font-size: 14px;
   font-weight: 700;
-  margin: 0 4px 12px;
+}
+
+.recipes-app .tcKind {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: #00a651;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.recipes-app .tcMeta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.recipes-app .tcMeta div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+}
+
+.recipes-app .tcMeta div + div {
+  border-left: 1px solid var(--line);
+}
+
+.recipes-app .tcMeta small,
+.recipes-app .tcFact small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.recipes-app .tcMeta b {
+  font-size: 15px;
+}
+
+.recipes-app .recipePhoto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 18px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+.recipes-app .tcFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.recipes-app .tcFact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+}
+
+.recipes-app .tcFact > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.recipes-app .tcFact b {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.recipes-app .tcFactIcon {
+  font-size: 26px;
+  line-height: 1;
 }
 
 .recipes-app .recipeScale label {
@@ -147,51 +242,234 @@
   font-weight: 900;
 }
 
-.recipes-app .scaleTotal {
+.recipes-app .scaleYield {
   margin-top: 8px;
-  color: #00a651;
-  font-weight: 900;
+  color: #555;
+  font-weight: 700;
   font-size: 14px;
 }
 
-.recipes-app .ingredientTable {
-  padding: 4px 13px;
+.recipes-app .tcSection {
+  margin: 18px 0 8px;
+  padding: 8px 14px;
+  background: var(--black);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.recipes-app .ingredientRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--line);
+.recipes-app .tcTableWrap {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.recipes-app .tcTable {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 16px;
 }
 
-.recipes-app .ingredientRow:last-child {
-  border-bottom: 0;
+.recipes-app .tcTable th {
+  padding: 8px 10px;
+  background: #f4f4f4;
+  color: #555;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-align: right;
 }
 
-.recipes-app .ingredientRow small {
+.recipes-app .tcTable td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.recipes-app .tcTable .tcName {
+  text-align: left;
+  width: 100%;
+}
+
+.recipes-app .tcTable td.tcName b,
+.recipes-app .tcTable td.tcName i,
+.recipes-app .tcTable td.tcName small {
+  display: block;
+}
+
+.recipes-app .tcTable td.tcName i {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.recipes-app .tcTable td.tcName small {
   color: var(--muted);
 }
 
-.recipes-app .ingredientRow b {
-  white-space: nowrap;
+.recipes-app .tcTable .tcNum {
+  color: var(--muted);
   font-weight: 900;
 }
 
-.recipes-app .recipeSteps {
-  margin: 0 0 10px;
-  padding: 13px 13px 13px 36px;
-  font-size: 16px;
-  line-height: 1.45;
+.recipes-app .tcTable .tcQty {
+  text-align: right;
+  white-space: nowrap;
+  color: #555;
 }
 
-.recipes-app .recipeSteps li + li {
-  margin-top: 10px;
+.recipes-app .tcTable .tcQty.net {
+  color: var(--black);
+  font-weight: 900;
 }
 
-.recipes-app .recipeStorage {
-  font-size: 16px;
+.recipes-app .tcTable tfoot td {
+  background: #fff3cd;
+  font-weight: 900;
+  border-top: 2px solid var(--gold);
+}
+
+.recipes-app .tcTable tfoot .tcQty {
+  color: var(--black);
+  font-size: 18px;
+}
+
+.recipes-app .tcStepsNote {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff3cd;
+  color: #6b4c00;
+  font-size: 13px;
   font-weight: 700;
 }
+
+.recipes-app .tcSteps {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .recipes-app .tcSteps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.recipes-app .tcStep {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 10px 12px 12px;
+}
+
+.recipes-app .tcStep header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.recipes-app .tcStepNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--gold);
+  color: var(--black);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.recipes-app .tcStepTitle b,
+.recipes-app .tcStepTitle i {
+  display: block;
+}
+
+.recipes-app .tcStepTitle b {
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.recipes-app .tcStepTitle i {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.recipes-app .tcStepPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  background: #f4f4f4;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.recipes-app .tcStep ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.recipes-app .tcStep li + li {
+  margin-top: 5px;
+}
+
+.recipes-app .tcStorage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.recipes-app .tcStorageRule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+}
+
+.recipes-app .tcStorageRule.freezer {
+  background: #eaf4ff;
+  border-color: #9cc8f2;
+}
+
+.recipes-app .tcStorageRule.no-refreeze {
+  background: #ffecec;
+  border-color: #f2a0a0;
+}
+
+.recipes-app .tcStorageRule > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.recipes-app .tcStorageRule b {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.recipes-app .tcStorageRule small {
+  color: #555;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.recipes-app .tcStorageIcon {
+  font-size: 28px;
+  line-height: 1;
+}
+
