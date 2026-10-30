@@ -1,3 +1,9 @@
+.recipes-app button,
+.recipes-app input,
+.recipes-app h1 {
+  font-family: inherit;
+}
+
 .recipes-app .recipesTitle {
   text-align: center;
   color: var(--gold);
