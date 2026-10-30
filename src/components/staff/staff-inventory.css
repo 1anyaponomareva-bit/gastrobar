@@ -8,7 +8,7 @@
   --line: #e4e4e4;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-staff, Arial), Helvetica, sans-serif;
   background: var(--bg);
   color: #111;
   min-height: 100dvh;
@@ -18,6 +18,16 @@
 .staff-inventory *::before,
 .staff-inventory *::after {
   box-sizing: border-box;
+}
+
+.staff-inventory button,
+.staff-inventory input,
+.staff-inventory textarea,
+.staff-inventory select,
+.staff-inventory h1,
+.staff-inventory h2,
+.staff-inventory h3 {
+  font-family: inherit;
 }
 
 .staff-inventory .app {

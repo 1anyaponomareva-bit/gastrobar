@@ -1,6 +1,5 @@
 "use client";
 
-import { Montserrat } from "next/font/google";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
@@ -17,12 +16,6 @@ import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import "@/components/staff/staff-inventory.css";
 import "./recipes.css";
-
-const recipesFont = Montserrat({
-  subsets: ["latin", "cyrillic", "vietnamese"],
-  weight: ["400", "500", "700", "800", "900"],
-  style: ["normal", "italic"],
-});
 
 const NUMBER_LOCALE: Record<RecipeLang, string> = { ru: "ru-RU", en: "en-US", vn: "vi-VN" };
 
@@ -124,10 +117,7 @@ export function RecipesApp() {
   }
 
   return (
-    <div
-      className="staff-inventory staff-inventory-page recipes-app"
-      style={{ fontFamily: recipesFont.style.fontFamily }}
-    >
+    <div className="staff-inventory staff-inventory-page recipes-app">
       <div className="app">
         <div className="top">
           <div className="langRow">
