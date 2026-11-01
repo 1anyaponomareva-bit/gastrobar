@@ -361,14 +361,13 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
               </span>
             ) : null}
           </div>
-          <div className="scaleYield">
-            {t("recipes_scale_base")}: {baseLabel}
-            {!isBase ? (
+          {!isBase ? (
+            <div className="scaleYield">
               <button type="button" className="scaleReset" onClick={() => setInput(initialScaleInput(base, !!units))}>
                 {t("recipes_scale_reset")}
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
