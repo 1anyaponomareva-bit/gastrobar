@@ -14,7 +14,7 @@ export type ExtractedRecipe = {
   yieldLabel: LocalizedText;
   heroBox: Box | null;
   facts: { icon: RecipeFactIcon; label: LocalizedText; value: LocalizedText }[];
-  ingredients: { name: LocalizedText; unit: string; net: number }[];
+  ingredients: { name: LocalizedText; unit: string; net: number; main: boolean }[];
   steps: { title: LocalizedText; items: LocalizedText[]; photoBox: Box | null }[];
   storage: { icon: RecipeStorageIcon; title: LocalizedText; text: LocalizedText | null }[];
 };
@@ -66,9 +66,10 @@ const RESPONSE_SCHEMA = {
           name: localized,
           unit: { type: "STRING", enum: ["g", "kg", "ml", "l", "pcs", "egg"] },
           net: { type: "NUMBER" },
+          main: { type: "BOOLEAN" },
         },
-        required: ["name", "unit", "net"],
-        propertyOrdering: ["name", "unit", "net"],
+        required: ["name", "unit", "net", "main"],
+        propertyOrdering: ["name", "unit", "net", "main"],
       },
     },
     steps: {
@@ -136,7 +137,7 @@ Rules:
 - name: product name as on the card, including batch size in brackets if printed, e.g. "Fish Bites (1 kg)" / "Фиш байтс (1 кг)". Use normal sentence/title case in all languages, never ALL CAPS.
 - cardNo, date, revision: from the card header; empty string if absent. Keep the date format as printed.
 - yieldAmount + yieldUnit: the finished dish / product weight printed on the card (usually the total under the ingredients table). yieldLabel: short human label built from the yield, such as "1 batch ≈ 1.43 kg" (not the table heading); mention pieces or portions only if printed.
-- ingredients: in the printed order. net = the amount that goes into the dish; if the card has both GROSS and NET columns, take NET and ignore GROSS. unit: g, kg, ml, l, pcs; use "egg" for eggs counted in pieces.
+- ingredients: in the printed order. net = the amount that goes into the dish; if the card has both GROSS and NET columns, take NET and ignore GROSS. unit: g, kg, ml, l, pcs; use "egg" for eggs counted in pieces. main = true for exactly one ingredient: the main raw product the recipe is calculated for (usually the meat or fish, e.g. 1000 g fillet or chicken thigh); false for all others.
 - facts: the highlighted key parameters (portion weight, piece weight, length, storage, cooking time/temperature), max 4. value includes the unit, e.g. "120–130 g". Use icon "weight" for weights, "length" for sizes, "storage" for storage temperature/shelf life.
 - steps: every numbered step of the cooking technology in order EXCEPT a final storage-only step (put that into storage instead). title = step heading. items = one entry per bullet / numbered line, short imperative sentences; keep sub-lists as separate items (e.g. "1) flour;"). Include EVERY line of the step, including intro lines such as "After the coating is firm:" and final lines such as "Store in the freezer." — never skip or merge lines.
 - storage: storage rules (freezer, fridge, after thawing, do not refreeze). title like "Freezer −18 °C", text like "up to 180 days" or null.

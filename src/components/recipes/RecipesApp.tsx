@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
   applyRecipeOverrides,
+  baseUnitAmount,
+  mainIngredientIndex,
   mergeRecipes,
   type Recipe,
   type RecipeFactIcon,
@@ -56,6 +58,12 @@ export function unitLabel(unit: string, lang: RecipeLang): string {
   return UNIT_LABELS[unit]?.[lang] ?? unit;
 }
 
+/** "1 000 g — Basa fillet": the main product amount the card is calculated for. */
+function mainIngredientLine(recipe: Recipe, lang: RecipeLang): string {
+  const main = recipe.ingredients[mainIngredientIndex(recipe)];
+  return main ? `${formatAmount(main.amount, lang)} ${unitLabel(main.unit, lang)} — ${main.name[lang]}` : "";
+}
+
 /** Second language printed under names, so mixed RU/VN staff can read the same card. */
 function secondaryLang(lang: RecipeLang): RecipeLang {
   return lang === "vn" ? "en" : "vn";
@@ -80,7 +88,6 @@ export function RecipesApp() {
   const [kind, setKind] = useState<RecipeKind>("dish");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [multiplier, setMultiplier] = useState("1");
   const [hydrated, setHydrated] = useState(false);
   const [overrides, setOverrides] = useState<RecipeOverrides | null>(null);
   const [stored, setStored] = useState<StoredRecipes | null>(null);
@@ -127,7 +134,6 @@ export function RecipesApp() {
 
   const openRecipe = (recipe: Recipe | null) => {
     setOpenId(recipe?.id ?? null);
-    setMultiplier("1");
     writeRecipeToUrl(recipe?.id ?? null);
     window.scrollTo({ top: 0 });
   };
@@ -166,11 +172,10 @@ export function RecipesApp() {
         <div className="main">
           {opened ? (
             <RecipeDetail
+              key={opened.id}
               recipe={opened}
               lang={recipeLang}
               t={t}
-              multiplier={multiplier}
-              onMultiplierChange={setMultiplier}
               onBack={() => openRecipe(null)}
             />
           ) : (
@@ -215,7 +220,7 @@ export function RecipesApp() {
                       )}
                       <span className="recipeItemText">
                         <b>{recipe.name[recipeLang]}</b>
-                        <span>{recipe.yield.label?.[recipeLang]}</span>
+                        <span>{mainIngredientLine(recipe, recipeLang)}</span>
                         {recipe.example ? (
                           <span className="exampleBadge">{t("recipes_example_short")}</span>
                         ) : null}
@@ -237,20 +242,40 @@ type DetailProps = {
   recipe: Recipe;
   lang: RecipeLang;
   t: (key: string) => string;
-  multiplier: string;
-  onMultiplierChange: (value: string) => void;
   onBack: () => void;
 };
 
-function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack }: DetailProps) {
-  const factor = Math.max(0, Number(multiplier.replace(",", ".")) || 0);
+/** kg + g for weights, l + ml for volumes, a single field for pieces. */
+function scaleUnits(unit: string): { big: string; small: string } | null {
+  if (unit === "g" || unit === "kg") return { big: "kg", small: "g" };
+  if (unit === "ml" || unit === "l") return { big: "l", small: "ml" };
+  return null;
+}
+
+function parseInput(value: string): number {
+  return Math.max(0, Number(value.replace(",", ".")) || 0);
+}
+
+function initialScaleInput(base: number, split: boolean) {
+  if (!split) return { big: String(base), small: "" };
+  return { big: String(Math.floor(base / 1000)), small: String(Math.round((base % 1000) * 10) / 10) };
+}
+
+function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
   const second = secondaryLang(lang);
-  const step = (delta: number) => {
-    const next = Math.max(1, Math.round(factor) + delta);
-    onMultiplierChange(String(next));
+  const main = recipe.ingredients[mainIngredientIndex(recipe)];
+  const units = main ? scaleUnits(main.unit) : null;
+  const base = main ? baseUnitAmount(main.amount, main.unit) : 1;
+  const [input, setInput] = useState(() => initialScaleInput(base, !!units));
+  const entered = units ? parseInput(input.big) * 1000 + parseInput(input.small) : parseInput(input.big);
+  const factor = base > 0 ? entered / base : 1;
+  const isBase = Math.abs(factor - 1) < 1e-9;
+  const amount = (value: number, unit: string) => {
+    const scaled = value * factor;
+    const shown = !isBase && (unit === "egg" || unit === "pcs") ? Math.max(scaled > 0 ? 1 : 0, Math.round(scaled)) : scaled;
+    return `${formatAmount(shown, lang)} ${unitLabel(unit, lang)}`;
   };
-  const amount = (value: number, unit: string) =>
-    `${formatAmount(value * factor, lang)} ${unitLabel(unit, lang)}`;
+  const baseLabel = main ? `${formatAmount(main.amount, lang)} ${unitLabel(main.unit, lang)}` : "";
 
   return (
     <div className="recipeDetail">
@@ -306,30 +331,46 @@ function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack 
         </div>
       ) : null}
 
-      <div className="card recipeScale">
-        <label htmlFor="recipe-multiplier">
-          {t(recipe.kind === "dish" ? "recipes_scale_dish" : "recipes_scale_prep")}
-        </label>
-        <div className="scaleControls">
-          <button type="button" className="white" onClick={() => step(-1)}>
-            −
-          </button>
-          <input
-            id="recipe-multiplier"
-            inputMode="decimal"
-            value={multiplier}
-            onChange={(event) => onMultiplierChange(event.target.value)}
-          />
-          <button type="button" className="white" onClick={() => step(1)}>
-            +
-          </button>
-        </div>
-        {recipe.yield.label ? (
-          <div className="scaleYield">
-            {t("recipes_yield")}: {recipe.yield.label[lang]}
+      {main ? (
+        <div className="card recipeScale">
+          <label htmlFor="recipe-scale-big">
+            <small>{t(units ? "recipes_scale_main_weight" : "recipes_scale_main_count")}</small>
+            <b>{main.name[lang]}</b>
+            <i>{main.name[second]}</i>
+          </label>
+          <div className="scaleInputs">
+            <span>
+              <input
+                id="recipe-scale-big"
+                inputMode="decimal"
+                value={input.big}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => setInput((prev) => ({ ...prev, big: event.target.value }))}
+              />
+              <small>{unitLabel(units?.big ?? main.unit, lang)}</small>
+            </span>
+            {units ? (
+              <span>
+                <input
+                  inputMode="decimal"
+                  value={input.small}
+                  onFocus={(event) => event.target.select()}
+                  onChange={(event) => setInput((prev) => ({ ...prev, small: event.target.value }))}
+                />
+                <small>{unitLabel(units.small, lang)}</small>
+              </span>
+            ) : null}
           </div>
-        ) : null}
-      </div>
+          <div className="scaleYield">
+            {t("recipes_scale_base")}: {baseLabel}
+            {!isBase ? (
+              <button type="button" className="scaleReset" onClick={() => setInput(initialScaleInput(base, !!units))}>
+                {t("recipes_scale_reset")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="tcSection">{t("recipes_ingredients")}</div>
       <div className="tcTableWrap">
@@ -343,7 +384,7 @@ function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack 
           </thead>
           <tbody>
             {recipe.ingredients.map((ingredient, index) => (
-              <tr key={index}>
+              <tr key={index} className={ingredient === main ? "tcMain" : undefined}>
                 <td className="tcNum">{index + 1}</td>
                 <td className="tcName">
                   <b>{ingredient.name[lang]}</b>
@@ -364,7 +405,11 @@ function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack 
       </div>
 
       <div className="tcSection">{t("recipes_steps")}</div>
-      {factor !== 1 ? <div className="tcStepsNote">{t("recipes_steps_scale_note")}</div> : null}
+      {!isBase && main ? (
+        <div className="tcStepsNote">
+          {t("recipes_steps_scale_note").replace("{base}", `${baseLabel} — ${main.name[lang]}`)}
+        </div>
+      ) : null}
       <div className="tcSteps">
         {recipe.steps.map((stepItem, index) => (
           <section key={index} className="tcStep">

@@ -78,6 +78,7 @@ export async function POST(request: Request) {
         name: ingredient.name,
         amount: ingredient.net,
         unit: ingredient.unit,
+        ...(ingredient.main ? { main: true } : {}),
       })),
       steps: extracted.steps.map((step, index) => ({
         title: step.title,

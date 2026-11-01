@@ -66,13 +66,16 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
   const yieldAmount = amount(yieldSource.amount);
   if (!id || !kind || !hasText(name) || yieldAmount === null) return null;
 
+  let hasMain = false;
   const ingredients = list(source.ingredients).flatMap((item) => {
     const row = (item ?? {}) as Record<string, unknown>;
     const rowName = localized(row.name);
     const net = amount(row.amount);
     const unit = UNITS.includes(String(row.unit)) ? String(row.unit) : "g";
     if (!hasText(rowName) || net === null) return [];
-    return [{ name: rowName, amount: net, unit }];
+    const main = row.main === true && !hasMain;
+    if (main) hasMain = true;
+    return [{ name: rowName, amount: net, unit, ...(main ? { main: true } : {}) }];
   });
 
   const steps = list(source.steps).flatMap((item) => {

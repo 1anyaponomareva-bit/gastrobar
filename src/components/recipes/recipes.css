@@ -334,7 +334,14 @@
 }
 
 .recipes-app .formGrid.yield {
-  grid-template-columns: 110px 80px 1fr;
+  grid-template-columns: 1fr 90px;
+}
+
+.recipes-app .formMain {
+  padding: 10px;
+  border: 2px solid #ffcf33;
+  border-radius: 12px;
+  background: #fffbea;
 }
 
 .recipes-app .formRow {
@@ -465,13 +472,8 @@
     grid-template-columns: 56px 1fr 1fr 32px;
   }
 
-  .recipes-app .formGrid.two,
-  .recipes-app .formGrid.yield {
+  .recipes-app .formGrid.two {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .recipes-app .formGrid.yield label:last-child {
-    grid-column: 1 / -1;
   }
 
   .recipes-app .adminRecipeActions {
@@ -692,42 +694,85 @@
   line-height: 1;
 }
 
+.recipes-app .recipeScale {
+  border: 2px solid #ffcf33;
+}
+
 .recipes-app .recipeScale label {
-  display: block;
+  display: grid;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.recipes-app .recipeScale label small {
   font-size: 11px;
   font-weight: 900;
   color: #777;
   text-transform: uppercase;
-  margin-bottom: 8px;
 }
 
-.recipes-app .scaleControls {
+.recipes-app .recipeScale label b {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.recipes-app .recipeScale label i {
+  color: #888;
+  font-size: 13px;
+}
+
+.recipes-app .scaleInputs {
   display: grid;
-  grid-template-columns: 56px 1fr 56px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.recipes-app .scaleInputs span {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.recipes-app .scaleControls button:not(.statusBox) {
-  font-size: 24px;
-  padding: 6px;
+.recipes-app .scaleInputs input {
+  width: 100%;
+  min-width: 0;
+  height: 56px;
   border: 1px solid #ddd;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
 }
 
-.recipes-app .scaleControls input {
-  width: 100%;
-  height: 48px;
-  border: 1px solid #ddd;
-  border-radius: 11px;
-  text-align: center;
-  font-size: 22px;
+.recipes-app .scaleInputs small {
+  min-width: 26px;
+  font-size: 18px;
   font-weight: 900;
 }
 
 .recipes-app .scaleYield {
-  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
   color: #555;
   font-weight: 700;
   font-size: 14px;
+}
+
+.recipes-app button.scaleReset:not(.statusBox) {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+}
+
+.recipes-app .tcTable tr.tcMain td {
+  background: #fff7d6;
 }
 
 .recipes-app .tcSection {

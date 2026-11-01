@@ -8,6 +8,8 @@ export type RecipeIngredient = {
   name: LocalizedText;
   /** Amount for the base yield; scaled linearly. */
   amount: number;
+  /** The main raw product the card is calculated for; staff enter how much of it they have. */
+  main?: boolean;
   unit: string;
   note?: LocalizedText;
 };
@@ -85,6 +87,28 @@ export function ingredientKey(ingredient: RecipeIngredient): string {
 }
 
 const WEIGHT_UNITS = new Set(["g", "ml"]);
+
+/** Grams for g/kg, millilitres for ml/l, otherwise the amount as is. */
+export function baseUnitAmount(amount: number, unit: string): number {
+  return unit === "kg" || unit === "l" ? amount * 1000 : amount;
+}
+
+/** Index of the main ingredient: the flagged one, otherwise the heaviest by weight or volume. */
+export function mainIngredientIndex(recipe: Recipe): number {
+  const flagged = recipe.ingredients.findIndex((ingredient) => ingredient.main);
+  if (flagged >= 0) return flagged;
+  let best = 0;
+  let bestAmount = -1;
+  recipe.ingredients.forEach((ingredient, index) => {
+    if (!["g", "kg", "ml", "l"].includes(ingredient.unit)) return;
+    const amount = baseUnitAmount(ingredient.amount, ingredient.unit);
+    if (amount > bestAmount) {
+      best = index;
+      bestAmount = amount;
+    }
+  });
+  return best;
+}
 
 export function applyRecipeOverrides(recipe: Recipe, overrides: RecipeOverrides | null): Recipe {
   const edits = overrides?.[recipe.id];

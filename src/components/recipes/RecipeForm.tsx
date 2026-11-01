@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type {
-  LocalizedText,
-  Recipe,
-  RecipeFactIcon,
-  RecipeKind,
-  RecipeLang,
-  RecipeStorageIcon,
+import {
+  mainIngredientIndex,
+  type LocalizedText,
+  type Recipe,
+  type RecipeFactIcon,
+  type RecipeKind,
+  type RecipeLang,
+  type RecipeStorageIcon,
 } from "@/data/recipes";
 import { getAssetUrl } from "@/lib/appVersion";
 
@@ -46,7 +47,7 @@ type FormDraft = {
   yieldUnit: string;
   yieldLabel: LocalizedText;
   facts: { icon: RecipeFactIcon; label: LocalizedText; value: LocalizedText }[];
-  ingredients: { name: LocalizedText; unit: string; amount: string }[];
+  ingredients: { name: LocalizedText; unit: string; amount: string; main?: boolean }[];
   steps: { title: LocalizedText; photo?: string; items: LocalizedText }[];
   storage: { icon: RecipeStorageIcon; title: LocalizedText; text: LocalizedText }[];
 };
@@ -87,6 +88,7 @@ export function toFormDraft(recipe: Recipe): FormDraft {
       name: { ...ingredient.name },
       unit: ingredient.unit,
       amount: String(ingredient.amount),
+      main: ingredient.main,
     })),
     steps: recipe.steps.map((step) => ({
       title: step.title ? { ...step.title } : emptyText(),
@@ -101,8 +103,15 @@ export function toFormDraft(recipe: Recipe): FormDraft {
   };
 }
 
+function draftMainIndex(draft: FormDraft): number {
+  return mainIngredientIndex({
+    ingredients: draft.ingredients.map((row) => ({ ...row, amount: Number(row.amount.replace(",", ".")) || 0 })),
+  } as Recipe);
+}
+
 /** Payload for POST /api/recipes-admin/recipes; the server validates and fills missing translations. */
 function fromFormDraft(draft: FormDraft) {
+  const mainIndex = draftMainIndex(draft);
   return {
     id: draft.id,
     kind: draft.kind,
@@ -112,7 +121,12 @@ function fromFormDraft(draft: FormDraft) {
     photo: draft.photo,
     yield: { amount: draft.yieldAmount, unit: draft.yieldUnit, label: draft.yieldLabel },
     facts: draft.facts,
-    ingredients: draft.ingredients.map((row) => ({ name: row.name, unit: row.unit, amount: row.amount })),
+    ingredients: draft.ingredients.map((row, index) => ({
+      name: row.name,
+      unit: row.unit,
+      amount: row.amount,
+      main: index === mainIndex,
+    })),
     steps: draft.steps.map((step) => ({ title: step.title, photo: step.photo, items: splitItems(step.items) })),
     storage: draft.storage,
   };
@@ -206,6 +220,7 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
   const [lang, setLang] = useState<RecipeLang>("ru");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mainIndex = draftMainIndex(draft);
 
   const patch = (update: Partial<FormDraft>) => setDraft((prev) => ({ ...prev, ...update }));
   const setText = (value: LocalizedText, text: string): LocalizedText => ({ ...value, [lang]: text });
@@ -334,13 +349,6 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
               ))}
             </select>
           </label>
-          <label>
-            <span>{t("recipes_admin_f_yield_label")}</span>
-            <input
-              value={draft.yieldLabel[lang]}
-              onChange={(event) => patch({ yieldLabel: setText(draft.yieldLabel, event.target.value) })}
-            />
-          </label>
         </div>
       </section>
 
@@ -381,6 +389,24 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
 
       <div className="tcSection">{t("recipes_ingredients")}</div>
       <section className="card formSection">
+        {draft.ingredients.length ? (
+          <label className="formMain">
+            <span>{t("recipes_admin_f_main")}</span>
+            <select
+              value={mainIndex}
+              onChange={(event) => {
+                const selected = Number(event.target.value);
+                patch({ ingredients: draft.ingredients.map((row, index) => ({ ...row, main: index === selected })) });
+              }}
+            >
+              {draft.ingredients.map((row, index) => (
+                <option key={index} value={index}>
+                  {row.name[lang] || row.name.ru || row.name.en || `#${index + 1}`}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <div className="formRow ingredient head">
           <span />
           <span>{t("recipes_col_name")}</span>
