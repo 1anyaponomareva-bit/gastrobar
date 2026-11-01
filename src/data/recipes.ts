@@ -55,6 +55,42 @@ export type Recipe = {
   example?: boolean;
 };
 
+export type IngredientOverride = { amount?: number; gross?: number };
+
+/** recipeId → ingredient key → edited amounts. Stored on the server, edited in /recipes/admin. */
+export type RecipeOverrides = Record<string, Record<string, IngredientOverride>>;
+
+/** Stable id of an ingredient inside its recipe; overrides are keyed by it. */
+export function ingredientKey(ingredient: RecipeIngredient): string {
+  return ingredient.name.en
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const WEIGHT_UNITS = new Set(["g", "ml"]);
+
+export function applyRecipeOverrides(recipe: Recipe, overrides: RecipeOverrides | null): Recipe {
+  const edits = overrides?.[recipe.id];
+  if (!edits || !Object.keys(edits).length) return recipe;
+
+  let yieldDelta = 0;
+  const ingredients = recipe.ingredients.map((ingredient) => {
+    const edit = edits[ingredientKey(ingredient)];
+    if (!edit) return ingredient;
+    const amount = edit.amount ?? ingredient.amount;
+    if (WEIGHT_UNITS.has(ingredient.unit)) yieldDelta += amount - ingredient.amount;
+    return { ...ingredient, amount, gross: edit.gross ?? (edit.amount !== undefined ? undefined : ingredient.gross) };
+  });
+
+  const recipeYield =
+    recipe.yield.unit === "g" && yieldDelta
+      ? { ...recipe.yield, amount: Math.round((recipe.yield.amount + yieldDelta) * 10) / 10 }
+      : recipe.yield;
+
+  return { ...recipe, ingredients, yield: recipeYield };
+}
+
 const l = (ru: string, en: string, vn: string): LocalizedText => ({ ru, en, vn });
 
 const SAUSAGE_PHOTO = "/recipes/chicken-sausage";

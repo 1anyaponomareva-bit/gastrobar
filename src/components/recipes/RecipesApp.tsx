@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
   RECIPES,
+  applyRecipeOverrides,
   type Recipe,
   type RecipeFactIcon,
   type RecipeKind,
   type RecipeLang,
+  type RecipeOverrides,
   type RecipeStorageIcon,
 } from "@/data/recipes";
 import { getAssetUrl } from "@/lib/appVersion";
@@ -49,7 +51,7 @@ function formatAmount(value: number, lang: RecipeLang): string {
   );
 }
 
-function unitLabel(unit: string, lang: RecipeLang): string {
+export function unitLabel(unit: string, lang: RecipeLang): string {
   return UNIT_LABELS[unit]?.[lang] ?? unit;
 }
 
@@ -79,6 +81,7 @@ export function RecipesApp() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [multiplier, setMultiplier] = useState("1");
   const [hydrated, setHydrated] = useState(false);
+  const [overrides, setOverrides] = useState<RecipeOverrides | null>(null);
 
   useEffect(() => {
     const id = readRecipeFromUrl();
@@ -88,17 +91,29 @@ export function RecipesApp() {
       setOpenId(recipe.id);
     }
     setHydrated(true);
+
+    fetch("/api/recipes/overrides", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { overrides?: RecipeOverrides } | null) => {
+        if (data?.overrides) setOverrides(data.overrides);
+      })
+      .catch(() => {});
   }, []);
+
+  const recipes = useMemo(
+    () => RECIPES.map((recipe) => applyRecipeOverrides(recipe, overrides)),
+    [overrides],
+  );
 
   const visible = useMemo(() => {
     const query = search.toLowerCase().trim();
-    return RECIPES.filter(
+    return recipes.filter(
       (recipe) =>
         recipe.kind === kind &&
         (!query ||
           Object.values(recipe.name).some((name) => name.toLowerCase().includes(query))),
     );
-  }, [kind, search]);
+  }, [recipes, kind, search]);
 
   const openRecipe = (recipe: Recipe | null) => {
     setOpenId(recipe?.id ?? null);
@@ -107,7 +122,7 @@ export function RecipesApp() {
     window.scrollTo({ top: 0 });
   };
 
-  const opened = RECIPES.find((recipe) => recipe.id === openId) ?? null;
+  const opened = recipes.find((recipe) => recipe.id === openId) ?? null;
 
   if (!hydrated) {
     return (
