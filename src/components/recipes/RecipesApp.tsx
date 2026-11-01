@@ -146,7 +146,15 @@ export function RecipesApp() {
     <div className="staff-inventory staff-inventory-page recipes-app">
       <div className="app">
         <div className="top">
-          <div className="langRow">
+          <div className="langRow recipesLangRow">
+            <a
+              className="adminEntry"
+              href="/recipes/admin"
+              title={t("recipes_admin_login_title")}
+              aria-label={t("recipes_admin_login_title")}
+            >
+              🔐 {t("recipes_admin_entry")}
+            </a>
             <StaffLanguageFlags />
           </div>
           <div className="venueLogo">
@@ -217,10 +225,6 @@ export function RecipesApp() {
                   ))}
                 </div>
               )}
-
-              <a className="adminEntry" href="/recipes/admin">
-                🔐 {t("recipes_admin_login_title")}
-              </a>
             </>
           )}
         </div>

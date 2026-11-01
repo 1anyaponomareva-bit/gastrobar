@@ -164,17 +164,22 @@
   margin-top: 12px;
 }
 
+.recipes-app .recipesLangRow {
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
 .recipes-app .adminEntry {
-  display: block;
-  margin: 28px 0 20px;
-  padding: 14px;
-  border: 1px solid #ddd;
-  border-radius: 14px;
-  background: #fff;
-  color: #333;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid #ffffff33;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 14px;
   font-weight: 800;
-  text-align: center;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .recipes-app .adminOpenCard {
