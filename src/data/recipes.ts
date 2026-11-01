@@ -58,6 +58,7 @@ export type Recipe = {
 const l = (ru: string, en: string, vn: string): LocalizedText => ({ ru, en, vn });
 
 const SAUSAGE_PHOTO = "/recipes/chicken-sausage";
+const FISH_BITES_PHOTO = "/recipes/fish-bites";
 
 export const RECIPES: Recipe[] = [
   {
@@ -243,6 +244,139 @@ export const RECIPES: Recipe[] = [
       { icon: "freezer", title: l("Морозильник −18 °C", "Freezer −18 °C", "Ngăn đông −18 °C"), text: l("до 180 дней", "up to 180 days", "tối đa 180 ngày") },
       { icon: "thaw", title: l("После разморозки", "After thawing", "Sau khi rã đông"), text: l("7 дней", "7 days", "7 ngày") },
       { icon: "no-refreeze", title: l("Повторно не замораживать", "Do not refreeze", "Không tái đông") },
+    ],
+  },
+  {
+    id: "fish-bites",
+    kind: "prep",
+    meta: { cardNo: "GF-PR-002", date: "01.11.2026", revision: "01" },
+    name: l("Фиш байтс (1 кг)", "Fish Bites (1 kg)", "Cá tẩm bột chiên (1 kg)"),
+    photo: `${FISH_BITES_PHOTO}/hero.jpg`,
+    yield: {
+      amount: 1429,
+      unit: "g",
+      label: l("1 партия ≈ 1,43 кг", "1 batch ≈ 1.43 kg", "1 mẻ ≈ 1,43 kg"),
+    },
+    facts: [
+      {
+        icon: "weight",
+        label: l("Вес порции", "Portion weight", "Trọng lượng 1 phần"),
+        value: l("170–185 г (5 шт)", "170–185 g (5 pieces)", "170–185 g (5 miếng)"),
+      },
+      { icon: "weight", label: l("Вес 1 кусочка", "Piece weight", "Trọng lượng 1 miếng"), value: l("25–28 г", "25–28 g", "25–28 g") },
+      { icon: "storage", label: l("Хранение", "Storage", "Bảo quản"), value: l("−18 °C, до 180 дней", "−18 °C, up to 180 days", "−18 °C, tối đa 180 ngày") },
+    ],
+    ingredients: [
+      { name: l("Сахар", "Sugar", "Đường"), amount: 5, unit: "g" },
+      { name: l("Чёрный перец молотый", "Black pepper (powder)", "Tiêu đen (bột)"), amount: 2, unit: "g" },
+      { name: l("Чесночный порошок", "Garlic powder", "Bột tỏi"), amount: 2, unit: "g" },
+      { name: l("Соль", "Salt", "Muối"), amount: 8, unit: "g" },
+      { name: l("Луковый порошок", "Onion powder", "Bột hành"), amount: 2, unit: "g" },
+      { name: l("Яйца", "Eggs", "Trứng gà"), amount: 3, unit: "egg" },
+      { name: l("Вода", "Water", "Nước"), amount: 50, unit: "ml" },
+      { name: l("Мука", "Flour", "Bột mì"), amount: 100, unit: "g" },
+      { name: l("Панко", "Panko", "Bột chiên xù (Panko)"), amount: 260, unit: "g" },
+      { name: l("Филе басы", "Basa fillet", "Phi lê cá basa"), amount: 1000, unit: "g" },
+    ],
+    steps: [
+      {
+        title: l("Разморозка", "Defrosting", "Rã đông"),
+        photo: `${FISH_BITES_PHOTO}/step-1.jpg`,
+        items: [
+          l(
+            "Разморозить филе басы в холодильнике (2–4 °C).",
+            "Defrost the basa fillet in the refrigerator (2–4 °C).",
+            "Rã đông phi lê cá basa trong tủ lạnh (2–4 °C).",
+          ),
+          l("Слить жидкость.", "Drain the liquid.", "Để ráo nước."),
+          l("Тщательно обсушить.", "Pat dry thoroughly.", "Thấm khô hoàn toàn."),
+        ],
+      },
+      {
+        title: l("Нарезка", "Cutting", "Cắt nhỏ"),
+        photo: `${FISH_BITES_PHOTO}/step-2.jpg`,
+        items: [
+          l(
+            "Разделить филе на спинку и брюшко.",
+            "Separate the fillet along the back (loin) and belly parts.",
+            "Tách phi lê thành phần lưng và phần bụng riêng.",
+          ),
+          l(
+            "Спинку нарезать кусочками по 25–28 г.",
+            "Cut the back (loin) part into pieces of 25–28 g each.",
+            "Cắt phần lưng thành miếng 25–28 g.",
+          ),
+        ],
+      },
+      {
+        title: l("Маринование", "Seasoning", "Ướp gia vị"),
+        photo: `${FISH_BITES_PHOTO}/step-3.jpg`,
+        items: [
+          l("Смешать все специи и соль.", "Mix all spices and salt.", "Trộn đều các loại gia vị và muối."),
+          l(
+            "Добавить к рыбе и хорошо перемешать, чтобы специи легли равномерно.",
+            "Add to the fish and mix well to coat evenly.",
+            "Thêm vào cá, trộn đều để gia vị thấm đều.",
+          ),
+          l("Мариновать в холодильнике 25 минут.", "Refrigerate and marinate for 25 minutes.", "Ướp trong tủ lạnh 25 phút."),
+          l(
+            "Достать из холодильника и слегка перемешать ещё раз.",
+            "Remove from the refrigerator and mix lightly again.",
+            "Lấy ra khỏi tủ lạnh và trộn nhẹ lại.",
+          ),
+        ],
+      },
+      {
+        title: l("Панировка", "Breading", "Tẩm bột"),
+        photo: `${FISH_BITES_PHOTO}/step-4.jpg`,
+        items: [
+          l(
+            "Панировать в один слой в таком порядке:",
+            "Bread in one layer in the following order:",
+            "Tẩm bột theo một lớp, theo thứ tự:",
+          ),
+          l("1) мука;", "1) flour;", "1) bột mì;"),
+          l("2) яичная смесь;", "2) egg mixture;", "2) hỗn hợp trứng;"),
+          l("3) панко.", "3) panko breadcrumbs.", "3) bột chiên xù (panko)."),
+          l(
+            "Разложить на противень так, чтобы кусочки не касались друг друга.",
+            "Arrange the pieces on a tray without touching each other.",
+            "Xếp các miếng lên khay, không để chúng chạm vào nhau.",
+          ),
+        ],
+      },
+      {
+        title: l("Заморозка", "Freezing", "Cấp đông"),
+        photo: `${FISH_BITES_PHOTO}/step-5.jpg`,
+        items: [
+          l(
+            "Поставить противень в морозильник до полного замерзания.",
+            "Place the tray in the freezer until completely frozen.",
+            "Đặt khay vào ngăn đông đến khi đông cứng hoàn toàn.",
+          ),
+        ],
+      },
+      {
+        title: l("Упаковка", "Packing", "Đóng gói"),
+        photo: `${FISH_BITES_PHOTO}/step-6.jpg`,
+        items: [
+          l("Когда панировка затвердеет:", "After the coating is firm:", "Sau khi lớp bột đã cứng:"),
+          l(
+            "Упаковать в пищевые пакеты по 5 шт (общий вес 170–185 г).",
+            "Pack into food bags, 5 pieces per bag (total weight 170–185 g).",
+            "Đóng gói vào túi thực phẩm, mỗi túi 5 miếng (tổng trọng lượng 170–185 g).",
+          ),
+          l(
+            "Плотно завязать пакет, выпустив лишний воздух.",
+            "Tie the bag tightly, removing excess air.",
+            "Buộc chặt túi, loại bỏ không khí.",
+          ),
+          l("Хранить в морозильнике.", "Store in the freezer.", "Bảo quản trong ngăn đông."),
+        ],
+      },
+    ],
+    storage: [
+      { icon: "freezer", title: l("Морозильник −18 °C", "Freezer −18 °C", "Ngăn đông −18 °C"), text: l("до 180 дней", "up to 180 days", "tối đa 180 ngày") },
     ],
   },
   {

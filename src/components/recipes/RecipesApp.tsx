@@ -25,6 +25,7 @@ const UNIT_LABELS: Record<string, Record<RecipeLang, string>> = {
   ml: { ru: "мл", en: "ml", vn: "ml" },
   l: { ru: "л", en: "l", vn: "l" },
   pcs: { ru: "шт", en: "pcs", vn: "cái" },
+  egg: { ru: "шт", en: "pcs", vn: "quả" },
 };
 
 const FACT_ICONS: Record<RecipeFactIcon, string> = {
