@@ -116,7 +116,10 @@ export function RecipesAdminApp() {
     <div className="staff-inventory staff-inventory-page recipes-app">
       <div className="app">
         <div className="top">
-          <div className="langRow">
+          <div className="langRow recipesLangRow">
+            <a className="adminEntry" href="/recipes">
+              ← {t("recipes_title")}
+            </a>
             <StaffLanguageFlags />
           </div>
           <div className="venueLogo">
