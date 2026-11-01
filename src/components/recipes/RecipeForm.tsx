@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type {
   LocalizedText,
   Recipe,
@@ -118,6 +118,71 @@ function fromFormDraft(draft: FormDraft) {
   };
 }
 
+const AUTO_SCROLL_EDGE = 90;
+/** The sticky publish bar covers the bottom of the screen. */
+const AUTO_SCROLL_BOTTOM_EDGE = 160;
+
+/** Reorders a list by dragging a handle with a finger or mouse; scrolls the page near the screen edges. */
+function useDragReorder(onMove: (from: number, to: number) => void) {
+  const rowRefs = useRef<(HTMLElement | null)[]>([]);
+  const drag = useRef<{ index: number; y: number } | null>(null);
+  const frame = useRef<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const onMoveRef = useRef(onMove);
+  onMoveRef.current = onMove;
+
+  const retarget = () => {
+    const current = drag.current;
+    if (!current) return;
+    let target = 0;
+    rowRefs.current.forEach((row, index) => {
+      if (!row || index === current.index) return;
+      const rect = row.getBoundingClientRect();
+      if (current.y > rect.top + rect.height / 2) target += 1;
+    });
+    if (target !== current.index) {
+      onMoveRef.current(current.index, target);
+      current.index = target;
+      setDragIndex(target);
+    }
+  };
+
+  const tick = () => {
+    const current = drag.current;
+    if (!current) return;
+    if (current.y < AUTO_SCROLL_EDGE) window.scrollBy(0, -10);
+    else if (current.y > window.innerHeight - AUTO_SCROLL_BOTTOM_EDGE) window.scrollBy(0, 10);
+    retarget();
+    frame.current = requestAnimationFrame(tick);
+  };
+
+  const stop = () => {
+    drag.current = null;
+    setDragIndex(null);
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    frame.current = null;
+  };
+
+  useEffect(() => stop, []);
+
+  const handleProps = (index: number) => ({
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      drag.current = { index, y: event.clientY };
+      setDragIndex(index);
+      frame.current = requestAnimationFrame(tick);
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
+      if (drag.current) drag.current.y = event.clientY;
+    },
+    onPointerUp: stop,
+    onPointerCancel: stop,
+  });
+
+  return { rowRefs, dragIndex, handleProps };
+}
+
 type RecipeFormProps = {
   initial: Recipe;
   t: (key: string) => string;
@@ -149,6 +214,15 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
   function removeFromList(key: "facts" | "ingredients" | "steps" | "storage", index: number) {
     setDraft((prev) => ({ ...prev, [key]: prev[key].filter((_, itemIndex) => itemIndex !== index) }));
   }
+
+  const ingredientDrag = useDragReorder((from, to) =>
+    setDraft((prev) => {
+      const ingredients = [...prev.ingredients];
+      const [moved] = ingredients.splice(from, 1);
+      ingredients.splice(to, 0, moved);
+      return { ...prev, ingredients };
+    }),
+  );
 
   const save = async () => {
     setError(null);
@@ -298,13 +372,28 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
       <div className="tcSection">{t("recipes_ingredients")}</div>
       <section className="card formSection">
         <div className="formRow ingredient head">
+          <span />
           <span>{t("recipes_col_name")}</span>
           <span>{t("recipes_admin_f_unit")}</span>
           <span>{t("recipes_col_net")}</span>
           <span />
         </div>
         {draft.ingredients.map((row, index) => (
-          <div key={index} className="formRow ingredient">
+          <div
+            key={index}
+            ref={(element) => {
+              ingredientDrag.rowRefs.current[index] = element;
+            }}
+            className={`formRow ingredient ${ingredientDrag.dragIndex === index ? "dragging" : ""}`}
+          >
+            <button
+              type="button"
+              className="formDrag"
+              aria-label={t("recipes_admin_f_drag")}
+              {...ingredientDrag.handleProps(index)}
+            >
+              ⠿
+            </button>
             <input
               value={row.name[lang]}
               onChange={(event) => updateList("ingredients", index, { name: setText(row.name, event.target.value) })}

@@ -17,6 +17,14 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+/** Ingredients can be reordered, so the previous version is the one sharing a text in some language, preferably at the same position. */
+function matchPrevious(next: Record<string, unknown>, candidates: LocalizedText[], index: number): LocalizedText | undefined {
+  const shares = (candidate: LocalizedText | undefined) =>
+    !!candidate && LANGS.some((lang) => str(next[lang]) && str(next[lang]) === candidate[lang].trim());
+  if (shares(candidates[index])) return candidates[index];
+  return candidates.find(shares);
+}
+
 /** Pairs every localized text of the submitted recipe with the same text of the published version (by position). */
 function collectSlots(input: Record<string, unknown>, prev: Recipe | undefined): TextSlot[] {
   const slots: TextSlot[] = [];
@@ -31,7 +39,11 @@ function collectSlots(input: Record<string, unknown>, prev: Recipe | undefined):
     add(asText(fact)?.label, prev?.facts?.[index]?.label);
     add(asText(fact)?.value, prev?.facts?.[index]?.value);
   });
-  list(input.ingredients).forEach((row, index) => add(asText(row)?.name, prev?.ingredients[index]?.name));
+  const prevNames = prev?.ingredients.map((ingredient) => ingredient.name) ?? [];
+  list(input.ingredients).forEach((row, index) => {
+    const name = asText(asText(row)?.name);
+    add(name, name ? matchPrevious(name, prevNames, index) : undefined);
+  });
   list(input.steps).forEach((step, index) => {
     const prevStep = prev?.steps[index];
     add(asText(step)?.title, prevStep?.title);
