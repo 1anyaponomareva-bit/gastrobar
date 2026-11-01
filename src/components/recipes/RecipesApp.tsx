@@ -5,7 +5,7 @@ import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
   applyRecipeOverrides,
   baseUnitAmount,
-  mainIngredientIndex,
+  mainIngredientIndexes,
   mergeRecipes,
   type Recipe,
   type RecipeFactIcon,
@@ -58,10 +58,31 @@ export function unitLabel(unit: string, lang: RecipeLang): string {
   return UNIT_LABELS[unit]?.[lang] ?? unit;
 }
 
-/** "1 000 g — Basa fillet": the main product amount the card is calculated for. */
+/** kg + g for weights, l + ml for volumes, a single field for pieces. */
+function scaleUnits(unit: string): { big: string; small: string } | null {
+  if (unit === "g" || unit === "kg") return { big: "kg", small: "g" };
+  if (unit === "ml" || unit === "l") return { big: "l", small: "ml" };
+  return null;
+}
+
+/** Main products the card is scaled by; only those measured like the first one are summed. */
+function mainProducts(recipe: Recipe) {
+  const all = mainIngredientIndexes(recipe).map((index) => recipe.ingredients[index]);
+  const first = all[0];
+  if (!first) return null;
+  const family = (unit: string) => scaleUnits(unit)?.big ?? unit;
+  const mains = all.filter((ingredient) => family(ingredient.unit) === family(first.unit));
+  const units = scaleUnits(first.unit);
+  const base = mains.reduce((sum, ingredient) => sum + baseUnitAmount(ingredient.amount, ingredient.unit), 0);
+  return { mains, units, base, baseUnit: units ? units.small : first.unit };
+}
+
+/** "1 000 g — Fillet 70% + Fillet 30%": the main products amount the card is calculated for. */
 function mainIngredientLine(recipe: Recipe, lang: RecipeLang): string {
-  const main = recipe.ingredients[mainIngredientIndex(recipe)];
-  return main ? `${formatAmount(main.amount, lang)} ${unitLabel(main.unit, lang)} — ${main.name[lang]}` : "";
+  const main = mainProducts(recipe);
+  if (!main) return "";
+  const names = main.mains.map((ingredient) => ingredient.name[lang]).join(" + ");
+  return `${formatAmount(main.base, lang)} ${unitLabel(main.baseUnit, lang)} — ${names}`;
 }
 
 /** Second language printed under names, so mixed RU/VN staff can read the same card. */
@@ -245,13 +266,6 @@ type DetailProps = {
   onBack: () => void;
 };
 
-/** kg + g for weights, l + ml for volumes, a single field for pieces. */
-function scaleUnits(unit: string): { big: string; small: string } | null {
-  if (unit === "g" || unit === "kg") return { big: "kg", small: "g" };
-  if (unit === "ml" || unit === "l") return { big: "l", small: "ml" };
-  return null;
-}
-
 function parseInput(value: string): number {
   return Math.max(0, Number(value.replace(",", ".")) || 0);
 }
@@ -263,9 +277,9 @@ function initialScaleInput(base: number, split: boolean) {
 
 function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
   const second = secondaryLang(lang);
-  const main = recipe.ingredients[mainIngredientIndex(recipe)];
-  const units = main ? scaleUnits(main.unit) : null;
-  const base = main ? baseUnitAmount(main.amount, main.unit) : 1;
+  const main = mainProducts(recipe);
+  const units = main?.units ?? null;
+  const base = main?.base ?? 1;
   const [input, setInput] = useState(() => initialScaleInput(base, !!units));
   const entered = units ? parseInput(input.big) * 1000 + parseInput(input.small) : parseInput(input.big);
   const factor = base > 0 ? entered / base : 1;
@@ -275,7 +289,8 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
     const shown = !isBase && (unit === "egg" || unit === "pcs") ? Math.max(scaled > 0 ? 1 : 0, Math.round(scaled)) : scaled;
     return `${formatAmount(shown, lang)} ${unitLabel(unit, lang)}`;
   };
-  const baseLabel = main ? `${formatAmount(main.amount, lang)} ${unitLabel(main.unit, lang)}` : "";
+  const baseLabel = main ? `${formatAmount(main.base, lang)} ${unitLabel(main.baseUnit, lang)}` : "";
+  const mainNames = (target: RecipeLang) => main?.mains.map((ingredient) => ingredient.name[target]).join(" + ") ?? "";
 
   return (
     <div className="recipeDetail">
@@ -334,9 +349,17 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
       {main ? (
         <div className="card recipeScale">
           <label htmlFor="recipe-scale-big">
-            <small>{t(units ? "recipes_scale_main_weight" : "recipes_scale_main_count")}</small>
-            <b>{main.name[lang]}</b>
-            <i>{main.name[second]}</i>
+            <small>
+              {t(
+                !units
+                  ? "recipes_scale_main_count"
+                  : main.mains.length > 1
+                    ? "recipes_scale_main_total"
+                    : "recipes_scale_main_weight",
+              )}
+            </small>
+            <b>{mainNames(lang)}</b>
+            <i>{mainNames(second)}</i>
           </label>
           <div className="scaleInputs">
             <span>
@@ -347,7 +370,7 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
                 onFocus={(event) => event.target.select()}
                 onChange={(event) => setInput((prev) => ({ ...prev, big: event.target.value }))}
               />
-              <small>{unitLabel(units?.big ?? main.unit, lang)}</small>
+              <small>{unitLabel(units?.big ?? main.baseUnit, lang)}</small>
             </span>
             {units ? (
               <span>
@@ -383,7 +406,7 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
           </thead>
           <tbody>
             {recipe.ingredients.map((ingredient, index) => (
-              <tr key={index} className={ingredient === main ? "tcMain" : undefined}>
+              <tr key={index} className={main?.mains.includes(ingredient) ? "tcMain" : undefined}>
                 <td className="tcNum">{index + 1}</td>
                 <td className="tcName">
                   <b>{ingredient.name[lang]}</b>
@@ -406,7 +429,7 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
       <div className="tcSection">{t("recipes_steps")}</div>
       {!isBase && main ? (
         <div className="tcStepsNote">
-          {t("recipes_steps_scale_note").replace("{base}", `${baseLabel} — ${main.name[lang]}`)}
+          {t("recipes_steps_scale_note").replace("{base}", `${baseLabel} — ${mainNames(lang)}`)}
         </div>
       ) : null}
       <div className="tcSteps">

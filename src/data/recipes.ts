@@ -93,10 +93,18 @@ export function baseUnitAmount(amount: number, unit: string): number {
   return unit === "kg" || unit === "l" ? amount * 1000 : amount;
 }
 
-/** Index of the main ingredient: the flagged one, otherwise the heaviest by weight or volume. */
-export function mainIngredientIndex(recipe: Recipe): number {
-  const flagged = recipe.ingredients.findIndex((ingredient) => ingredient.main);
-  if (flagged >= 0) return flagged;
+export const MAX_MAIN_INGREDIENTS = 4;
+
+/** Indexes of the main ingredients: the flagged ones (up to 4), otherwise the heaviest by weight or volume. */
+export function mainIngredientIndexes(recipe: Recipe): number[] {
+  const flagged = recipe.ingredients
+    .map((ingredient, index) => (ingredient.main ? index : -1))
+    .filter((index) => index >= 0)
+    .slice(0, MAX_MAIN_INGREDIENTS);
+  return flagged.length ? flagged : recipe.ingredients.length ? [heaviestIngredientIndex(recipe)] : [];
+}
+
+function heaviestIngredientIndex(recipe: Recipe): number {
   let best = 0;
   let bestAmount = -1;
   recipe.ingredients.forEach((ingredient, index) => {

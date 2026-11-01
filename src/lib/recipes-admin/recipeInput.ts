@@ -5,6 +5,7 @@ import type {
   RecipeKind,
   RecipeStorageIcon,
 } from "@/data/recipes";
+import { MAX_MAIN_INGREDIENTS } from "@/data/recipes";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 
 const KINDS: RecipeKind[] = ["dish", "prep"];
@@ -66,15 +67,15 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
   const yieldAmount = amount(yieldSource.amount);
   if (!id || !kind || !hasText(name) || yieldAmount === null) return null;
 
-  let hasMain = false;
+  let mainCount = 0;
   const ingredients = list(source.ingredients).flatMap((item) => {
     const row = (item ?? {}) as Record<string, unknown>;
     const rowName = localized(row.name);
     const net = amount(row.amount);
     const unit = UNITS.includes(String(row.unit)) ? String(row.unit) : "g";
     if (!hasText(rowName) || net === null) return [];
-    const main = row.main === true && !hasMain;
-    if (main) hasMain = true;
+    const main = row.main === true && mainCount < MAX_MAIN_INGREDIENTS;
+    if (main) mainCount += 1;
     return [{ name: rowName, amount: net, unit, ...(main ? { main: true } : {}) }];
   });
 

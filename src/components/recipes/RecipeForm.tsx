@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
-  mainIngredientIndex,
+  MAX_MAIN_INGREDIENTS,
+  mainIngredientIndexes,
   type LocalizedText,
   type Recipe,
   type RecipeFactIcon,
@@ -103,15 +104,15 @@ export function toFormDraft(recipe: Recipe): FormDraft {
   };
 }
 
-function draftMainIndex(draft: FormDraft): number {
-  return mainIngredientIndex({
+function draftMainIndexes(draft: FormDraft): number[] {
+  return mainIngredientIndexes({
     ingredients: draft.ingredients.map((row) => ({ ...row, amount: Number(row.amount.replace(",", ".")) || 0 })),
   } as Recipe);
 }
 
 /** Payload for POST /api/recipes-admin/recipes; the server validates and fills missing translations. */
 function fromFormDraft(draft: FormDraft) {
-  const mainIndex = draftMainIndex(draft);
+  const mainIndexes = draftMainIndexes(draft);
   return {
     id: draft.id,
     kind: draft.kind,
@@ -125,7 +126,7 @@ function fromFormDraft(draft: FormDraft) {
       name: row.name,
       unit: row.unit,
       amount: row.amount,
-      main: index === mainIndex,
+      main: mainIndexes.includes(index),
     })),
     steps: draft.steps.map((step) => ({ title: step.title, photo: step.photo, items: splitItems(step.items) })),
     storage: draft.storage,
@@ -220,7 +221,14 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
   const [lang, setLang] = useState<RecipeLang>("ru");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const mainIndex = draftMainIndex(draft);
+  const mainIndexes = draftMainIndexes(draft);
+  const toggleMain = (selected: number) => {
+    const next = mainIndexes.includes(selected)
+      ? mainIndexes.filter((index) => index !== selected)
+      : [...mainIndexes, selected];
+    if (!next.length || next.length > MAX_MAIN_INGREDIENTS) return;
+    patch({ ingredients: draft.ingredients.map((row, index) => ({ ...row, main: next.includes(index) })) });
+  };
 
   const patch = (update: Partial<FormDraft>) => setDraft((prev) => ({ ...prev, ...update }));
   const setText = (value: LocalizedText, text: string): LocalizedText => ({ ...value, [lang]: text });
@@ -390,22 +398,27 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
       <div className="tcSection">{t("recipes_ingredients")}</div>
       <section className="card formSection">
         {draft.ingredients.length ? (
-          <label className="formMain">
+          <div className="formMain">
             <span>{t("recipes_admin_f_main")}</span>
-            <select
-              value={mainIndex}
-              onChange={(event) => {
-                const selected = Number(event.target.value);
-                patch({ ingredients: draft.ingredients.map((row, index) => ({ ...row, main: index === selected })) });
-              }}
-            >
-              {draft.ingredients.map((row, index) => (
-                <option key={index} value={index}>
-                  {row.name[lang] || row.name.ru || row.name.en || `#${index + 1}`}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="formMainChips">
+              {draft.ingredients.map((row, index) => {
+                const active = mainIndexes.includes(index);
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    aria-pressed={active}
+                    className={`formMainChip ${active ? "active" : ""}`}
+                    disabled={!active && mainIndexes.length >= MAX_MAIN_INGREDIENTS}
+                    onClick={() => toggleMain(index)}
+                  >
+                    {active ? "★ " : ""}
+                    {row.name[lang] || row.name.ru || row.name.en || `#${index + 1}`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ) : null}
         <div className="formRow ingredient head">
           <span />
