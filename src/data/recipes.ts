@@ -67,7 +67,7 @@ export const RECIPES: Recipe[] = [
     name: l("Куриная колбаска (1 кг)", "Chicken Sausage (1 kg)", "Xúc xích gà (1 kg)"),
     photo: `${SAUSAGE_PHOTO}/hero.jpg`,
     yield: {
-      amount: 1223.5,
+      amount: 1248.5,
       unit: "g",
       label: l(
         "1 партия ≈ 1,2 кг (9–10 колбасок)",
@@ -85,11 +85,11 @@ export const RECIPES: Recipe[] = [
       { name: l("Куриная кожа", "Chicken skin", "Da gà"), amount: 130, unit: "g" },
       { name: l("Чёрный перец молотый", "Black pepper powder", "Tiêu đen (bột)"), amount: 2, unit: "g" },
       { name: l("Сахар", "Sugar", "Đường"), amount: 2, unit: "g" },
-      { name: l("Вода (ледяная)", "Water (iced)", "Nước (đá)"), amount: 130, unit: "ml" },
+      { name: l("Вода (ледяная)", "Water (iced)", "Nước (đá)"), amount: 150, unit: "ml" },
       { name: l("Соль", "Salt", "Muối"), amount: 15, unit: "g" },
       { name: l("Горчичный порошок", "Mustard powder", "Bột mù tạt"), amount: 1.5, unit: "g" },
       { name: l("Луковый порошок", "Onion powder", "Bột hành"), amount: 3, unit: "g" },
-      { name: l("Сливочное масло несолёное", "Butter (unsalted)", "Bơ lạt"), amount: 65, unit: "g" },
+      { name: l("Сливочное масло несолёное", "Butter (unsalted)", "Bơ lạt"), amount: 70, unit: "g" },
       { name: l("Чесночный порошок", "Garlic powder", "Bột tỏi"), amount: 3, unit: "g" },
       { name: l("Паприка сладкая молотая", "Paprika powder (sweet)", "Bột ớt chuông (ngọt)"), amount: 2, unit: "g" },
     ],
