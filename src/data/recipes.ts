@@ -53,7 +53,25 @@ export type Recipe = {
   storage?: RecipeStorageRule[];
   /** Placeholder content that has to be replaced with the real tech card. */
   example?: boolean;
+  /** Hidden from staff, still visible in the admin panel. */
+  hidden?: boolean;
 };
+
+/** Recipes created or fully edited by admins; `deleted` hides built-in recipes from code. */
+export type StoredRecipes = { recipes: Recipe[]; deleted: string[] };
+
+/** Built-in recipes from code, replaced or removed by admin-stored ones, plus admin-created recipes. */
+export function mergeRecipes(stored: StoredRecipes | null): Recipe[] {
+  if (!stored) return RECIPES;
+  const storedIds = new Set(stored.recipes.map((recipe) => recipe.id));
+  const deleted = new Set(stored.deleted);
+  const builtIn = RECIPES.filter((recipe) => !deleted.has(recipe.id)).map(
+    (recipe) => (storedIds.has(recipe.id) ? stored.recipes.find((item) => item.id === recipe.id)! : recipe),
+  );
+  const builtInIds = new Set(RECIPES.map((recipe) => recipe.id));
+  const created = stored.recipes.filter((recipe) => !builtInIds.has(recipe.id) && !deleted.has(recipe.id));
+  return [...builtIn, ...created];
+}
 
 export type IngredientOverride = { amount?: number; gross?: number };
 

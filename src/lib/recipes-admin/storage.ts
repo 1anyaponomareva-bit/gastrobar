@@ -1,11 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
-import type { RecipeOverrides } from "@/data/recipes";
+import type { RecipeOverrides, StoredRecipes } from "@/data/recipes";
 
 const BUCKET = "recipes-admin";
+const PHOTOS_BUCKET = "recipes-photos";
 const ADMINS_FILE = "admins.json";
 const OVERRIDES_FILE = "overrides.json";
-
+const RECIPES_FILE = "recipes.json";
 export type RecipesAdminAccount = {
   email: string;
   salt: string;
@@ -78,4 +79,33 @@ export function readOverrides() {
 
 export function writeOverrides(overrides: RecipeOverrides) {
   return writeJson(OVERRIDES_FILE, overrides);
+}
+
+export async function readStoredRecipes(): Promise<StoredRecipes> {
+  const stored = await readJson<Partial<StoredRecipes>>(RECIPES_FILE, {});
+  return { recipes: stored.recipes ?? [], deleted: stored.deleted ?? [] };
+}
+
+export function writeStoredRecipes(stored: StoredRecipes) {
+  return writeJson(RECIPES_FILE, stored);
+}
+
+let photosBucketReady = false;
+
+/** Uploads a JPEG to the public photos bucket and returns its public URL. */
+export async function uploadRecipePhoto(path: string, jpeg: Buffer): Promise<string> {
+  const supabase = getClient();
+  if (!photosBucketReady) {
+    const { data } = await supabase.storage.getBucket(PHOTOS_BUCKET);
+    if (!data) {
+      const { error } = await supabase.storage.createBucket(PHOTOS_BUCKET, { public: true });
+      if (error && !/already exists/i.test(error.message)) throw error;
+    }
+    photosBucketReady = true;
+  }
+  const { error } = await supabase.storage
+    .from(PHOTOS_BUCKET)
+    .upload(path, jpeg, { upsert: true, contentType: "image/jpeg", cacheControl: "31536000" });
+  if (error) throw error;
+  return supabase.storage.from(PHOTOS_BUCKET).getPublicUrl(path).data.publicUrl;
 }

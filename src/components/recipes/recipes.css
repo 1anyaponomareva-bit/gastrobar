@@ -172,6 +172,253 @@
   font-weight: 700;
 }
 
+.recipes-app button.adminRecipeBtn.isHidden:not(.statusBox) {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.recipes-app button.adminNewBtn:not(.statusBox) {
+  background: #00a651;
+  border-color: #00a651;
+  color: #fff;
+}
+
+.recipes-app .adminRecipeActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.recipes-app .adminRecipeActions button:not(.statusBox) {
+  padding: 10px 8px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.recipes-app .adminRecipeActions button.danger:not(.statusBox) {
+  color: var(--red);
+}
+
+.recipes-app .adminImport {
+  display: grid;
+  gap: 12px;
+}
+
+.recipes-app .adminImport h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.recipes-app .adminImport p {
+  margin: 0;
+  color: #555;
+  line-height: 1.4;
+}
+
+.recipes-app .adminFilePick input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.recipes-app .adminFilePick span {
+  display: block;
+  padding: 18px;
+  border: 2px dashed #bbb;
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.recipes-app .adminImportPreview {
+  max-height: 320px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f4f4f4;
+}
+
+.recipes-app .adminBusy {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff3cd;
+  color: #6b4c00;
+  font-weight: 700;
+}
+
+.recipes-app .recipeForm .formLangs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 6px 0;
+  background: var(--bg);
+}
+
+.recipes-app .formSection {
+  display: grid;
+  gap: 10px;
+}
+
+.recipes-app .formSection label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recipes-app .formSection label span,
+.recipes-app .formRow.head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.recipes-app .formSection input,
+.recipes-app .formSection select,
+.recipes-app .formSection textarea {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.recipes-app .formSection textarea {
+  height: auto;
+  padding: 8px 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.recipes-app .formGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.recipes-app .formGrid.two {
+  grid-template-columns: 140px 1fr;
+}
+
+.recipes-app .formGrid.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.recipes-app .formGrid.yield {
+  grid-template-columns: 110px 80px 1fr;
+}
+
+.recipes-app .formRow {
+  display: grid;
+  gap: 6px;
+  align-items: center;
+}
+
+.recipes-app .formRow.fact {
+  grid-template-columns: 64px 1fr 1fr 36px;
+}
+
+.recipes-app .formRow.ingredient {
+  grid-template-columns: 1fr 70px 76px 76px 36px;
+}
+
+.recipes-app button.formRemove:not(.statusBox) {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #f2a0a0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--red);
+}
+
+.recipes-app button.formAdd:not(.statusBox) {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px dashed #999;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+}
+
+.recipes-app button.formAdd.standalone:not(.statusBox) {
+  margin-top: 10px;
+}
+
+.recipes-app .formStep {
+  margin-bottom: 10px;
+}
+
+.recipes-app .formStepHead {
+  display: grid;
+  grid-template-columns: 34px 1fr 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.recipes-app .formPhoto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recipes-app .formPhoto img {
+  width: 160px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.recipes-app .formPhoto.small img {
+  width: 120px;
+  height: 76px;
+}
+
+.recipes-app .formPhoto button:not(.statusBox) {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.recipes-app .formActions {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 14px;
+  background: var(--bg);
+}
+
+@media (max-width: 520px) {
+  .recipes-app .formRow.ingredient {
+    grid-template-columns: 1fr 58px 60px 60px 32px;
+  }
+
+  .recipes-app .formRow.fact {
+    grid-template-columns: 56px 1fr 1fr 32px;
+  }
+
+  .recipes-app .formGrid.two,
+  .recipes-app .formGrid.yield {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .recipes-app .formGrid.yield label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .recipes-app .adminRecipeActions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .recipes-app .recipesTitle {
   text-align: center;
   color: var(--gold);

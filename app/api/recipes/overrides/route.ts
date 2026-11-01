@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { readOverrides } from "@/lib/recipes-admin/storage";
+import { readOverrides, readStoredRecipes } from "@/lib/recipes-admin/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Everything admins changed: amount overrides and stored (created / edited / deleted) recipes. */
 export async function GET() {
+  const headers = { "Cache-Control": "no-store" };
   try {
-    return NextResponse.json(
-      { overrides: await readOverrides() },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    const [overrides, stored] = await Promise.all([readOverrides(), readStoredRecipes()]);
+    return NextResponse.json({ overrides, stored }, { headers });
   } catch (error) {
     console.error("[recipes] overrides", error);
-    return NextResponse.json({ overrides: {} }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ overrides: {}, stored: null }, { headers });
   }
 }

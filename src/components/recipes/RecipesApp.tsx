@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import {
-  RECIPES,
   applyRecipeOverrides,
+  mergeRecipes,
   type Recipe,
   type RecipeFactIcon,
   type RecipeKind,
   type RecipeLang,
   type RecipeOverrides,
   type RecipeStorageIcon,
+  type StoredRecipes,
 } from "@/data/recipes";
 import { getAssetUrl } from "@/lib/appVersion";
 import { translate } from "@/lib/i18n";
@@ -82,28 +83,37 @@ export function RecipesApp() {
   const [multiplier, setMultiplier] = useState("1");
   const [hydrated, setHydrated] = useState(false);
   const [overrides, setOverrides] = useState<RecipeOverrides | null>(null);
+  const [stored, setStored] = useState<StoredRecipes | null>(null);
 
   useEffect(() => {
-    const id = readRecipeFromUrl();
-    const recipe = RECIPES.find((item) => item.id === id);
-    if (recipe) {
-      setKind(recipe.kind);
-      setOpenId(recipe.id);
-    }
-    setHydrated(true);
+    setOpenId(readRecipeFromUrl());
+    const fallback = window.setTimeout(() => setHydrated(true), 4000);
 
     fetch("/api/recipes/overrides", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
-      .then((data: { overrides?: RecipeOverrides } | null) => {
+      .then((data: { overrides?: RecipeOverrides; stored?: StoredRecipes | null } | null) => {
         if (data?.overrides) setOverrides(data.overrides);
+        if (data?.stored) setStored(data.stored);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        window.clearTimeout(fallback);
+        setHydrated(true);
+      });
   }, []);
 
   const recipes = useMemo(
-    () => RECIPES.map((recipe) => applyRecipeOverrides(recipe, overrides)),
-    [overrides],
+    () =>
+      mergeRecipes(stored)
+        .filter((recipe) => !recipe.hidden)
+        .map((recipe) => applyRecipeOverrides(recipe, overrides)),
+    [stored, overrides],
   );
+
+  const openedKind = recipes.find((recipe) => recipe.id === openId)?.kind;
+  useEffect(() => {
+    if (openedKind) setKind(openedKind);
+  }, [openedKind]);
 
   const visible = useMemo(() => {
     const query = search.toLowerCase().trim();

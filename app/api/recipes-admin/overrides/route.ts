@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { RECIPES, ingredientKey, type IngredientOverride } from "@/data/recipes";
+import { ingredientKey, mergeRecipes, type IngredientOverride } from "@/data/recipes";
 import { getSessionEmail } from "@/lib/recipes-admin/auth";
-import { readOverrides, writeOverrides } from "@/lib/recipes-admin/storage";
+import { readOverrides, readStoredRecipes, writeOverrides } from "@/lib/recipes-admin/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
       recipeId?: unknown;
       edits?: Record<string, { amount?: unknown; gross?: unknown }>;
     };
-    const recipe = RECIPES.find((item) => item.id === body.recipeId);
+    const recipe = mergeRecipes(await readStoredRecipes()).find((item) => item.id === body.recipeId);
     if (!recipe) return NextResponse.json({ error: "recipe" }, { status: 400 });
 
     const clean: Record<string, IngredientOverride> = {};
