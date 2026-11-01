@@ -190,7 +190,12 @@ export function extractRecipeFromImage(image: Buffer, mimeType: string): Promise
 
 export type TranslationTask = { id: number; from: RecipeLang; text: string; to: RecipeLang[] };
 
-const LANGUAGE_NAMES: Record<RecipeLang, string> = { ru: "Russian", en: "English", vn: "Vietnamese" };
+/** Full names instead of codes: with "vn" the model sometimes answered in the source language. */
+const LANGUAGE_NAMES: Record<RecipeLang, "russian" | "english" | "vietnamese"> = {
+  ru: "russian",
+  en: "english",
+  vn: "vietnamese",
+};
 
 const TRANSLATE_SCHEMA = {
   type: "ARRAY",
@@ -198,39 +203,59 @@ const TRANSLATE_SCHEMA = {
     type: "OBJECT",
     properties: {
       id: { type: "INTEGER" },
-      ru: { type: "STRING", nullable: true },
-      en: { type: "STRING", nullable: true },
-      vn: { type: "STRING", nullable: true },
+      russian: { type: "STRING", nullable: true },
+      english: { type: "STRING", nullable: true },
+      vietnamese: { type: "STRING", nullable: true },
     },
     required: ["id"],
   },
 };
 
-/** Translates short tech-card texts; returns id → translations for the requested languages. */
-export async function translateTexts(
-  tasks: TranslationTask[],
-): Promise<Map<number, Partial<Record<RecipeLang, string>>>> {
-  const codes = Object.entries(LANGUAGE_NAMES)
-    .map(([code, name]) => `${code} = ${name}`)
-    .join(", ");
-  const prompt = `Translate texts of a restaurant tech card for kitchen staff. For each task translate "text" from the language "from" into every language listed in "to" (${codes}). Use natural professional kitchen terminology, proper Vietnamese diacritics, normal sentence case (never ALL CAPS). Keep every number, unit and punctuation such as "1)" exactly. Return one object per task with its id and only the requested language fields.
+const CYRILLIC = /[\u0400-\u04FF]/;
+
+function isValidTranslation(lang: RecipeLang, value: string): boolean {
+  return lang === "ru" || !CYRILLIC.test(value);
+}
+
+async function requestTranslations(tasks: TranslationTask[]) {
+  const payload = tasks.map((task) => ({
+    id: task.id,
+    from: LANGUAGE_NAMES[task.from],
+    to: task.to.map((lang) => LANGUAGE_NAMES[lang]),
+    text: task.text,
+  }));
+  const prompt = `Translate texts of a restaurant tech card for kitchen staff. For each task translate "text" from the "from" language into EVERY language listed in "to", and put each translation into the field with that language name. The "english" field must be English only, the "vietnamese" field must be Vietnamese only (with proper diacritics), the "russian" field Russian only — never leave words in the source language. Use natural professional kitchen terminology and normal sentence case (never ALL CAPS). Keep numbers, units and list markers such as "1." or "1)" exactly. Return one object per task with its id.
 
 Tasks:
-${JSON.stringify(tasks)}`;
-  const result = await generateJson<({ id: number } & Partial<Record<RecipeLang, string | null>>)[]>(
+${JSON.stringify(payload)}`;
+  return generateJson<({ id: number } & Partial<Record<"russian" | "english" | "vietnamese", string | null>>)[]>(
     [{ text: prompt }],
     TRANSLATE_SCHEMA,
   );
+}
+
+/** Translates short tech-card texts; returns id → translations for the requested languages. Failed ones are retried once. */
+export async function translateTexts(
+  tasks: TranslationTask[],
+): Promise<Map<number, Partial<Record<RecipeLang, string>>>> {
   const translations = new Map<number, Partial<Record<RecipeLang, string>>>();
-  for (const row of result) {
-    const task = tasks.find((item) => item.id === row.id);
-    if (!task) continue;
-    const values: Partial<Record<RecipeLang, string>> = {};
-    for (const lang of task.to) {
-      const value = row[lang]?.trim();
-      if (value) values[lang] = value;
+  let pending = tasks;
+  for (let attempt = 0; attempt < 2 && pending.length; attempt += 1) {
+    const rows = await requestTranslations(pending);
+    const retry: TranslationTask[] = [];
+    for (const task of pending) {
+      const row = rows.find((item) => item.id === task.id);
+      const values = translations.get(task.id) ?? {};
+      const missing: RecipeLang[] = [];
+      for (const lang of task.to) {
+        const value = row?.[LANGUAGE_NAMES[lang]]?.trim();
+        if (value && isValidTranslation(lang, value)) values[lang] = value;
+        else missing.push(lang);
+      }
+      translations.set(task.id, values);
+      if (missing.length) retry.push({ ...task, to: missing });
     }
-    translations.set(row.id, values);
+    pending = retry;
   }
   return translations;
 }
