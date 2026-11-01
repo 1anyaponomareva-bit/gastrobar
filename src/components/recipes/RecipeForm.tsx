@@ -130,10 +130,13 @@ function useDragReorder(onMove: (from: number, to: number) => void) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
+  const renderedIndex = useRef<number | null>(null);
+  renderedIndex.current = dragIndex;
 
   const retarget = () => {
     const current = drag.current;
-    if (!current) return;
+    // Row positions are stale until the previous move has been rendered.
+    if (!current || renderedIndex.current !== current.index) return;
     let target = 0;
     rowRefs.current.forEach((row, index) => {
       if (!row || index === current.index) return;
@@ -168,13 +171,20 @@ function useDragReorder(onMove: (from: number, to: number) => void) {
   const handleProps = (index: number) => ({
     onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
       event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Capture is optional; moves still reach the handle without it.
+      }
       drag.current = { index, y: event.clientY };
+      renderedIndex.current = index;
       setDragIndex(index);
       frame.current = requestAnimationFrame(tick);
     },
     onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
-      if (drag.current) drag.current.y = event.clientY;
+      if (!drag.current) return;
+      drag.current.y = event.clientY;
+      retarget();
     },
     onPointerUp: stop,
     onPointerCancel: stop,
