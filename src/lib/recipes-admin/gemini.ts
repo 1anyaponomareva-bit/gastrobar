@@ -1,4 +1,4 @@
-import type { LocalizedText, RecipeFactIcon, RecipeKind, RecipeStorageIcon } from "@/data/recipes";
+import type { LocalizedText, RecipeFactIcon, RecipeKind, RecipeLang, RecipeStorageIcon } from "@/data/recipes";
 
 /** [ymin, xmin, ymax, xmax], normalized to 0–1000 (Gemini convention). */
 export type Box = [number, number, number, number];
@@ -146,7 +146,9 @@ function geminiModel(): string {
   return process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
 }
 
-export async function extractRecipeFromImage(image: Buffer, mimeType: string): Promise<ExtractedRecipe> {
+type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+
+async function generateJson<T>(parts: GeminiPart[], responseSchema: unknown): Promise<T> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("GEMINI_API_KEY is not configured");
 
@@ -157,17 +159,12 @@ export async function extractRecipeFromImage(image: Buffer, mimeType: string): P
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ inlineData: { mimeType, data: image.toString("base64") } }, { text: PROMPT }],
-          },
-        ],
+        contents: [{ role: "user", parts }],
         generationConfig: {
           temperature: 0.1,
           thinkingConfig: { thinkingLevel: "low" },
           responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
+          responseSchema,
         },
       }),
     },
@@ -181,5 +178,59 @@ export async function extractRecipeFromImage(image: Buffer, mimeType: string): P
 
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   if (!text) throw new Error("Gemini returned an empty response");
-  return JSON.parse(text) as ExtractedRecipe;
+  return JSON.parse(text) as T;
+}
+
+export function extractRecipeFromImage(image: Buffer, mimeType: string): Promise<ExtractedRecipe> {
+  return generateJson<ExtractedRecipe>(
+    [{ inlineData: { mimeType, data: image.toString("base64") } }, { text: PROMPT }],
+    RESPONSE_SCHEMA,
+  );
+}
+
+export type TranslationTask = { id: number; from: RecipeLang; text: string; to: RecipeLang[] };
+
+const LANGUAGE_NAMES: Record<RecipeLang, string> = { ru: "Russian", en: "English", vn: "Vietnamese" };
+
+const TRANSLATE_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      id: { type: "INTEGER" },
+      ru: { type: "STRING", nullable: true },
+      en: { type: "STRING", nullable: true },
+      vn: { type: "STRING", nullable: true },
+    },
+    required: ["id"],
+  },
+};
+
+/** Translates short tech-card texts; returns id → translations for the requested languages. */
+export async function translateTexts(
+  tasks: TranslationTask[],
+): Promise<Map<number, Partial<Record<RecipeLang, string>>>> {
+  const codes = Object.entries(LANGUAGE_NAMES)
+    .map(([code, name]) => `${code} = ${name}`)
+    .join(", ");
+  const prompt = `Translate texts of a restaurant tech card for kitchen staff. For each task translate "text" from the language "from" into every language listed in "to" (${codes}). Use natural professional kitchen terminology, proper Vietnamese diacritics, normal sentence case (never ALL CAPS). Keep every number, unit and punctuation such as "1)" exactly. Return one object per task with its id and only the requested language fields.
+
+Tasks:
+${JSON.stringify(tasks)}`;
+  const result = await generateJson<({ id: number } & Partial<Record<RecipeLang, string | null>>)[]>(
+    [{ text: prompt }],
+    TRANSLATE_SCHEMA,
+  );
+  const translations = new Map<number, Partial<Record<RecipeLang, string>>>();
+  for (const row of result) {
+    const task = tasks.find((item) => item.id === row.id);
+    if (!task) continue;
+    const values: Partial<Record<RecipeLang, string>> = {};
+    for (const lang of task.to) {
+      const value = row[lang]?.trim();
+      if (value) values[lang] = value;
+    }
+    translations.set(row.id, values);
+  }
+  return translations;
 }

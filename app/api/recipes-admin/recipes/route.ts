@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { RECIPES, mergeRecipes, type Recipe } from "@/data/recipes";
 import { getSessionEmail } from "@/lib/recipes-admin/auth";
+import { translateEditedTexts } from "@/lib/recipes-admin/autoTranslate";
 import { sanitizeRecipe } from "@/lib/recipes-admin/recipeInput";
 import {
   readOverrides,
@@ -11,6 +12,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 async function dropOverrides(id: string) {
   const overrides = await readOverrides();
@@ -24,10 +26,17 @@ export async function POST(request: Request) {
   try {
     if (!(await getSessionEmail())) return NextResponse.json({ error: "auth" }, { status: 401 });
     const body = (await request.json().catch(() => ({}))) as { recipe?: unknown };
+    const stored = await readStoredRecipes();
+    const id = (body.recipe as { id?: unknown } | undefined)?.id;
+    const published = mergeRecipes(stored).find((item) => item.id === id);
+    try {
+      await translateEditedTexts(body.recipe, published);
+    } catch (error) {
+      console.error("[recipes-admin] auto-translate", error);
+    }
     const recipe = sanitizeRecipe(body.recipe);
     if (!recipe) return NextResponse.json({ error: "invalid" }, { status: 400 });
 
-    const stored = await readStoredRecipes();
     stored.recipes = [...stored.recipes.filter((item) => item.id !== recipe.id), recipe];
     stored.deleted = stored.deleted.filter((id) => id !== recipe.id);
     await writeStoredRecipes(stored);
