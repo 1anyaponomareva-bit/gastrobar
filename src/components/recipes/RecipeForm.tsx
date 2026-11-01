@@ -12,9 +12,9 @@ import type {
 import { getAssetUrl } from "@/lib/appVersion";
 
 const LANGS: { id: RecipeLang; flag: string }[] = [
-  { id: "ru", flag: "🇷🇺 RU" },
-  { id: "en", flag: "🇬🇧 EN" },
-  { id: "vn", flag: "🇻🇳 VN" },
+  { id: "ru", flag: "Русский" },
+  { id: "en", flag: "English" },
+  { id: "vn", flag: "Tiếng Việt" },
 ];
 const UNITS = ["g", "kg", "ml", "l", "pcs", "egg"];
 const FACT_ICONS: RecipeFactIcon[] = ["weight", "length", "storage", "time", "temperature"];

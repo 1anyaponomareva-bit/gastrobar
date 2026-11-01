@@ -13,7 +13,7 @@ export const maxDuration = 60;
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 /** Trims step-number badges and frame lines that touch the edges of detected photos. */
-const BOX_INSET = 0.025;
+const BOX_INSET = 0.04;
 
 async function cropPhoto(image: Buffer, width: number, height: number, box: Box | null): Promise<Buffer | null> {
   if (!box || box.length !== 4) return null;

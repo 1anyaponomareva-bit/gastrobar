@@ -197,6 +197,8 @@
 }
 
 .recipes-app .adminRecipeActions button.danger:not(.statusBox) {
+  border-color: #f2a0a0;
+  background: #fff;
   color: var(--red);
 }
 
@@ -321,6 +323,14 @@
   display: grid;
   gap: 6px;
   align-items: center;
+}
+
+.recipes-app .formRow > * {
+  min-width: 0;
+}
+
+.recipes-app .formRow select {
+  padding: 0 4px;
 }
 
 .recipes-app .formRow.fact {
