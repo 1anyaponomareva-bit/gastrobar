@@ -217,6 +217,10 @@ export function RecipesApp() {
                   ))}
                 </div>
               )}
+
+              <a className="adminEntry" href="/recipes/admin">
+                🔐 {t("recipes_admin_login_title")}
+              </a>
             </>
           )}
         </div>

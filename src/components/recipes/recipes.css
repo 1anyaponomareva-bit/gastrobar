@@ -164,6 +164,19 @@
   margin-top: 12px;
 }
 
+.recipes-app .adminEntry {
+  display: block;
+  margin: 28px 0 20px;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fff;
+  color: #333;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
 .recipes-app .adminOpenCard {
   display: block;
   margin: 14px 0 24px;
