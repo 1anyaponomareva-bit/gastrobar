@@ -20,7 +20,7 @@ import { unitLabel } from "./RecipesApp";
 import "@/components/staff/staff-inventory.css";
 import "./recipes.css";
 
-type Draft = Record<string, { amount: string; gross: string }>;
+type Draft = Record<string, { amount: string }>;
 
 const ERROR_KEYS: Record<string, string> = {
   credentials: "recipes_admin_err_credentials",
@@ -69,11 +69,7 @@ function blankRecipe(): Recipe {
 function draftFor(recipe: Recipe): Draft {
   const draft: Draft = {};
   for (const ingredient of recipe.ingredients) {
-    const gross = ingredient.gross;
-    draft[ingredientKey(ingredient)] = {
-      amount: String(ingredient.amount),
-      gross: gross !== undefined && gross !== ingredient.amount ? String(gross) : "",
-    };
+    draft[ingredientKey(ingredient)] = { amount: String(ingredient.amount) };
   }
   return draft;
 }
@@ -499,23 +495,19 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
     for (const ingredient of base.ingredients) {
       const row = draft[ingredientKey(ingredient)];
       const amount = row ? parseNumber(row.amount) : null;
-      const gross = row ? parseNumber(row.gross) : null;
       edits[ingredientKey(ingredient)] = {
         amount: amount !== null && !Number.isNaN(amount) ? amount : ingredient.amount,
-        gross: gross !== null && !Number.isNaN(gross) ? gross : undefined,
       };
     }
     return applyRecipeOverrides(base, { [base.id]: edits });
   }, [base, draft]);
 
-  const hasInvalid = Object.values(draft).some(
-    (row) =>
-      parseNumber(row.amount) === null ||
-      Number.isNaN(parseNumber(row.amount)) ||
-      Number.isNaN(parseNumber(row.gross)),
-  );
+  const hasInvalid = Object.values(draft).some((row) => {
+    const amount = parseNumber(row.amount);
+    return amount === null || Number.isNaN(amount);
+  });
 
-  const save = async (edits: Record<string, { amount?: string; gross?: string }>) => {
+  const save = async (edits: Record<string, { amount?: string }>) => {
     setBusy(true);
     setStatus(null);
     try {
@@ -539,9 +531,9 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
     }
   };
 
-  const updateRow = (key: string, field: "amount" | "gross", value: string) => {
+  const updateRow = (key: string, value: string) => {
     setStatus(null);
-    setDraft((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
+    setDraft((prev) => ({ ...prev, [key]: { amount: value } }));
   };
 
   const second: RecipeLang = lang === "vn" ? "en" : "vn";
@@ -554,20 +546,16 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
           <thead>
             <tr>
               <th className="tcName">{t("recipes_col_name")}</th>
-              <th>{t("recipes_col_gross")}</th>
               <th>{t("recipes_col_net")}</th>
             </tr>
           </thead>
           <tbody>
             {base.ingredients.map((ingredient) => {
               const key = ingredientKey(ingredient);
-              const row = draft[key] ?? { amount: "", gross: "" };
+              const row = draft[key] ?? { amount: "" };
               const amount = parseNumber(row.amount);
-              const gross = parseNumber(row.gross);
               const unit = unitLabel(ingredient.unit, lang);
-              const changed =
-                amount !== ingredient.amount ||
-                (gross !== null && gross !== (ingredient.gross ?? ingredient.amount));
+              const changed = amount !== ingredient.amount;
               return (
                 <tr key={key} className={changed ? "changed" : ""}>
                   <td className="tcName">
@@ -575,20 +563,9 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
                     <i>{ingredient.name[second]}</i>
                     {changed ? (
                       <small>
-                        {t("recipes_admin_original")}:{" "}
-                        {ingredient.gross && ingredient.gross !== ingredient.amount ? `${ingredient.gross} / ` : ""}
-                        {ingredient.amount} {unit}
+                        {t("recipes_admin_original")}: {ingredient.amount} {unit}
                       </small>
                     ) : null}
-                  </td>
-                  <td>
-                    <input
-                      className={Number.isNaN(gross) ? "invalid" : ""}
-                      inputMode="decimal"
-                      placeholder={row.amount}
-                      value={row.gross}
-                      onChange={(event) => updateRow(key, "gross", event.target.value)}
-                    />
                   </td>
                   <td>
                     <span className="adminQty">
@@ -596,7 +573,7 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
                         className={amount === null || Number.isNaN(amount) ? "invalid" : ""}
                         inputMode="decimal"
                         value={row.amount}
-                        onChange={(event) => updateRow(key, "amount", event.target.value)}
+                        onChange={(event) => updateRow(key, event.target.value)}
                       />
                       <small>{unit}</small>
                     </span>
@@ -607,7 +584,7 @@ function AmountsEditor({ base, overrides, lang, t, onExpired, onSaved }: Amounts
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={2}>{t("recipes_finished_weight")}</td>
+              <td>{t("recipes_finished_weight")}</td>
               <td className="tcQty">
                 {preview.yield.amount} {unitLabel(preview.yield.unit, lang)}
               </td>

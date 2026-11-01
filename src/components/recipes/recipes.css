@@ -356,7 +356,7 @@
 }
 
 .recipes-app .formRow.ingredient {
-  grid-template-columns: 1fr 70px 76px 76px 36px;
+  grid-template-columns: 1fr 70px 90px 36px;
 }
 
 .recipes-app button.formRemove:not(.statusBox) {
@@ -426,7 +426,7 @@
 
 @media (max-width: 520px) {
   .recipes-app .formRow.ingredient {
-    grid-template-columns: 1fr 58px 60px 60px 32px;
+    grid-template-columns: 1fr 58px 72px 32px;
   }
 
   .recipes-app .formRow.fact {

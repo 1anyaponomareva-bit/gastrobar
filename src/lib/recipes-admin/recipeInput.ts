@@ -70,10 +70,9 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
     const row = (item ?? {}) as Record<string, unknown>;
     const rowName = localized(row.name);
     const net = amount(row.amount);
-    const gross = row.gross === undefined || row.gross === null || row.gross === "" ? undefined : amount(row.gross);
     const unit = UNITS.includes(String(row.unit)) ? String(row.unit) : "g";
-    if (!hasText(rowName) || net === null || gross === null) return [];
-    return [{ name: rowName, amount: net, unit, ...(gross !== undefined && gross !== net ? { gross } : {}) }];
+    if (!hasText(rowName) || net === null) return [];
+    return [{ name: rowName, amount: net, unit }];
   });
 
   const steps = list(source.steps).flatMap((item) => {

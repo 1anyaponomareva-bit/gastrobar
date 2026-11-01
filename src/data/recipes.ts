@@ -6,10 +6,8 @@ export type RecipeKind = "dish" | "prep";
 
 export type RecipeIngredient = {
   name: LocalizedText;
-  /** Net amount for the base yield; scaled linearly. */
+  /** Amount for the base yield; scaled linearly. */
   amount: number;
-  /** Gross amount before trimming; defaults to `amount`. */
-  gross?: number;
   unit: string;
   note?: LocalizedText;
 };
@@ -73,7 +71,7 @@ export function mergeRecipes(stored: StoredRecipes | null): Recipe[] {
   return [...builtIn, ...created];
 }
 
-export type IngredientOverride = { amount?: number; gross?: number };
+export type IngredientOverride = { amount?: number };
 
 /** recipeId → ingredient key → edited amounts. Stored on the server, edited in /recipes/admin. */
 export type RecipeOverrides = Record<string, Record<string, IngredientOverride>>;
@@ -94,11 +92,10 @@ export function applyRecipeOverrides(recipe: Recipe, overrides: RecipeOverrides 
 
   let yieldDelta = 0;
   const ingredients = recipe.ingredients.map((ingredient) => {
-    const edit = edits[ingredientKey(ingredient)];
-    if (!edit) return ingredient;
-    const amount = edit.amount ?? ingredient.amount;
+    const amount = edits[ingredientKey(ingredient)]?.amount;
+    if (amount === undefined) return ingredient;
     if (WEIGHT_UNITS.has(ingredient.unit)) yieldDelta += amount - ingredient.amount;
-    return { ...ingredient, amount, gross: edit.gross ?? (edit.amount !== undefined ? undefined : ingredient.gross) };
+    return { ...ingredient, amount };
   });
 
   const recipeYield =

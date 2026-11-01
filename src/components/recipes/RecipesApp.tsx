@@ -338,7 +338,6 @@ function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack 
             <tr>
               <th>#</th>
               <th className="tcName">{t("recipes_col_name")}</th>
-              <th>{t("recipes_col_gross")}</th>
               <th>{t("recipes_col_net")}</th>
             </tr>
           </thead>
@@ -351,14 +350,13 @@ function RecipeDetail({ recipe, lang, t, multiplier, onMultiplierChange, onBack 
                   <i>{ingredient.name[second]}</i>
                   {ingredient.note ? <small>{ingredient.note[lang]}</small> : null}
                 </td>
-                <td className="tcQty">{amount(ingredient.gross ?? ingredient.amount, ingredient.unit)}</td>
                 <td className="tcQty net">{amount(ingredient.amount, ingredient.unit)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3}>{t("recipes_finished_weight")}</td>
+              <td colSpan={2}>{t("recipes_finished_weight")}</td>
               <td className="tcQty">{amount(recipe.yield.amount, recipe.yield.unit)}</td>
             </tr>
           </tfoot>

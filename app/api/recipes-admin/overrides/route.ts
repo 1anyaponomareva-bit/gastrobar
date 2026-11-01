@@ -15,7 +15,7 @@ function parseAmount(value: unknown): number | undefined | null {
   return Math.round(number * 100) / 100;
 }
 
-/** Body: { recipeId, edits: { [ingredientKey]: { amount?, gross? } } }; empty edits reset the recipe. */
+/** Body: { recipeId, edits: { [ingredientKey]: { amount? } } }; empty edits reset the recipe. */
 export async function PUT(request: Request) {
   try {
     if (!(await getSessionEmail())) {
@@ -24,7 +24,7 @@ export async function PUT(request: Request) {
 
     const body = (await request.json().catch(() => ({}))) as {
       recipeId?: unknown;
-      edits?: Record<string, { amount?: unknown; gross?: unknown }>;
+      edits?: Record<string, { amount?: unknown }>;
     };
     const recipe = mergeRecipes(await readStoredRecipes()).find((item) => item.id === body.recipeId);
     if (!recipe) return NextResponse.json({ error: "recipe" }, { status: 400 });
@@ -35,16 +35,10 @@ export async function PUT(request: Request) {
       const edit = body.edits?.[key];
       if (!edit) continue;
       const amount = parseAmount(edit.amount);
-      const gross = parseAmount(edit.gross);
-      if (amount === null || gross === null) {
+      if (amount === null) {
         return NextResponse.json({ error: "number", key }, { status: 400 });
       }
-      const next: IngredientOverride = {};
-      if (amount !== undefined && amount !== ingredient.amount) next.amount = amount;
-      const effectiveAmount = next.amount ?? ingredient.amount;
-      const baseGross = next.amount !== undefined ? effectiveAmount : (ingredient.gross ?? ingredient.amount);
-      if (gross !== undefined && gross !== baseGross) next.gross = gross;
-      if (Object.keys(next).length) clean[key] = next;
+      if (amount !== undefined && amount !== ingredient.amount) clean[key] = { amount };
     }
 
     const overrides = await readOverrides();

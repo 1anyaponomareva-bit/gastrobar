@@ -46,7 +46,7 @@ type FormDraft = {
   yieldUnit: string;
   yieldLabel: LocalizedText;
   facts: { icon: RecipeFactIcon; label: LocalizedText; value: LocalizedText }[];
-  ingredients: { name: LocalizedText; unit: string; gross: string; amount: string }[];
+  ingredients: { name: LocalizedText; unit: string; amount: string }[];
   steps: { title: LocalizedText; photo?: string; items: LocalizedText }[];
   storage: { icon: RecipeStorageIcon; title: LocalizedText; text: LocalizedText }[];
 };
@@ -86,7 +86,6 @@ export function toFormDraft(recipe: Recipe): FormDraft {
     ingredients: recipe.ingredients.map((ingredient) => ({
       name: { ...ingredient.name },
       unit: ingredient.unit,
-      gross: ingredient.gross !== undefined && ingredient.gross !== ingredient.amount ? String(ingredient.gross) : "",
       amount: String(ingredient.amount),
     })),
     steps: recipe.steps.map((step) => ({
@@ -113,7 +112,7 @@ function fromFormDraft(draft: FormDraft) {
     photo: draft.photo,
     yield: { amount: draft.yieldAmount, unit: draft.yieldUnit, label: draft.yieldLabel },
     facts: draft.facts,
-    ingredients: draft.ingredients.map((row) => ({ name: row.name, unit: row.unit, amount: row.amount, gross: row.gross })),
+    ingredients: draft.ingredients.map((row) => ({ name: row.name, unit: row.unit, amount: row.amount })),
     steps: draft.steps.map((step) => ({ title: step.title, photo: step.photo, items: splitItems(step.items) })),
     storage: draft.storage,
   };
@@ -301,7 +300,6 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
         <div className="formRow ingredient head">
           <span>{t("recipes_col_name")}</span>
           <span>{t("recipes_admin_f_unit")}</span>
-          <span>{t("recipes_col_gross")}</span>
           <span>{t("recipes_col_net")}</span>
           <span />
         </div>
@@ -316,12 +314,6 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
                 <option key={unit}>{unit}</option>
               ))}
             </select>
-            <input
-              inputMode="decimal"
-              placeholder={row.amount}
-              value={row.gross}
-              onChange={(event) => updateList("ingredients", index, { gross: event.target.value })}
-            />
             <input
               inputMode="decimal"
               value={row.amount}
@@ -341,7 +333,7 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
           type="button"
           className="formAdd"
           onClick={() =>
-            patch({ ingredients: [...draft.ingredients, { name: emptyText(), unit: "g", gross: "", amount: "" }] })
+            patch({ ingredients: [...draft.ingredients, { name: emptyText(), unit: "g", amount: "" }] })
           }
         >
           {t("recipes_admin_f_add")}
