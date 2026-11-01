@@ -39,17 +39,19 @@ async function ensureBucket(supabase: SupabaseClient) {
   bucketReady = true;
 }
 
+/** Reads straight from the storage API with a cache-buster: the SDK download can return a stale CDN copy. */
 async function readJson<T>(file: string, fallback: T): Promise<T> {
   const supabase = getClient();
   await ensureBucket(supabase);
-  const { data, error } = await supabase.storage.from(BUCKET).download(file);
-  if (error || !data) {
-    const status = (error as { status?: number; statusCode?: string } | null)?.status;
-    const notFound = status === 400 || status === 404 || /not.?found/i.test(error?.message ?? "");
-    if (notFound || !error) return fallback;
-    throw error;
-  }
-  return JSON.parse(await data.text()) as T;
+  const url = `${getSupabaseBackendUrl()}/storage/v1/object/authenticated/${BUCKET}/${file}?v=${Date.now()}`;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${key}`, apikey: key, "Cache-Control": "no-cache" },
+  });
+  if (response.status === 400 || response.status === 404) return fallback;
+  if (!response.ok) throw new Error(`Storage read ${file}: ${response.status}`);
+  return JSON.parse(await response.text()) as T;
 }
 
 async function writeJson(file: string, value: unknown) {
