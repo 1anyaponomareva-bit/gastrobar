@@ -89,6 +89,20 @@
   grid-template-columns: 1fr 1fr;
 }
 
+.staff-admin .staffAdminInline {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid #ffcf33;
+  border-radius: 12px;
+  background: #fffbea;
+}
+
+.staff-admin .staffAdminInline > b {
+  font-size: 15px;
+  font-weight: 900;
+}
+
 .staff-admin .staffAdminTranslate {
   display: grid;
   grid-template-columns: 1fr auto;

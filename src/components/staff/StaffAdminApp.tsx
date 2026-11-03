@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import {
   sanitizeStaffCatalog,
@@ -196,9 +196,13 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         busy={busy}
         onExpired={onExpired}
         onCancel={() => setEditing(null)}
-        onSave={(value) =>
+        onSave={(value, extras) =>
           finish(
-            { ...catalog, items: replace(catalog.items, value, editing.isNew) },
+            {
+              categories: extras.category ? [...catalog.categories, extras.category] : catalog.categories,
+              suppliers: extras.supplier ? [...catalog.suppliers, extras.supplier] : catalog.suppliers,
+              items: replace(catalog.items, value, editing.isNew),
+            },
             editing.isNew ? "Позиция добавлена" : "Позиция сохранена",
           )
         }
@@ -560,43 +564,86 @@ type ItemFormProps = {
   busy: boolean;
   onExpired: () => void;
   onCancel: () => void;
-  onSave: (value: StaffCatalogItem) => void;
+  onSave: (
+    value: StaffCatalogItem,
+    extras: { category?: StaffCatalogCategory; supplier?: StaffCatalogSupplier },
+  ) => void;
   onDelete: () => void;
 };
+
+const NEW_OPTION = "__new__";
 
 function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, onDelete }: ItemFormProps) {
   const [draft, setDraft] = useState(initial);
   const [translating, setTranslating] = useState(false);
+  const [newCategory, setNewCategory] = useState({ en: "", vn: "" });
+  const [newSupplier, setNewSupplier] = useState({ label: "", zaloUrl: "" });
+  const units = useMemo(
+    () => [...new Set([...UNITS, ...catalog.items.map((item) => item.unit)])],
+    [catalog],
+  );
+  const [customUnit, setCustomUnit] = useState(!units.includes(initial.unit));
   const set = <K extends keyof StaffCatalogItem>(key: K, value: StaffCatalogItem[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
 
-  const canSave = Boolean(draft.name.trim() && draft.unit.trim() && draft.category && draft.supplier);
+  const addingCategory = draft.category === NEW_OPTION;
+  const addingSupplier = draft.supplier === NEW_OPTION;
+  const zaloValid = !newSupplier.zaloUrl.trim() || /^https:\/\/\S+$/i.test(newSupplier.zaloUrl.trim());
+  const canSave = Boolean(
+    draft.name.trim() &&
+      draft.unit.trim() &&
+      draft.category &&
+      draft.supplier &&
+      (!addingCategory || newCategory.en.trim()) &&
+      (!addingSupplier || (newSupplier.label.trim() && zaloValid)),
+  );
   const packHint = draft.pack?.trim() ? `1 ${draft.unit || "…"} = ${draft.pack.trim()}` : null;
 
+  const ensureVn = async (vn: string, en: string) => {
+    if (vn.trim()) return vn.trim();
+    return (await translateToVn(en.trim()).catch(() => null)) ?? en.trim();
+  };
+
   const submit = async () => {
-    let nameVn = draft.nameVn.trim();
-    if (!nameVn) {
-      setTranslating(true);
-      nameVn = (await translateToVn(draft.name.trim()).catch(() => null)) ?? "";
-      setTranslating(false);
-    }
+    setTranslating(true);
+    const nameVn = await ensureVn(draft.nameVn, draft.name);
+    const category = addingCategory
+      ? {
+          id: uniqueCatalogId(newCategory.en, catalog.categories.map((entry) => entry.id)),
+          en: newCategory.en.trim(),
+          vn: await ensureVn(newCategory.vn, newCategory.en),
+        }
+      : undefined;
+    setTranslating(false);
+    const supplier = addingSupplier
+      ? {
+          id: uniqueCatalogId(newSupplier.label, catalog.suppliers.map((entry) => entry.id)),
+          label: newSupplier.label.trim(),
+          zaloUrl: newSupplier.zaloUrl.trim() || undefined,
+        }
+      : undefined;
     const id = isNew
       ? uniqueCatalogId(
           `${draft.name} ${draft.brand ?? ""}`,
           catalog.items.map((item) => item.id),
         )
       : draft.id;
-    onSave({
-      ...draft,
-      id,
-      name: draft.name.trim(),
-      nameVn: nameVn || draft.name.trim(),
-      unit: draft.unit.trim(),
-      brand: draft.brand?.trim() || undefined,
-      pack: draft.pack?.trim() || undefined,
-      itemNo: draft.itemNo?.trim() || undefined,
-      hidden: draft.hidden || undefined,
-    });
+    onSave(
+      {
+        ...draft,
+        id,
+        category: category?.id ?? draft.category,
+        supplier: supplier?.id ?? draft.supplier,
+        name: draft.name.trim(),
+        nameVn,
+        unit: draft.unit.trim(),
+        brand: draft.brand?.trim() || undefined,
+        pack: draft.pack?.trim() || undefined,
+        itemNo: draft.itemNo?.trim() || undefined,
+        hidden: draft.hidden || undefined,
+      },
+      { category, supplier },
+    );
   };
 
   return (
@@ -629,6 +676,7 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
                 {category.en}
               </option>
             ))}
+            <option value={NEW_OPTION}>+ Новая категория…</option>
           </select>
         </label>
         <label>
@@ -639,23 +687,81 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
                 {supplier.label}
               </option>
             ))}
+            <option value={NEW_OPTION}>+ Новый поставщик…</option>
           </select>
         </label>
       </div>
+      {addingCategory ? (
+        <div className="staffAdminInline">
+          <b>Новая категория</b>
+          <label>
+            <span>Название (English) *</span>
+            <input
+              value={newCategory.en}
+              onChange={(event) => setNewCategory((prev) => ({ ...prev, en: event.target.value }))}
+              required
+            />
+          </label>
+          <TranslateField
+            label="Название (Tiếng Việt)"
+            value={newCategory.vn}
+            source={newCategory.en}
+            onChange={(vn) => setNewCategory((prev) => ({ ...prev, vn }))}
+            onExpired={onExpired}
+          />
+        </div>
+      ) : null}
+      {addingSupplier ? (
+        <div className="staffAdminInline">
+          <b>Новый поставщик</b>
+          <label>
+            <span>Название *</span>
+            <input
+              value={newSupplier.label}
+              onChange={(event) => setNewSupplier((prev) => ({ ...prev, label: event.target.value }))}
+              required
+            />
+          </label>
+          <label>
+            <span>Ссылка на группу Zalo</span>
+            <input
+              inputMode="url"
+              placeholder="https://zalo.me/g/…"
+              value={newSupplier.zaloUrl}
+              onChange={(event) => setNewSupplier((prev) => ({ ...prev, zaloUrl: event.target.value }))}
+            />
+          </label>
+          {zaloValid ? null : (
+            <small className="staffAdminHint error">Ссылка должна начинаться с https://</small>
+          )}
+        </div>
+      ) : null}
       <div className="formGrid staffAdminGrid">
         <label>
           <span>Единица заказа *</span>
-          <input
-            list="staff-admin-units"
-            value={draft.unit}
-            onChange={(event) => set("unit", event.target.value)}
-            required
-          />
-          <datalist id="staff-admin-units">
-            {UNITS.map((unit) => (
-              <option key={unit} value={unit} />
+          <select
+            value={customUnit ? NEW_OPTION : draft.unit}
+            onChange={(event) => {
+              const custom = event.target.value === NEW_OPTION;
+              setCustomUnit(custom);
+              set("unit", custom ? "" : event.target.value);
+            }}
+          >
+            {units.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
             ))}
-          </datalist>
+            <option value={NEW_OPTION}>+ Своя единица…</option>
+          </select>
+          {customUnit ? (
+            <input
+              placeholder="напр. tray, bag, roll"
+              value={draft.unit}
+              onChange={(event) => set("unit", event.target.value)}
+              required
+            />
+          ) : null}
         </label>
         <label>
           <span>В упаковке</span>
