@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import {
   sanitizeStaffCatalog,
@@ -14,6 +14,7 @@ import {
 } from "@/data/staffCatalog";
 import { getAssetUrl } from "@/lib/appVersion";
 import { translate } from "@/lib/i18n";
+import { useDragReorder } from "@/lib/useDragReorder";
 import "./staff-inventory.css";
 import "@/components/recipes/recipes.css";
 import "./staff-admin.css";
@@ -31,23 +32,85 @@ const UNITS = ["kg", "g", "l", "ml", "pcs", "box", "pack", "btl", "can"];
 
 const t = (key: string) => translate("ru", key);
 
-async function translateToVn(text: string): Promise<string | null> {
-  const response = await fetch("/api/staff-admin/translate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
-  if (response.status === 401) throw new Error("auth");
-  const data = (await response.json().catch(() => null)) as { vn?: string } | null;
-  return response.ok && data?.vn ? data.vn : null;
+/** Puts the entries listed in `ids` into that order, keeping every other entry in its place. */
+function reorderSubset<T extends { id: string }>(list: T[], ids: string[]): T[] {
+  const byId = new Map(list.map((entry) => [entry.id, entry]));
+  const queue = ids.map((id) => byId.get(id)).filter((entry): entry is T => Boolean(entry));
+  const moved = new Set(queue.map((entry) => entry.id));
+  let next = 0;
+  return list.map((entry) => (moved.has(entry.id) ? queue[next++] : entry));
 }
 
-function move<T>(list: T[], index: number, delta: number): T[] {
-  const target = index + delta;
-  if (target < 0 || target >= list.length) return list;
-  const next = [...list];
-  [next[index], next[target]] = [next[target], next[index]];
-  return next;
+type DragListProps<T extends { id: string }> = {
+  list: T[];
+  disabled: boolean;
+  render: (entry: T) => ReactNode;
+  onCommit: (ids: string[]) => Promise<boolean>;
+};
+
+function DragList<T extends { id: string }>({ list, disabled, render, onCommit }: DragListProps<T>) {
+  const listKey = list.map((entry) => entry.id).join("|");
+  const [order, setOrder] = useState(() => list.map((entry) => entry.id));
+  const orderRef = useRef(order);
+  const moved = useRef(false);
+
+  const resetOrder = useCallback(() => {
+    orderRef.current = listKey ? listKey.split("|") : [];
+    setOrder(orderRef.current);
+  }, [listKey]);
+
+  useEffect(resetOrder, [resetOrder]);
+
+  const drag = useDragReorder(
+    (from, to) => {
+      const next = [...orderRef.current];
+      const [entry] = next.splice(from, 1);
+      next.splice(to, 0, entry);
+      orderRef.current = next;
+      moved.current = true;
+      setOrder(next);
+    },
+    {
+      onEnd: () => {
+        if (moved.current) {
+          void onCommit(orderRef.current).then((saved) => {
+            if (!saved) resetOrder();
+          });
+        }
+        moved.current = false;
+      },
+    },
+  );
+
+  const byId = new Map(list.map((entry) => [entry.id, entry]));
+  return (
+    <>
+      {order.map((id, index) => {
+        const entry = byId.get(id);
+        if (!entry) return null;
+        return (
+          <div
+            key={id}
+            ref={(element) => {
+              drag.rowRefs.current[index] = element;
+            }}
+            className={`staffAdminDragRow ${drag.dragIndex === index ? "dragging" : ""}`}
+          >
+            <button
+              type="button"
+              className="staffAdminHandle"
+              aria-label="Перетащить"
+              disabled={disabled}
+              {...drag.handleProps(index)}
+            >
+              ⠿
+            </button>
+            {render(entry)}
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 export function StaffAdminApp() {
@@ -183,6 +246,12 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
     window.scrollTo({ top: 0 });
   };
 
+  const reorder = (key: keyof StaffCatalog, ids: string[]) =>
+    save(
+      { ...catalog, [key]: reorderSubset<{ id: string }>(catalog[key], ids) } as StaffCatalog,
+      "Порядок сохранён",
+    );
+
   const replace = <T extends { id: string }>(list: T[], value: T, isNew: boolean): T[] =>
     isNew ? [...list, value] : list.map((entry) => (entry.id === value.id ? value : entry));
 
@@ -194,7 +263,6 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         isNew={editing.isNew}
         catalog={catalog}
         busy={busy}
-        onExpired={onExpired}
         onCancel={() => setEditing(null)}
         onSave={(value, extras) =>
           finish(
@@ -248,7 +316,6 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         isNew={editing.isNew}
         usedBy={usage("category", editing.value.id)}
         busy={busy}
-        onExpired={onExpired}
         onCancel={() => setEditing(null)}
         onSave={(value) =>
           finish(
@@ -326,21 +393,25 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
           return (
             <div key={category.id}>
               <div className="category">{staffCategoryLabel(category)}</div>
-              {inCategory.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`staffAdminRow ${item.hidden ? "isHidden" : ""}`}
-                  onClick={() => open({ kind: "item", isNew: false, value: item })}
-                >
-                  <b>{staffItemLabel(item)}</b>
-                  <span>
-                    {[supplierLabel(item.supplier), item.unit, item.brand, item.hidden ? "скрыта" : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </button>
-              ))}
+              <DragList
+                list={inCategory}
+                disabled={busy}
+                onCommit={(ids) => reorder("items", ids)}
+                render={(item) => (
+                  <button
+                    type="button"
+                    className={`staffAdminRow ${item.hidden ? "isHidden" : ""}`}
+                    onClick={() => open({ kind: "item", isNew: false, value: item })}
+                  >
+                    <b>{staffItemLabel(item)}</b>
+                    <span>
+                      {[supplierLabel(item.supplier), item.unit, item.brand, item.hidden ? "скрыта" : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </button>
+                )}
+              />
             </div>
           );
         })}
@@ -360,18 +431,23 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         <div className="mode">
           <span>Порядок здесь = порядок вкладок у сотрудников</span>
         </div>
-        {catalog.suppliers.map((supplier, index) => (
-          <OrderedRow
-            key={supplier.id}
-            title={supplier.label}
-            subtitle={`${usage("supplier", supplier.id)} поз. · ${supplier.zaloUrl ? "Zalo ✓" : "без Zalo"}`}
-            busy={busy}
-            onOpen={() => open({ kind: "supplier", isNew: false, value: supplier })}
-            onMove={(delta) =>
-              save({ ...catalog, suppliers: move(catalog.suppliers, index, delta) }, "Порядок сохранён")
-            }
-          />
-        ))}
+        <DragList
+          list={catalog.suppliers}
+          disabled={busy}
+          onCommit={(ids) => reorder("suppliers", ids)}
+          render={(supplier) => (
+            <button
+              type="button"
+              className="staffAdminRow"
+              onClick={() => open({ kind: "supplier", isNew: false, value: supplier })}
+            >
+              <b>{supplier.label}</b>
+              <span>
+                {usage("supplier", supplier.id)} поз. · {supplier.zaloUrl ? "Zalo ✓" : "без Zalo"}
+              </span>
+            </button>
+          )}
+        />
       </>
     );
   } else {
@@ -387,18 +463,21 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         <div className="mode">
           <span>Порядок здесь = порядок категорий у сотрудников</span>
         </div>
-        {catalog.categories.map((category, index) => (
-          <OrderedRow
-            key={category.id}
-            title={staffCategoryLabel(category)}
-            subtitle={`${usage("category", category.id)} поз.`}
-            busy={busy}
-            onOpen={() => open({ kind: "category", isNew: false, value: category })}
-            onMove={(delta) =>
-              save({ ...catalog, categories: move(catalog.categories, index, delta) }, "Порядок сохранён")
-            }
-          />
-        ))}
+        <DragList
+          list={catalog.categories}
+          disabled={busy}
+          onCommit={(ids) => reorder("categories", ids)}
+          render={(category) => (
+            <button
+              type="button"
+              className="staffAdminRow"
+              onClick={() => open({ kind: "category", isNew: false, value: category })}
+            >
+              <b>{staffCategoryLabel(category)}</b>
+              <span>{usage("category", category.id)} поз.</span>
+            </button>
+          )}
+        />
       </>
     );
   }
@@ -441,31 +520,6 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
       {notice ? <div className={notice.ok ? "adminOk" : "adminError"}>{notice.text}</div> : null}
 
       {body}
-    </div>
-  );
-}
-
-type OrderedRowProps = {
-  title: string;
-  subtitle: string;
-  busy: boolean;
-  onOpen: () => void;
-  onMove: (delta: number) => void;
-};
-
-function OrderedRow({ title, subtitle, busy, onOpen, onMove }: OrderedRowProps) {
-  return (
-    <div className="staffAdminOrdered">
-      <button type="button" className="staffAdminRow" onClick={onOpen}>
-        <b>{title}</b>
-        <span>{subtitle}</span>
-      </button>
-      <button type="button" className="white" disabled={busy} aria-label="Выше" onClick={() => onMove(-1)}>
-        ↑
-      </button>
-      <button type="button" className="white" disabled={busy} aria-label="Ниже" onClick={() => onMove(1)}>
-        ↓
-      </button>
     </div>
   );
 }
@@ -516,53 +570,11 @@ function FormActions({
   );
 }
 
-type TranslateFieldProps = {
-  label: string;
-  value: string;
-  source: string;
-  onChange: (value: string) => void;
-  onExpired: () => void;
-};
-
-function TranslateField({ label, value, source, onChange, onExpired }: TranslateFieldProps) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-
-  const run = async () => {
-    setBusy(true);
-    setError(false);
-    try {
-      const vn = await translateToVn(source.trim());
-      if (vn) onChange(vn);
-      else setError(true);
-    } catch (reason) {
-      if (reason instanceof Error && reason.message === "auth") onExpired();
-      else setError(true);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <label>
-      <span>{label}</span>
-      <div className="staffAdminTranslate">
-        <input value={value} onChange={(event) => onChange(event.target.value)} />
-        <button type="button" className="white" disabled={busy || !source.trim()} onClick={run}>
-          {busy ? "…" : "🌐 Перевести"}
-        </button>
-      </div>
-      {error ? <small className="staffAdminHint error">Перевод не получился, впишите вручную</small> : null}
-    </label>
-  );
-}
-
 type ItemFormProps = {
   initial: StaffCatalogItem;
   isNew: boolean;
   catalog: StaffCatalog;
   busy: boolean;
-  onExpired: () => void;
   onCancel: () => void;
   onSave: (
     value: StaffCatalogItem,
@@ -573,10 +585,9 @@ type ItemFormProps = {
 
 const NEW_OPTION = "__new__";
 
-function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, onDelete }: ItemFormProps) {
-  const [draft, setDraft] = useState(initial);
-  const [translating, setTranslating] = useState(false);
-  const [newCategory, setNewCategory] = useState({ en: "", vn: "" });
+function ItemForm({ initial, isNew, catalog, busy, onCancel, onSave, onDelete }: ItemFormProps) {
+  const [draft, setDraft] = useState(() => ({ ...initial, name: isNew ? "" : staffItemLabel(initial) }));
+  const [newCategory, setNewCategory] = useState("");
   const [newSupplier, setNewSupplier] = useState({ label: "", zaloUrl: "" });
   const units = useMemo(
     () => [...new Set([...UNITS, ...catalog.items.map((item) => item.unit)])],
@@ -594,27 +605,21 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
       draft.unit.trim() &&
       draft.category &&
       draft.supplier &&
-      (!addingCategory || newCategory.en.trim()) &&
+      (!addingCategory || newCategory.trim()) &&
       (!addingSupplier || (newSupplier.label.trim() && zaloValid)),
   );
   const packHint = draft.pack?.trim() ? `1 ${draft.unit || "…"} = ${draft.pack.trim()}` : null;
 
-  const ensureVn = async (vn: string, en: string) => {
-    if (vn.trim()) return vn.trim();
-    return (await translateToVn(en.trim()).catch(() => null)) ?? en.trim();
-  };
-
-  const submit = async () => {
-    setTranslating(true);
-    const nameVn = await ensureVn(draft.nameVn, draft.name);
+  const submit = () => {
+    const name = draft.name.trim();
+    const categoryName = newCategory.trim();
     const category = addingCategory
       ? {
-          id: uniqueCatalogId(newCategory.en, catalog.categories.map((entry) => entry.id)),
-          en: newCategory.en.trim(),
-          vn: await ensureVn(newCategory.vn, newCategory.en),
+          id: uniqueCatalogId(categoryName, catalog.categories.map((entry) => entry.id)),
+          en: categoryName,
+          vn: categoryName,
         }
       : undefined;
-    setTranslating(false);
     const supplier = addingSupplier
       ? {
           id: uniqueCatalogId(newSupplier.label, catalog.suppliers.map((entry) => entry.id)),
@@ -624,7 +629,7 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
       : undefined;
     const id = isNew
       ? uniqueCatalogId(
-          `${draft.name} ${draft.brand ?? ""}`,
+          `${name} ${draft.brand ?? ""}`,
           catalog.items.map((item) => item.id),
         )
       : draft.id;
@@ -634,8 +639,8 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
         id,
         category: category?.id ?? draft.category,
         supplier: supplier?.id ?? draft.supplier,
-        name: draft.name.trim(),
-        nameVn,
+        name,
+        nameVn: name,
         unit: draft.unit.trim(),
         brand: draft.brand?.trim() || undefined,
         pack: draft.pack?.trim() || undefined,
@@ -651,29 +656,27 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
       className="card formSection"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSave) void submit();
+        if (canSave) submit();
       }}
     >
       <h2 className="staffAdminTitle">{isNew ? "Новая позиция" : "Редактирование позиции"}</h2>
       <label>
-        <span>Название (English) *</span>
-        <input value={draft.name} onChange={(event) => set("name", event.target.value)} required />
+        <span>Название *</span>
+        <input
+          placeholder="Butter / Bơ"
+          value={draft.name}
+          onChange={(event) => set("name", event.target.value)}
+          required
+        />
       </label>
-      <TranslateField
-        label="Название (Tiếng Việt)"
-        value={draft.nameVn}
-        source={draft.name}
-        onChange={(value) => set("nameVn", value)}
-        onExpired={onExpired}
-      />
-      <small className="staffAdminHint">Если оставить пустым, переведётся автоматически при сохранении</small>
+      <small className="staffAdminHint">Сотрудники увидят название ровно так, как вы его впишете</small>
       <div className="formGrid staffAdminGrid">
         <label>
           <span>Категория *</span>
           <select value={draft.category} onChange={(event) => set("category", event.target.value)}>
             {catalog.categories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.en}
+                {staffCategoryLabel(category)}
               </option>
             ))}
             <option value={NEW_OPTION}>+ Новая категория…</option>
@@ -695,20 +698,14 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
         <div className="staffAdminInline">
           <b>Новая категория</b>
           <label>
-            <span>Название (English) *</span>
+            <span>Название *</span>
             <input
-              value={newCategory.en}
-              onChange={(event) => setNewCategory((prev) => ({ ...prev, en: event.target.value }))}
+              placeholder="Frozen / Đông lạnh"
+              value={newCategory}
+              onChange={(event) => setNewCategory(event.target.value)}
               required
             />
           </label>
-          <TranslateField
-            label="Название (Tiếng Việt)"
-            value={newCategory.vn}
-            source={newCategory.en}
-            onChange={(vn) => setNewCategory((prev) => ({ ...prev, vn }))}
-            onExpired={onExpired}
-          />
         </div>
       ) : null}
       {addingSupplier ? (
@@ -791,10 +788,9 @@ function ItemForm({ initial, isNew, catalog, busy, onExpired, onCancel, onSave, 
         />
         <span>Скрыть у сотрудников</span>
       </label>
-      {translating ? <div className="adminBusy">⏳ Перевожу на вьетнамский…</div> : null}
       <FormActions
         isNew={isNew}
-        busy={busy || translating}
+        busy={busy}
         canSave={canSave}
         deleteConfirm={`Удалить «${initial.name}»?`}
         onCancel={onCancel}
@@ -871,35 +867,38 @@ type CategoryFormProps = {
   isNew: boolean;
   usedBy: number;
   busy: boolean;
-  onExpired: () => void;
   onCancel: () => void;
   onSave: (value: StaffCatalogCategory) => void;
   onDelete: () => void;
 };
 
-function CategoryForm({ initial, takenIds, isNew, usedBy, busy, onExpired, onCancel, onSave, onDelete }: CategoryFormProps) {
-  const [en, setEn] = useState(initial.en);
-  const [vn, setVn] = useState(initial.vn);
+function CategoryForm({ initial, takenIds, isNew, usedBy, busy, onCancel, onSave, onDelete }: CategoryFormProps) {
+  const [name, setName] = useState(isNew ? "" : staffCategoryLabel(initial));
 
   return (
     <form
       className="card formSection"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!en.trim()) return;
-        onSave({ id: initial.id || uniqueCatalogId(en, takenIds), en: en.trim(), vn: vn.trim() || en.trim() });
+        const label = name.trim();
+        if (!label) return;
+        onSave({ id: initial.id || uniqueCatalogId(label, takenIds), en: label, vn: label });
       }}
     >
       <h2 className="staffAdminTitle">{isNew ? "Новая категория" : "Редактирование категории"}</h2>
       <label>
-        <span>Название (English) *</span>
-        <input value={en} onChange={(event) => setEn(event.target.value)} required />
+        <span>Название *</span>
+        <input
+          placeholder="Frozen / Đông lạnh"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          required
+        />
       </label>
-      <TranslateField label="Название (Tiếng Việt)" value={vn} source={en} onChange={setVn} onExpired={onExpired} />
       <FormActions
         isNew={isNew}
         busy={busy}
-        canSave={Boolean(en.trim())}
+        canSave={Boolean(name.trim())}
         deleteBlocked={
           usedBy ? `В этой категории ${usedBy} поз. Сначала перенесите их в другую категорию.` : undefined
         }

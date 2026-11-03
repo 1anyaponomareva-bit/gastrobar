@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useState } from "react";
 import {
   MAX_MAIN_INGREDIENTS,
   mainIngredientIndexes,
@@ -12,6 +12,7 @@ import {
   type RecipeStorageIcon,
 } from "@/data/recipes";
 import { getAssetUrl } from "@/lib/appVersion";
+import { useDragReorder } from "@/lib/useDragReorder";
 
 const LANGS: { id: RecipeLang; flag: string }[] = [
   { id: "ru", flag: "Русский" },
@@ -133,81 +134,6 @@ function fromFormDraft(draft: FormDraft) {
   };
 }
 
-const AUTO_SCROLL_EDGE = 90;
-/** The sticky publish bar covers the bottom of the screen. */
-const AUTO_SCROLL_BOTTOM_EDGE = 160;
-
-/** Reorders a list by dragging a handle with a finger or mouse; scrolls the page near the screen edges. */
-function useDragReorder(onMove: (from: number, to: number) => void) {
-  const rowRefs = useRef<(HTMLElement | null)[]>([]);
-  const drag = useRef<{ index: number; y: number } | null>(null);
-  const frame = useRef<number | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const onMoveRef = useRef(onMove);
-  onMoveRef.current = onMove;
-  const renderedIndex = useRef<number | null>(null);
-  renderedIndex.current = dragIndex;
-
-  const retarget = () => {
-    const current = drag.current;
-    // Row positions are stale until the previous move has been rendered.
-    if (!current || renderedIndex.current !== current.index) return;
-    let target = 0;
-    rowRefs.current.forEach((row, index) => {
-      if (!row || index === current.index) return;
-      const rect = row.getBoundingClientRect();
-      if (current.y > rect.top + rect.height / 2) target += 1;
-    });
-    if (target !== current.index) {
-      onMoveRef.current(current.index, target);
-      current.index = target;
-      setDragIndex(target);
-    }
-  };
-
-  const tick = () => {
-    const current = drag.current;
-    if (!current) return;
-    if (current.y < AUTO_SCROLL_EDGE) window.scrollBy(0, -10);
-    else if (current.y > window.innerHeight - AUTO_SCROLL_BOTTOM_EDGE) window.scrollBy(0, 10);
-    retarget();
-    frame.current = requestAnimationFrame(tick);
-  };
-
-  const stop = () => {
-    drag.current = null;
-    setDragIndex(null);
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = null;
-  };
-
-  useEffect(() => stop, []);
-
-  const handleProps = (index: number) => ({
-    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
-      event.preventDefault();
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
-        // Capture is optional; moves still reach the handle without it.
-      }
-      drag.current = { index, y: event.clientY };
-      renderedIndex.current = index;
-      setDragIndex(index);
-      frame.current = requestAnimationFrame(tick);
-    },
-    onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
-      if (!drag.current) return;
-      drag.current.y = event.clientY;
-      retarget();
-    },
-    onPointerUp: stop,
-    onPointerCancel: stop,
-  });
-
-  return { rowRefs, dragIndex, handleProps };
-}
-
 type RecipeFormProps = {
   initial: Recipe;
   t: (key: string) => string;
@@ -255,6 +181,7 @@ export function RecipeForm({ initial, t, onSaved, onCancel, onExpired }: RecipeF
       ingredients.splice(to, 0, moved);
       return { ...prev, ingredients };
     }),
+    { bottomEdge: 160 },
   );
 
   const save = async () => {

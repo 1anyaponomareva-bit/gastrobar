@@ -59,26 +59,6 @@
   border-style: dashed;
 }
 
-.staff-admin .staffAdminOrdered {
-  display: grid;
-  grid-template-columns: 1fr 44px 44px;
-  gap: 6px;
-  align-items: stretch;
-  margin-bottom: 6px;
-}
-
-.staff-admin .staffAdminOrdered button.staffAdminRow:not(.statusBox) {
-  margin-bottom: 0;
-}
-
-.staff-admin .staffAdminOrdered > button.white:not(.statusBox) {
-  padding: 0;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  font-size: 18px;
-  font-weight: 900;
-}
-
 .staff-admin .staffAdminTitle {
   margin: 0 0 4px;
   font-size: 20px;
@@ -101,21 +81,6 @@
 .staff-admin .staffAdminInline > b {
   font-size: 15px;
   font-weight: 900;
-}
-
-.staff-admin .staffAdminTranslate {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-}
-
-.staff-admin .staffAdminTranslate button:not(.statusBox) {
-  padding: 0 12px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 800;
-  white-space: nowrap;
 }
 
 .staff-admin .staffAdminHint {
@@ -154,4 +119,39 @@
   background: #fff;
   color: var(--red);
   font-weight: 800;
+}
+
+.staff-admin .staffAdminDragRow {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 6px;
+}
+
+.staff-admin .staffAdminDragRow button.staffAdminRow:not(.statusBox) {
+  margin-bottom: 0;
+}
+
+.staff-admin button.staffAdminHandle:not(.statusBox) {
+  padding: 0;
+  border: 1px solid #e3e3e3;
+  border-radius: 12px;
+  background: #fff;
+  color: #999;
+  font-size: 20px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.staff-admin .staffAdminDragRow.dragging button.staffAdminHandle:not(.statusBox) {
+  background: #ffcf33;
+  border-color: #ffcf33;
+  color: #111;
+  cursor: grabbing;
+}
+
+.staff-admin .staffAdminDragRow.dragging button.staffAdminRow:not(.statusBox) {
+  border-color: #ffcf33;
+  box-shadow: 0 6px 18px #0002;
 }
