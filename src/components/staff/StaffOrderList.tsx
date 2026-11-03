@@ -7,6 +7,8 @@ import {
   STAFF_ORDER_ITEMS,
   STAFF_ORDER_COMPANY_FOOTER,
   STAFF_ORDER_SUPPLIERS,
+  staffOrderItemLabel,
+  staffOrderItemNameVn,
   staffOrderPackLabel,
   type StaffOrderItem,
   type StaffOrderSupplierId,
@@ -16,7 +18,6 @@ import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { translate } from "@/lib/i18n";
 import {
   translateStaffCategory,
-  translateStaffItemName,
   type StaffAppLang,
 } from "@/lib/staffInventoryI18n";
 import {
@@ -47,6 +48,10 @@ type Props = {
 
 function isOrderTab(value: string): value is OrderTab {
   return value === "all" || STAFF_ORDER_SUPPLIERS.some((s) => s.id === value);
+}
+
+function bilingualCategory(category: string): string {
+  return `${translateStaffCategory("en", category)} / ${translateStaffCategory("vn", category)}`;
 }
 
 function asciiFileLabel(value: string): string {
@@ -111,13 +116,13 @@ export function StaffOrderList({
       if (!query) return true;
       return [
         item.name,
-        translateStaffItemName(staffLang, item.name),
+        staffOrderItemNameVn(item),
         item.brand ?? "",
         getStaffOrderSupplier(item.supplier).label,
         item.itemNo ?? "",
       ].some((text) => text.toLowerCase().includes(query));
     },
-    [search, staffLang],
+    [search],
   );
 
   const supplier = tab === "all" ? null : getStaffOrderSupplier(tab);
@@ -239,7 +244,7 @@ export function StaffOrderList({
     ].filter(Boolean);
     return (
       <div key={item.id} className={`card orderCard ${marked ? "marked" : ""}`}>
-        <div className="name">{translateStaffItemName(staffLang, item.name)}</div>
+        <div className="name">{staffOrderItemLabel(item)}</div>
         {details.length ? <div className="orderDetails">{details.join(" · ")}</div> : null}
         <div className="row single">
           <div className="field">
@@ -318,7 +323,7 @@ export function StaffOrderList({
               >
                 {option === "All"
                   ? t("staff_cat_all")
-                  : translateStaffCategory(staffLang, option)}
+                  : bilingualCategory(option)}
               </button>
             ))}
           </div>
@@ -338,7 +343,7 @@ export function StaffOrderList({
               if (!inCategory.length) return null;
               return (
                 <div key={cat}>
-                  <div className="category">{translateStaffCategory(staffLang, cat)}</div>
+                  <div className="category">{bilingualCategory(cat)}</div>
                   {inCategory.map((item) => renderCard(item, true))}
                 </div>
               );
@@ -364,7 +369,7 @@ export function StaffOrderList({
               if (!inCategory.length) return null;
               return (
                 <div key={cat}>
-                  <div className="category">{translateStaffCategory(staffLang, cat)}</div>
+                  <div className="category">{bilingualCategory(cat)}</div>
                   {inCategory.map((item) => renderCard(item, false))}
                 </div>
               );

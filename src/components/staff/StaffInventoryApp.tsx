@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InAppBrowserNotice } from "@/components/staff/InAppBrowserNotice";
-import { StaffLanguageFlags } from "@/components/staff/StaffLanguageFlags";
 import { StaffOrderList } from "@/components/staff/StaffOrderList";
 import { STAFF_ORDER_ITEMS } from "@/data/staffOrderItems";
 import {
@@ -22,7 +21,7 @@ import {
 } from "@/lib/deliverPdfFile";
 import {
   buildStaffInventoryPdfLabels,
-  toStaffAppLang,
+  type StaffAppLang,
 } from "@/lib/staffInventoryI18n";
 import {
   getStaffInventoryPdfFileName,
@@ -47,7 +46,6 @@ import {
 } from "@/lib/staffInventoryStorage";
 import { parseStockMessage } from "@/lib/staffStockParser";
 import { translate } from "@/lib/i18n";
-import { useTranslation } from "@/lib/useTranslation";
 import type { StaffStockRow } from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
 
@@ -82,8 +80,7 @@ function buildStockRows(venue: StaffInventoryVenue): StaffStockRow[] {
 }
 
 export function StaffInventoryApp() {
-  const { lang } = useTranslation();
-  const staffLang = toStaffAppLang(lang);
+  const staffLang: StaffAppLang = "en";
   const t = useCallback(
     (key: string) => translate(staffLang, key),
     [staffLang],
@@ -302,7 +299,9 @@ export function StaffInventoryApp() {
 
   const stockCards = stockItems.map((item) => (
     <div key={`${venue}-stock-${item.id}`} className="card">
-      <div className="name">{item.name[staffLang]}</div>
+      <div className="name">
+        {item.name.en} / {item.name.vn}
+      </div>
       <div className={`row ${item.noWarehouse ? "single" : ""}`}>
         <div className="field">
           <label>{t("staff_stock_restaurant")}</label>
@@ -344,10 +343,6 @@ export function StaffInventoryApp() {
     <div className="staff-inventory staff-inventory-page">
       <div className="app">
         <div className="top">
-          <div className="langRow">
-            <StaffLanguageFlags />
-          </div>
-
           <div className="venueLogo">
             <img
               src={getAssetUrl("/food/menu/GASTROFOOD-line.png")}

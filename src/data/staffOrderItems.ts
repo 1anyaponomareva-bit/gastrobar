@@ -1,3 +1,5 @@
+import { STAFF_ORDER_ITEM_NAMES_VN } from "@/data/staffOrderItemNamesVn";
+
 export type StaffOrderSupplierId =
   | "mm"
   | "hisina"
@@ -238,6 +240,14 @@ export const STAFF_ORDER_COMPANY_FOOTER = [
   "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa",
   "+84 98 863 15 07",
 ];
+
+export function staffOrderItemNameVn(item: StaffOrderItem): string {
+  return STAFF_ORDER_ITEM_NAMES_VN[item.name] ?? item.name;
+}
+
+export function staffOrderItemLabel(item: StaffOrderItem): string {
+  return `${item.name} / ${staffOrderItemNameVn(item)}`;
+}
 
 export function staffOrderPackLabel(item: StaffOrderItem): string | null {
   if (!item.pack) return null;
