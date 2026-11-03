@@ -371,7 +371,7 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         <div className="staffAdminFilters">
           <input
             className="search"
-            placeholder="Поиск по названию, бренду, артикулу"
+            placeholder="Поиск"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />

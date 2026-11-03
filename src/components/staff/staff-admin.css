@@ -15,19 +15,22 @@
 
 .staff-admin .staffAdminFilters {
   display: grid;
-  grid-template-columns: 1fr 150px;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 8px;
 }
 
+.staff-admin .staffAdminFilters .search,
 .staff-admin .staffAdminFilters select {
   min-width: 0;
-  height: 46px;
-  padding: 0 8px;
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
   border: 1px solid #ddd;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fff;
-  font-size: 14px;
+  color: #111;
+  font-size: 16px;
 }
 
 .staff-admin button.staffAdminRow:not(.statusBox) {
