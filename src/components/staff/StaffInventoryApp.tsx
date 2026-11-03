@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InAppBrowserNotice } from "@/components/staff/InAppBrowserNotice";
 import { StaffOrderList } from "@/components/staff/StaffOrderList";
-import { STAFF_ORDER_ITEMS } from "@/data/staffOrderItems";
 import {
   STAFF_INVENTORY_VENUE_LABELS,
   type StaffInventoryVenue,
@@ -46,6 +45,7 @@ import {
 } from "@/lib/staffInventoryStorage";
 import { parseStockMessage } from "@/lib/staffStockParser";
 import { translate } from "@/lib/i18n";
+import { useStaffCatalog } from "@/lib/useStaffCatalog";
 import type { StaffStockRow } from "@/components/staff/staffInventoryTypes";
 import "./staff-inventory.css";
 
@@ -85,6 +85,7 @@ export function StaffInventoryApp() {
     (key: string) => translate(staffLang, key),
     [staffLang],
   );
+  const catalog = useStaffCatalog();
   const [hydrated, setHydrated] = useState(false);
   const venue: StaffInventoryVenue = "gastrofood";
   const [date, setDate] = useState("");
@@ -190,7 +191,7 @@ export function StaffInventoryApp() {
 
     clearStoredOrderValues(
       venue,
-      STAFF_ORDER_ITEMS.map((item) => item.id),
+      catalog.items.map((item) => item.id),
     );
     clearStoredStockValues(
       venue,
@@ -343,6 +344,11 @@ export function StaffInventoryApp() {
     <div className="staff-inventory staff-inventory-page">
       <div className="app">
         <div className="top">
+          <div className="langRow staffTopRow">
+            <a className="staffAdminEntry" href="/staff/admin">
+              🔐 Admin
+            </a>
+          </div>
           <div className="venueLogo">
             <img
               src={getAssetUrl("/food/menu/GASTROFOOD-line.png")}
@@ -467,6 +473,7 @@ export function StaffInventoryApp() {
             </>
           ) : (
             <StaffOrderList
+              catalog={catalog}
               venue={venue}
               venueLabel={venueLabel}
               date={date}

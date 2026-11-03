@@ -1,12 +1,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 import type { RecipeOverrides, StoredRecipes } from "@/data/recipes";
+import type { StaffCatalog } from "@/data/staffCatalog";
 
 const BUCKET = "recipes-admin";
 const PHOTOS_BUCKET = "recipes-photos";
 const ADMINS_FILE = "admins.json";
 const OVERRIDES_FILE = "overrides.json";
 const RECIPES_FILE = "recipes.json";
+const STAFF_CATALOG_FILE = "staff-catalog.json";
 export type RecipesAdminAccount = {
   email: string;
   salt: string;
@@ -88,6 +90,14 @@ export async function readStoredRecipes(): Promise<StoredRecipes> {
 
 export function writeStoredRecipes(stored: StoredRecipes) {
   return writeJson(RECIPES_FILE, stored);
+}
+
+export function readStaffCatalog() {
+  return readJson<StaffCatalog | null>(STAFF_CATALOG_FILE, null);
+}
+
+export function writeStaffCatalog(catalog: StaffCatalog) {
+  return writeJson(STAFF_CATALOG_FILE, catalog);
 }
 
 let photosBucketReady = false;

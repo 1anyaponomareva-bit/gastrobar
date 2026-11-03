@@ -244,20 +244,3 @@ export const STAFF_ORDER_COMPANY_FOOTER = [
 export function staffOrderItemNameVn(item: StaffOrderItem): string {
   return STAFF_ORDER_ITEM_NAMES_VN[item.name] ?? item.name;
 }
-
-export function staffOrderItemLabel(item: StaffOrderItem): string {
-  return `${item.name} / ${staffOrderItemNameVn(item)}`;
-}
-
-export function staffOrderPackLabel(item: StaffOrderItem): string | null {
-  if (!item.pack) return null;
-  const compact = (value: string) => value.toLowerCase().replace(/\s+/g, "");
-  if (compact(item.pack) === compact(`1 ${item.unit}`)) return null;
-  return `1 ${item.unit} = ${item.pack}`;
-}
-
-export function getStaffOrderSupplier(
-  id: StaffOrderSupplierId,
-): StaffOrderSupplier {
-  return STAFF_ORDER_SUPPLIERS.find((supplier) => supplier.id === id)!;
-}

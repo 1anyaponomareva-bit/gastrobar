@@ -2,24 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  getStaffOrderSupplier,
-  STAFF_ORDER_CATEGORIES,
-  STAFF_ORDER_ITEMS,
-  STAFF_ORDER_COMPANY_FOOTER,
-  STAFF_ORDER_SUPPLIERS,
-  staffOrderItemLabel,
-  staffOrderItemNameVn,
-  staffOrderPackLabel,
-  type StaffOrderItem,
-  type StaffOrderSupplierId,
-} from "@/data/staffOrderItems";
+  staffCategoryLabel,
+  staffItemLabel,
+  staffItemPackLabel,
+  type StaffCatalog,
+  type StaffCatalogItem,
+} from "@/data/staffCatalog";
+import { STAFF_ORDER_COMPANY_FOOTER } from "@/data/staffOrderItems";
 import type { StaffInventoryVenue } from "@/data/staffInventoryItems";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { translate } from "@/lib/i18n";
-import {
-  translateStaffCategory,
-  type StaffAppLang,
-} from "@/lib/staffInventoryI18n";
+import type { StaffAppLang } from "@/lib/staffInventoryI18n";
 import {
   getStaffInventoryPdfFileName,
   makeSupplierOrderPdfBlob,
@@ -34,9 +27,10 @@ import {
   setStoredOrderValue,
 } from "@/lib/staffInventoryStorage";
 
-type OrderTab = "all" | StaffOrderSupplierId;
+const ALL = "all";
 
 type Props = {
+  catalog: StaffCatalog;
   venue: StaffInventoryVenue;
   venueLabel: string;
   date: string;
@@ -45,14 +39,6 @@ type Props = {
   revision: number;
   onChange: () => void;
 };
-
-function isOrderTab(value: string): value is OrderTab {
-  return value === "all" || STAFF_ORDER_SUPPLIERS.some((s) => s.id === value);
-}
-
-function bilingualCategory(category: string): string {
-  return `${translateStaffCategory("en", category)} / ${translateStaffCategory("vn", category)}`;
-}
 
 function asciiFileLabel(value: string): string {
   return value
@@ -63,6 +49,7 @@ function asciiFileLabel(value: string): string {
 }
 
 export function StaffOrderList({
+  catalog,
   venue,
   venueLabel,
   date,
@@ -72,67 +59,74 @@ export function StaffOrderList({
   onChange,
 }: Props) {
   const t = useCallback((key: string) => translate(staffLang, key), [staffLang]);
-  const [tab, setTab] = useState<OrderTab>("all");
-  const [category, setCategory] = useState<string>("All");
+  const [tab, setTab] = useState<string>(ALL);
+  const [category, setCategory] = useState<string>(ALL);
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const preparedRef = useRef<{ key: string; promise: Promise<Blob> } | null>(
     null,
   );
 
+  const items = useMemo(
+    () => catalog.items.filter((item) => !item.hidden),
+    [catalog],
+  );
+  const suppliersById = useMemo(
+    () => new Map(catalog.suppliers.map((supplier) => [supplier.id, supplier])),
+    [catalog],
+  );
+  const supplierLabel = useCallback(
+    (id: string) => suppliersById.get(id)?.label ?? id,
+    [suppliersById],
+  );
+
   useEffect(() => {
     const stored = getStoredOrderTab(venue);
-    if (isOrderTab(stored)) setTab(stored);
-  }, [venue]);
+    if (stored === ALL || suppliersById.has(stored)) setTab(stored);
+  }, [venue, suppliersById]);
 
   const values = useMemo(() => {
     void revision;
     return new Map(
-      STAFF_ORDER_ITEMS.map((item) => [
-        item.id,
-        getStoredOrderValue(venue, item.id),
-      ]),
+      items.map((item) => [item.id, getStoredOrderValue(venue, item.id)]),
     );
-  }, [venue, revision]);
+  }, [venue, revision, items]);
 
   const isMarked = useCallback(
-    (item: StaffOrderItem) => parseNumber(values.get(item.id) ?? "") > 0,
+    (item: StaffCatalogItem) => parseNumber(values.get(item.id) ?? "") > 0,
     [values],
   );
 
   const markedBySupplier = useMemo(() => {
-    const counts = new Map<StaffOrderSupplierId, number>();
-    STAFF_ORDER_ITEMS.forEach((item) => {
+    const counts = new Map<string, number>();
+    items.forEach((item) => {
       if (isMarked(item)) {
         counts.set(item.supplier, (counts.get(item.supplier) ?? 0) + 1);
       }
     });
     return counts;
-  }, [isMarked]);
+  }, [items, isMarked]);
 
   const matchesSearch = useCallback(
-    (item: StaffOrderItem) => {
+    (item: StaffCatalogItem) => {
       const query = search.toLowerCase().trim();
       if (!query) return true;
       return [
         item.name,
-        staffOrderItemNameVn(item),
+        item.nameVn,
         item.brand ?? "",
-        getStaffOrderSupplier(item.supplier).label,
+        supplierLabel(item.supplier),
         item.itemNo ?? "",
       ].some((text) => text.toLowerCase().includes(query));
     },
-    [search],
+    [search, supplierLabel],
   );
 
-  const supplier = tab === "all" ? null : getStaffOrderSupplier(tab);
+  const supplier = tab === ALL ? null : (suppliersById.get(tab) ?? null);
 
   const supplierItems = useMemo(
-    () =>
-      supplier
-        ? STAFF_ORDER_ITEMS.filter((item) => item.supplier === supplier.id)
-        : [],
-    [supplier],
+    () => (supplier ? items.filter((item) => item.supplier === supplier.id) : []),
+    [supplier, items],
   );
   const supplierMarked = supplierItems.filter(isMarked);
 
@@ -150,7 +144,7 @@ export function StaffOrderList({
       rows: supplierMarked.map((item) => ({
         name: item.name,
         details: item.brand ?? "",
-        packInfo: staffOrderPackLabel(item) ?? undefined,
+        packInfo: staffItemPackLabel(item) ?? undefined,
         quantity: parseNumber(values.get(item.id) ?? ""),
         unit: item.unit,
         itemNo: item.itemNo,
@@ -173,7 +167,7 @@ export function StaffOrderList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfKey]);
 
-  const handleTabChange = (next: OrderTab) => {
+  const handleTabChange = (next: string) => {
     setTab(next);
     setStoredOrderTab(venue, next);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -181,10 +175,8 @@ export function StaffOrderList({
 
   const handleReset = () => {
     setSearch("");
-    setCategory("All");
-    const scope = supplier
-      ? STAFF_ORDER_ITEMS.filter((item) => item.supplier === supplier.id)
-      : STAFF_ORDER_ITEMS;
+    setCategory(ALL);
+    const scope = supplier ? supplierItems : items;
     const filled = scope.filter((item) => (values.get(item.id) ?? "").trim() !== "");
     if (!filled.length) return;
     const message = supplier
@@ -234,17 +226,17 @@ export function StaffOrderList({
     }
   };
 
-  const renderCard = (item: StaffOrderItem, showSupplier: boolean) => {
+  const renderCard = (item: StaffCatalogItem, showSupplier: boolean) => {
     const marked = isMarked(item);
-    const packLabel = staffOrderPackLabel(item);
+    const packLabel = staffItemPackLabel(item);
     const details = [
       item.brand,
-      showSupplier ? getStaffOrderSupplier(item.supplier).label : null,
+      showSupplier ? supplierLabel(item.supplier) : null,
       item.itemNo ? `#${item.itemNo}` : null,
     ].filter(Boolean);
     return (
       <div key={item.id} className={`card orderCard ${marked ? "marked" : ""}`}>
-        <div className="name">{staffOrderItemLabel(item)}</div>
+        <div className="name">{staffItemLabel(item)}</div>
         {details.length ? <div className="orderDetails">{details.join(" · ")}</div> : null}
         <div className="row single">
           <div className="field">
@@ -264,22 +256,34 @@ export function StaffOrderList({
     );
   };
 
-  const allItems = STAFF_ORDER_ITEMS.filter(
-    (item) =>
-      (category === "All" || item.category === category) && matchesSearch(item),
+  const renderByCategory = (list: StaffCatalogItem[], showSupplier: boolean) =>
+    catalog.categories.map((cat) => {
+      const inCategory = list.filter((item) => item.category === cat.id);
+      if (!inCategory.length) return null;
+      return (
+        <div key={cat.id}>
+          <div className="category">{staffCategoryLabel(cat)}</div>
+          {inCategory.map((item) => renderCard(item, showSupplier))}
+        </div>
+      );
+    });
+
+  const allItems = items.filter(
+    (item) => (category === ALL || item.category === category) && matchesSearch(item),
   );
+  const filteredSupplierItems = supplierItems.filter(matchesSearch);
 
   return (
     <>
       <div className="tabs supplierTabs">
         <button
           type="button"
-          className={`tab ${tab === "all" ? "active" : ""}`}
-          onClick={() => handleTabChange("all")}
+          className={`tab ${tab === ALL ? "active" : ""}`}
+          onClick={() => handleTabChange(ALL)}
         >
           {t("staff_tab_all_plain")}
         </button>
-        {STAFF_ORDER_SUPPLIERS.map((option) => {
+        {catalog.suppliers.map((option) => {
           const count = markedBySupplier.get(option.id) ?? 0;
           return (
             <button
@@ -311,19 +315,24 @@ export function StaffOrderList({
         </button>
       </div>
 
-      {tab === "all" ? (
+      {tab === ALL ? (
         <>
           <div className="tabs categoryTabs">
-            {["All", ...STAFF_ORDER_CATEGORIES].map((option) => (
+            <button
+              type="button"
+              className={`tab small ${category === ALL ? "active" : ""}`}
+              onClick={() => setCategory(ALL)}
+            >
+              {t("staff_cat_all")}
+            </button>
+            {catalog.categories.map((option) => (
               <button
-                key={option}
+                key={option.id}
                 type="button"
-                className={`tab small ${category === option ? "active" : ""}`}
-                onClick={() => setCategory(option)}
+                className={`tab small ${category === option.id ? "active" : ""}`}
+                onClick={() => setCategory(option.id)}
               >
-                {option === "All"
-                  ? t("staff_cat_all")
-                  : bilingualCategory(option)}
+                {staffCategoryLabel(option)}
               </button>
             ))}
           </div>
@@ -335,19 +344,10 @@ export function StaffOrderList({
             </span>
           </div>
 
-          {!allItems.length ? (
-            <div className="empty">{t("staff_empty")}</div>
+          {allItems.length ? (
+            renderByCategory(allItems, true)
           ) : (
-            STAFF_ORDER_CATEGORIES.map((cat) => {
-              const inCategory = allItems.filter((item) => item.category === cat);
-              if (!inCategory.length) return null;
-              return (
-                <div key={cat}>
-                  <div className="category">{bilingualCategory(cat)}</div>
-                  {inCategory.map((item) => renderCard(item, true))}
-                </div>
-              );
-            })
+            <div className="empty">{t("staff_empty")}</div>
           )}
         </>
       ) : supplier ? (
@@ -361,19 +361,8 @@ export function StaffOrderList({
             </span>
           </div>
 
-          {supplierItems.filter(matchesSearch).length ? (
-            STAFF_ORDER_CATEGORIES.map((cat) => {
-              const inCategory = supplierItems.filter(
-                (item) => item.category === cat && matchesSearch(item),
-              );
-              if (!inCategory.length) return null;
-              return (
-                <div key={cat}>
-                  <div className="category">{bilingualCategory(cat)}</div>
-                  {inCategory.map((item) => renderCard(item, false))}
-                </div>
-              );
-            })
+          {filteredSupplierItems.length ? (
+            renderByCategory(filteredSupplierItems, false)
           ) : (
             <div className="empty">{t("staff_empty")}</div>
           )}

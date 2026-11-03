@@ -1,0 +1,143 @@
+.staff-admin .staffAdminTabs {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.staff-admin button.staffAdminAdd:not(.statusBox) {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #00a651;
+  border-color: #00a651;
+  color: #fff;
+  font-weight: 900;
+}
+
+.staff-admin .staffAdminFilters {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.staff-admin .staffAdminFilters select {
+  min-width: 0;
+  height: 46px;
+  padding: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.staff-admin button.staffAdminRow:not(.statusBox) {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e3e3e3;
+  border-radius: 14px;
+  background: #fff;
+  color: #111;
+  text-align: left;
+}
+
+.staff-admin .staffAdminRow b {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.staff-admin .staffAdminRow span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.staff-admin button.staffAdminRow.isHidden:not(.statusBox) {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.staff-admin .staffAdminOrdered {
+  display: grid;
+  grid-template-columns: 1fr 44px 44px;
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 6px;
+}
+
+.staff-admin .staffAdminOrdered button.staffAdminRow:not(.statusBox) {
+  margin-bottom: 0;
+}
+
+.staff-admin .staffAdminOrdered > button.white:not(.statusBox) {
+  padding: 0;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.staff-admin .staffAdminTitle {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.staff-admin .staffAdminGrid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.staff-admin .staffAdminTranslate {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.staff-admin .staffAdminTranslate button:not(.statusBox) {
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.staff-admin .staffAdminHint {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.staff-admin .staffAdminHint.error {
+  color: var(--red);
+}
+
+.staff-admin label.staffAdminCheck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.staff-admin .formSection label.staffAdminCheck input {
+  width: 22px;
+  height: 22px;
+}
+
+.staff-admin .formSection label.staffAdminCheck span {
+  color: #111;
+  font-size: 15px;
+  text-transform: none;
+}
+
+.staff-admin button.staffAdminDelete:not(.statusBox) {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid #f2a0a0;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--red);
+  font-weight: 800;
+}
