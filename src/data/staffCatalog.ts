@@ -87,11 +87,25 @@ export function staffCategoryLabel(category: StaffCatalogCategory): string {
     : category.en;
 }
 
-export function staffItemPackLabel(item: StaffCatalogItem): string | null {
+const UNIT_NAMES_VN: Record<string, string> = {
+  pcs: "cái",
+  box: "thùng",
+  pack: "gói",
+  btl: "chai",
+  can: "lon",
+};
+
+/** "box / thùng" for units that differ in Vietnamese; metric and custom units stay as they are. */
+export function staffUnitLabel(unit: string): string {
+  const vn = UNIT_NAMES_VN[unit.toLowerCase()];
+  return vn ? `${unit} / ${vn}` : unit;
+}
+
+export function staffItemPackLabel(item: StaffCatalogItem, unitLabel = item.unit): string | null {
   if (!item.pack) return null;
   const compact = (value: string) => value.toLowerCase().replace(/\s+/g, "");
   if (compact(item.pack) === compact(`1 ${item.unit}`)) return null;
-  return `1 ${item.unit} = ${item.pack}`;
+  return `1 ${unitLabel} = ${item.pack}`;
 }
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;

@@ -516,8 +516,9 @@ export type SupplierOrderPdfOptions = {
   footerLines?: string[];
 };
 
-const ORDER_COL_QTY = 330;
-const ORDER_COL_ITEM_NO = 420;
+const ORDER_COL_QTY = 320;
+const ORDER_COL_ITEM_NO = 460;
+const ORDER_QTY_WIDTH = ORDER_COL_ITEM_NO - ORDER_COL_QTY - 8;
 const ORDER_ITEM_WIDTH = ORDER_COL_QTY - (MARGIN_LEFT + 28) - 10;
 const ORDER_ITEM_NO_WIDTH = MARGIN_LEFT + CONTENT_WIDTH - ORDER_COL_ITEM_NO - 8;
 
@@ -528,9 +529,9 @@ function drawOrderTableHeader(ctx: PdfContext) {
   drawFilledBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, height, COLORS.section);
   const baseline = topY - 14;
   drawTextLine(ctx, "#", MARGIN_LEFT + 8, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "ITEM", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "QTY", ORDER_COL_QTY, baseline, 8, ctx.fontBold);
-  drawTextLine(ctx, "ITEM #", ORDER_COL_ITEM_NO, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "ITEM / MẶT HÀNG", MARGIN_LEFT + 28, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "QTY / SỐ LƯỢNG", ORDER_COL_QTY, baseline, 8, ctx.fontBold);
+  drawTextLine(ctx, "ITEM # / MÃ HÀNG", ORDER_COL_ITEM_NO, baseline, 8, ctx.fontBold);
   ctx.y = topY - height - 6;
 }
 
@@ -542,8 +543,11 @@ function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) 
   const itemNoLines = row.itemNo
     ? wrapText(row.itemNo, ctx.font, 8, ORDER_ITEM_NO_WIDTH)
     : [];
+  const packLines = row.packInfo
+    ? wrapText(row.packInfo, ctx.font, 8, ORDER_QTY_WIDTH)
+    : [];
   const leftHeight = nameLines.length * 12 + detailLines.length * 11;
-  const qtyHeight = row.packInfo ? 26 : 14;
+  const qtyHeight = 14 + packLines.length * 11;
   const rowHeight = Math.max(
     22,
     leftHeight + 10,
@@ -565,9 +569,9 @@ function drawOrderRow(ctx: PdfContext, row: SupplierOrderPdfRow, index: number) 
     10,
     ctx.fontBold,
   );
-  if (row.packInfo) {
-    drawTextLine(ctx, row.packInfo, ORDER_COL_QTY, baseline - 12, 8, ctx.font, COLORS.muted);
-  }
+  packLines.forEach((line, lineIndex) => {
+    drawTextLine(ctx, line, ORDER_COL_QTY, baseline - 12 - lineIndex * 11, 8, ctx.font, COLORS.muted);
+  });
 
   let y = baseline;
   nameLines.forEach((line) => {

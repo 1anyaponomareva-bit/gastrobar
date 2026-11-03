@@ -5,6 +5,7 @@ import {
   staffCategoryLabel,
   staffItemLabel,
   staffItemPackLabel,
+  staffUnitLabel,
   type StaffCatalog,
   type StaffCatalogItem,
 } from "@/data/staffCatalog";
@@ -133,20 +134,17 @@ export function StaffOrderList({
   const pdfOptions = useMemo((): SupplierOrderPdfOptions | null => {
     if (!supplier) return null;
     return {
-      title: `${venueLabel.toUpperCase()} — ORDER: ${supplier.label.toUpperCase()}`,
-      dateLine: translate("en", "staff_pdf_date").replace("{date}", date || "-"),
-      employeeLine: translate("en", "staff_pdf_employee").replace(
-        "{employee}",
-        employee.trim() || "-",
-      ),
-      emptyMessage: "No items marked for order.",
+      title: `${venueLabel.toUpperCase()} — ORDER / ĐƠN ĐẶT HÀNG: ${supplier.label.toUpperCase()}`,
+      dateLine: `Date / Ngày: ${date || "-"}`,
+      employeeLine: `Employee / Nhân viên: ${employee.trim() || "-"}`,
+      emptyMessage: "No items marked for order. / Không có mặt hàng nào được chọn để đặt.",
       footerLines: STAFF_ORDER_COMPANY_FOOTER,
       rows: supplierMarked.map((item) => ({
-        name: item.name,
+        name: staffItemLabel(item),
         details: item.brand ?? "",
-        packInfo: staffItemPackLabel(item) ?? undefined,
+        packInfo: staffItemPackLabel(item, staffUnitLabel(item.unit)) ?? undefined,
         quantity: parseNumber(values.get(item.id) ?? ""),
-        unit: item.unit,
+        unit: staffUnitLabel(item.unit),
         itemNo: item.itemNo,
       })),
     };
