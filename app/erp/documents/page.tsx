@@ -1,5 +1,5 @@
-import { DocumentsPage } from "@/components/erp/DocumentsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpDocumentsPage() {
-  return <DocumentsPage />;
+export default function ErpDocumentsRedirect() {
+  redirect("/erp/stock/history");
 }

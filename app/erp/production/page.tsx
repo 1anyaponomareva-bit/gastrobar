@@ -1,5 +1,5 @@
-import { DocumentsPage } from "@/components/erp/DocumentsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpProductionPage() {
-  return <DocumentsPage productionOnly />;
+export default function ErpProductionRedirect() {
+  redirect("/erp/preps/batches");
 }

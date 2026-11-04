@@ -1,5 +1,5 @@
-import { SettingsPage } from "@/components/erp/SettingsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpSettingsPage() {
-  return <SettingsPage />;
+export default function ErpSettingsRedirect() {
+  redirect("/erp/service");
 }

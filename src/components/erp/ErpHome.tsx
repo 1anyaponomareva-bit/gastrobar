@@ -1,87 +1,102 @@
 "use client";
 
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
-import { L } from "./ui";
 import { reviewCounts } from "./review";
+import { StaffImportCard } from "./ServicePages";
+import { NavLink, PageHead, T } from "./ui";
 
-const TILES = [
-  { href: "/erp/catalog", title: L("Catalog", "Danh mục"), text: L("Products, units, packs, suppliers", "Sản phẩm, đơn vị, quy cách") },
-  { href: "/erp/documents/new?type=receipt", title: L("Receive goods", "Nhập hàng"), text: L("Into any warehouse, with price", "Vào kho bất kỳ, có giá") },
-  { href: "/erp/documents/new?type=transfer", title: L("Transfer", "Chuyển kho"), text: L("Warehouse → Prep → Online", "Kho → Sơ chế → Online") },
-  { href: "/erp/preps", title: L("Semi-finished recipes", "Công thức bán thành phẩm"), text: L("Yield, versions, cost", "Định lượng, phiên bản, giá vốn") },
-  { href: "/erp/production", title: L("Production batches", "Mẻ sản xuất"), text: L("Actual use and yield", "Tiêu hao và thành phẩm thực tế") },
-  { href: "/erp/menu", title: L("Menu costing", "Giá vốn món"), text: L("Food cost, packaging, margin", "Food cost, bao bì, biên lợi nhuận") },
-  { href: "/erp/stock", title: L("Stock", "Tồn kho"), text: L("Balances by warehouse", "Tồn theo kho") },
-];
+function QuickTile({ href, title, text, icon }: { href: string; title: string; text: string; icon: ReactNode }) {
+  return (
+    <NavLink href={href} className="erpQuickTile">
+      <span className="icon" aria-hidden>
+        {icon}
+      </span>
+      <strong>{title}</strong>
+      <span>{text}</span>
+    </NavLink>
+  );
+}
 
-type ImportResult = Record<string, number>;
+const svg = (path: ReactNode) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {path}
+  </svg>
+);
 
 export function ErpHome() {
-  const { state, act, busy } = useErp();
-  const [staffResult, setStaffResult] = useState<ImportResult | null>(null);
-  const [recipesResult, setRecipesResult] = useState<ImportResult | null>(null);
+  const { state } = useErp();
+  const docs = useDocuments(null);
   if (!state) return null;
   const counts = reviewCounts(state);
-  const total = counts.lines + counts.units + counts.packs;
+  const toCheck = counts.lines + counts.units;
+  const emptyCatalog = !state.products.length;
 
   return (
     <>
-      <h1>GASTROFOOD ERP</h1>
-      {total > 0 ? (
-        <a className="erpNotice warn" href="/erp/review">
-          {L("Needs review", "Cần kiểm tra")}: {total} → {L("open", "mở")}
-        </a>
-      ) : null}
-      <div className="erpTiles" style={{ marginTop: 12 }}>
-        {TILES.map((tile) => (
-          <a key={tile.href} className="erpTile" href={tile.href}>
-            <strong>{tile.title}</strong>
-            <span>{tile.text}</span>
-          </a>
-        ))}
+      <PageHead title={T("Главная", "Home", "Trang chủ")} sub={T("Что нужно сделать?", "What do you need to do?", "Bạn cần làm gì?")} />
+
+      {emptyCatalog ? <StaffImportCard compact /> : null}
+
+      <div className="erpQuick">
+        <QuickTile
+          href="/erp/documents/new?type=receipt"
+          title={T("Принять поставку", "Receive a delivery", "Nhận hàng")}
+          text={T("Товар от поставщика — на склад или сразу на кухню", "Goods from a supplier — to a warehouse or the kitchen", "Hàng từ nhà cung cấp vào kho")}
+          icon={svg(<path d="M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10" />)}
+        />
+        <QuickTile
+          href="/erp/documents/new?type=transfer"
+          title={T("Переместить продукты", "Move products", "Chuyển hàng")}
+          text={T("Со склада на кухню заготовок или в фудтрак", "From the warehouse to the prep kitchen or truck", "Từ kho sang bếp sơ chế")}
+          icon={svg(<path d="M4 8h13l-3-3M20 16H7l3 3" />)}
+        />
+        <QuickTile
+          href="/erp/preps/batch/new"
+          title={T("Изготовить полуфабрикат", "Make a semi-finished product", "Sản xuất bán thành phẩm")}
+          text={T("Списать сырьё и получить партию по рецептуре", "Use ingredients and produce a batch", "Trừ nguyên liệu, nhập mẻ thành phẩm")}
+          icon={svg(<path d="M5 11h14v3a7 7 0 01-14 0v-3zM8 7c0-1 1-1.5 1-3M12 7c0-1 1-1.5 1-3M16 7c0-1 1-1.5 1-3" />)}
+        />
+        <QuickTile
+          href="/erp/menu"
+          title={T("Себестоимость блюда", "Dish cost", "Giá vốn món")}
+          text={T("Food Cost, упаковка и маржа по каналам", "Food cost, packaging and margin per channel", "Food cost, bao bì, biên LN")}
+          icon={svg(<path d="M7 3v8M5 3v4a2 2 0 004 0V3M7 11v10M17 3c-2 0-3 3-3 6s1 3 3 3v9" />)}
+        />
       </div>
 
-      <h2>{L("Data transfer", "Chuyển dữ liệu")}</h2>
-      <div className="erpCard">
-        <p className="erpHint">
-          {L(
-            "Safe to repeat: items keep their Staff ids, nothing is duplicated, ERP-only fields are not overwritten.",
-            "Có thể chạy lại: giữ nguyên mã Staff, không tạo trùng.",
-          )}
-        </p>
-        <div className="erpActions">
-          <button
-            type="button"
-            className="erpBtn"
-            disabled={busy}
-            onClick={async () => setStaffResult((await act<{ result: ImportResult }>({ action: "importStaffCatalog" }))?.result ?? null)}
-          >
-            {L("Import Staff catalog", "Nhập danh mục Staff")}
-          </button>
-          <button
-            type="button"
-            className="erpBtn"
-            disabled={busy}
-            onClick={async () => setRecipesResult((await act<{ result: ImportResult }>({ action: "importRecipes" }))?.result ?? null)}
-          >
-            {L("Import Recipes (semi-finished)", "Nhập công thức")}
-          </button>
+      {toCheck ? (
+        <div className="erpNotice warn">
+          {T("Некоторые данные после загрузки нужно уточнить", "Some imported data needs a quick check", "Một số dữ liệu cần kiểm tra")}
+          {counts.units ? ` · ${T("продуктов без единицы", "products without a unit", "sản phẩm chưa có đơn vị")}: ${counts.units}` : ""}
+          {counts.lines ? ` · ${T("ингредиентов без привязки", "unlinked ingredients", "nguyên liệu chưa liên kết")}: ${counts.lines}` : ""}{" "}
+          <NavLink href="/erp/service/review" className="erpLink">
+            {T("Открыть", "Open", "Mở")}
+          </NavLink>
         </div>
-        {staffResult ? (
-          <p className="erpHint">
-            Staff: {L("created", "tạo")} {staffResult.created}, {L("updated", "cập nhật")} {staffResult.updated},{" "}
-            {L("packs to review", "quy cách cần kiểm tra")} {staffResult.pack_review}
-          </p>
-        ) : null}
-        {recipesResult ? (
-          <p className="erpHint">
-            Recipes: {L("created", "tạo")} {recipesResult.created}, {L("refreshed drafts", "làm mới nháp")} {recipesResult.refreshed},{" "}
-            {L("kept (already active)", "giữ nguyên")} {recipesResult.kept}, {L("ingredients to link", "nguyên liệu cần liên kết")}{" "}
-            {recipesResult.unresolved}
-          </p>
-        ) : null}
-      </div>
+      ) : null}
+
+      {!emptyCatalog ? (
+        <section>
+          <h2>{T("Последние документы", "Recent documents", "Chứng từ gần đây")}</h2>
+          <DocTable
+            state={state}
+            documents={docs.documents ? docs.documents.slice(0, 6) : null}
+            error={docs.error}
+            reload={docs.reload}
+            showType
+            empty={<p className="erpHint">{T("Документов пока нет — начните с поставки или начальных остатков.", "No documents yet — start with a delivery or opening stock.", "Chưa có chứng từ — bắt đầu bằng nhập hàng.")}</p>}
+          />
+          {docs.documents && docs.documents.length > 6 ? (
+            <div className="erpActions">
+              <NavLink href="/erp/stock/history" className="erpBtn ghost">
+                {T("Все документы", "All documents", "Tất cả chứng từ")}
+              </NavLink>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </>
   );
 }

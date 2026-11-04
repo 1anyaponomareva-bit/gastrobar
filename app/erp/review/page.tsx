@@ -1,5 +1,5 @@
-import { ReviewPage } from "@/components/erp/ReviewPage";
+import { redirect } from "next/navigation";
 
-export default function ErpReviewPage() {
-  return <ReviewPage />;
+export default function ErpReviewRedirect() {
+  redirect("/erp/service/review");
 }

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
-import { errorText, L } from "./ui";
+import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
+import { Empty, errorText, loadingText, NavLink, T } from "./ui";
 import "./erp.css";
 
 type Notice = { ok: boolean; text: string } | null;
@@ -14,7 +15,8 @@ type ErpContextValue = {
   email: string;
   state: ErpState | null;
   reload: () => Promise<void>;
-  act: <T = Record<string, unknown>>(action: ErpAction) => Promise<T | null>;
+  /** Runs an action; on success shows `successText` (or "Saved") and reloads data. */
+  act: <T = Record<string, unknown>>(action: ErpAction, successText?: string | false) => Promise<T | null>;
   busy: boolean;
   notify: (notice: Notice) => void;
 };
@@ -27,26 +29,64 @@ export function useErp(): ErpContextValue {
   return value;
 }
 
-const NAV: { href: string; label: string }[] = [
-  { href: "/erp", label: L("Start", "Bắt đầu") },
-  { href: "/erp/catalog", label: L("Catalog", "Danh mục") },
-  { href: "/erp/stock", label: L("Stock", "Tồn kho") },
-  { href: "/erp/documents", label: L("Documents", "Chứng từ") },
-  { href: "/erp/preps", label: L("Semi-finished", "Bán thành phẩm") },
-  { href: "/erp/production", label: L("Production", "Sản xuất") },
-  { href: "/erp/menu", label: L("Menu costing", "Giá vốn món") },
-  { href: "/erp/review", label: L("Review", "Kiểm tra") },
-  { href: "/erp/settings", label: L("Settings", "Cài đặt") },
+type Section = "home" | "products" | "stock" | "preps" | "menu" | "service";
+
+export function sectionOf(pathname: string | null): Section {
+  const path = pathname ?? "/erp";
+  if (path.startsWith("/erp/products")) return "products";
+  if (path.startsWith("/erp/stock") || path.startsWith("/erp/documents")) return "stock";
+  if (path.startsWith("/erp/preps")) return "preps";
+  if (path.startsWith("/erp/menu")) return "menu";
+  if (path.startsWith("/erp/service")) return "service";
+  return "home";
+}
+
+const ICONS: Record<Section, ReactNode> = {
+  home: <path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
+  products: <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9" />,
+  stock: <path d="M3 9.5 12 4l9 5.5V20H3zM7 20v-6h10v6M7 17h10" />,
+  preps: <path d="M5 11h14v3a7 7 0 0 1-14 0zM3 11h18M9 4c0 2 2 2 2 4M14 4c0 2 2 2 2 4" />,
+  menu: <path d="M6 3v8a2 2 0 0 0 2 2v8M10 3v8a2 2 0 0 1-2 2M8 3v6M17 21V3c-2 1-3 4-3 8h3" />,
+  service: (
+    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2.2-1.3L14.4 3h-4l-.4 2.4a7.5 7.5 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.5 7.5 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3z" />
+  ),
+};
+
+const Icon = ({ section }: { section: Section }) => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" aria-hidden>
+    {ICONS[section]}
+  </svg>
+);
+
+const navItems = (): { section: Section; href: string; label: string; short: string }[] => [
+  { section: "home", href: "/erp", label: T("Главная", "Home", "Trang chủ"), short: T("Главная", "Home", "Trang chủ") },
+  { section: "products", href: "/erp/products", label: T("Продукты", "Products", "Sản phẩm"), short: T("Продукты", "Products", "Sản phẩm") },
+  { section: "stock", href: "/erp/stock", label: T("Склад", "Stock", "Kho"), short: T("Склад", "Stock", "Kho") },
+  { section: "preps", href: "/erp/preps", label: T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm"), short: T("Полуфабр.", "Preps", "BTP") },
+  { section: "menu", href: "/erp/menu", label: T("Меню", "Menu", "Thực đơn"), short: T("Меню", "Menu", "Thực đơn") },
 ];
 
-const t = (key: string) => translate("en", key);
+function LangSwitch({ lang, onChange }: { lang: ErpLang; onChange: (lang: ErpLang) => void }) {
+  return (
+    <div className="erpLang" role="group" aria-label="Language">
+      {ERP_LANGS.map((item) => (
+        <button key={item.code} type="button" className={item.code === lang ? "active" : ""} onClick={() => onChange(item.code)}>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function ErpShell({ children }: { children: ReactNode }) {
+  const [lang, setLang] = useState<ErpLang>("ru");
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [invite, setInvite] = useState<string | null>(null);
+  setErpLang(lang);
 
   useEffect(() => {
+    setLang(readStoredLang());
     const code = new URLSearchParams(window.location.search).get("invite");
     if (code) {
       setInvite(code);
@@ -58,41 +98,76 @@ export function ErpShell({ children }: { children: ReactNode }) {
       .catch(() => setEmail(null));
   }, []);
 
+  useEffect(() => {
+    document.documentElement.lang = lang === "vn" ? "vi" : lang;
+  }, [lang]);
+
+  const changeLang = (next: ErpLang) => {
+    setLang(next);
+    try {
+      window.localStorage.setItem(LANG_STORAGE_KEY, next);
+    } catch {
+      /* private mode: the choice lasts for this visit */
+    }
+  };
+
   const logout = async () => {
     await fetch("/api/recipes-admin/logout", { method: "POST" }).catch(() => {});
     setEmail(null);
   };
 
-  return (
-    <div className="erp">
-      <header className="erpHeader">
-        <div className="erpBrand">GASTROFOOD ERP</div>
-        {email ? (
-          <div className="erpUser">
-            <span>{email}</span>
-            <button type="button" className="erpLink" onClick={logout}>
-              {L("Log out", "Đăng xuất")}
-            </button>
-          </div>
-        ) : null}
-      </header>
-      {email === undefined ? (
-        <div className="erpEmpty">{L("Loading…", "Đang tải…")}</div>
-      ) : email ? (
-        <ErpData email={email} onExpired={() => setEmail(null)}>
-          {children}
-        </ErpData>
-      ) : (
+  if (email === undefined) {
+    return (
+      <div className="erp">
+        <div className="erpLoading">{loadingText()}</div>
+      </div>
+    );
+  }
+
+  if (!email) {
+    return (
+      <div className="erp">
+        <header className="erpAuthHead">
+          <span className="erpBrand">GASTROFOOD</span>
+          <LangSwitch lang={lang} onChange={changeLang} />
+        </header>
         <div className="erpAuth recipes-app">
-          <AdminAuthForm mode={mode} invite={invite} t={t} onDone={setEmail} onSwitchToLogin={() => setMode("login")} />
+          <AdminAuthForm
+            mode={mode}
+            invite={invite}
+            t={(key) => translate(lang, key)}
+            onDone={setEmail}
+            onSwitchToLogin={() => setMode("login")}
+          />
         </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <ErpData email={email} onExpired={() => setEmail(null)} lang={lang} onLang={changeLang} onLogout={logout}>
+      {children}
+    </ErpData>
   );
 }
 
-function ErpData({ email, onExpired, children }: { email: string; onExpired: () => void; children: ReactNode }) {
+function ErpData({
+  email,
+  onExpired,
+  lang,
+  onLang,
+  onLogout,
+  children,
+}: {
+  email: string;
+  onExpired: () => void;
+  lang: ErpLang;
+  onLang: (lang: ErpLang) => void;
+  onLogout: () => void;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
+  const section = sectionOf(pathname);
   const [state, setState] = useState<ErpState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -102,7 +177,7 @@ function ErpData({ email, onExpired, children }: { email: string; onExpired: () 
     const response = await fetch("/api/erp/state", { cache: "no-store" }).catch(() => null);
     if (response?.status === 401) return onExpired();
     if (!response?.ok) {
-      setLoadError(errorText((await response?.json().catch(() => null))?.error ?? "server"));
+      setLoadError(response ? ((await response.json().catch(() => null))?.error ?? "server") : "network");
       return;
     }
     setLoadError(null);
@@ -120,7 +195,7 @@ function ErpData({ email, onExpired, children }: { email: string; onExpired: () 
   }, [notice]);
 
   const act = useCallback(
-    async <T,>(action: ErpAction): Promise<T | null> => {
+    async <T,>(action: ErpAction, successText?: string | false): Promise<T | null> => {
       setBusy(true);
       try {
         const response = await fetch("/api/erp/action", {
@@ -137,7 +212,7 @@ function ErpData({ email, onExpired, children }: { email: string; onExpired: () 
           setNotice({ ok: false, text: errorText(data.error ?? "server", data.detail) });
           return null;
         }
-        setNotice({ ok: true, text: L("Saved", "Đã lưu") });
+        if (successText !== false) setNotice({ ok: true, text: successText ?? T("Сохранено", "Saved", "Đã lưu") });
         await reload();
         return data;
       } catch {
@@ -150,29 +225,88 @@ function ErpData({ email, onExpired, children }: { email: string; onExpired: () 
     [onExpired, reload],
   );
 
+  const items = navItems();
+
   return (
     <ErpContext.Provider value={{ email, state, reload, act, busy, notify: setNotice }}>
-      <nav className="erpNav">
-        {NAV.map((item) => {
-          const active = item.href === "/erp" ? pathname === "/erp" : pathname?.startsWith(item.href);
-          return (
-            <a key={item.href} href={item.href} className={active ? "active" : ""}>
-              {item.label}
-            </a>
-          );
-        })}
-      </nav>
-      {notice ? (
-        <div className={`erpNotice ${notice.ok ? "ok" : "bad"}`} role="status">
-          <span>{notice.text}</span>
-          <button type="button" className="erpLink" onClick={() => setNotice(null)}>
-            ✕
-          </button>
+      <div className="erp erpApp">
+        <aside className="erpSide">
+          <div className="erpSideBrand">
+            GASTROFOOD
+            <small>ERP</small>
+          </div>
+          <nav className="erpSideNav">
+            {items.map((item) => (
+              <NavLink key={item.href} href={item.href} className={section === item.section ? "active" : ""}>
+                <Icon section={item.section} />
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="erpSideFoot">
+            <NavLink href="/erp/service" className={`erpSideService ${section === "service" ? "active" : ""}`}>
+              <Icon section="service" />
+              {T("Служебное", "Admin tools", "Quản trị")}
+            </NavLink>
+            <LangSwitch lang={lang} onChange={onLang} />
+            <div className="erpSideUser">
+              <span title={email}>{email}</span>
+              <button type="button" className="erpLink" onClick={onLogout}>
+                {T("Выйти", "Log out", "Đăng xuất")}
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <header className="erpTop">
+          <span className="erpBrand">GASTROFOOD</span>
+          <div className="erpTopRight">
+            <LangSwitch lang={lang} onChange={onLang} />
+            <NavLink href="/erp/service" className={`erpTopIcon ${section === "service" ? "active" : ""}`}>
+              <Icon section="service" />
+              <span className="erpSr">{T("Служебное", "Admin tools", "Quản trị")}</span>
+            </NavLink>
+          </div>
+        </header>
+
+        <div className="erpBody">
+          {notice ? (
+            <div className={`erpToast ${notice.ok ? "ok" : "bad"}`} role={notice.ok ? "status" : "alert"}>
+              <span>{notice.text}</span>
+              <button type="button" aria-label="×" onClick={() => setNotice(null)}>
+                ×
+              </button>
+            </div>
+          ) : null}
+          <main className="erpMain">
+            {loadError ? (
+              <Empty
+                kind="error"
+                title={T("Не удалось загрузить данные", "Could not load data", "Không tải được dữ liệu")}
+                text={errorText(loadError)}
+                action={
+                  <button type="button" className="erpBtn primary" onClick={() => void reload()}>
+                    {T("Повторить", "Try again", "Thử lại")}
+                  </button>
+                }
+              />
+            ) : state ? (
+              children
+            ) : (
+              <div className="erpLoading">{loadingText()}</div>
+            )}
+          </main>
         </div>
-      ) : null}
-      <main className="erpMain">
-        {loadError ? <div className="erpNotice bad">{loadError}</div> : state ? children : <div className="erpEmpty">{L("Loading…", "Đang tải…")}</div>}
-      </main>
+
+        <nav className="erpBottomNav">
+          {items.map((item) => (
+            <NavLink key={item.href} href={item.href} className={section === item.section ? "active" : ""}>
+              <Icon section={item.section} />
+              <span>{item.short}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
     </ErpContext.Provider>
   );
 }

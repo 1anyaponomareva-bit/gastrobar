@@ -1,5 +1,5 @@
-import { CatalogPage } from "@/components/erp/CatalogPage";
+import { redirect } from "next/navigation";
 
-export default function ErpCatalogPage() {
-  return <CatalogPage />;
+export default function ErpCatalogRedirect() {
+  redirect("/erp/products");
 }

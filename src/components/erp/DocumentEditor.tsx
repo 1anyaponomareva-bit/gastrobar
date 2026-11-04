@@ -1,198 +1,332 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { buildCostContext, costLine, productLabel } from "@/lib/erp/costing";
-import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpRecipe, ErpState } from "@/lib/erp/types";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { productLabel } from "@/lib/erp/costing";
+import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
+import { stockKindOf } from "./StockPage";
 import {
-  DOC_LABELS,
+  dateText,
+  dateTimeText,
+  docLabel,
+  Empty,
   errorText,
   Field,
-  L,
+  loadingText,
+  NavLink,
   NumberInput,
+  PageHead,
   productById,
   ProductPicker,
   qtyText,
   QtyInput,
-  STATUS_LABELS,
+  savingText,
   stockQty,
+  T,
   today,
+  unitLabel,
   unitOf,
+  useDirtyGuard,
   vnd,
   WarehouseSelect,
 } from "./ui";
 
-const TYPES = new Set<ErpDocType>(["opening", "receipt", "transfer", "writeoff", "count", "production"]);
+const TYPES = new Set<ErpDocType>(["opening", "receipt", "transfer", "writeoff", "count"]);
 
-function defaultDocument(state: ErpState, type: ErpDocType, email: string): ErpDocument {
-  const byKind = (kind: string) => state.warehouses.find((w) => w.kind === kind && !w.archived_at)?.id ?? null;
+type SetDoc = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => void;
+type SetLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) => void;
+
+function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | null): ErpDocument {
+  const active = state.warehouses.filter((w) => !w.archived_at);
+  const byKind = (kind: string) => active.find((w) => w.kind === kind)?.id ?? null;
+  const preset = active.find((w) => w.id === warehouse)?.id ?? null;
+  const main = byKind("warehouse") ?? active[0]?.id ?? null;
   const prep = byKind("prep_kitchen");
   return {
     doc_type: type,
     doc_date: today(),
-    warehouse_id: type === "production" ? prep : type === "transfer" ? byKind("warehouse") : (byKind("warehouse") ?? prep),
-    target_warehouse_id: type === "production" ? prep : type === "transfer" ? prep : null,
-    responsible: type === "production" ? email : null,
+    warehouse_id: preset ?? main,
+    target_warehouse_id: type === "transfer" ? (prep && prep !== (preset ?? main) ? prep : (active.find((w) => w.id !== (preset ?? main))?.id ?? null)) : null,
     lines: [],
   };
 }
 
-export function DocumentEditor({ id }: { id: string }) {
-  const { state, act, busy, email, notify } = useErp();
-  const [doc, setDoc] = useState<ErpDocument | null>(null);
+const newTitle = (type: ErpDocType) =>
+  ({
+    receipt: T("Принять поставку", "Receive a delivery", "Nhận hàng"),
+    transfer: T("Переместить продукты", "Move products", "Chuyển hàng"),
+    writeoff: T("Списать продукты", "Write off products", "Xuất hủy hàng"),
+    count: T("Провести инвентаризацию", "Count stock", "Kiểm kê"),
+    opening: T("Внести начальные остатки", "Enter opening balances", "Nhập tồn đầu kỳ"),
+    production: T("Изготовить партию", "Make a batch", "Sản xuất mẻ"),
+  })[type];
 
-  const load = useCallback(async () => {
-    if (id === "new") return;
-    const response = await fetch(`/api/erp/documents/${id}`, { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok) return notify({ ok: false, text: errorText(data.error ?? "server") });
-    setDoc(data.document);
-  }, [id, notify]);
+const postLabel = (type: ErpDocType) =>
+  ({
+    receipt: T("Принять поставку", "Receive delivery", "Nhận hàng"),
+    transfer: T("Переместить", "Move", "Chuyển kho"),
+    writeoff: T("Списать", "Write off", "Xuất hủy"),
+    count: T("Завершить инвентаризацию", "Finish count", "Hoàn tất kiểm kê"),
+    opening: T("Внести остатки", "Save balances", "Ghi tồn đầu kỳ"),
+    production: T("Подтвердить производство", "Confirm production", "Xác nhận sản xuất"),
+  })[type];
+
+const postedText = (type: ErpDocType) =>
+  ({
+    receipt: T("Поставка принята", "Delivery received", "Đã nhận hàng"),
+    transfer: T("Продукты перемещены", "Products moved", "Đã chuyển kho"),
+    writeoff: T("Продукты списаны", "Products written off", "Đã xuất hủy"),
+    count: T("Инвентаризация завершена", "Stock count finished", "Đã kiểm kê"),
+    opening: T("Остатки внесены", "Balances saved", "Đã ghi tồn đầu kỳ"),
+    production: T("Производство подтверждено", "Production confirmed", "Đã xác nhận sản xuất"),
+  })[type];
+
+async function fetchDoc(id: string): Promise<ErpDocument> {
+  const response = await fetch(`/api/erp/documents/${id}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? "server");
+  return data.document as ErpDocument;
+}
+
+export function DocumentEditor({ id }: { id: string }) {
+  const { state, act, busy } = useErp();
+  const router = useRouter();
+  const [doc, setDoc] = useState<ErpDocument | null>(null);
+  const [baseline, setBaseline] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadSaved = (saved: ErpDocument) => {
+    setDoc(saved);
+    setBaseline(JSON.stringify(saved));
+  };
 
   useEffect(() => {
     if (!state) return;
+    const params = new URLSearchParams(window.location.search);
     if (id === "new") {
-      const type = new URLSearchParams(window.location.search).get("type") as ErpDocType;
-      setDoc(defaultDocument(state, TYPES.has(type) ? type : "receipt", email));
-    } else {
-      void load();
+      const type = params.get("type") as ErpDocType;
+      if (type === "production") {
+        router.replace("/erp/preps/batch/new");
+        return;
+      }
+      const initial = defaultDocument(state, TYPES.has(type) ? type : "receipt", params.get("warehouse"));
+      if (initial.doc_type === "count" && initial.warehouse_id) initial.lines = countLines(state, initial.warehouse_id);
+      loadSaved(initial);
+      return;
     }
-    // Only on first render: later state reloads must not reset the form.
+    fetchDoc(id)
+      .then((saved) => {
+        if (saved.doc_type === "production") router.replace(`/erp/preps/batch/${id}`);
+        else loadSaved(saved);
+      })
+      .catch((error: Error) => setLoadError(errorText(error.message)));
+    // Only on first render: later data reloads must not reset the form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, Boolean(state)]);
 
-  if (!state || !doc) return <div className="erpEmpty">{L("Loading…", "Đang tải…")}</div>;
+  const editable = !doc?.status || doc.status === "draft";
+  const dirty = Boolean(doc) && editable && JSON.stringify(doc) !== baseline;
+  useDirtyGuard(dirty);
 
-  const editable = !doc.status || doc.status === "draft";
-  const set = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => setDoc((prev) => (prev ? { ...prev, [key]: value } : prev));
-  const setLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) =>
-    setDoc((prev) => (prev ? { ...prev, lines: update(prev.lines) } : prev));
+  if (loadError) {
+    return (
+      <Empty
+        kind="error"
+        title={T("Не удалось открыть документ", "Could not open the document", "Không mở được chứng từ")}
+        text={loadError}
+        action={
+          <NavLink href="/erp/stock/history" className="erpBtn">
+            {T("Ко всем документам", "All documents", "Tất cả chứng từ")}
+          </NavLink>
+        }
+      />
+    );
+  }
+  if (!state || !doc) return <div className="erpLoading">{loadingText()}</div>;
 
-  const save = async (): Promise<string | null> => {
-    const result = await act<{ id: string }>({ action: "saveDocument", document: { ...doc } as Record<string, unknown> });
+  const type = doc.doc_type;
+  const set: SetDoc = (key, value) => setDoc((prev) => (prev ? { ...prev, [key]: value } : prev));
+  const setLines: SetLines = (update) => setDoc((prev) => (prev ? { ...prev, lines: update(prev.lines) } : prev));
+  const kindHref = `/erp/stock/${stockKindOf(type)}`;
+
+  const usesStock = type === "transfer" || type === "writeoff";
+  const shortages = usesStock ? doc.lines.filter((line) => line.product_id && stockQty(state, line.product_id, doc.warehouse_id) < line.qty) : [];
+  const problems: string[] = [];
+  if (!doc.warehouse_id) problems.push(T("Выберите склад", "Choose a location", "Chọn kho"));
+  if (type === "transfer" && (!doc.target_warehouse_id || doc.target_warehouse_id === doc.warehouse_id))
+    problems.push(T("Выберите другой склад назначения", "Choose a different destination", "Chọn kho đến khác"));
+  if (type === "writeoff" && !doc.reason?.trim()) problems.push(T("Укажите причину списания", "Enter a reason", "Nhập lý do"));
+  if (!doc.lines.length) problems.push(T("Добавьте хотя бы один продукт", "Add at least one product", "Thêm ít nhất một sản phẩm"));
+  if (doc.lines.some((line) => !line.product_id)) problems.push(T("В одной из строк не выбран продукт", "A line has no product", "Có dòng chưa chọn sản phẩm"));
+  if (doc.lines.some((line) => line.product_id && (type === "count" ? line.qty < 0 : !(line.qty > 0))))
+    problems.push(T("Укажите количество в каждой строке", "Enter a quantity on every line", "Nhập số lượng cho mỗi dòng"));
+  if (shortages.length) problems.push(T("На складе не хватает части продуктов", "Some products are short", "Thiếu hàng trong kho"));
+
+  const save = async (successText: string | false): Promise<string | null> => {
+    const result = await act<{ id: string }>({ action: "saveDocument", document: { ...doc } as unknown as Record<string, unknown> }, successText);
     if (!result) return null;
-    if (id === "new") {
-      window.history.replaceState(null, "", `/erp/documents/${result.id}`);
+    if (!doc.id) window.history.replaceState(null, "", `/erp/documents/${result.id}`);
+    try {
+      loadSaved(await fetchDoc(result.id));
+    } catch {
+      setBaseline(JSON.stringify(doc));
     }
-    const response = await fetch(`/api/erp/documents/${result.id}`, { cache: "no-store" });
-    if (response.ok) setDoc((await response.json()).document);
     return result.id;
   };
 
   const post = async () => {
-    const savedId = await save();
+    const savedId = await save(false);
     if (!savedId) return;
-    if (await act({ action: "postDocument", id: savedId })) {
-      const response = await fetch(`/api/erp/documents/${savedId}`, { cache: "no-store" });
-      if (response.ok) setDoc((await response.json()).document);
-      notify({ ok: true, text: L("Posted", "Đã ghi sổ") });
+    await act({ action: "postDocument", id: savedId }, postedText(type));
+    try {
+      loadSaved(await fetchDoc(savedId));
+    } catch {
+      /* the list shows the result */
     }
   };
 
   const cancel = async () => {
-    const reason = window.prompt(L("Cancel reason", "Lý do hủy"));
+    const reason = window.prompt(T("Причина отмены документа", "Why is this document cancelled?", "Lý do hủy chứng từ"));
     if (!reason?.trim() || !doc.id) return;
-    if (await act({ action: "cancelDocument", id: doc.id, reason })) await load();
+    if (await act({ action: "cancelDocument", id: doc.id, reason }, T("Документ отменён", "Document cancelled", "Đã hủy chứng từ"))) loadSaved(await fetchDoc(doc.id));
   };
 
   const remove = async () => {
-    if (!doc.id || !window.confirm(L("Delete this draft?", "Xóa bản nháp?"))) return;
-    if (await act({ action: "deleteDraft", id: doc.id })) window.location.href = "/erp/documents";
+    if (!doc.id || !window.confirm(T("Удалить черновик?", "Delete this draft?", "Xóa bản nháp?"))) return;
+    if (await act({ action: "deleteDraft", id: doc.id }, T("Черновик удалён", "Draft deleted", "Đã xóa bản nháp"))) {
+      setBaseline(JSON.stringify(doc));
+      router.push(kindHref);
+    }
   };
 
   return (
     <>
-      <h1>
-        {DOC_LABELS[doc.doc_type]} {doc.doc_no ?? ""}{" "}
-        <span className={`erpBadge ${doc.status === "posted" ? "ok" : doc.status === "cancelled" ? "bad" : ""}`}>
-          {STATUS_LABELS[doc.status ?? "draft"]}
-        </span>
-      </h1>
+      <NavLink href={kindHref} className="erpBack">
+        ← {T("Склад", "Stock", "Kho")}
+      </NavLink>
+      <PageHead
+        title={
+          doc.status ? (
+            <>
+              {docLabel(type)} {doc.doc_no} <StatusBadge status={doc.status} />
+            </>
+          ) : (
+            newTitle(type)
+          )
+        }
+        sub={doc.status ? dateText(doc.doc_date) : undefined}
+      />
       {doc.status === "cancelled" ? (
         <div className="erpNotice bad">
-          {L("Cancelled", "Đã hủy")}: {doc.cancel_reason} · {doc.cancelled_by} · {doc.cancelled_at?.slice(0, 16).replace("T", " ")}
+          {T("Документ отменён", "Cancelled", "Đã hủy")}: {doc.cancel_reason} · {doc.cancelled_by} · {dateTimeText(doc.cancelled_at)}
         </div>
       ) : null}
 
-      <div className="erpCard">
-        <Header state={state} doc={doc} editable={editable} set={set} />
-      </div>
+      <section className="erpCard">
+        <Header state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
+      </section>
 
-      {doc.doc_type === "production" ? (
-        <Production state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
+      <Lines state={state} doc={doc} editable={editable} setLines={setLines} />
+
+      {editable ? (
+        <>
+          {problems.length && doc.lines.length ? (
+            <div className="erpNotice warn">
+              <ul>
+                {problems.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="erpActions split">
+            <div className="erpRow">
+              <button type="button" className="erpBtn ghost" disabled={busy || (!dirty && Boolean(doc.id))} onClick={() => save(T("Черновик сохранён", "Draft saved", "Đã lưu nháp"))}>
+                {T("Сохранить черновик", "Save draft", "Lưu nháp")}
+              </button>
+              {doc.id ? (
+                <button type="button" className="erpBtn ghost" disabled={busy} onClick={remove}>
+                  {T("Удалить черновик", "Delete draft", "Xóa nháp")}
+                </button>
+              ) : null}
+            </div>
+            <button type="button" className="erpBtn primary" disabled={busy || problems.length > 0} onClick={post}>
+              {busy ? savingText() : postLabel(type)}
+            </button>
+          </div>
+          <p className="erpHint">
+            {T(
+              "Пока документ не подтверждён, остатки не меняются. Черновик можно сохранить и закончить позже.",
+              "Stock does not change until you confirm. You can save a draft and finish later.",
+              "Tồn kho chỉ thay đổi khi xác nhận. Có thể lưu nháp và hoàn tất sau.",
+            )}
+          </p>
+        </>
       ) : (
-        <Lines state={state} doc={doc} editable={editable} setLines={setLines} />
-      )}
-
-      <div className="erpActions">
-        {editable ? (
-          <>
-            <button type="button" className="erpBtn" disabled={busy} onClick={save}>
-              {L("Save draft", "Lưu nháp")}
-            </button>
-            <button type="button" className="erpBtn primary" disabled={busy || !doc.lines.length} onClick={post}>
-              {L("Post", "Ghi sổ")}
-            </button>
-            {doc.id ? (
-              <button type="button" className="erpBtn danger" disabled={busy} onClick={remove}>
-                {L("Delete draft", "Xóa nháp")}
+        <>
+          <div className="erpActions">
+            <NavLink href={`/erp/documents/new?type=${type}`} className="erpBtn primary">
+              {newTitle(type)}
+            </NavLink>
+            <NavLink href="/erp/stock" className="erpBtn">
+              {T("Открыть остатки", "Open stock", "Xem tồn kho")}
+            </NavLink>
+            {doc.status === "posted" ? (
+              <button type="button" className="erpBtn danger" disabled={busy} onClick={cancel}>
+                {T("Отменить документ", "Cancel document", "Hủy chứng từ")}
               </button>
             ) : null}
-          </>
-        ) : doc.status === "posted" ? (
-          <button type="button" className="erpBtn danger" disabled={busy} onClick={cancel}>
-            {L("Cancel document", "Hủy chứng từ")}
-          </button>
-        ) : null}
-        <a className="erpBtn" href={doc.doc_type === "production" ? "/erp/production" : "/erp/documents"}>
-          {L("Back", "Quay lại")}
-        </a>
-      </div>
-      {editable ? (
-        <p className="erpHint">
-          {L(
-            "A draft does not change stock. Posting checks availability and writes all movements at once.",
-            "Bản nháp không thay đổi tồn kho. Ghi sổ kiểm tra tồn và ghi toàn bộ một lần.",
-          )}
-        </p>
-      ) : (
-        <p className="erpHint">
-          {L("Posted by", "Ghi sổ bởi")} {doc.posted_by} · {doc.posted_at?.slice(0, 16).replace("T", " ")} · {L("created by", "tạo bởi")}{" "}
-          {doc.created_by}
-        </p>
+          </div>
+          <p className="erpHint">
+            {T("Подтвердил", "Confirmed by", "Xác nhận bởi")} {doc.posted_by ?? "—"} · {dateTimeText(doc.posted_at)} · {T("создал", "created by", "tạo bởi")} {doc.created_by ?? "—"}
+          </p>
+        </>
       )}
     </>
   );
 }
 
-type SetDoc = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => void;
-type SetLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) => void;
+function countLines(state: ErpState, warehouseId: string): ErpDocumentLine[] {
+  return state.stock
+    .filter((row) => row.warehouse_id === warehouseId && row.qty !== 0 && state.products.some((p) => p.id === row.product_id && !p.archived_at))
+    .sort((a, b) => (productById(state, a.product_id)?.name_en ?? "").localeCompare(productById(state, b.product_id)?.name_en ?? ""))
+    .map((row) => ({ product_id: row.product_id, qty: row.qty }));
+}
 
-function Header({ state, doc, editable, set }: { state: ErpState; doc: ErpDocument; editable: boolean; set: SetDoc }) {
+function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc: ErpDocument; editable: boolean; set: SetDoc; setLines: SetLines }) {
   const type = doc.doc_type;
-  const twoWarehouses = type === "transfer" || type === "production";
+  const warehouseLabel =
+    type === "receipt"
+      ? T("Куда принять *", "Receive into *", "Nhập vào kho *")
+      : type === "transfer"
+        ? T("Откуда *", "From *", "Từ kho *")
+        : type === "count"
+          ? T("Какой склад считаем *", "Location to count *", "Kho kiểm kê *")
+          : T("Склад *", "Location *", "Kho *");
   return (
-    <div className="erpGrid">
-      <Field label={L("Date", "Ngày")}>
-        <input type="date" value={doc.doc_date ?? ""} disabled={!editable} onChange={(event) => set("doc_date", event.target.value)} />
+    <div className="erpGrid two">
+      <Field label={warehouseLabel} hint={type === "receipt" ? T("Можно сразу на кухню заготовок", "Can go straight to the prep kitchen", "Có thể nhập thẳng vào bếp sơ chế") : undefined}>
+        <WarehouseSelect
+          warehouses={state.warehouses}
+          value={doc.warehouse_id}
+          disabled={!editable}
+          onChange={(v) => {
+            set("warehouse_id", v || null);
+            if (type === "count" && v && !doc.lines.length) setLines(() => countLines(state, v));
+          }}
+        />
       </Field>
-      <Field label={twoWarehouses ? L("From warehouse", "Từ kho") : L("Warehouse", "Kho")}>
-        <WarehouseSelect warehouses={state.warehouses} value={doc.warehouse_id} disabled={!editable} onChange={(v) => set("warehouse_id", v)} />
-      </Field>
-      {twoWarehouses ? (
-        <Field label={type === "production" ? L("Output to", "Thành phẩm vào kho") : L("To warehouse", "Đến kho")}>
-          <WarehouseSelect
-            warehouses={state.warehouses}
-            value={doc.target_warehouse_id}
-            disabled={!editable}
-            onChange={(v) => set("target_warehouse_id", v)}
-          />
+      {type === "transfer" ? (
+        <Field label={T("Куда *", "To *", "Đến kho *")}>
+          <WarehouseSelect warehouses={state.warehouses} value={doc.target_warehouse_id} disabled={!editable} onChange={(v) => set("target_warehouse_id", v || null)} />
         </Field>
       ) : null}
       {type === "receipt" ? (
-        <Field label={L("Supplier", "Nhà cung cấp")}>
-          <select value={doc.supplier_id ?? ""} disabled={!editable} onChange={(event) => set("supplier_id", event.target.value || null)}>
-            <option value="">—</option>
+        <Field label={T("Поставщик", "Supplier", "Nhà cung cấp")}>
+          <select value={doc.supplier_id ?? ""} disabled={!editable} onChange={(e) => set("supplier_id", e.target.value || null)}>
+            <option value="">{T("— не указан —", "— not set —", "— không —")}</option>
             {state.suppliers
               .filter((s) => !s.archived_at || s.id === doc.supplier_id)
               .map((s) => (
@@ -203,24 +337,22 @@ function Header({ state, doc, editable, set }: { state: ErpState; doc: ErpDocume
           </select>
         </Field>
       ) : null}
-      {type === "receipt" && state.settings.input_vat_enabled ? (
-        <label className="erpCheck">
-          <input
-            type="checkbox"
-            checked={Boolean(doc.prices_include_vat)}
-            disabled={!editable}
-            onChange={(event) => set("prices_include_vat", event.target.checked)}
-          />
-          {L("Prices include VAT", "Giá đã gồm VAT")}
-        </label>
-      ) : null}
       {type === "writeoff" ? (
-        <Field label={L("Reason *", "Lý do *")}>
-          <input value={doc.reason ?? ""} disabled={!editable} onChange={(event) => set("reason", event.target.value)} />
+        <Field label={T("Причина списания *", "Reason *", "Lý do *")}>
+          <input value={doc.reason ?? ""} disabled={!editable} placeholder={T("Испорчено, истёк срок, проба…", "Spoiled, expired, tasting…", "Hư, hết hạn, thử món…")} onChange={(e) => set("reason", e.target.value)} />
         </Field>
       ) : null}
-      <Field label={L("Comment", "Ghi chú")} wide>
-        <input value={doc.comment ?? ""} disabled={!editable} onChange={(event) => set("comment", event.target.value)} />
+      <Field label={T("Дата", "Date", "Ngày")}>
+        <input type="date" value={doc.doc_date ?? ""} disabled={!editable} onChange={(e) => set("doc_date", e.target.value)} />
+      </Field>
+      {type === "receipt" && state.settings.input_vat_enabled ? (
+        <label className="erpCheck">
+          <input type="checkbox" checked={Boolean(doc.prices_include_vat)} disabled={!editable} onChange={(e) => set("prices_include_vat", e.target.checked)} />
+          {T("Цены указаны с НДС", "Prices include VAT", "Giá đã gồm VAT")}
+        </label>
+      ) : null}
+      <Field label={T("Комментарий", "Comment", "Ghi chú")} wide>
+        <input value={doc.comment ?? ""} disabled={!editable} onChange={(e) => set("comment", e.target.value)} />
       </Field>
     </div>
   );
@@ -231,359 +363,184 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
   const priced = type === "receipt" || type === "opening";
   const vatOn = type === "receipt" && state.settings.input_vat_enabled;
   const posted = doc.status === "posted" || doc.status === "cancelled";
-  const update = (index: number, patch: Partial<ErpDocumentLine>) =>
-    setLines((lines) => lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  const showStock = type === "transfer" || type === "writeoff" || (type === "count" && !posted);
+  const update = (index: number, patch: Partial<ErpDocumentLine>) => setLines((lines) => lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
   const total = doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
-  const missingPrice = priced && doc.lines.some((line) => line.unit_price === null || line.unit_price === undefined);
+  const missingPrice = priced && doc.lines.some((line) => line.product_id && (line.unit_price === null || line.unit_price === undefined));
+  const qtyLabel = type === "count" ? T("Фактически", "Counted", "Thực tế") : type === "receipt" ? T("Принято", "Received", "Đã nhận") : T("Количество", "Quantity", "Số lượng");
+  const stockLabel = type === "count" ? T("По учёту", "On record", "Theo sổ") : T("Есть на складе", "In stock", "Tồn kho");
 
   return (
-    <div className="erpCard">
-      <div className="erpTableWrap">
-        <table className="erpTable">
-          <thead>
-            <tr>
-              <th>{L("Product", "Sản phẩm")}</th>
-              {type === "receipt" ? <th>{L("Pack", "Quy cách")}</th> : null}
-              <th>{type === "count" ? L("Counted", "Thực tế") : type === "receipt" ? L("Accepted qty", "SL nhận") : L("Qty", "SL")}</th>
-              {type === "transfer" || type === "writeoff" || (type === "count" && !posted) ? (
-                <th className="num">{L("In stock", "Tồn")}</th>
-              ) : null}
-              {priced ? <th>{L("Price / unit, ₫", "Giá / ĐV")}</th> : null}
-              {vatOn ? <th>VAT %</th> : null}
-              {priced ? <th>{L("Expiry", "HSD")}</th> : null}
-              {type === "writeoff" ? <th>{L("Reason", "Lý do")}</th> : null}
-              {posted && type === "count" ? <th className="num">{L("System / diff", "Sổ / chênh")}</th> : null}
-              {posted ? <th className="num">{L("Cost", "Giá vốn")}</th> : null}
-              {editable ? <th /> : null}
-            </tr>
-          </thead>
-          <tbody>
-            {doc.lines.map((line, index) => {
-              const unit = unitOf(state, line.product_id);
-              const packs = state.packs.filter((pack) => pack.product_id === line.product_id);
-              const pack = packs.find((p) => p.id === line.pack_id);
-              return (
-                <tr key={line.id ?? index}>
-                  <td style={{ minWidth: 260 }}>
-                    {editable ? (
-                      <ProductPicker
-                        state={state}
-                        value={line.product_id}
-                        onChange={(productId) => {
-                          const product = productById(state, productId);
-                          const defaultPack = state.packs.find((p) => p.product_id === productId && p.is_default);
-                          update(index, {
-                            product_id: productId,
-                            pack_id: type === "receipt" ? (defaultPack?.id ?? null) : null,
-                            unit_price: priced ? (product?.est_unit_cost ?? null) : null,
-                          });
-                        }}
-                      />
-                    ) : (
-                      productLabel(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })
-                    )}
-                  </td>
-                  {type === "receipt" ? (
-                    <td style={{ minWidth: 170 }}>
-                      {editable ? (
-                        <div className="erpRow">
-                          <select value={line.pack_id ?? ""} onChange={(event) => update(index, { pack_id: event.target.value || null })}>
-                            <option value="">—</option>
-                            {packs.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.label} = {qtyText(p.qty_base, unit)}
-                              </option>
-                            ))}
-                          </select>
-                          {pack ? (
-                            <NumberInput
-                              value={line.pack_qty}
-                              placeholder={L("packs", "số gói")}
-                              onChange={(v) => update(index, { pack_qty: v, qty: v === null ? line.qty : v * pack.qty_base })}
-                            />
-                          ) : null}
-                        </div>
-                      ) : pack && line.pack_qty ? (
-                        `${line.pack_qty} × ${pack.label}`
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  ) : null}
-                  <td style={{ minWidth: 150 }}>
-                    {editable ? (
-                      <QtyInput base={unit} value={line.qty} onChange={(v) => update(index, { qty: v ?? 0 })} />
-                    ) : (
-                      qtyText(line.qty, unit)
-                    )}
-                  </td>
-                  {type === "transfer" || type === "writeoff" || (type === "count" && !posted) ? (
-                    <td className="num">{qtyText(stockQty(state, line.product_id, doc.warehouse_id), unit)}</td>
-                  ) : null}
-                  {priced ? (
-                    <td style={{ minWidth: 140 }}>
-                      {editable ? (
-                        <>
-                          <NumberInput value={line.unit_price} onChange={(v) => update(index, { unit_price: v })} />
-                          {pack ? (
-                            <small className="erpHint">
-                              {L("per pack", "mỗi gói")}: {line.unit_price !== null && line.unit_price !== undefined ? vnd(line.unit_price * pack.qty_base) : "—"}
-                            </small>
-                          ) : null}
-                        </>
-                      ) : (
-                        vnd(line.unit_price)
-                      )}
-                    </td>
-                  ) : null}
-                  {vatOn ? (
-                    <td style={{ width: 90 }}>
-                      {editable ? (
-                        <NumberInput
-                          value={line.vat_rate}
-                          placeholder={String(state.settings.default_input_vat_rate ?? "")}
-                          onChange={(v) => update(index, { vat_rate: v })}
-                        />
-                      ) : (
-                        (line.vat_rate ?? state.settings.default_input_vat_rate ?? "—")
-                      )}
-                    </td>
-                  ) : null}
-                  {priced ? (
-                    <td>
-                      <input
-                        type="date"
-                        value={line.expires_at ?? ""}
-                        disabled={!editable}
-                        onChange={(event) => update(index, { expires_at: event.target.value || null })}
-                      />
-                    </td>
-                  ) : null}
-                  {type === "writeoff" ? (
-                    <td>
-                      <input value={line.reason ?? ""} disabled={!editable} onChange={(event) => update(index, { reason: event.target.value })} />
-                    </td>
-                  ) : null}
-                  {posted && type === "count" ? (
-                    <td className="num">
-                      {qtyText(line.system_qty, unit)} / {line.diff_qty !== null && line.diff_qty !== undefined && line.diff_qty > 0 ? "+" : ""}
-                      {qtyText(line.diff_qty, unit)}
-                    </td>
-                  ) : null}
-                  {posted ? (
-                    <td className="num">
-                      {line.cost_known === false ? <span className="erpBadge warn">{L("unknown", "chưa rõ")}</span> : vnd(line.cost_amount)}
-                      {vatOn && line.vat_amount ? <small className="erpHint"> VAT {vnd(line.vat_amount)}</small> : null}
-                    </td>
-                  ) : null}
-                  {editable ? (
-                    <td>
-                      <button type="button" className="erpLink" onClick={() => setLines((lines) => lines.filter((_, i) => i !== index))}>
-                        ✕
-                      </button>
-                    </td>
-                  ) : null}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {editable ? (
-        <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
-            + {L("Line", "Dòng")}
-          </button>
-        </div>
-      ) : null}
-      {priced ? (
+    <section className="erpCard">
+      <h2>{T("Продукты", "Products", "Sản phẩm")}</h2>
+      {!doc.lines.length ? (
         <p className="erpHint">
-          {L("Total", "Tổng")}: {vnd(total)}
-          {missingPrice ? ` · ${L("lines without price will have unknown cost", "dòng chưa có giá sẽ có giá vốn chưa rõ")}` : ""}
-          {vatOn ? ` · ${doc.prices_include_vat ? L("prices include VAT", "giá gồm VAT") : L("prices without VAT", "giá chưa VAT")}` : ""}
+          {type === "count"
+            ? T("На выбранном складе нет остатков. Добавьте продукты, которые нашли при пересчёте.", "No stock on record here. Add what you find on the shelf.", "Kho chưa có tồn. Thêm hàng tìm thấy khi đếm.")
+            : T("Добавьте продукты кнопкой ниже.", "Add products with the button below.", "Thêm sản phẩm bằng nút bên dưới.")}
         </p>
-      ) : null}
-      {posted && doc.doc_type !== "count" ? (
-        <p className="erpHint">
-          {L("Document cost", "Giá vốn chứng từ")}: {doc.cost_known ? vnd(doc.total_cost) : L("incomplete (some costs unknown)", "chưa đủ (thiếu giá)")}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function Production({
-  state,
-  doc,
-  editable,
-  set,
-  setLines,
-}: {
-  state: ErpState;
-  doc: ErpDocument;
-  editable: boolean;
-  set: SetDoc;
-  setLines: SetLines;
-}) {
-  const recipes = state.recipes.filter((r) => r.status === "active" || r.id === doc.recipe_id);
-  const recipe = state.recipes.find((r) => r.id === doc.recipe_id);
-  const output = productById(state, doc.output_product_id);
-  const outUnit = output?.base_unit ?? null;
-  const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
-  const posted = doc.status === "posted" || doc.status === "cancelled";
-
-  const scaleLines = (r: ErpRecipe, plan: number | null): ErpDocumentLine[] =>
-    r.lines
-      .filter((line) => line.product_id && line.qty)
-      .map((line) => {
-        const planned = plan && r.yield_qty ? (line.qty! * plan) / r.yield_qty : line.qty!;
-        return { product_id: line.product_id!, planned_qty: planned, qty: planned };
-      });
-
-  const chooseRecipe = (recipeId: string) => {
-    const r = state.recipes.find((x) => x.id === recipeId);
-    set("recipe_id", recipeId || null);
-    if (!r) return;
-    set("output_product_id", r.product_id);
-    set("plan_output_qty", r.yield_qty);
-    set("output_qty", r.yield_qty);
-    set("output_pieces", r.yield_pieces);
-    setLines(() => scaleLines(r, r.yield_qty));
-  };
-
-  const changePlan = (plan: number | null) => {
-    set("plan_output_qty", plan);
-    set("output_qty", plan);
-    if (recipe) {
-      if (plan && recipe.yield_pieces && recipe.yield_qty) set("output_pieces", Math.round((recipe.yield_pieces * plan) / recipe.yield_qty));
-      setLines(() => scaleLines(recipe, plan));
-    }
-  };
-
-  const plannedCost = doc.lines.reduce<number | null>((sum, line) => {
-    if (sum === null || !line.product_id) return sum;
-    const c = costLine(ctx, line.product_id, line.qty).cost;
-    return c === null ? null : sum + c;
-  }, 0);
-  const actualCost = posted ? (doc.cost_known ? (doc.total_cost ?? null) : null) : plannedCost;
-  const perUnit = actualCost !== null && doc.output_qty ? actualCost / doc.output_qty : null;
-  const shelf = recipe?.shelf_life_days ?? output?.shelf_life_days ?? null;
-
-  return (
-    <>
-      <div className="erpCard">
-        <div className="erpGrid">
-          <Field label={L("Recipe", "Công thức")}>
-            <select value={doc.recipe_id ?? ""} disabled={!editable} onChange={(event) => chooseRecipe(event.target.value)}>
-              <option value="">{L("— choose —", "— chọn —")}</option>
-              {recipes.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {productLabel(productById(state, r.product_id) ?? { name_en: "?", name_vn: "" })} · v{r.version}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={`${L("Planned output", "Sản lượng kế hoạch")} (${outUnit ?? "?"})`}>
-            <QtyInput base={outUnit} value={doc.plan_output_qty} disabled={!editable} onChange={changePlan} />
-          </Field>
-          <Field label={`${L("Actual output *", "Thành phẩm thực tế *")} (${outUnit ?? "?"})`}>
-            <QtyInput base={outUnit} value={doc.output_qty} disabled={!editable} onChange={(v) => set("output_qty", v)} />
-          </Field>
-          <Field label={L("Pieces", "Số cái")}>
-            <NumberInput
-              value={doc.output_pieces}
-              disabled={!editable}
-              onChange={(v) => set("output_pieces", v === null ? null : Math.round(v))}
-            />
-          </Field>
-          <Field label={L("Total weight, kg", "Tổng trọng lượng, kg")}>
-            <NumberInput value={doc.output_weight_kg} disabled={!editable} onChange={(v) => set("output_weight_kg", v)} />
-          </Field>
-          <Field label={L("Batch number", "Số lô")}>
-            <input
-              value={doc.batch_no ?? ""}
-              placeholder={L("auto = document №", "tự động")}
-              disabled={!editable}
-              onChange={(event) => set("batch_no", event.target.value)}
-            />
-          </Field>
-          <Field label={`${L("Expiry", "HSD")}${shelf ? ` (${L("auto", "tự động")} +${shelf} ${L("days", "ngày")})` : ""}`}>
-            <input type="date" value={doc.expires_at ?? ""} disabled={!editable} onChange={(event) => set("expires_at", event.target.value || null)} />
-          </Field>
-          <Field label={L("Responsible", "Người phụ trách")}>
-            <input value={doc.responsible ?? ""} disabled={!editable} onChange={(event) => set("responsible", event.target.value)} />
-          </Field>
-        </div>
-      </div>
-
-      <div className="erpCard">
-        <h2 style={{ marginTop: 0 }}>{L("Components", "Nguyên liệu")}</h2>
+      ) : (
         <div className="erpTableWrap">
-          <table className="erpTable">
+          <table className="erpTable stack">
             <thead>
               <tr>
-                <th>{L("Product", "Sản phẩm")}</th>
-                <th className="num">{L("Planned", "Định mức")}</th>
-                <th>{L("Actual use", "Thực tế")}</th>
-                {!posted ? <th className="num">{L("In stock", "Tồn")}</th> : null}
-                <th className="num">{posted ? L("Cost", "Giá vốn") : L("Estimate", "Ước tính")}</th>
+                <th>{T("Продукт", "Product", "Sản phẩm")}</th>
+                {type === "receipt" ? <th>{T("Упаковки", "Packs", "Quy cách")}</th> : null}
+                <th>{qtyLabel}</th>
+                {showStock ? <th className="num">{stockLabel}</th> : null}
+                {type === "count" ? <th className="num">{T("Разница", "Difference", "Chênh lệch")}</th> : null}
+                {priced ? <th>{T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}</th> : null}
+                {vatOn ? <th>{T("НДС, %", "VAT, %", "VAT, %")}</th> : null}
+                {priced ? <th>{T("Годен до", "Use by", "Hạn dùng")}</th> : null}
+                {type === "writeoff" ? <th>{T("Комментарий", "Note", "Ghi chú")}</th> : null}
+                {priced || posted ? <th className="num">{T("Сумма", "Amount", "Số tiền")}</th> : null}
                 {editable ? <th /> : null}
               </tr>
             </thead>
             <tbody>
               {doc.lines.map((line, index) => {
+                const product = productById(state, line.product_id);
                 const unit = unitOf(state, line.product_id);
+                const packs = state.packs.filter((pack) => pack.product_id === line.product_id);
+                const pack = packs.find((p) => p.id === line.pack_id);
                 const available = stockQty(state, line.product_id, doc.warehouse_id);
-                const estimate = line.product_id ? costLine(ctx, line.product_id, line.qty).cost : null;
+                const short = type !== "count" && showStock && Boolean(line.product_id) && available < line.qty;
+                const recorded = posted ? (line.system_qty ?? null) : available;
+                const diff = type === "count" ? (posted ? (line.diff_qty ?? null) : line.product_id ? line.qty - available : null) : null;
                 return (
-                  <tr key={line.id ?? index}>
-                    <td style={{ minWidth: 240 }}>
+                  <tr key={line.id ?? index} className={short ? "short" : ""}>
+                    <td className="main" style={{ minWidth: 220 }}>
                       {editable ? (
                         <ProductPicker
                           state={state}
                           value={line.product_id}
-                          onChange={(productId) =>
-                            setLines((lines) => lines.map((l, i) => (i === index ? { ...l, product_id: productId } : l)))
-                          }
+                          onChange={(productId) => {
+                            const picked = productById(state, productId);
+                            const defaultPack = state.packs.find((p) => p.product_id === productId && p.is_default);
+                            update(index, {
+                              product_id: productId,
+                              pack_id: type === "receipt" ? (defaultPack?.id ?? null) : null,
+                              pack_qty: null,
+                              unit_price: priced ? (picked?.est_unit_cost ?? null) : null,
+                            });
+                          }}
                         />
                       ) : (
-                        productLabel(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })
+                        <span className="erpName">{product ? productLabel(product) : "—"}</span>
                       )}
+                      {short ? (
+                        <span className="erpShort">
+                          {T("Не хватает", "Short by", "Thiếu")} {qtyText(line.qty - available, unit)}
+                        </span>
+                      ) : null}
                     </td>
-                    <td className="num">{qtyText(line.planned_qty ?? null, unit)}</td>
-                    <td style={{ minWidth: 150 }}>
+                    {type === "receipt" ? (
+                      <td className="edit" data-label={T("Упаковки", "Packs", "Quy cách")}>
+                        {editable ? (
+                          packs.length ? (
+                            <div className="erpRow">
+                              <select value={line.pack_id ?? ""} onChange={(e) => update(index, { pack_id: e.target.value || null, pack_qty: null })}>
+                                <option value="">{T("без упаковки", "no pack", "không")}</option>
+                                {packs.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.label} = {qtyText(p.qty_base, unit)}
+                                  </option>
+                                ))}
+                              </select>
+                              {pack ? (
+                                <NumberInput
+                                  value={line.pack_qty}
+                                  placeholder={T("сколько", "how many", "bao nhiêu")}
+                                  onChange={(v) => update(index, { pack_qty: v, qty: v === null ? line.qty : Math.round(v * pack.qty_base * 1e6) / 1e6 })}
+                                />
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span className="erpMuted">—</span>
+                          )
+                        ) : pack && line.pack_qty ? (
+                          `${line.pack_qty} × ${pack.label}`
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    ) : null}
+                    <td className="edit" data-label={qtyLabel}>
                       {editable ? (
-                        <QtyInput
-                          base={unit}
-                          value={line.qty}
-                          onChange={(v) => setLines((lines) => lines.map((l, i) => (i === index ? { ...l, qty: v ?? 0 } : l)))}
-                        />
+                        line.product_id ? (
+                          <QtyInput base={unit} value={line.qty} defaultSmall={unit !== "pcs" && line.qty > 0 && line.qty < 1} onChange={(v) => update(index, { qty: v ?? 0, pack_qty: null })} />
+                        ) : (
+                          <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
+                        )
                       ) : (
                         qtyText(line.qty, unit)
                       )}
                     </td>
-                    {!posted ? (
-                      <td className="num">
-                        {available < line.qty ? <span className="erpBadge bad">{qtyText(available, unit)}</span> : qtyText(available, unit)}
+                    {showStock ? (
+                      <td className="num" data-label={stockLabel}>
+                        {line.product_id ? <span className={short ? "erpBadge bad" : ""}>{qtyText(recorded, unit)}</span> : "—"}
                       </td>
                     ) : null}
-                    <td className="num">
-                      {posted ? (
-                        line.cost_known === false ? (
-                          <span className="erpBadge warn">{L("unknown", "chưa rõ")}</span>
+                    {type === "count" ? (
+                      <td className="num" data-label={T("Разница", "Difference", "Chênh lệch")}>
+                        {diff === null ? "—" : diff === 0 ? <span className="erpMuted">0</span> : <span className={`erpBadge ${diff < 0 ? "bad" : "ok"}`}>{`${diff > 0 ? "+" : "−"}${qtyText(Math.abs(diff), unit)}`}</span>}
+                      </td>
+                    ) : null}
+                    {priced ? (
+                      <td className="edit" data-label={T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}>
+                        {editable ? (
+                          <>
+                            <NumberInput value={line.unit_price} placeholder={unit ? `₫ / ${unitLabel(unit)}` : ""} onChange={(v) => update(index, { unit_price: v })} />
+                            {pack && line.unit_price !== null && line.unit_price !== undefined ? (
+                              <small className="erpCellSub">
+                                {pack.label}: {vnd(line.unit_price * pack.qty_base)}
+                              </small>
+                            ) : null}
+                          </>
                         ) : (
-                          vnd(line.cost_amount)
-                        )
-                      ) : estimate === null ? (
-                        <span className="erpBadge warn">{L("no price", "chưa có giá")}</span>
-                      ) : (
-                        vnd(estimate)
-                      )}
-                    </td>
+                          `${vnd(line.unit_price)}${unit ? ` / ${unitLabel(unit)}` : ""}`
+                        )}
+                      </td>
+                    ) : null}
+                    {vatOn ? (
+                      <td className="edit" data-label={T("НДС, %", "VAT, %", "VAT, %")} style={{ width: 90 }}>
+                        {editable ? (
+                          <NumberInput value={line.vat_rate} placeholder={String(state.settings.default_input_vat_rate ?? "")} onChange={(v) => update(index, { vat_rate: v })} />
+                        ) : (
+                          (line.vat_rate ?? state.settings.default_input_vat_rate ?? "—")
+                        )}
+                      </td>
+                    ) : null}
+                    {priced ? (
+                      <td className="edit" data-label={T("Годен до", "Use by", "Hạn dùng")}>
+                        {editable ? <input type="date" value={line.expires_at ?? ""} onChange={(e) => update(index, { expires_at: e.target.value || null })} /> : dateText(line.expires_at)}
+                      </td>
+                    ) : null}
+                    {type === "writeoff" ? (
+                      <td className="edit" data-label={T("Комментарий", "Note", "Ghi chú")}>
+                        {editable ? <input value={line.reason ?? ""} onChange={(e) => update(index, { reason: e.target.value })} /> : (line.reason ?? "—")}
+                      </td>
+                    ) : null}
+                    {priced || posted ? (
+                      <td className="num" data-label={T("Сумма", "Amount", "Số tiền")}>
+                        {posted ? (
+                          line.cost_known === false ? (
+                            <span className="erpBadge warn">{T("цена неизвестна", "price unknown", "chưa rõ giá")}</span>
+                          ) : (
+                            vnd(line.cost_amount)
+                          )
+                        ) : line.unit_price !== null && line.unit_price !== undefined ? (
+                          vnd(line.unit_price * line.qty)
+                        ) : (
+                          "—"
+                        )}
+                        {posted && vatOn && line.vat_amount ? <small className="erpCellSub">НДС {vnd(line.vat_amount)}</small> : null}
+                      </td>
+                    ) : null}
                     {editable ? (
-                      <td>
-                        <button type="button" className="erpLink" onClick={() => setLines((lines) => lines.filter((_, i) => i !== index))}>
-                          ✕
+                      <td className="num">
+                        <button type="button" className="erpIconBtn" aria-label={T("Убрать строку", "Remove line", "Xóa dòng")} onClick={() => setLines((lines) => lines.filter((_, i) => i !== index))}>
+                          ×
                         </button>
                       </td>
                     ) : null}
@@ -593,47 +550,42 @@ function Production({
             </tbody>
           </table>
         </div>
-        {editable ? (
-          <div className="erpActions">
-            <button type="button" className="erpBtn" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
-              + {L("Component", "Nguyên liệu")}
+      )}
+      {editable ? (
+        <div className="erpActions">
+          <button type="button" className="erpBtn" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
+            + {T("Добавить продукт", "Add product", "Thêm sản phẩm")}
+          </button>
+          {type === "count" && doc.warehouse_id ? (
+            <button
+              type="button"
+              className="erpBtn ghost"
+              onClick={() => {
+                if (!doc.lines.length || window.confirm(T("Заменить список всеми остатками склада?", "Replace the list with all stock at this location?", "Thay danh sách bằng toàn bộ tồn kho?"))) {
+                  setLines(() => countLines(state, doc.warehouse_id!));
+                }
+              }}
+            >
+              {T("Заполнить по остаткам склада", "Fill from stock on record", "Điền theo tồn kho")}
             </button>
-          </div>
-        ) : null}
-
-        <div className="erpKpis">
-          <div className="erpKpi">
-            <span>{posted ? L("Batch cost (actual)", "Giá vốn mẻ (thực tế)") : L("Batch cost (estimate)", "Giá vốn mẻ (ước tính)")}</span>
-            <strong>{actualCost === null ? L("incomplete", "chưa đủ") : vnd(actualCost)}</strong>
-          </div>
-          <div className="erpKpi">
-            <span>
-              {L("Cost per", "Giá vốn mỗi")} {outUnit ?? "?"}
-            </span>
-            <strong>{vnd(posted ? (doc.output_unit_cost ?? null) : perUnit)}</strong>
-          </div>
-          {doc.output_pieces && outUnit !== "pcs" ? (
-            <div className="erpKpi">
-              <span>{L("Cost per piece", "Giá vốn mỗi cái")}</span>
-              <strong>{vnd(actualCost === null ? null : actualCost / doc.output_pieces)}</strong>
-            </div>
-          ) : null}
-          {doc.output_weight_kg && outUnit !== "kg" ? (
-            <div className="erpKpi">
-              <span>{L("Cost per kg", "Giá vốn mỗi kg")}</span>
-              <strong>{vnd(actualCost === null ? null : actualCost / doc.output_weight_kg)}</strong>
-            </div>
           ) : null}
         </div>
-        {!posted ? (
-          <p className="erpHint">
-            {L(
-              "Estimate uses current prices. On posting, the actual cost of the used lots is carried to the batch.",
-              "Ước tính theo giá hiện tại. Khi ghi sổ, giá vốn thực tế của các lô được chuyển vào mẻ.",
-            )}
-          </p>
-        ) : null}
-      </div>
-    </>
+      ) : null}
+      {priced && doc.lines.length ? (
+        <p className="erpHint">
+          {T("Итого", "Total", "Tổng")}: <b>{vnd(total)}</b>
+          {missingPrice ? ` · ${T("у строк без цены себестоимость будет неизвестна", "lines without a price will have unknown cost", "dòng chưa có giá sẽ chưa rõ giá vốn")}` : ""}
+          {vatOn ? ` · ${doc.prices_include_vat ? T("с НДС", "incl. VAT", "gồm VAT") : T("без НДС", "excl. VAT", "chưa VAT")}` : ""}
+        </p>
+      ) : null}
+      {type === "count" && !posted && doc.lines.length ? (
+        <p className="erpHint">{T("После завершения остатки станут равны фактическим, разница будет записана в документ.", "After finishing, stock equals the counted amounts; the difference is recorded.", "Sau khi hoàn tất, tồn kho sẽ bằng số thực tế.")}</p>
+      ) : null}
+      {posted && type !== "count" ? (
+        <p className="erpHint">
+          {T("Себестоимость документа", "Document cost", "Giá vốn chứng từ")}: <b>{doc.cost_known ? vnd(doc.total_cost) : T("неполная — часть цен неизвестна", "incomplete — some prices unknown", "chưa đủ — thiếu giá")}</b>
+        </p>
+      ) : null}
+    </section>
   );
 }
