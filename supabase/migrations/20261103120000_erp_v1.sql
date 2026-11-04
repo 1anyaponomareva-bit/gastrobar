@@ -1625,6 +1625,87 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Reference rows and settings
+-- ---------------------------------------------------------------------------
+
+create or replace function public.erp_save_ref(p_entity text, p jsonb, p_actor text)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_id uuid := nullif(p->>'id', '')::uuid;
+  v_name text := btrim(coalesce(p->>'name', p->>'name_en', ''));
+  v_table text;
+begin
+  v_table := case p_entity when 'category' then 'erp_categories' when 'supplier' then 'erp_suppliers'
+                           when 'warehouse' then 'erp_warehouses' when 'channel' then 'erp_sales_channels' end;
+  if v_table is null then perform public.erp_raise('ERP_INVALID', 'entity'); end if;
+  if v_name = '' then perform public.erp_raise('ERP_INVALID', 'name'); end if;
+
+  if p_entity = 'category' then
+    if v_id is null then
+      insert into public.erp_categories (code, name_en, name_vn, sort)
+      values (public.erp_unique_code('erp_categories', v_name), v_name, coalesce(btrim(p->>'name_vn'), ''),
+              coalesce((select max(sort) + 1 from public.erp_categories), 0))
+      returning id into v_id;
+    else
+      update public.erp_categories set name_en = v_name, name_vn = coalesce(btrim(p->>'name_vn'), '') where id = v_id;
+    end if;
+  elsif p_entity = 'supplier' then
+    if v_id is null then
+      insert into public.erp_suppliers (code, name, zalo_url, sort)
+      values (public.erp_unique_code('erp_suppliers', v_name), v_name, nullif(btrim(p->>'zalo_url'), ''),
+              coalesce((select max(sort) + 1 from public.erp_suppliers), 0))
+      returning id into v_id;
+    else
+      update public.erp_suppliers set name = v_name, zalo_url = nullif(btrim(p->>'zalo_url'), '') where id = v_id;
+    end if;
+  elsif p_entity = 'warehouse' then
+    if v_id is null then
+      insert into public.erp_warehouses (code, name, kind, sort)
+      values (public.erp_unique_code('erp_warehouses', v_name), v_name, coalesce(nullif(p->>'kind', ''), 'other'),
+              coalesce((select max(sort) + 1 from public.erp_warehouses), 0))
+      returning id into v_id;
+    else
+      update public.erp_warehouses set name = v_name, kind = coalesce(nullif(p->>'kind', ''), kind) where id = v_id;
+    end if;
+  else
+    if v_id is null then
+      insert into public.erp_sales_channels (code, name, commission_pct, sort)
+      values (public.erp_unique_code('erp_sales_channels', v_name), v_name, nullif(p->>'commission_pct', '')::numeric,
+              coalesce((select max(sort) + 1 from public.erp_sales_channels), 0))
+      returning id into v_id;
+    else
+      update public.erp_sales_channels set name = v_name, commission_pct = nullif(p->>'commission_pct', '')::numeric
+      where id = v_id;
+    end if;
+  end if;
+  if not found then perform public.erp_raise('ERP_NOT_FOUND'); end if;
+  perform public.erp_audit(p_actor, p_entity, v_id, 'save', null, p);
+  return v_id;
+end;
+$$;
+
+create or replace function public.erp_save_settings(p jsonb, p_actor text)
+returns void
+language plpgsql
+as $$
+begin
+  update public.erp_settings set
+    input_vat_enabled = coalesce((p->>'input_vat_enabled')::boolean, input_vat_enabled),
+    output_vat_enabled = coalesce((p->>'output_vat_enabled')::boolean, output_vat_enabled),
+    default_input_vat_rate = case when p ? 'default_input_vat_rate'
+                                  then nullif(p->>'default_input_vat_rate', '')::numeric else default_input_vat_rate end,
+    default_output_vat_rate = case when p ? 'default_output_vat_rate'
+                                   then nullif(p->>'default_output_vat_rate', '')::numeric else default_output_vat_rate end,
+    updated_by = p_actor,
+    updated_at = now()
+  where id = 1;
+  perform public.erp_audit(p_actor, 'settings', null, 'save', null, p);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Access: server (service_role) only
 -- ---------------------------------------------------------------------------
 

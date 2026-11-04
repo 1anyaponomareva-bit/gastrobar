@@ -4,8 +4,16 @@
  */
 import assert from "node:assert/strict";
 import type { PGlite } from "@electric-sql/pglite";
-import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog } from "../../src/data/staffCatalog";
+import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog, type StaffCatalog } from "../../src/data/staffCatalog";
 import { RECIPES } from "../../src/data/recipes";
+import {
+  buildCostContext,
+  channelResult,
+  costLine,
+  summarize,
+  type CostProduct,
+  type CostRecipe,
+} from "../../src/lib/erp/costing";
 import { applyMigration, createTestDb } from "./testDb";
 
 const ACTOR = "test@gastrofood";
@@ -130,14 +138,14 @@ async function main() {
 
   await test("staff catalog export matches the Staff format", async () => {
     const exported = await value<unknown>("select public.erp_staff_catalog()");
-    const clean = sanitizeStaffCatalog(exported);
+    const clean: StaffCatalog | null = sanitizeStaffCatalog(exported);
     assert.ok(clean, "export passes sanitizeStaffCatalog");
     assert.deepEqual(
       clean!.items.map((i) => i.id),
       catalog.items.map((i) => i.id),
     );
     for (const [index, item] of catalog.items.entries()) {
-      const out = clean!.items[index];
+      const out: StaffCatalog["items"][number] = clean!.items[index];
       assert.equal(out.name, item.name, item.id);
       assert.equal(out.nameVn, item.nameVn, item.id);
       assert.equal(out.unit, item.unit, item.id);
@@ -331,7 +339,7 @@ async function main() {
     assert.ok(doc.batch_no);
     assert.ok(doc.expires_at, "expiry from shelf life");
     assert.equal(await stock(patty, prep), 13);
-    assert.ok(Math.abs(await stock(beef, prep)! - 12.9) < 1e-9);
+    assert.ok(Math.abs((await stock(beef, prep))! - 12.9) < 1e-9);
   });
 
   await test("insufficient stock blocks posting and changes nothing", async () => {
@@ -497,6 +505,85 @@ async function main() {
       ACTOR,
     ]);
     assert.equal(n(await value("select count(*) from public.erp_movements")), movesBefore);
+  });
+
+  await test("warehouses: create, rename, no duplicates, archive only when empty", async () => {
+    const id = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [
+      JSON.stringify({ name: "Event Stand", kind: "other" }),
+      ACTOR,
+    ]);
+    await expectError(
+      q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ name: "event stand" }), ACTOR]),
+      "erp_warehouses_name_uidx",
+    );
+    await q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ id, name: "Event Stand 2" }), ACTOR]);
+    await q("select public.erp_set_archived('warehouse', $1, true, $2)", [id, ACTOR]);
+    await expectError(q("select public.erp_set_archived('warehouse', $1, true, $2)", [prep, ACTOR]), "ERP_HAS_STOCK");
+    await q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ output_vat_enabled: true, default_output_vat_rate: 8 }), ACTOR]);
+    assert.equal(n(await value("select default_output_vat_rate from public.erp_settings")), 8);
+  });
+
+  await test("burger costing: food vs packaging, VAT, commission, incomplete marking", async () => {
+    const load = async () => {
+      const products = (await q<Record<string, unknown>>("select * from public.erp_products")).map((p) => ({
+        id: p.id as string,
+        type: p.type as CostProduct["type"],
+        name_en: p.name_en as string,
+        name_vn: p.name_vn as string,
+        base_unit: p.base_unit as CostProduct["base_unit"],
+        est_unit_cost: n(p.est_unit_cost),
+        est_cost_source: p.est_cost_source as CostProduct["est_cost_source"],
+      }));
+      const recipes = (await q<Record<string, unknown>>("select * from public.erp_recipes")).map(async (r) => ({
+        id: r.id as string,
+        product_id: r.product_id as string,
+        status: r.status as CostRecipe["status"],
+        yield_qty: n(r.yield_qty),
+        lines: (await q<Record<string, unknown>>("select product_id, qty from public.erp_recipe_lines where recipe_id = $1 order by line_no", [r.id])).map(
+          (l) => ({ product_id: l.product_id as string | null, qty: n(l.qty) }),
+        ),
+      }));
+      return buildCostContext(products, await Promise.all(recipes));
+    };
+    const dishLines = (ctx: ReturnType<typeof buildCostContext>) => [
+      costLine(ctx, patty, 1),
+      costLine(ctx, bun, 1),
+      costLine(ctx, box, 1),
+    ];
+
+    let summary = summarize(dishLines(await load()));
+    assert.equal(summary.complete, false);
+    assert.equal(summary.totalCost, null);
+    assert.equal(summary.packagingCost, null);
+    assert.deepEqual(summary.missing, ["Burger box test / Hộp burger"]);
+    const pattyLine = summary.lines[0];
+    assert.equal(pattyLine.source, "recipe");
+    assert.equal(pattyLine.children?.length, 2);
+    assert.ok(Math.abs(pattyLine.cost! - (300000 * 1 + 10000 * 0.01) / 6) < 1e-6);
+
+    await saveProduct({ id: box, type: "packaging", name_en: "Burger box test", name_vn: "Hộp burger", base_unit: "pcs", est_unit_cost: 2000 });
+    assert.equal(await value("select est_cost_source from public.erp_products where id = $1", [box]), "manual");
+    summary = summarize(dishLines(await load()));
+    const food = (300000 + 100) / 6 + 10000;
+    assert.equal(summary.complete, true);
+    assert.ok(Math.abs(summary.foodCost! - food) < 1e-6);
+    assert.equal(summary.packagingCost, 2000);
+
+    const settings = { output_vat_enabled: true, default_output_vat_rate: 8 };
+    const direct = channelResult(summary, { id: "d", name: "Direct", commission_pct: 0, price: 120000 }, settings, null);
+    const net = 120000 / 1.08;
+    assert.ok(direct.complete);
+    assert.ok(Math.abs(direct.netRevenue! - net) < 1e-6);
+    assert.ok(Math.abs(direct.grossProfit! - (net - food - 2000)) < 1e-6);
+    assert.ok(Math.abs(direct.foodCostPct! - (food / net) * 100) < 1e-9);
+    assert.ok(Math.abs(direct.totalCostPct! - ((food + 2000) / net) * 100) < 1e-9);
+
+    const grab = channelResult(summary, { id: "g", name: "Grab Food", commission_pct: 25, price: 150000 }, settings, null);
+    assert.ok(Math.abs(grab.grossProfit! - (150000 / 1.08 - 37500 - food - 2000)) < 1e-6);
+    const unset = channelResult(summary, { id: "s", name: "Shopee Food", commission_pct: null, price: 150000 }, settings, null);
+    assert.equal(unset.complete, false);
+    assert.equal(unset.grossProfit, null);
+    assert.deepEqual(unset.issues, ["no_commission"]);
   });
 
   console.log(`\n${passed} checks passed`);
