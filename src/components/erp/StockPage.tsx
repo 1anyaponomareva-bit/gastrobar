@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { productLabel } from "@/lib/erp/costing";
 import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
@@ -8,7 +8,7 @@ import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
-import { dateText, Empty, NavLink, noSearchResults, PageHead, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
+import { Empty, NavLink, noSearchResults, PageHead, qtyText, T } from "./ui";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
   receipts: { types: ["receipt", "opening"], newHref: "/erp/documents/new?type=receipt" },
@@ -34,202 +34,6 @@ export function StockReportPage() {
 }
 
 const addText = () => T("Добавить", "Add", "Thêm");
-
-const newDocHref = (type: ErpDocType, warehouseId?: string) => `/erp/documents/new?type=${type}${warehouseId ? `&warehouse=${warehouseId}` : ""}`;
-
-function StockActions({ warehouseId }: { warehouseId?: string }) {
-  return (
-    <div className="erpQuick compact">
-      <NavLink href={newDocHref("receipt", warehouseId)} className="erpBtn primary">
-        {T("Принять поставку", "Receive delivery", "Nhận hàng")}
-      </NavLink>
-      <NavLink href={newDocHref("transfer", warehouseId)} className="erpBtn">
-        {T("Переместить", "Move", "Chuyển kho")}
-      </NavLink>
-      <NavLink href={newDocHref("writeoff", warehouseId)} className="erpBtn">
-        {T("Списать", "Write off", "Xuất hủy")}
-      </NavLink>
-      <NavLink href={newDocHref("count", warehouseId)} className="erpBtn">
-        {T("Провести инвентаризацию", "Count stock", "Kiểm kê")}
-      </NavLink>
-    </div>
-  );
-}
-
-const WAREHOUSE_KEY = "gastrofood-erp-warehouse";
-
-export function StockPage() {
-  const { state } = useErp();
-  const [warehouseId, setWarehouseId] = useState("");
-  const [query, setQuery] = useState("");
-  const active = state?.warehouses.filter((w) => !w.archived_at) ?? [];
-
-  useEffect(() => {
-    if (!state || warehouseId) return;
-    const stored = window.localStorage.getItem(WAREHOUSE_KEY);
-    const list = state.warehouses.filter((w) => !w.archived_at);
-    setWarehouseId(list.find((w) => w.id === stored)?.id ?? list.find((w) => w.kind === "warehouse")?.id ?? list[0]?.id ?? "");
-  }, [state, warehouseId]);
-
-  if (!state) return null;
-
-  const choose = (id: string) => {
-    setWarehouseId(id);
-    window.localStorage.setItem(WAREHOUSE_KEY, id);
-  };
-
-  const products = new Map(state.products.map((p) => [p.id, p]));
-  const all = state.stock
-    .filter((row) => row.warehouse_id === warehouseId && row.qty !== 0)
-    .map((row) => ({ row, product: products.get(row.product_id)! }))
-    .filter((entry) => entry.product)
-    .sort((a, b) => a.product.name_en.localeCompare(b.product.name_en));
-  const q = query.trim().toLowerCase();
-  const rows = all.filter(({ product }) => !q || `${product.name_en} ${product.name_vn} ${product.brand ?? ""}`.toLowerCase().includes(q));
-  const known = all.reduce((sum, { row }) => sum + (row.known_value ?? 0), 0);
-  const incomplete = all.some(({ row }) => !row.cost_known);
-  const now = today();
-  const soon = (() => {
-    const d = new Date(`${now}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 2);
-    return d.toISOString().slice(0, 10);
-  })();
-
-  return (
-    <>
-      <PageHead title={T("Остатки", "Balances", "Tồn kho")} sub={T("Сколько продуктов лежит на каждом складе и на какую сумму.", "How much of each product is at each location, and its value.", "Số lượng và giá trị hàng tại từng kho.")} />
-      <StockMobileNav active="/erp/stock" />
-      <StockActions warehouseId={warehouseId || undefined} />
-
-      {!active.length ? (
-        <Empty
-          title={T("Складов пока нет", "No locations yet", "Chưa có kho")}
-          text={T("Добавьте склады: основной склад, кухня заготовок, фудтрак…", "Add locations: main warehouse, prep kitchen, food truck…", "Thêm kho: kho chính, bếp sơ chế, xe bán đồ ăn…")}
-          action={
-            <NavLink href="/erp/stock/warehouses" className="erpBtn primary">
-              {T("Добавить склад", "Add location", "Thêm kho")}
-            </NavLink>
-          }
-        />
-      ) : (
-        <>
-          <div className="erpToolbar">
-            <select value={warehouseId} onChange={(e) => choose(e.target.value)} aria-label={T("Склад", "Location", "Kho")}>
-              {active.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-            {all.length > 8 ? (
-              <input type="search" placeholder={T("Найти продукт…", "Find a product…", "Tìm sản phẩm…")} value={query} onChange={(e) => setQuery(e.target.value)} />
-            ) : null}
-          </div>
-
-          {!all.length ? (
-            <Empty
-              title={T("На этом складе пока ничего нет", "Nothing at this location yet", "Kho này chưa có hàng")}
-              text={T(
-                "Остатки появятся после поставки, перемещения или изготовления партии. Если продукты уже лежат на складе — внесите начальные остатки.",
-                "Stock appears after a delivery, transfer or production. If products are already here, enter opening balances.",
-                "Tồn kho sẽ xuất hiện sau khi nhập hàng, chuyển kho hoặc sản xuất.",
-              )}
-              action={
-                <>
-                  <NavLink href={newDocHref("receipt", warehouseId)} className="erpBtn primary">
-                    {T("Принять поставку", "Receive delivery", "Nhận hàng")}
-                  </NavLink>
-                  <NavLink href={newDocHref("opening", warehouseId)} className="erpBtn">
-                    {T("Внести начальные остатки", "Enter opening balances", "Nhập tồn đầu kỳ")}
-                  </NavLink>
-                </>
-              }
-            />
-          ) : (
-            <>
-              <div className="erpKpis">
-                <div className="erpKpi">
-                  <span>{T("Позиций", "Items", "Mặt hàng")}</span>
-                  <strong>{all.length}</strong>
-                </div>
-                <div className="erpKpi">
-                  <span>{T("Стоимость остатков", "Stock value", "Giá trị tồn")}</span>
-                  <strong>
-                    {incomplete ? "≥ " : ""}
-                    {vnd(known)}
-                  </strong>
-                </div>
-              </div>
-              {incomplete ? (
-                <p className="erpHint">
-                  {T(
-                    "У части продуктов цена закупки неизвестна — показана стоимость только известной части.",
-                    "Some items have no purchase price — only the known part is counted.",
-                    "Một số mặt hàng chưa có giá — chỉ tính phần đã biết.",
-                  )}
-                </p>
-              ) : null}
-              {!rows.length ? (
-                noSearchResults(() => setQuery(""))
-              ) : (
-                <div className="erpTableWrap">
-                  <table className="erpTable stack">
-                    <thead>
-                      <tr>
-                        <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                        <th className="num">{T("Количество", "Quantity", "Số lượng")}</th>
-                        <th className="num">{T("Стоимость", "Value", "Giá trị")}</th>
-                        <th className="num">{T("Цена за единицу", "Unit cost", "Giá / đơn vị")}</th>
-                        <th>{T("Ближайший срок", "Nearest use-by", "Hạn gần nhất")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map(({ row, product }) => {
-                        const expiry = row.nearest_expiry;
-                        return (
-                          <tr key={row.product_id} className={row.qty < 0 ? "short" : ""}>
-                            <td className="main">
-                              <NavLink href={`/erp/products/${product.id}`} className="erpName">
-                                {productLabel(product)}
-                              </NavLink>
-                              <span className="erpCellSub">{typeLabel(product.type)}</span>
-                            </td>
-                            <td className="num" data-label={T("Количество", "Quantity", "Số lượng")}>
-                              <strong>{qtyText(row.qty, product.base_unit)}</strong>
-                            </td>
-                            <td className="num" data-label={T("Стоимость", "Value", "Giá trị")}>
-                              {row.cost_known ? vnd(row.known_value) : <span className="erpBadge warn">{T("цена неизвестна", "price unknown", "chưa rõ giá")}</span>}
-                            </td>
-                            <td className="num" data-label={T("Цена за единицу", "Unit cost", "Giá / đơn vị")}>
-                              {row.cost_known && row.qty ? `${vnd((row.known_value ?? 0) / row.qty)} / ${unitLabel(product.base_unit)}` : "—"}
-                            </td>
-                            <td data-label={T("Ближайший срок", "Nearest use-by", "Hạn gần nhất")}>
-                              {!expiry ? (
-                                "—"
-                              ) : expiry < now ? (
-                                <span className="erpBadge bad">
-                                  {T("просрочено", "expired", "hết hạn")} {dateText(expiry)}
-                                </span>
-                              ) : expiry <= soon ? (
-                                <span className="erpBadge warn">{dateText(expiry)}</span>
-                              ) : (
-                                dateText(expiry)
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </>
-  );
-}
 
 const kindTexts = (): Record<string, { title: string; sub: string; empty: string; text: string }> => ({
   receipts: {

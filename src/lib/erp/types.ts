@@ -112,6 +112,18 @@ export type ErpMovementRow = {
   closing_value: number | null;
 };
 
+export type ErpProductReceipt = {
+  document_id: string;
+  doc_no: string;
+  doc_type: "receipt" | "opening";
+  doc_date: string;
+  warehouse_id: string | null;
+  supplier_id: string | null;
+  qty: number;
+  unit_cost: number | null;
+  cost_amount: number | null;
+};
+
 export type ErpDish = Archivable & {
   id: string;
   code: string;

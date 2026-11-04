@@ -1424,3 +1424,370 @@
 .erpMethods input[type="checkbox"] {
   width: auto;
 }
+
+/* ---------- list page with Poster-style filters ---------- */
+
+.erpPanel {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 14px;
+  padding: 14px 0 0;
+  margin-bottom: 16px;
+}
+
+.erpFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 12px;
+}
+
+.erpFilters .erpSearch {
+  width: auto;
+  flex: 0 1 280px;
+  min-width: 180px;
+  border-radius: 999px;
+}
+
+.erpDrop {
+  position: relative;
+}
+
+.erpFilterBtn {
+  font: inherit;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 8px 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  background: var(--erp-card);
+  color: var(--erp-muted);
+  cursor: pointer;
+}
+
+.erpFilterBtn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erpFilterBtn:hover {
+  background: var(--erp-soft);
+}
+
+.erpFilterBtn.on {
+  border-color: var(--erp-accent);
+  color: var(--erp-accent);
+  background: var(--erp-accent-soft);
+}
+
+.erpDropMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  min-width: 240px;
+  max-width: min(340px, calc(100vw - 24px));
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 10px;
+}
+
+.erpDropMenu.right {
+  left: auto;
+  right: 0;
+}
+
+.erpDropLinks {
+  display: flex;
+  gap: 16px;
+  padding: 2px 6px 8px;
+}
+
+.erpDropLinks .erpLink {
+  text-decoration: none;
+}
+
+.erpDropSearch {
+  margin-bottom: 6px;
+}
+
+.erpDropList {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.erpDropList hr {
+  border: none;
+  border-top: 1px solid var(--erp-line);
+  margin: 6px 0;
+}
+
+.erpDropTitle {
+  margin: 2px 8px 4px;
+  font-size: 12px;
+  color: var(--erp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.erpDropItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.erpDropItem input[type="checkbox"] {
+  width: auto;
+  flex: none;
+}
+
+.erpDropItem:hover,
+.erpDropAction:hover {
+  background: var(--erp-soft);
+}
+
+.erpDropAction {
+  font: inherit;
+  text-align: left;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--erp-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.erpDropEmpty {
+  margin: 6px 8px;
+  color: var(--erp-muted);
+  font-size: 14px;
+}
+
+.erpCond {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--erp-accent);
+  border-radius: 8px;
+  background: var(--erp-accent-soft);
+}
+
+.erpCondName {
+  font-size: 14px;
+  color: var(--erp-accent);
+  white-space: nowrap;
+}
+
+.erpCond select,
+.erpCond input {
+  width: auto;
+  padding: 4px 6px;
+  font-size: 14px;
+}
+
+.erpCond input {
+  width: 90px;
+}
+
+.erpCondX {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  border: none;
+  background: none;
+  color: var(--erp-accent);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.erpDots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--erp-accent);
+  cursor: pointer;
+}
+
+.erpDots:hover {
+  background: var(--erp-accent-soft);
+}
+
+.erpPager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--erp-muted);
+}
+
+.erpPagerBtns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.erpPagerBtn {
+  font: inherit;
+  font-size: 16px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--erp-text);
+  cursor: pointer;
+}
+
+.erpPagerBtn:hover:not(:disabled) {
+  background: var(--erp-soft);
+}
+
+.erpPagerBtn:disabled {
+  color: var(--erp-line);
+  cursor: default;
+}
+
+.erpScrollX {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.erpPanel .erpTableWrap {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+}
+
+.erpBalances {
+  min-width: 720px;
+}
+
+.erpBalances th,
+.erpBalances td {
+  white-space: nowrap;
+}
+
+.erpBalances td.main {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.erpSortBtn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.erpExpand {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--erp-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.erpExpand svg {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.erpExpand[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.erpBalances tr.open td {
+  background: var(--erp-soft);
+}
+
+.erpDetailRow > td {
+  background: var(--erp-soft);
+  padding: 4px 14px 16px 38px;
+  white-space: normal;
+}
+
+.erpDetail h3 {
+  margin: 12px 0 8px;
+  font-size: 15px;
+}
+
+.erpDetailHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.erpDetail .erpTable {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  min-width: 560px;
+}
+
+.erpNeg {
+  color: var(--erp-bad);
+  font-weight: 600;
+}
+
+.erpNoRows {
+  text-align: center;
+  padding: 40px 12px !important;
+  color: var(--erp-muted);
+  white-space: normal !important;
+}
+
+@media (max-width: 760px) {
+  .erpFilters .erpSearch {
+    flex: 1 1 100%;
+  }
+
+  .erpCond {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .erpCond select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .erpCond input {
+    width: 76px;
+  }
+
+  .erpDetailRow > td {
+    padding-left: 12px;
+  }
+}
