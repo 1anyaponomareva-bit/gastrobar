@@ -15,7 +15,7 @@ export function erpDb(): SupabaseClient {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
     client = url && key ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
   }
-  if (!client) throw new Error("Supabase service role is not configured");
+  if (!client) throw new ErpHttpError(503, "ERP_NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY");
   return client;
 }
 
@@ -49,6 +49,10 @@ export function check<T>(result: { data: T | null; error: DbError | null }): T {
   if (!result.error) return result.data as T;
   const message = result.error.message ?? "db";
   if (message.startsWith("ERP_")) throw new ErpHttpError(400, message, result.error.details || undefined);
+  // Missing table / function: the ERP migration has not been applied to this database.
+  if (["PGRST205", "PGRST202", "42P01", "42883"].includes(result.error.code ?? "")) {
+    throw new ErpHttpError(503, "ERP_NOT_INSTALLED");
+  }
   if (result.error.code === "23505") throw new ErpHttpError(400, "ERP_DUPLICATE", result.error.details || message);
   if (result.error.code === "23514" || result.error.code === "22P02" || result.error.code === "23502") {
     throw new ErpHttpError(400, "ERP_INVALID", message);

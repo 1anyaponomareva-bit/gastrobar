@@ -58,6 +58,11 @@ const ERRORS: Record<string, string> = {
   ERP_NOT_FOUND: L("Not found", "Không tìm thấy"),
   network: L("No connection", "Mất kết nối"),
   server: L("Server error", "Lỗi máy chủ"),
+  ERP_NOT_INSTALLED: L(
+    "ERP database is not installed yet: apply supabase/migrations/20261103120000_erp_v1.sql in Supabase SQL Editor",
+    "Cơ sở dữ liệu ERP chưa được cài đặt: chạy migration erp_v1 trong Supabase SQL Editor",
+  ),
+  ERP_NOT_CONFIGURED: L("Server key for the database is not set", "Chưa cấu hình khóa máy chủ cho cơ sở dữ liệu"),
 };
 
 export function errorText(code: string, detail?: string): string {
