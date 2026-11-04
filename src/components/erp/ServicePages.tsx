@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { productLabel, type ErpUnit } from "@/lib/erp/costing";
-import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, ErpWarehouse } from "@/lib/erp/types";
+import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { RefList } from "./RefList";
 import { productsWithoutPack, productsWithoutUnit, unresolvedLines } from "./review";
@@ -25,14 +25,6 @@ function ServiceHead({ active }: { active: string }) {
     </>
   );
 }
-
-const warehouseKinds = (): [string, string][] => [
-  ["warehouse", T("Склад", "Warehouse", "Kho")],
-  ["prep_kitchen", T("Кухня заготовок", "Prep kitchen", "Bếp sơ chế")],
-  ["online_kitchen", T("Онлайн-кухня", "Online kitchen", "Bếp online")],
-  ["food_truck", T("Фудтрак", "Food truck", "Xe bán đồ ăn")],
-  ["other", T("Другое", "Other", "Khác")],
-];
 
 export function SettingsPage() {
   const { state, act, busy } = useErp();
@@ -84,22 +76,6 @@ export function SettingsPage() {
             {busy ? savingText() : T("Сохранить настройки", "Save settings", "Lưu cài đặt")}
           </button>
         </div>
-      </section>
-
-      <section className="erpCard">
-        <h2>{T("Склады", "Locations", "Kho")}</h2>
-        <p className="erpHint">{T("Места, где лежат продукты: основной склад, кухня заготовок, онлайн-кухня, фудтрак.", "Places where products are kept: main warehouse, prep kitchen, online kitchen, food truck.", "Nơi để hàng: kho chính, bếp sơ chế, bếp online, xe bán đồ ăn.")}</p>
-        <RefList<ErpWarehouse>
-          entity="warehouse"
-          rows={state.warehouses}
-          columns={[
-            { key: "name", label: T("Название", "Name", "Tên") },
-            { key: "kind", label: T("Тип", "Kind", "Loại"), kind: "select", options: warehouseKinds() },
-          ]}
-          addLabel={T("Добавить склад", "Add location", "Thêm kho")}
-          emptyTitle={T("Складов пока нет", "No locations yet", "Chưa có kho")}
-          emptyText={T("Добавьте хотя бы один склад, чтобы принимать поставки.", "Add at least one location to receive deliveries.", "Thêm ít nhất một kho để nhập hàng.")}
-        />
       </section>
 
       <section className="erpCard">

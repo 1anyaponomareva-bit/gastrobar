@@ -12,7 +12,7 @@ import {
   type ErpUnit,
   type LossPcts,
 } from "@/lib/erp/costing";
-import type { ErpCategory, ErpPack, ErpProduct, ErpState, ErpSupplier } from "@/lib/erp/types";
+import type { ErpCategory, ErpPack, ErpProduct, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
 import { RefList } from "./RefList";
@@ -40,7 +40,6 @@ import {
 const productTabs = () => [
   { href: "/erp/products", label: T("Продукты", "Products", "Sản phẩm") },
   { href: "/erp/products/categories", label: T("Категории", "Categories", "Nhóm hàng") },
-  { href: "/erp/products/suppliers", label: T("Поставщики", "Suppliers", "Nhà cung cấp") },
 ];
 
 const productsSub = () =>
@@ -614,28 +613,6 @@ export function CategoriesPage() {
         addLabel={T("Добавить категорию", "Add category", "Thêm nhóm")}
         emptyTitle={T("Категорий пока нет", "No categories yet", "Chưa có nhóm hàng")}
         emptyText={T("Категории помогают быстро фильтровать продукты: мясо, овощи, соусы…", "Categories help filter products: meat, vegetables, sauces…", "Nhóm hàng giúp lọc sản phẩm: thịt, rau, nước sốt…")}
-      />
-    </>
-  );
-}
-
-export function SuppliersPage() {
-  const { state } = useErp();
-  if (!state) return null;
-  return (
-    <>
-      <PageHead title={T("Продукты", "Products", "Sản phẩm")} sub={productsSub()} />
-      <SubTabs tabs={productTabs()} active="/erp/products/suppliers" />
-      <RefList<ErpSupplier>
-        entity="supplier"
-        rows={state.suppliers}
-        columns={[
-          { key: "name", label: T("Название", "Name", "Tên") },
-          { key: "zalo_url", label: T("Ссылка Zalo", "Zalo link", "Liên kết Zalo"), placeholder: "https://zalo.me/…" },
-        ]}
-        addLabel={T("Добавить поставщика", "Add supplier", "Thêm nhà cung cấp")}
-        emptyTitle={T("Поставщиков пока нет", "No suppliers yet", "Chưa có nhà cung cấp")}
-        emptyText={T("Добавьте поставщиков, чтобы указывать их в поставках и упаковках.", "Add suppliers to use them in deliveries and packs.", "Thêm nhà cung cấp để dùng khi nhập hàng.")}
       />
     </>
   );

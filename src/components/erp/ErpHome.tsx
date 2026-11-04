@@ -88,13 +88,6 @@ export function ErpHome() {
             showType
             empty={<p className="erpHint">{T("Документов пока нет — начните с поставки или начальных остатков.", "No documents yet — start with a delivery or opening stock.", "Chưa có chứng từ — bắt đầu bằng nhập hàng.")}</p>}
           />
-          {docs.documents && docs.documents.length > 6 ? (
-            <div className="erpActions">
-              <NavLink href="/erp/stock/history" className="erpBtn ghost">
-                {T("Все документы", "All documents", "Tất cả chứng từ")}
-              </NavLink>
-            </div>
-          ) : null}
         </section>
       ) : null}
     </>

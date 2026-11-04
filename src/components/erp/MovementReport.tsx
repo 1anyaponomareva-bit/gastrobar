@@ -123,7 +123,7 @@ export function MovementReport({ tabs }: { tabs: ReactNode }) {
   return (
     <>
       <PageHead
-        title={T("Склад", "Stock", "Kho")}
+        title={T("Отчёт по движению", "Movement report", "Báo cáo biến động")}
         sub={T(
           "Движение продуктов за период: сколько было, пришло, ушло и осталось.",
           "Product movement for a period: opening, in, out and closing stock.",

@@ -1,5 +1,5 @@
-import { SuppliersPage } from "@/components/erp/ProductsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpSuppliersPage() {
-  return <SuppliersPage />;
+export default function ErpSuppliersRedirect() {
+  redirect("/erp/stock/suppliers");
 }

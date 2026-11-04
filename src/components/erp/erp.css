@@ -103,6 +103,63 @@
   color: var(--erp-accent);
 }
 
+.erpSideNav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.erpSideChevron {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.erpSideGroup.open .erpSideChevron {
+  transform: rotate(180deg);
+}
+
+.erpSideSub {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+
+.erpSideGroup.open .erpSideSub {
+  grid-template-rows: 1fr;
+}
+
+.erpSideSub > div {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.erpSideNav .erpSideSub a {
+  padding: 7px 12px 7px 46px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--erp-muted);
+}
+
+.erpSideNav .erpSideSub a.active {
+  background: none;
+  color: var(--erp-accent);
+  font-weight: 600;
+}
+
+.erpSideNav .erpSideSub a:hover {
+  background: var(--erp-soft);
+}
+
+@media (min-width: 901px) {
+  .erpMobileOnly {
+    display: none !important;
+  }
+}
+
 .erpSideFoot {
   margin-top: auto;
   display: flex;
@@ -423,6 +480,18 @@
 .erpSubTabs a.active {
   color: var(--erp-text);
   border-bottom-color: var(--erp-accent);
+}
+
+.erpSubTabs.erpMobileOnly {
+  position: relative;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.erpSubTabs.erpMobileOnly a {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .erpHint {

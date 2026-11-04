@@ -137,8 +137,8 @@ export function DocumentEditor({ id }: { id: string }) {
         title={T("Не удалось открыть документ", "Could not open the document", "Không mở được chứng từ")}
         text={loadError}
         action={
-          <NavLink href="/erp/stock/history" className="erpBtn">
-            {T("Ко всем документам", "All documents", "Tất cả chứng từ")}
+          <NavLink href="/erp/stock" className="erpBtn">
+            {T("К складу", "Back to stock", "Về kho")}
           </NavLink>
         }
       />

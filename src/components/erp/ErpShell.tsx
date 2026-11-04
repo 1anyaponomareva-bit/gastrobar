@@ -6,6 +6,7 @@ import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
 import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
+import { activeStockHref, stockNavItems } from "./stockNav";
 import { Empty, errorText, loadingText, NavLink, T } from "./ui";
 import "./erp.css";
 
@@ -168,6 +169,7 @@ function ErpData({
 }) {
   const pathname = usePathname();
   const section = sectionOf(pathname);
+  const stockActive = activeStockHref(pathname);
   const [state, setState] = useState<ErpState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -236,12 +238,33 @@ function ErpData({
             <small>ERP</small>
           </div>
           <nav className="erpSideNav">
-            {items.map((item) => (
-              <NavLink key={item.href} href={item.href} className={section === item.section ? "active" : ""}>
-                <Icon section={item.section} />
-                {item.label}
-              </NavLink>
-            ))}
+            {items.map((item) =>
+              item.section === "stock" ? (
+                <div key={item.href} className={`erpSideGroup ${section === "stock" ? "open" : ""}`}>
+                  <NavLink href={item.href} className={section === "stock" ? "active" : ""}>
+                    <Icon section={item.section} />
+                    {item.label}
+                    <svg className="erpSideChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </NavLink>
+                  <div className="erpSideSub">
+                    <div>
+                      {stockNavItems().map((sub) => (
+                        <NavLink key={sub.href} href={sub.href} className={stockActive === sub.href ? "active" : ""}>
+                          {sub.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <NavLink key={item.href} href={item.href} className={section === item.section ? "active" : ""}>
+                  <Icon section={item.section} />
+                  {item.label}
+                </NavLink>
+              ),
+            )}
           </nav>
           <div className="erpSideFoot">
             <NavLink href="/erp/service" className={`erpSideService ${section === "service" ? "active" : ""}`}>
