@@ -2,9 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { buildCostContext, costLine, productLabel, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
+import {
+  buildCostContext,
+  costLine,
+  isPackaging,
+  LOSS_METHODS,
+  productLabel,
+  type ErpProductType,
+  type ErpUnit,
+  type LossPcts,
+} from "@/lib/erp/costing";
 import type { ErpCategory, ErpPack, ErpProduct, ErpState, ErpSupplier } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
+import { methodLabel } from "./losses";
 import { RefList } from "./RefList";
 import {
   costSourceLabel,
@@ -41,6 +51,8 @@ const productsSub = () =>
   );
 
 const UNITS: ErpUnit[] = ["kg", "l", "pcs"];
+
+const lossTitle = () => T("Потери при обработке", "Processing losses", "Hao hụt khi sơ chế");
 
 const categoryName = (category: ErpCategory | undefined) =>
   category ? `${category.name_en}${category.name_vn && category.name_vn !== category.name_en ? ` / ${category.name_vn}` : ""}` : "—";
@@ -228,7 +240,7 @@ type ProductForm = {
   est_unit_cost: number | null;
   shelf_life_days: number | null;
   storage_conditions: string;
-};
+} & LossPcts;
 
 const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): ProductForm => ({
   name_en: product?.name_en ?? "",
@@ -241,6 +253,7 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   est_unit_cost: product?.est_unit_cost ?? null,
   shelf_life_days: product?.shelf_life_days ?? null,
   storage_conditions: product?.storage_conditions ?? "",
+  ...Object.fromEntries(LOSS_METHODS.map((m) => [`loss_${m}_pct`, product?.[`loss_${m}_pct`] ?? null])),
   ...preset,
 });
 
@@ -282,7 +295,12 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
   const recipe = product ? state.recipes.find((r) => r.product_id === product.id && r.status !== "archived") : undefined;
   const stock = product ? state.stock.filter((row) => row.product_id === product.id && row.qty !== 0) : [];
   const validPacks = packs.every((pack) => pack.label.trim() && pack.qty_base > 0);
-  const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && (dirty || isNew);
+  const validLosses = LOSS_METHODS.every((m) => {
+    const v = form[`loss_${m}_pct`];
+    return v === null || v === undefined || (v >= 0 && v < 100);
+  });
+  const showLosses = (unit === "kg" || unit === "l") && !isPackaging(form.type);
+  const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async () => {
     const result = await act<{ id: string }>(
@@ -450,6 +468,26 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
     </>
   );
 
+  const losses = (
+    <>
+      <p className="erpHint">
+        {T(
+          "Сколько процентов веса теряется при обработке. Например, очистка 26%: из 1 кг остаётся 740 г. В рецептах и блюдах по этим процентам считается нетто.",
+          "How much weight is lost in processing. For example, cleaning 26%: 1 kg leaves 740 g. Recipes and dishes use these to work out net weight.",
+          "Phần trăm khối lượng hao hụt khi sơ chế. Ví dụ sơ chế 26%: 1 kg còn 740 g. Công thức và món dùng để tính netto.",
+        )}
+      </p>
+      <div className="erpGrid five">
+        {LOSS_METHODS.map((m) => (
+          <Field key={m} label={`${methodLabel(m)}, %`}>
+            <NumberInput value={form[`loss_${m}_pct`]} placeholder="0" onChange={(v) => set(`loss_${m}_pct`, v)} />
+          </Field>
+        ))}
+      </div>
+      {!validLosses ? <div className="erpNotice warn">{T("Потери — от 0 до 99,99%.", "Losses must be from 0 to 99.99%.", "Hao hụt từ 0 đến 99,99%.")}</div> : null}
+    </>
+  );
+
   const storage = (
     <>
       <div className="erpGrid two">
@@ -514,6 +552,12 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
           {purchasing}
           <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
           {storage}
+          {showLosses ? (
+            <>
+              <h2>{lossTitle()}</h2>
+              {losses}
+            </>
+          ) : null}
         </details>
       ) : (
         <>
@@ -521,6 +565,12 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
             <h2>{T("Закупка и упаковки", "Purchasing & packs", "Mua hàng và quy cách")}</h2>
             {purchasing}
           </section>
+          {showLosses ? (
+            <section className="erpCard">
+              <h2>{lossTitle()}</h2>
+              {losses}
+            </section>
+          ) : null}
           <section className="erpCard">
             <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
             {storage}

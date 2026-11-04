@@ -17,6 +17,9 @@ type Db = {
 // two PGlite instances on the same directory corrupt it.
 const shared = globalThis as typeof globalThis & { __erpLocalDb?: Promise<Db> };
 
+/** In order: later files replace functions of earlier ones. */
+export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql"];
+
 export const erpLocalMode = () => process.env.NODE_ENV === "development" && process.env.ERP_LOCAL_DB === "pglite";
 
 async function getDb(): Promise<Db> {
@@ -37,7 +40,7 @@ async function getDb(): Promise<Db> {
       if (!ready.rows[0].ok) {
         await db.exec("do $$ begin create role anon; create role authenticated; create role service_role; exception when duplicate_object then null; end $$;");
       }
-      await db.exec(readFileSync(path.join(process.cwd(), "supabase/migrations/20261103120000_erp_v1.sql"), "utf8"));
+      for (const file of ERP_MIGRATIONS) await db.exec(readFileSync(path.join(process.cwd(), "supabase/migrations", file), "utf8"));
       return db as unknown as Db;
     })();
   }

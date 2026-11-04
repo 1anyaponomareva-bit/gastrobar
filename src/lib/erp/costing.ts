@@ -58,6 +58,19 @@ export function buildCostContext(products: CostProduct[], recipes: CostRecipe[])
   };
 }
 
+/** Processing methods with a weight loss, as in Poster. Line qty is gross (taken from stock). */
+export const LOSS_METHODS = ["clean", "boil", "fry", "stew", "bake"] as const;
+export type LossMethod = (typeof LOSS_METHODS)[number];
+export type LossPcts = { [M in LossMethod as `loss_${M}_pct`]?: number | null };
+
+export const lossPct = (product: LossPcts | undefined, method: LossMethod) => Number(product?.[`loss_${method}_pct`] ?? 0);
+
+/** Share of the gross weight left after all chosen methods (1 = no loss). */
+export const netFactor = (product: LossPcts | undefined, methods: readonly LossMethod[] = []) =>
+  methods.reduce((factor, method) => factor * (1 - lossPct(product, method) / 100), 1);
+
+export const roundQty = (value: number) => Math.round(value * 1e6) / 1e6;
+
 export const isPackaging = (type: ErpProductType) => type === "packaging" || type === "consumable";
 
 export const productLabel = (product: Pick<CostProduct, "name_en" | "name_vn">) =>

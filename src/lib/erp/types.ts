@@ -1,4 +1,4 @@
-import type { ErpProductType, ErpUnit } from "./costing";
+import type { ErpProductType, ErpUnit, LossMethod, LossPcts } from "./costing";
 
 export type ErpSettings = {
   input_vat_enabled: boolean;
@@ -24,7 +24,7 @@ export type ErpPack = {
   is_default: boolean;
 };
 
-export type ErpProduct = Archivable & {
+export type ErpProduct = Archivable & LossPcts & {
   id: string;
   code: string;
   type: ErpProductType;
@@ -64,6 +64,8 @@ export type ErpRecipeLine = {
   raw_name: { en?: string; vn?: string; ru?: string } | null;
   raw_amount: number | null;
   raw_unit: string | null;
+  methods?: LossMethod[];
+  net_qty?: number | null;
 };
 
 export type ErpRecipeStep = { title?: { en?: string; vn?: string }; items?: { en?: string; vn?: string }[] };
@@ -86,7 +88,29 @@ export type ErpRecipe = {
   lines: ErpRecipeLine[];
 };
 
-export type ErpDishLine = { id: string; dish_id: string; line_no: number; product_id: string; qty: number; note: string | null };
+export type ErpDishLine = {
+  id: string;
+  dish_id: string;
+  line_no: number;
+  product_id: string;
+  qty: number;
+  note: string | null;
+  methods?: LossMethod[];
+  net_qty?: number | null;
+};
+
+export type ErpMovementRow = {
+  product_id: string;
+  warehouse_id: string;
+  opening_qty: number;
+  opening_value: number | null;
+  in_qty: number;
+  in_value: number | null;
+  out_qty: number;
+  out_value: number | null;
+  closing_qty: number;
+  closing_value: number | null;
+};
 
 export type ErpDish = Archivable & {
   id: string;

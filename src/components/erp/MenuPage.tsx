@@ -2,9 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import { buildCostContext, channelResult, costLine, summarize, type ChannelResult, type CostContext, type CostLine } from "@/lib/erp/costing";
+import {
+  buildCostContext,
+  channelResult,
+  costLine,
+  isPackaging,
+  summarize,
+  type ChannelResult,
+  type CostContext,
+  type CostLine,
+  type LossMethod,
+} from "@/lib/erp/costing";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
+import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
 import {
   Empty,
   Field,
@@ -32,7 +43,7 @@ type DishForm = {
   sale_price: number | null;
   vat_rate: number | null;
   note: string;
-  lines: { product_id: string; qty: number | null }[];
+  lines: { product_id: string; qty: number | null; methods: LossMethod[]; net_qty: number | null }[];
   channel_prices: Record<string, number | null>;
 };
 
@@ -51,6 +62,11 @@ const marginNote = () =>
     "Biên lợi nhuận = giá chưa VAT − hoa hồng − thực phẩm − bao bì. Đây là biên gộp, chưa tính lương, thuê mặt bằng và chi phí khác.",
   );
 
+const isPackagingId = (state: ErpState, id: string | null) => {
+  const product = id ? state.products.find((p) => p.id === id) : undefined;
+  return product ? isPackaging(product.type) : false;
+};
+
 function toForm(dish: ErpDish | null): DishForm {
   return {
     name_en: dish?.name_en ?? "",
@@ -59,7 +75,12 @@ function toForm(dish: ErpDish | null): DishForm {
     sale_price: dish?.sale_price ?? null,
     vat_rate: dish?.vat_rate ?? null,
     note: dish?.note ?? "",
-    lines: (dish?.lines ?? []).map((line) => ({ product_id: line.product_id, qty: line.qty })),
+    lines: (dish?.lines ?? []).map((line) => ({
+      product_id: line.product_id,
+      qty: line.qty,
+      methods: line.methods ?? [],
+      net_qty: line.net_qty ?? null,
+    })),
     channel_prices: Object.fromEntries((dish?.channel_prices ?? []).map((p) => [p.channel_id, p.sale_price])),
   };
 }
@@ -264,6 +285,7 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
   const set = <K extends keyof DishForm>(key: K, value: DishForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
   const { summary, channels, main, lines } = calculate(state, ctx, form);
   const missing = missingParts(state, lines);
+  const portion = netWeight(state, form.lines.filter((l) => !isPackagingId(state, l.product_id)));
   const isNew = !dish;
 
   const save = async () => {
@@ -298,9 +320,9 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
         <td className="main" style={{ paddingLeft: 10 + depth * 18 }}>
           ↳ {line.name}
         </td>
-        <td className="num" data-label={T("Количество", "Quantity", "Số lượng")}>
-          {qtyText(line.qty, line.unit)}
-        </td>
+        <td />
+        <td data-label={T("Брутто", "Gross", "Brutto")}>{qtyText(line.qty, line.unit)}</td>
+        <td />
         <td className="num" data-label={T("Цена за единицу", "Unit cost", "Đơn giá")}>
           {line.unitCost === null ? "—" : `${vnd(line.unitCost)} / ${unitLabel(line.unit)}`}
         </td>
@@ -368,7 +390,9 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
               <thead>
                 <tr>
                   <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                  <th>{T("Количество", "Quantity", "Số lượng")}</th>
+                  <th>{T("Обработка", "Processing", "Sơ chế")}</th>
+                  <th>{T("Брутто", "Gross", "Brutto")}</th>
+                  <th>{T("Нетто", "Net", "Netto")}</th>
                   <th className="num">{T("Цена за единицу", "Unit cost", "Đơn giá")}</th>
                   <th className="num">{T("Стоимость", "Cost", "Thành tiền")}</th>
                   <th />
@@ -379,12 +403,20 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
                   const unit = unitOf(state, line.product_id);
                   const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null;
                   const expanded = open.has(index);
-                  const updateLine = (patch: Partial<DishForm["lines"][number]>) => set("lines", form.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)));
+                  const updateLine = (patch: Partial<LossLine>) =>
+                    set(
+                      "lines",
+                      form.lines.map((l, i) => (i === index ? ({ ...l, ...patch } as DishForm["lines"][number]) : l)),
+                    );
                   return (
                     <Fragment key={index}>
                       <tr className={cost && cost.cost === null ? "short" : ""}>
                         <td className="main" style={{ minWidth: 240 }}>
-                          <ProductPicker state={state} value={line.product_id} onChange={(productId) => updateLine({ product_id: productId })} />
+                          <ProductPicker
+                            state={state}
+                            value={line.product_id}
+                            onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null })}
+                          />
                           <span className="erpRow">
                             {cost?.packaging ? <span className="erpBadge">{T("упаковка", "packaging", "bao bì")}</span> : null}
                             {cost?.children ? (
@@ -394,12 +426,18 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
                             ) : null}
                           </span>
                         </td>
-                        <td className="edit" data-label={T("Количество", "Quantity", "Số lượng")}>
+                        <td className="edit" data-label={T("Обработка", "Processing", "Sơ chế")}>
+                          <MethodPicker state={state} line={line} onChange={updateLine} />
+                        </td>
+                        <td className="edit" data-label={T("Брутто", "Gross", "Brutto")}>
                           {line.product_id ? (
-                            <QtyInput base={unit} value={line.qty} defaultSmall={unit !== "pcs"} onChange={(v) => updateLine({ qty: v })} />
+                            <QtyInput base={unit} value={line.qty} defaultSmall={unit !== "pcs"} onChange={(v) => updateLine(grossPatch(state, line, v))} />
                           ) : (
                             <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
                           )}
+                        </td>
+                        <td className={line.methods.length ? "edit" : ""} data-label={T("Нетто", "Net", "Netto")}>
+                          <NetCell state={state} line={line} onChange={updateLine} />
                         </td>
                         <td className="num" data-label={T("Цена за единицу", "Unit cost", "Đơn giá")}>
                           {!cost || cost.unitCost === null ? "—" : `${vnd(cost.unitCost)} / ${unitLabel(unit)}`}
@@ -424,10 +462,11 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
           <p className="erpHint">{T("Добавьте продукты, полуфабрикаты и упаковку, которые идут в одну порцию.", "Add the products, semi-finished items and packaging used in one portion.", "Thêm sản phẩm, bán thành phẩm và bao bì cho một phần.")}</p>
         )}
         <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null }])}>
+          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null }])}>
             + {T("Добавить в состав", "Add component", "Thêm thành phần")}
           </button>
         </div>
+        {form.lines.length ? <p className="erpHint">{lossHint()}</p> : null}
 
         {missing.length ? (
           <div className="erpNotice warn">
@@ -470,6 +509,12 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
             <span>{T("Маржа", "Margin", "Biên LN")}</span>
             <strong>{main?.grossProfit === null || main?.grossProfit === undefined ? "—" : `${vnd(main.grossProfit)} · ${pct(main.grossMarginPct)}`}</strong>
           </div>
+          {portion.kg ? (
+            <div className="erpKpi">
+              <span>{T("Выход порции (нетто)", "Portion weight (net)", "Khối lượng phần (netto)")}</span>
+              <strong>{netWeightText(portion)}</strong>
+            </div>
+          ) : null}
         </div>
       </section>
 

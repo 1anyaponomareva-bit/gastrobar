@@ -586,6 +586,72 @@ async function main() {
     assert.deepEqual(unset.issues, ["no_commission"]);
   });
 
+  await test("losses: stored on products and recipe/dish lines, gross stays the stock amount", async () => {
+    const apple = await saveProduct({ type: "ingredient", name_en: "Apple loss test", base_unit: "kg", loss_clean_pct: 26 });
+    assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [apple])), 26);
+    await saveProduct({ id: apple, type: "ingredient", name_en: "Apple loss test", base_unit: "kg" });
+    assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [apple])), 26, "omitted loss is kept");
+    await expectError(saveProduct({ id: apple, type: "ingredient", name_en: "Apple loss test", base_unit: "kg", loss_fry_pct: 100 }), "check");
+
+    const pie = await saveProduct({ type: "semi_finished", name_en: "Apple pie loss test", base_unit: "kg" });
+    const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: pie, yield_qty: 1, lines: [{ product_id: apple, qty: 1.351, net_qty: 1, methods: ["clean", "clean"] }] }),
+      ACTOR,
+    ]);
+    const line = await one<{ qty: string; net_qty: string; methods: string[] }>(
+      "select qty, net_qty, methods from public.erp_recipe_lines where recipe_id = $1",
+      [recipe],
+    );
+    assert.deepEqual([n(line.qty), n(line.net_qty), line.methods], [1.351, 1, ["clean"]]);
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [JSON.stringify({ id: recipe, product_id: pie, yield_qty: 1, lines: [{ product_id: apple, qty: 1, methods: ["smoke"] }] }), ACTOR]),
+      "check",
+    );
+
+    const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Apple dish loss test", lines: [{ product_id: apple, qty: 0.2, net_qty: 0.148, methods: ["clean"] }] }),
+      ACTOR,
+    ]);
+    const dl = await one<{ qty: string; net_qty: string; methods: string[] }>("select qty, net_qty, methods from public.erp_dish_lines where dish_id = $1", [dish]);
+    assert.deepEqual([n(dl.qty), n(dl.net_qty), dl.methods], [0.2, 0.148, ["clean"]]);
+    const old = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Dish without losses", lines: [{ product_id: apple, qty: 0.3 }] }),
+      ACTOR,
+    ]);
+    const ol = await one<{ net_qty: string | null; methods: string[] }>("select net_qty, methods from public.erp_dish_lines where dish_id = $1", [old]);
+    assert.deepEqual([ol.net_qty, ol.methods], [null, []]);
+  });
+
+  await test("movement report: opening, in, out, closing with cancellations and dates", async () => {
+    const w = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ name: "Report test", kind: "other" }), ACTOR]);
+    const salt = await saveProduct({ type: "ingredient", name_en: "Salt report test", base_unit: "kg" });
+    const receipt = (date: string, qty: number, price: number) =>
+      saveDoc({ doc_type: "receipt", doc_date: date, warehouse_id: w, lines: [{ product_id: salt, qty, unit_price: price }] }).then(post);
+    await receipt("2026-10-01", 10, 1000);
+    await receipt("2026-10-05", 5, 2000);
+    const wo = await saveDoc({ doc_type: "writeoff", doc_date: "2026-10-06", warehouse_id: w, reason: "spoiled", lines: [{ product_id: salt, qty: 4 }] });
+    await post(wo);
+    const bad = await saveDoc({ doc_type: "receipt", doc_date: "2026-10-07", warehouse_id: w, lines: [{ product_id: salt, qty: 3, unit_price: 500 }] });
+    await post(bad);
+    await cancel(bad);
+    await receipt("2026-11-01", 1, 3000);
+
+    const report = async (from: string, to: string) =>
+      one<Record<string, string | null>>("select * from public.erp_movement_report($1::date, $2::date, $3) where product_id = $4", [from, to, w, salt]);
+    const r = await report("2026-10-03", "2026-10-31");
+    assert.deepEqual(
+      [r.opening_qty, r.opening_value, r.in_qty, r.in_value, r.out_qty, r.out_value, r.closing_qty, r.closing_value].map(n),
+      [10, 10000, 5, 10000, 4, 4000, 11, 16000],
+    );
+    const all = await report("2026-01-01", "2026-12-31");
+    assert.deepEqual([all.opening_qty, all.in_qty, all.out_qty, all.closing_qty].map(n), [0, 16, 4, 12]);
+    assert.equal(n(all.closing_value), 19000);
+    const other = await q("select * from public.erp_movement_report('2026-01-01', '2026-12-31', $1) where product_id = $2", [prep, salt]);
+    assert.equal(other.length, 0, "filtered by warehouse");
+    const json = await value<Record<string, unknown>[]>("select public.erp_movement_report_json('2026-10-03', '2026-10-31', $1)", [w]);
+    assert.deepEqual(json.map((row) => [row.product_id, row.closing_qty, row.closing_value]), [[salt, 11, 16000]]);
+  });
+
   console.log(`\n${passed} checks passed`);
 }
 

@@ -1295,3 +1295,63 @@
   background: var(--erp-line);
   margin: 16px 0;
 }
+
+.erpGrid.five {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+/* Processing methods of a recipe line */
+.erpMethods {
+  position: relative;
+  display: inline-block;
+}
+
+.erpMethods > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  background: var(--erp-card);
+  white-space: nowrap;
+}
+
+.erpMethods > summary::-webkit-details-marker {
+  display: none;
+}
+
+.erpMethods > summary::after {
+  content: " ▾";
+  color: var(--erp-muted);
+}
+
+.erpMethods > div {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 180px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+}
+
+.erpMethods label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.erpMethods label:hover {
+  background: var(--erp-soft);
+}
+
+.erpMethods input[type="checkbox"] {
+  width: auto;
+}

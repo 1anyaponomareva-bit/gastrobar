@@ -6,6 +6,7 @@ import { buildCostContext, costLine, plannedUnitCost, productLabel, type ErpUnit
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
+import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText } from "./losses";
 import {
   Empty,
   Field,
@@ -296,7 +297,7 @@ function NewPrep() {
   );
 }
 
-type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" | "raw_amount" | "raw_unit">;
+type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" | "raw_amount" | "raw_unit" | "methods" | "net_qty">;
 
 type RecipeForm = {
   yield_qty: number | null;
@@ -337,6 +338,8 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
       raw_name: line.raw_name,
       raw_amount: line.raw_amount,
       raw_unit: line.raw_unit,
+      methods: line.methods ?? [],
+      net_qty: line.net_qty ?? null,
     })),
   };
 }
@@ -407,6 +410,8 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
   const batchCost = known ? costs.reduce((sum, line) => sum + (line?.cost ?? 0), 0) : null;
   const unlinked = form.lines.filter((line) => !line.product_id).length;
   const readOnly = !editing;
+  const net = netWeight(state, form.lines);
+  const netYield = unit === "kg" || unit === "l" ? net.kg : null;
 
   return (
     <>
@@ -499,7 +504,9 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
               <thead>
                 <tr>
                   <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                  <th>{T("Количество", "Quantity", "Số lượng")}</th>
+                  <th>{T("Обработка", "Processing", "Sơ chế")}</th>
+                  <th>{T("Брутто", "Gross", "Brutto")}</th>
+                  <th>{T("Нетто", "Net", "Netto")}</th>
                   <th className="num">{T("Стоимость", "Cost", "Chi phí")}</th>
                   {!readOnly ? <th /> : null}
                 </tr>
@@ -525,19 +532,35 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
                             value={line.product_id}
                             onChange={(productId) => {
                               const base = unitOf(state, productId);
-                              setLine(index, { product_id: productId || null, qty: toBase(line.raw_amount, line.raw_unit, base) ?? line.qty });
+                              setLine(index, {
+                                product_id: productId || null,
+                                qty: toBase(line.raw_amount, line.raw_unit, base) ?? line.qty,
+                                methods: [],
+                                net_qty: null,
+                              });
                             }}
                           />
                         )}
                       </td>
-                      <td className={readOnly ? "" : "edit"} data-label={T("Количество", "Quantity", "Số lượng")}>
+                      <td className={readOnly ? "" : "edit"} data-label={T("Обработка", "Processing", "Sơ chế")}>
+                        <MethodPicker state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
+                      </td>
+                      <td className={readOnly ? "" : "edit"} data-label={T("Брутто", "Gross", "Brutto")}>
                         {readOnly ? (
                           qtyText(line.qty, lineUnit)
                         ) : line.product_id ? (
-                          <QtyInput base={lineUnit} value={line.qty} defaultSmall={lineUnit !== "pcs"} onChange={(v) => setLine(index, { qty: v })} />
+                          <QtyInput
+                            base={lineUnit}
+                            value={line.qty}
+                            defaultSmall={lineUnit !== "pcs"}
+                            onChange={(v) => setLine(index, grossPatch(state, line, v))}
+                          />
                         ) : (
                           <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
                         )}
+                      </td>
+                      <td className={readOnly || !line.methods?.length ? "" : "edit"} data-label={T("Нетто", "Net", "Netto")}>
+                        <NetCell state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
                       </td>
                       <td className="num" data-label={T("Стоимость", "Cost", "Chi phí")}>
                         {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
@@ -571,10 +594,26 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
             <button
               type="button"
               className="erpBtn"
-              onClick={() => set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null }])}
+              onClick={() =>
+                set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null, methods: [], net_qty: null }])
+              }
             >
               + {T("Добавить ингредиент", "Add ingredient", "Thêm nguyên liệu")}
             </button>
+          </div>
+        ) : null}
+        {form.lines.length ? <p className="erpHint">{lossHint()}</p> : null}
+        {netYield ? (
+          <div className="erpNotice">
+            {T("Сумма нетто по составу", "Total net weight of the ingredients", "Tổng netto của thành phần")}: <strong>{netWeightText(net)}</strong>
+            {!readOnly && form.yield_qty !== netYield ? (
+              <>
+                {" "}
+                <button type="button" className="erpLink" onClick={() => set("yield_qty", netYield)}>
+                  {T("Подставить в нормативный выход", "Use as standard yield", "Dùng làm sản lượng chuẩn")}
+                </button>
+              </>
+            ) : null}
           </div>
         ) : null}
 

@@ -5,6 +5,7 @@ import { productLabel } from "@/lib/erp/costing";
 import type { ErpDocType } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
+import { MovementReport } from "./MovementReport";
 import { dateText, Empty, NavLink, noSearchResults, PageHead, qtyText, SubTabs, T, today, typeLabel, unitLabel, vnd } from "./ui";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[] | null; newType?: ErpDocType }> = {
@@ -24,8 +25,13 @@ const stockTabs = () => [
   { href: "/erp/stock/transfers", label: T("Перемещения", "Transfers", "Chuyển kho") },
   { href: "/erp/stock/writeoffs", label: T("Списания", "Write-offs", "Xuất hủy") },
   { href: "/erp/stock/counts", label: T("Инвентаризации", "Stock counts", "Kiểm kê") },
+  { href: "/erp/stock/report", label: T("Движение", "Movement", "Biến động") },
   { href: "/erp/stock/history", label: T("Все документы", "All documents", "Tất cả chứng từ") },
 ];
+
+export function StockReportPage() {
+  return <MovementReport tabs={<SubTabs tabs={stockTabs()} active="/erp/stock/report" />} />;
+}
 
 const stockSub = () =>
   T(
