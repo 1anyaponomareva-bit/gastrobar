@@ -1,0 +1,142 @@
+/**
+ * Development-only stand-in for the Supabase client: runs the ERP migration on a
+ * local PGlite database and answers the small subset of the query builder the ERP
+ * API uses. Enabled only with ERP_LOCAL_DB=pglite under `next dev`.
+ */
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+type Row = Record<string, unknown>;
+type Result = { data: unknown; error: { message: string; details?: string; code?: string } | null };
+type Db = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Row[] }>;
+  exec: (sql: string) => Promise<unknown>;
+};
+
+// Each route is bundled separately in dev; one shared instance per process, because
+// two PGlite instances on the same directory corrupt it.
+const shared = globalThis as typeof globalThis & { __erpLocalDb?: Promise<Db> };
+
+export const erpLocalMode = () => process.env.NODE_ENV === "development" && process.env.ERP_LOCAL_DB === "pglite";
+
+async function getDb(): Promise<Db> {
+  if (!shared.__erpLocalDb) {
+    shared.__erpLocalDb = (async () => {
+      const { PGlite } = await import(/* webpackIgnore: true */ "@electric-sql/pglite");
+      const dir = path.join(process.cwd(), "node_modules", ".erp-local-db");
+      const db = new PGlite(dir, {
+        parsers: {
+          20: (v: string) => Number(v),
+          1700: (v: string) => Number(v),
+          1082: (v: string) => v,
+          1114: (v: string) => new Date(`${v}Z`).toISOString(),
+          1184: (v: string) => new Date(v).toISOString(),
+        },
+      });
+      const ready = await db.query<{ ok: boolean }>("select to_regclass('public.erp_products') is not null as ok");
+      if (!ready.rows[0].ok) {
+        await db.exec("do $$ begin create role anon; create role authenticated; create role service_role; exception when duplicate_object then null; end $$;");
+      }
+      await db.exec(readFileSync(path.join(process.cwd(), "supabase/migrations/20261103120000_erp_v1.sql"), "utf8"));
+      return db as unknown as Db;
+    })();
+  }
+  return shared.__erpLocalDb;
+}
+
+function toError(error: unknown): Result["error"] {
+  const e = error as { message?: string; detail?: string; code?: string };
+  return { message: e.message ?? "db", details: e.detail, code: e.code };
+}
+
+const IDENT = /^[a-z_][a-z0-9_]*$/;
+const ident = (name: string) => {
+  if (!IDENT.test(name)) throw new Error(`bad identifier ${name}`);
+  return name;
+};
+
+class Query implements PromiseLike<Result> {
+  private columns = "*";
+  private filters: { sql: string; value?: unknown }[] = [];
+  private orders: string[] = [];
+  private max: number | null = null;
+  private mode: "many" | "single" | "maybe" = "many";
+
+  constructor(private table: string) {}
+
+  select(columns = "*") {
+    this.columns = columns === "*" ? "*" : columns.split(",").map((c) => ident(c.trim())).join(", ");
+    return this;
+  }
+  eq(column: string, value: unknown) {
+    this.filters.push({ sql: `${ident(column)} = $`, value });
+    return this;
+  }
+  is(column: string, value: null) {
+    if (value !== null) throw new Error("only is(null)");
+    this.filters.push({ sql: `${ident(column)} is null` });
+    return this;
+  }
+  order(column: string, options?: { ascending?: boolean }) {
+    this.orders.push(`${ident(column)} ${options?.ascending === false ? "desc" : "asc"}`);
+    return this;
+  }
+  limit(count: number) {
+    this.max = count;
+    return this;
+  }
+  single() {
+    this.mode = "single";
+    return this;
+  }
+  maybeSingle() {
+    this.mode = "maybe";
+    return this;
+  }
+
+  private async run(): Promise<Result> {
+    try {
+      const params: unknown[] = [];
+      const where = this.filters.map((f) => {
+        if (!f.sql.endsWith("$")) return f.sql;
+        params.push(f.value);
+        return `${f.sql}${params.length}`;
+      });
+      const sql =
+        `select ${this.columns} from public.${ident(this.table)}` +
+        (where.length ? ` where ${where.join(" and ")}` : "") +
+        (this.orders.length ? ` order by ${this.orders.join(", ")}` : "") +
+        (this.max ? ` limit ${Math.floor(this.max)}` : "");
+      const { rows } = await (await getDb()).query(sql, params);
+      if (this.mode === "many") return { data: rows, error: null };
+      if (this.mode === "single" && rows.length !== 1) return { data: null, error: { message: "single row expected" } };
+      return { data: rows[0] ?? null, error: null };
+    } catch (error) {
+      return { data: null, error: toError(error) };
+    }
+  }
+
+  then<A = Result, B = never>(onFulfilled?: ((value: Result) => A | PromiseLike<A>) | null, onRejected?: ((reason: unknown) => B | PromiseLike<B>) | null) {
+    return this.run().then(onFulfilled, onRejected);
+  }
+}
+
+async function rpc(fn: string, args: Record<string, unknown>): Promise<Result> {
+  try {
+    const names = Object.keys(args);
+    const values = names.map((name) => {
+      const value = args[name];
+      return value !== null && typeof value === "object" ? JSON.stringify(value) : value;
+    });
+    const call = names.map((name, index) => `${ident(name)} => $${index + 1}`).join(", ");
+    const { rows } = await (await getDb()).query(`select public.${ident(fn)}(${call}) as result`, values);
+    return { data: rows[0]?.result ?? null, error: null };
+  } catch (error) {
+    return { data: null, error: toError(error) };
+  }
+}
+
+export const localErpClient = {
+  from: (table: string) => new Query(table),
+  rpc,
+};

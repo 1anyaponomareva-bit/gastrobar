@@ -30,6 +30,10 @@ export function I18nDocumentTitle() {
       document.title = translate(toStaffAppLang(lang), "recipes_meta_title");
       return;
     }
+    if (pathname === "/erp" || pathname.startsWith("/erp/")) {
+      document.title = "GASTROFOOD ERP";
+      return;
+    }
     if (pathname === "/kitchen" || pathname.startsWith("/kitchen/")) {
       document.title = "GASTROFOOD — Kitchen checklist";
       return;

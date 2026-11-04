@@ -2,12 +2,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/recipes-admin/auth";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
+import { erpLocalMode, localErpClient } from "./localDb";
 
 if (typeof window !== "undefined") throw new Error("erp/server is server-only");
 
 let client: SupabaseClient | null | undefined;
 
 export function erpDb(): SupabaseClient {
+  if (erpLocalMode()) return localErpClient as unknown as SupabaseClient;
   if (client === undefined) {
     const url = getSupabaseBackendUrl();
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -27,8 +29,15 @@ export class ErpHttpError extends Error {
   }
 }
 
+export const LOCAL_DEV_ADMIN = "local-dev@gastrofood";
+
+export async function getErpEmail(): Promise<string | null> {
+  if (erpLocalMode()) return LOCAL_DEV_ADMIN;
+  return getSessionEmail();
+}
+
 export async function requireAdmin(): Promise<string> {
-  const email = await getSessionEmail();
+  const email = await getErpEmail();
   if (!email) throw new ErpHttpError(401, "auth");
   return email;
 }

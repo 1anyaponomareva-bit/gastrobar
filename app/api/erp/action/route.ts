@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mergeRecipes } from "@/data/recipes";
 import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog } from "@/data/staffCatalog";
+import { erpLocalMode } from "@/lib/erp/localDb";
 import { ErpHttpError, errorResponse, requireAdmin, rpc } from "@/lib/erp/server";
 import type { ErpAction } from "@/lib/erp/types";
 import { readStaffCatalog, readStoredRecipes } from "@/lib/recipes-admin/storage";
@@ -75,12 +76,13 @@ export async function POST(request: Request) {
       case "saveDish":
         return NextResponse.json({ id: await rpc("erp_save_dish", { p: object(a.dish, "dish"), p_actor: actor }) });
       case "importStaffCatalog": {
-        const catalog = sanitizeStaffCatalog((await readStaffCatalog()) ?? DEFAULT_STAFF_CATALOG);
+        const stored = erpLocalMode() ? null : await readStaffCatalog();
+        const catalog = sanitizeStaffCatalog(stored ?? DEFAULT_STAFF_CATALOG);
         if (!catalog) throw new ErpHttpError(400, "ERP_INVALID", "staff catalog");
         return NextResponse.json({ result: await rpc("erp_sync_staff_catalog", { p_catalog: catalog, p_actor: actor }) });
       }
       case "importRecipes": {
-        const recipes = mergeRecipes(await readStoredRecipes());
+        const recipes = mergeRecipes(erpLocalMode() ? null : await readStoredRecipes());
         return NextResponse.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });
       }
       default:

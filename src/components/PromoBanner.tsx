@@ -72,6 +72,8 @@ function isKitchenPath(path: string): boolean {
   return (
     path === "/kitchen" ||
     path.startsWith("/kitchen/") ||
+    path === "/erp" ||
+    path.startsWith("/erp/") ||
     path === "/recipes" ||
     path.startsWith("/recipes/")
   );

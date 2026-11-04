@@ -1,0 +1,515 @@
+.erp {
+  --erp-bg: #f4f2ee;
+  --erp-card: #ffffff;
+  --erp-text: #1d1d1b;
+  --erp-muted: #6f6b64;
+  --erp-line: #e2ded6;
+  --erp-accent: #e2471f;
+  --erp-ok: #1f8a4c;
+  --erp-bad: #c62828;
+  --erp-warn: #b26a00;
+  min-height: 100vh;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+}
+
+.erp * {
+  box-sizing: border-box;
+}
+
+.erpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #1d1d1b;
+  color: #fff;
+}
+
+.erpBrand {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.erpUser {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.erpUser .erpLink {
+  color: #fff;
+}
+
+.erpNav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  background: var(--erp-card);
+  border-bottom: 1px solid var(--erp-line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.erpNav a {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--erp-text);
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.erpNav a.active {
+  background: var(--erp-accent);
+  color: #fff;
+}
+
+.erpMain {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px 80px;
+}
+
+.erpAuth {
+  max-width: 440px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.erpEmpty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--erp-muted);
+}
+
+.erpNotice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.erpNotice.ok {
+  background: #e6f4ec;
+  color: var(--erp-ok);
+}
+
+.erpNotice.bad {
+  background: #fdecea;
+  color: var(--erp-bad);
+}
+
+.erpNotice.warn {
+  background: #fff4e0;
+  color: var(--erp-warn);
+}
+
+.erp h1 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+
+.erp h2 {
+  font-size: 17px;
+  margin: 24px 0 10px;
+}
+
+.erpCard {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.erpGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.erpTiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.erpTile {
+  display: block;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.erpTile strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.erpTile span {
+  color: var(--erp-muted);
+  font-size: 13px;
+}
+
+.erpField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--erp-muted);
+  min-width: 0;
+}
+
+.erpField.wide {
+  grid-column: 1 / -1;
+}
+
+.erp input,
+.erp select,
+.erp textarea {
+  font: inherit;
+  color: var(--erp-text);
+  background: #fff;
+  border: 1px solid #cfcac1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 40px;
+  width: 100%;
+  min-width: 0;
+}
+
+.erp textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.erp input:disabled,
+.erp select:disabled,
+.erp textarea:disabled {
+  background: #f1efea;
+  color: var(--erp-muted);
+}
+
+.erp input[type="checkbox"] {
+  width: 20px;
+  min-height: 20px;
+}
+
+.erpCheck {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.erpQty {
+  display: flex;
+  gap: 4px;
+}
+
+.erpQty input {
+  flex: 1;
+}
+
+.erpQty select {
+  width: 72px;
+  flex: none;
+}
+
+.erpUnit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--erp-muted);
+  min-width: 44px;
+}
+
+.erpPicker {
+  display: flex;
+  gap: 4px;
+}
+
+.erpPickerSearch {
+  width: 90px !important;
+  flex: none;
+}
+
+.erpPicker select {
+  flex: 1;
+}
+
+.erpBtn {
+  font: inherit;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  min-height: 40px;
+  background: #ebe7df;
+  color: var(--erp-text);
+  cursor: pointer;
+  max-width: 100%;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.erpBtn.primary {
+  background: var(--erp-accent);
+  color: #fff;
+}
+
+.erpBtn.danger {
+  background: #fdecea;
+  color: var(--erp-bad);
+}
+
+.erpBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.erpLink {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--erp-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.erpActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.erpToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.erpToolbar input,
+.erpToolbar select {
+  width: auto;
+  flex: 1 1 200px;
+}
+
+.erpTabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.erpTabs button {
+  font: inherit;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-card);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.erpTabs button.active {
+  background: #1d1d1b;
+  color: #fff;
+  border-color: #1d1d1b;
+}
+
+.erpTableWrap {
+  overflow-x: auto;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+}
+
+.erpTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.erpTable th,
+.erpTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--erp-line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.erpTable th {
+  font-size: 12px;
+  color: var(--erp-muted);
+  font-weight: 600;
+  background: #faf8f4;
+  white-space: nowrap;
+}
+
+.erpTable td.num,
+.erpTable th.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.erpTable tr.clickable {
+  cursor: pointer;
+}
+
+.erpTable tr.clickable:hover {
+  background: #faf6ef;
+}
+
+.erpTable tr.muted td {
+  color: var(--erp-muted);
+}
+
+.erpTable tr.child td {
+  background: #faf8f4;
+  font-size: 13px;
+}
+
+.erpTable tfoot td {
+  font-weight: 700;
+  background: #faf8f4;
+}
+
+.erpTable input,
+.erpTable select {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.erpBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #ebe7df;
+  color: var(--erp-text);
+  white-space: nowrap;
+}
+
+.erpBadge.ok {
+  background: #e6f4ec;
+  color: var(--erp-ok);
+}
+
+.erpBadge.bad {
+  background: #fdecea;
+  color: var(--erp-bad);
+}
+
+.erpBadge.warn {
+  background: #fff4e0;
+  color: var(--erp-warn);
+}
+
+.erpHint {
+  font-size: 13px;
+  color: var(--erp-muted);
+  margin: 6px 0;
+}
+
+.erpRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.erpSplit {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.erpList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.erpList button {
+  font: inherit;
+  text-align: left;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-card);
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.erpList button.active {
+  border-color: var(--erp-accent);
+  box-shadow: inset 3px 0 0 var(--erp-accent);
+}
+
+.erpList small {
+  display: block;
+  color: var(--erp-muted);
+}
+
+.erpKpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.erpKpi {
+  background: #faf8f4;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.erpKpi span {
+  display: block;
+  font-size: 12px;
+  color: var(--erp-muted);
+}
+
+.erpKpi strong {
+  font-size: 18px;
+}
+
+@media (max-width: 760px) {
+  .erpSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .erpMain {
+    padding: 14px 10px 80px;
+  }
+
+  .erpPickerSearch {
+    width: 64px !important;
+  }
+}
