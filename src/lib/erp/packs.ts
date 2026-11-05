@@ -1,8 +1,10 @@
 /**
- * Pack labels are stored as written by the Staff import ("box 10*1040 g", "pcs 1 L").
- * This module only reads them for display: stored labels and qty_base stay untouched,
- * and a label that does not match a known pattern is shown unchanged.
+ * Staff import still stores pack names as written ("box 10*1040 g", "pcs 1 L").
+ * The catalog UI shows that name as-is: it is not parsed into «Коробка/Бутылка».
+ * parsePackLabel remains for the Staff import coefficient, not for screen labels.
  */
+import type { ErpUnit } from "./costing";
+import type { ErpDocumentLine, ErpPack, ErpProductPack } from "./types";
 
 export type PackContainer = "box" | "pack" | "pcs" | "btl" | "can" | "bag";
 export type PackUnit = "g" | "kg" | "ml" | "l" | "pcs";
@@ -56,6 +58,36 @@ export function parsePackLabel(label: string | null | undefined): ParsedPack | n
 export const packToBase = (packQty: number, qtyBase: number) => Math.round(packQty * qtyBase * 1e6) / 1e6;
 /** Price of one pack from the price per base unit. */
 export const packPrice = (unitPrice: number, qtyBase: number) => unitPrice * qtyBase;
+/** Price per base unit from the price of one pack. */
+export const basePrice = (onePackPrice: number, qtyBase: number) => (qtyBase > 0 ? onePackPrice / qtyBase : 0);
+
+export const packNameOf = (pack: Pick<ErpPack, "name"> | { label?: string } | null | undefined) =>
+  pack && "name" in pack && pack.name ? pack.name : ((pack as { label?: string } | null)?.label ?? "");
+
+/** Name frozen on the document line, else the live catalog name. */
+export function linePackName(line: Pick<ErpDocumentLine, "pack_name" | "pack_id">, packs: Iterable<ErpPack | (ErpPack & { label?: string })>): string {
+  if (line.pack_name) return line.pack_name;
+  if (!line.pack_id) return "";
+  for (const pack of packs) {
+    if (pack.id === line.pack_id) return packNameOf(pack);
+  }
+  return "";
+}
+
+export function compatiblePacks(packs: ErpPack[], unit: ErpUnit | string | null | undefined): ErpPack[] {
+  if (!unit) return [];
+  return packs.filter((pack) => !pack.archived_at && pack.unit === unit);
+}
+
+export function defaultPackId(links: ErpProductPack[], productId: string): string | null {
+  return links.find((link) => link.product_id === productId && link.is_default && !link.archived_at)?.pack_id ?? null;
+}
+
+export function packCoefficient(line: Pick<ErpDocumentLine, "pack_qty_base" | "pack_id">, pack: Pick<ErpPack, "qty_base"> | null | undefined): number | null {
+  if (line.pack_qty_base != null && Number(line.pack_qty_base) > 0) return Number(line.pack_qty_base);
+  if (pack && Number(pack.qty_base) > 0) return Number(pack.qty_base);
+  return null;
+}
 
 export type PackWords = {
   container: (container: PackContainer) => string;

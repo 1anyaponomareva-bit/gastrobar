@@ -2742,3 +2742,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+.erpPackTable {
+  min-width: 560px;
+}
+
+.erpPackTable .erpPackActs {
+  width: 88px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.erpPackTable .erpPackActs .erpDrop {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.erpPackCols {
+  min-width: 220px;
+}
+
+.erpPackLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.erpPackQty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--erp-muted);
+}
+
+.erpPackQty input {
+  min-width: 88px;
+}

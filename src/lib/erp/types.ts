@@ -18,13 +18,25 @@ export type ErpWarehouse = Archivable & { id: string; code: string; name: string
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
 export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
 
+/** Shared ordering unit (Poster «Фасовка»): name is display-only; unit + qty_base are used in maths. */
 export type ErpPack = {
   id: string;
+  name: string;
+  unit: ErpUnit;
+  qty_base: number;
+  archived_at?: string | null;
+};
+
+/** Product ↔ catalog pack link: supplier and the product's default pack. */
+export type ErpProductPack = {
+  id: string;
   product_id: string;
+  pack_id: string;
   supplier_id: string | null;
   label: string;
   qty_base: number;
   is_default: boolean;
+  archived_at?: string | null;
 };
 
 export type ErpProduct = Archivable & LossPcts & {
@@ -151,6 +163,7 @@ export type ErpState = {
   channels: ErpChannel[];
   products: ErpProduct[];
   packs: ErpPack[];
+  productPacks: ErpProductPack[];
   stock: ErpStockRow[];
   recipes: ErpRecipe[];
   dishes: ErpDish[];
@@ -192,6 +205,9 @@ export type ErpDocumentLine = {
   planned_qty?: number | null;
   pack_id?: string | null;
   pack_qty?: number | null;
+  pack_name?: string | null;
+  pack_unit?: string | null;
+  pack_qty_base?: number | null;
   unit_price?: number | null;
   vat_rate?: number | null;
   batch_no?: string | null;
@@ -290,6 +306,7 @@ export type ErpCountPreview = {
 
 export type ErpAction =
   | { action: "saveProduct"; product: Record<string, unknown> }
+  | { action: "savePack"; pack: Record<string, unknown> }
   | { action: "setArchived"; entity: string; id: string; archived: boolean }
   | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }

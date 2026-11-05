@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
-import { packPrice, packToBase } from "@/lib/erp/packs";
+import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
@@ -203,6 +203,17 @@ export function DocumentEditor({ id }: { id: string }) {
   if (doc.lines.some((line) => !line.product_id)) problems.push(T("В одной из строк не выбран продукт", "A line has no product", "Có dòng chưa chọn sản phẩm"));
   if (doc.lines.some((line) => line.product_id && (type === "count" ? line.qty < 0 : !(line.qty > 0))))
     problems.push(T("Укажите количество в каждой строке", "Enter a quantity on every line", "Nhập số lượng cho mỗi dòng"));
+  if (
+    type === "receipt" &&
+    doc.lines.some((line) => {
+      const pack = state.packs.find((p) => p.id === line.pack_id);
+      const unit = unitOf(state, line.product_id);
+      return Boolean(pack && unit && pack.unit !== unit);
+    })
+  )
+    problems.push(T("Фасовка не совпадает с единицей товара", "The pack unit does not match the product", "Quy cách không khớp đơn vị hàng"));
+  if (type === "receipt" && doc.lines.some((line) => line.pack_id && !(Number(line.pack_qty) > 0)))
+    problems.push(T("Укажите количество фасовок больше нуля", "Enter a pack quantity greater than 0", "Nhập số quy cách lớn hơn 0"));
   if (shortages.length) problems.push(T("На складе не хватает части продуктов", "Some products are short", "Thiếu hàng trong kho"));
 
   /** Shows the document as the server saved it. */
@@ -490,11 +501,11 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
             <thead>
               <tr>
                 <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                {withPacks ? <th>{T("Упаковки", "Packs", "Quy cách")}</th> : null}
+                {withPacks ? <th>{T("Фасовка", "Pack", "Quy cách")}</th> : null}
                 <th>{qtyLabel}</th>
                 {showStock ? <th className="num">{stockLabel}</th> : null}
                 {type === "count" ? <th className="num">{T("Разница", "Difference", "Chênh lệch")}</th> : null}
-                {priced ? <th>{T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}</th> : null}
+                {priced ? <th>{T("Цена за фасовку, ₫", "Pack price, ₫", "Giá quy cách, ₫")}</th> : null}
                 {vatOn ? <th>{T("НДС, %", "VAT, %", "VAT, %")}</th> : null}
                 {priced ? <th>{T("Годен до", "Use by", "Hạn dùng")}</th> : null}
                 {type === "writeoff" ? <th>{T("Комментарий", "Note", "Ghi chú")}</th> : null}
@@ -506,8 +517,11 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
               {doc.lines.map((line, index) => {
                 const product = productById(state, line.product_id);
                 const unit = unitOf(state, line.product_id);
-                const packs = state.packs.filter((pack) => pack.product_id === line.product_id);
-                const pack = packs.find((p) => p.id === line.pack_id);
+                const packs = compatiblePacks(state.packs, unit);
+                const pack = state.packs.find((p) => p.id === line.pack_id) ?? null;
+                const coef = packCoefficient(line, pack);
+                const packLabel = linePackName(line, state.packs) || (pack ? pack.name : "");
+                const onePackPrice = pack && coef && line.unit_price != null ? packPrice(line.unit_price, coef) : null;
                 const available = stockQty(state, line.product_id, doc.warehouse_id);
                 const short = type !== "count" && showStock && Boolean(line.product_id) && available < line.qty;
                 const recorded = posted ? (line.system_qty ?? null) : available;
@@ -521,10 +535,10 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                           value={line.product_id}
                           onChange={(productId) => {
                             const picked = productById(state, productId);
-                            const defaultPack = state.packs.find((p) => p.product_id === productId && p.is_default);
+                            const defaultId = type === "receipt" ? defaultPackId(state.productPacks, productId) : null;
                             update(index, {
                               product_id: productId,
-                              pack_id: type === "receipt" ? (defaultPack?.id ?? null) : null,
+                              pack_id: defaultId,
                               pack_qty: null,
                               unit_price: priced ? (picked?.est_unit_cost ?? null) : null,
                             });
@@ -545,36 +559,56 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                       ) : null}
                     </td>
                     {withPacks ? (
-                      <td className="edit" data-label={T("Упаковки", "Packs", "Quy cách")}>
+                      <td className="edit" data-label={T("Фасовка", "Pack", "Quy cách")}>
                         {editable ? (
-                          packs.length ? (
-                            <div className="erpRow">
-                              <select value={line.pack_id ?? ""} onChange={(e) => update(index, { pack_id: e.target.value || null, pack_qty: null })}>
-                                <option value="">{T("без упаковки", "no pack", "không")}</option>
+                          line.product_id ? (
+                            <div className="erpPackLine">
+                              <select
+                                value={line.pack_id ?? ""}
+                                onChange={(e) => {
+                                  const next = e.target.value || null;
+                                  const chosen = packs.find((p) => p.id === next);
+                                  if (next && chosen && unit && chosen.unit !== unit) return;
+                                  update(index, {
+                                    pack_id: next,
+                                    pack_qty: next ? line.pack_qty : null,
+                                    qty: next && chosen && line.pack_qty ? packToBase(line.pack_qty, chosen.qty_base) : line.qty,
+                                  });
+                                }}
+                                aria-label={T("Фасовка", "Pack", "Quy cách")}
+                              >
+                                <option value="">{T("без фасовки", "no pack", "không")}</option>
                                 {packs.map((p) => (
                                   <option key={p.id} value={p.id}>
-                                    {packText(p.label)} = {qtyText(p.qty_base, unit)}
+                                    {packText(p.name)} = {qtyText(p.qty_base, unit)}
                                   </option>
                                 ))}
                               </select>
-                              {pack ? (
-                                <NumberInput
-                                  value={line.pack_qty}
-                                  placeholder={T("сколько", "how many", "bao nhiêu")}
-                                  onChange={(v) => update(index, { pack_qty: v, qty: v === null ? line.qty : packToBase(v, pack.qty_base) })}
-                                />
+                              {pack && coef ? (
+                                <label className="erpPackQty">
+                                  <span>{T("Количество фасовок", "Number of packs", "Số quy cách")}</span>
+                                  <NumberInput
+                                    value={line.pack_qty}
+                                    onChange={(v) =>
+                                      update(index, {
+                                        pack_qty: v,
+                                        qty: v === null ? line.qty : packToBase(v, coef),
+                                      })
+                                    }
+                                  />
+                                </label>
                               ) : null}
-                              {pack ? (
-                                <small className="erpCellSub erpPackName">
-                                  {packText(pack.label)} = {qtyText(pack.qty_base, unit)}
+                              {pack && coef && line.pack_qty ? (
+                                <small className="erpCellSub">
+                                  {qtyText(packToBase(line.pack_qty, coef), unit)}
                                 </small>
                               ) : null}
                             </div>
                           ) : (
                             <span className="erpMuted">—</span>
                           )
-                        ) : pack && line.pack_qty ? (
-                          `${numText(line.pack_qty)} × ${packText(pack.label)} = ${qtyText(line.qty, unit)}`
+                        ) : line.pack_id && line.pack_qty ? (
+                          `${numText(line.pack_qty)} × ${packText(packLabel)} = ${qtyText(line.qty, unit)}`
                         ) : (
                           "—"
                         )}
@@ -602,16 +636,27 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                       </td>
                     ) : null}
                     {priced ? (
-                      <td className="edit" data-label={T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}>
+                      <td className="edit" data-label={pack && coef ? T("Цена за фасовку, ₫", "Pack price, ₫", "Giá quy cách, ₫") : T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}>
                         {editable ? (
-                          <>
+                          pack && coef ? (
+                            <>
+                              <NumberInput
+                                value={onePackPrice}
+                                placeholder={T("Цена за фасовку", "Price per pack", "Giá một quy cách")}
+                                onChange={(v) => update(index, { unit_price: v === null ? null : basePrice(v, coef) })}
+                              />
+                              {line.pack_qty && onePackPrice != null ? (
+                                <small className="erpCellSub">
+                                  {vnd(onePackPrice * line.pack_qty)}
+                                  {unit ? ` · ${vnd(basePrice(onePackPrice, coef))} / ${unitLabel(unit)}` : ""}
+                                </small>
+                              ) : null}
+                            </>
+                          ) : (
                             <NumberInput value={line.unit_price} placeholder={unit ? `₫ / ${unitLabel(unit)}` : ""} onChange={(v) => update(index, { unit_price: v })} />
-                            {pack && line.unit_price !== null && line.unit_price !== undefined ? (
-                              <small className="erpCellSub">
-                                {packText(pack.label)} — {vnd(packPrice(line.unit_price, pack.qty_base))}
-                              </small>
-                            ) : null}
-                          </>
+                          )
+                        ) : pack && coef && line.pack_qty ? (
+                          `${vnd(onePackPrice)} / ${T("фасовку", "pack", "quy cách")}`
                         ) : (
                           `${vnd(line.unit_price)}${unit ? ` / ${unitLabel(unit)}` : ""}`
                         )}

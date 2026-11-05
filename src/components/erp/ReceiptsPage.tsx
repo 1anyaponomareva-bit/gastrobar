@@ -922,7 +922,7 @@ function ReceiptDetail({ state, row, printable }: { state: ErpState; row: Row; p
                   <td>{product ? productTitle(product) : "?"}</td>
                   <td className="num">
                     {qtyText(line.qty, unit)}
-                    {pack && line.pack_qty ? <small className="erpCellSub">{`${line.pack_qty} × ${packText(pack.label)}`}</small> : null}
+                    {line.pack_qty && (line.pack_name || pack) ? <small className="erpCellSub">{`${line.pack_qty} × ${packText(line.pack_name || pack?.name || "")}`}</small> : null}
                   </td>
                   <td className="num">{line.unit_price === null || line.unit_price === undefined ? "—" : vnd(line.unit_price)}</td>
                   <td className="num">{amount === null ? "—" : vnd(amount)}</td>

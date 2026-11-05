@@ -12,7 +12,8 @@ import {
   type ErpUnit,
   type LossPcts,
 } from "@/lib/erp/costing";
-import type { ErpCategory, ErpPack, ErpProduct, ErpState } from "@/lib/erp/types";
+import { compatiblePacks } from "@/lib/erp/packs";
+import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
 import { RefList } from "./RefList";
@@ -58,7 +59,7 @@ const categoryName = (category: ErpCategory | undefined) =>
   category ? `${category.name_en}${category.name_vn && category.name_vn !== category.name_en ? ` / ${category.name_vn}` : ""}` : "—";
 
 function productSuppliers(state: ErpState, product: ErpProduct): string[] {
-  const ids = new Set(state.packs.filter((pack) => pack.product_id === product.id && pack.supplier_id).map((pack) => pack.supplier_id!));
+  const ids = new Set(state.productPacks.filter((link) => link.product_id === product.id && link.supplier_id).map((link) => link.supplier_id!));
   if (product.staff_supplier_id) ids.add(product.staff_supplier_id);
   return [...ids];
 }
@@ -227,7 +228,7 @@ export function ProductsPage() {
   );
 }
 
-type PackDraft = Pick<ErpPack, "label" | "qty_base" | "is_default" | "supplier_id"> & { id?: string };
+type PackDraft = { id?: string; pack_id?: string; label: string; qty_base: number; is_default: boolean; supplier_id: string | null };
 
 type ProductForm = {
   name_en: string;
@@ -294,7 +295,19 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
   const { act, busy } = useErp();
   const router = useRouter();
   const initialPacks = (): PackDraft[] =>
-    state.packs.filter((pack) => pack.product_id === product?.id).map(({ id, label, qty_base, is_default, supplier_id }) => ({ id, label, qty_base, is_default, supplier_id }));
+    state.productPacks
+      .filter((link) => link.product_id === product?.id)
+      .map((link) => {
+        const catalog = state.packs.find((p) => p.id === link.pack_id);
+        return {
+          id: link.id,
+          pack_id: link.pack_id,
+          label: catalog?.name ?? link.label,
+          qty_base: catalog?.qty_base ?? link.qty_base,
+          is_default: link.is_default,
+          supplier_id: link.supplier_id,
+        };
+      });
   const [form, setForm] = useState<ProductForm>(() => formOf(product));
   const [packs, setPacks] = useState<PackDraft[]>(initialPacks);
   const [staff, setStaff] = useState<StaffForm>(() => staffOf(product));
@@ -421,12 +434,12 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
           {unit ? <NumberInput value={form.est_unit_cost} onChange={(v) => set("est_unit_cost", v)} /> : <span className="erpNoUnit">{T("Сначала выберите единицу", "Choose a unit first", "Chọn đơn vị trước")}</span>}
         </Field>
       </div>
-      <h3>{T("Упаковки для закупки", "Purchase packs", "Quy cách mua")}</h3>
+      <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
       <p className="erpHint">
         {T(
-          "Например, «Коробка» = 5 кг. При поставке можно вводить количество упаковками.",
-          "For example, “Box” = 5 kg. Deliveries can then be entered in packs.",
-          "Ví dụ “Thùng” = 5 kg. Khi nhập hàng có thể nhập theo quy cách.",
+          "Выберите фасовку из справочника с той же единицей. Новую фасовку можно создать в разделе «Фасовки».",
+          "Pick a pack from the catalog with the same unit. Create new packs in Packs.",
+          "Chọn quy cách cùng đơn vị. Tạo mới trong mục Quy cách.",
         )}
       </p>
       {packs.length ? (
@@ -434,8 +447,8 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
           <table className="erpTable stack">
             <thead>
               <tr>
-                <th>{T("Упаковка", "Pack", "Quy cách")}</th>
-                <th>{T("Сколько в ней", "Contains", "Số lượng")}</th>
+                <th>{T("Фасовка", "Pack", "Quy cách")}</th>
+                <th>{T("Количество", "Quantity", "Số lượng")}</th>
                 <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
                 <th>{T("Основная", "Default", "Mặc định")}</th>
                 <th />
@@ -444,14 +457,35 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
             <tbody>
               {packs.map((pack, index) => {
                 const update = (patch: Partial<PackDraft>) => setPacks((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+                const chosen = state.packs.find((p) => p.id === pack.pack_id);
+                const options = compatiblePacks(state.packs, unit).filter((p) => p.id === pack.pack_id || !packs.some((row) => row.pack_id === p.id));
                 return (
                   <tr key={pack.id ?? `new-${index}`}>
                     <td className="main">
-                      <input value={pack.label} placeholder={T("Коробка, мешок…", "Box, bag…", "Thùng, bao…")} onChange={(e) => update({ label: e.target.value })} />
-                      {pack.label && packText(pack.label) !== pack.label ? <small className="erpCellSub">{packText(pack.label)}</small> : null}
+                      {pack.pack_id ? (
+                        <select
+                          value={pack.pack_id}
+                          onChange={(e) => {
+                            const next = state.packs.find((p) => p.id === e.target.value);
+                            update({ pack_id: e.target.value, label: next?.name ?? pack.label, qty_base: next?.qty_base ?? pack.qty_base });
+                          }}
+                        >
+                          {options.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {packText(p.name)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={pack.label} placeholder={T("Название фасовки", "Pack name", "Tên quy cách")} onChange={(e) => update({ label: e.target.value, pack_id: undefined })} />
+                      )}
                     </td>
-                    <td className="edit" data-label={T("Сколько в ней", "Contains", "Số lượng")}>
-                      <QtyInput base={unit} value={pack.qty_base || null} onChange={(v) => update({ qty_base: v ?? 0 })} />
+                    <td className="edit" data-label={T("Количество", "Quantity", "Số lượng")}>
+                      {pack.pack_id ? (
+                        qtyText(chosen?.qty_base ?? pack.qty_base, unit)
+                      ) : (
+                        <QtyInput base={unit} value={pack.qty_base || null} onChange={(v) => update({ qty_base: v ?? 0 })} />
+                      )}
                     </td>
                     <td className="edit" data-label={T("Поставщик", "Supplier", "Nhà cung cấp")}>
                       <select value={pack.supplier_id ?? ""} onChange={(e) => update({ supplier_id: e.target.value || null })}>
@@ -492,8 +526,23 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
           disabled={!unit}
           onClick={() => setPacks((prev) => [...prev, { label: "", qty_base: 0, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null }])}
         >
-          + {T("Добавить упаковку", "Add pack", "Thêm quy cách")}
+          + {T("Новая фасовка", "New pack", "Quy cách mới")}
         </button>
+        <button
+          type="button"
+          className="erpBtn"
+          disabled={!unit || !compatiblePacks(state.packs, unit).some((p) => !packs.some((row) => row.pack_id === p.id))}
+          onClick={() => {
+            const next = compatiblePacks(state.packs, unit).find((p) => !packs.some((row) => row.pack_id === p.id));
+            if (!next) return;
+            setPacks((prev) => [...prev, { pack_id: next.id, label: next.name, qty_base: next.qty_base, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null }]);
+          }}
+        >
+          + {T("Из справочника", "From catalog", "Từ danh mục")}
+        </button>
+        <NavLink href="/erp/stock/packs/new" className="erpBtn ghost">
+          {T("Открыть справочник", "Open catalog", "Mở danh mục")}
+        </NavLink>
       </div>
     </>
   );

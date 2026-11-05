@@ -25,7 +25,8 @@ import {
   documentSupplierIds,
   receiptMatchesSupplier,
 } from "../../src/lib/erp/docSupplier";
-import { formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
+import { basePrice, formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
+import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import type { ErpStockRow } from "../../src/lib/erp/types";
@@ -68,6 +69,9 @@ const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 async function saveProduct(p: Record<string, unknown>) {
   return value<string>("select public.erp_save_product($1::jsonb, $2)", [JSON.stringify(p), ACTOR]);
+}
+async function savePack(p: Record<string, unknown>) {
+  return value<string>("select public.erp_save_pack($1::jsonb, $2)", [JSON.stringify(p), ACTOR]);
 }
 async function saveDoc(p: Record<string, unknown>) {
   return value<string>("select public.erp_save_document($1::jsonb, $2)", [JSON.stringify(p), ACTOR]);
@@ -1687,7 +1691,7 @@ async function main() {
         { id: other, name: "Receipt other supplier" },
       ],
       products: [{ id: foil, staff_supplier_id: null }],
-      packs: [{ id: pack, product_id: foil, supplier_id: mm }],
+      productPacks: [{ id: pack, product_id: foil, supplier_id: mm }],
     };
     const emptyHeader = { doc_type: "receipt" as const, supplier_id: null, lines: [{ product_id: foil, pack_id: pack, qty: 1 }] };
     assert.equal(documentSupplierLabel(catalog, emptyHeader), "MM", "brand MM Pro is not used as the supplier");
@@ -1712,7 +1716,7 @@ async function main() {
         { id: foil, staff_supplier_id: null },
         { id: "oil", staff_supplier_id: other },
       ],
-      packs: catalog.packs,
+      productPacks: catalog.productPacks,
     };
     const several = {
       doc_type: "receipt" as const,
@@ -1764,6 +1768,78 @@ async function main() {
     assert.deepEqual([after.supplier_id, after.status], [mm, "posted"]);
     assert.equal(n(await value("select count(*) from public.erp_lots where source_document_id = $1", [draft])), lotsBefore, "apply does not create lots");
     assert.equal(await stock(foil, prep), 2);
+  });
+
+  await test("ordering units: shared catalog, maths, snapshots, no stock on create, no name-merge", async () => {
+    assert.equal(packToBase(3, 1.284), 3.852);
+    assert.equal(basePrice(128400, 1.284), 100000);
+    assert.equal(packPrice(100000, 1.284), 128400);
+    const xlsx = xlsxBytes("Фасовки", ["№", "Название", "Ед. измерения", "Количество"], [[1, "1.284 KG", "кг", 1.284]]);
+    assert.equal(xlsx[0], 0x50);
+    assert.equal(xlsx[1], 0x4b);
+    const lotsBefore = n(await value("select count(*) from public.erp_lots"));
+
+    const a = await savePack({ name: "1 KG", unit: "kg", qty_base: 1 });
+    const b = await savePack({ name: "1 KG", unit: "kg", qty_base: 1 });
+    assert.notEqual(a, b, "same name stays two rows");
+    const dozen = await savePack({ name: "1 ДЕСЯТОК", unit: "pcs", qty_base: 10 });
+    const bag = await savePack({ name: "1.284 KG", unit: "kg", qty_base: 1.284 });
+    const bottle = await savePack({ name: "1 L", unit: "l", qty_base: 1 });
+    await expectError(savePack({ name: "", unit: "kg", qty_base: 1 }), "ERP_INVALID");
+    await expectError(savePack({ name: "zero", unit: "kg", qty_base: 0 }), "ERP_INVALID");
+    await expectError(savePack({ name: "neg", unit: "kg", qty_base: -1 }), "ERP_INVALID");
+    assert.equal(n(await value("select count(*) from public.erp_lots")), lotsBefore, "creating a pack does not touch stock");
+
+    const flour = await saveProduct({ type: "ingredient", name_en: "Pack flour", base_unit: "kg", packs: [{ pack_id: bag, label: "1.284 KG", qty_base: 1.284, is_default: true }] });
+    const sugar = await saveProduct({ type: "ingredient", name_en: "Pack sugar", base_unit: "kg", packs: [{ pack_id: bag, label: "1.284 KG", qty_base: 1.284, is_default: true }] });
+    const water = await saveProduct({ type: "ingredient", name_en: "Pack water", base_unit: "l" });
+    const linked = await q<{ product_id: string }>("select product_id from public.erp_product_packs where pack_id = $1 and archived_at is null order by product_id", [bag]);
+    assert.equal(linked.length, 2);
+    assert.deepEqual(linked.map((r) => r.product_id).sort(), [flour, sugar].sort());
+
+    const qty = packToBase(3, 1.284);
+    const doc = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [{ product_id: flour, pack_id: bag, pack_qty: 3, qty, unit_price: basePrice(128400, 1.284) }],
+    });
+    const snap = await one<{ pack_name: string; pack_unit: string; pack_qty_base: string; qty: string }>(
+      "select pack_name, pack_unit, pack_qty_base, qty from public.erp_document_lines where document_id = $1",
+      [doc],
+    );
+    assert.deepEqual([snap.pack_name, snap.pack_unit, n(snap.pack_qty_base), n(snap.qty)], ["1.284 KG", "kg", 1.284, 3.852]);
+    await expectError(
+      saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: water, pack_id: bag, pack_qty: 1, qty: 1.284, unit_price: 1 }] }),
+      "ERP_PACK_UNIT",
+    );
+    await post(doc);
+    assert.equal(await stock(flour, prep), 3.852);
+    const cost = n(await value("select cost_amount from public.erp_document_lines where document_id = $1", [doc]));
+    assert.equal(cost, 385200);
+
+    await savePack({ id: bag, name: "1.284 KG edited", unit: "kg", qty_base: 2 });
+    const afterEdit = await one<{ pack_name: string; pack_qty_base: string; qty: string }>(
+      "select pack_name, pack_qty_base, qty from public.erp_document_lines where document_id = $1",
+      [doc],
+    );
+    assert.deepEqual([afterEdit.pack_name, n(afterEdit.pack_qty_base), n(afterEdit.qty)], ["1.284 KG", 1.284, 3.852], "posted line keeps the snapshot");
+    assert.equal(await stock(flour, prep), 3.852);
+
+    await q("select public.erp_set_archived('pack', $1, true, $2)", [dozen, ACTOR]);
+    assert.equal(await value("select archived_at is not null from public.erp_packs where id = $1", [dozen]), true);
+    const migrated = await one<{ packs: string; links: string; same: boolean }>(
+      `select (select count(*) from public.erp_packs) packs,
+              (select count(*) from public.erp_product_packs) links,
+              (select bool_and(k.pack_id is not null) from public.erp_product_packs k) same`,
+    );
+    assert.ok(n(migrated.packs)! > 0);
+    assert.ok(n(migrated.links)! > 0);
+    assert.equal(migrated.same, true);
+    const staffPack = await one<{ id: string; pack_id: string }>("select id, pack_id from public.erp_product_packs where label = 'box 5*2 kg' limit 1");
+    assert.equal(staffPack.id, staffPack.pack_id, "migrated product packs kept their ids as catalog ids");
+    void a;
+    void b;
+    void bottle;
   });
 
   console.log(`\n${passed} checks passed`);

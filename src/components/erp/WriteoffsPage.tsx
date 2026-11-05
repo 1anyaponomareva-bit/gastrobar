@@ -964,7 +964,7 @@ function WriteoffDetail({ state, row }: { state: ErpState; row: Row }) {
                     {line.reason ? <small className="erpWoSub">{line.reason}</small> : null}
                   </td>
                   <td className="num">{qtyText(line.qty, unit)}</td>
-                  <td>{pack && line.pack_qty ? `${line.pack_qty} × ${packText(pack.label)}` : "—"}</td>
+                  <td>{line.pack_qty && (line.pack_name || pack) ? `${line.pack_qty} × ${packText(line.pack_name || pack?.name || "")}` : "—"}</td>
                   <td className="num">{posted && line.unit_cost !== null && line.unit_cost !== undefined ? vnd(line.unit_cost) : "—"}</td>
                   <td className="num">{!posted ? "—" : amount === null ? <span className="erpBadge warn">{T("цена неизвестна", "price unknown", "chưa rõ giá")}</span> : vnd(amount)}</td>
                 </tr>

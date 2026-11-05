@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel"]);
 const CATALOG_ENTITIES = new Set(["product", "category", "supplier"]);
-const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish"]);
+const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish", "pack"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Screen data each entity lives in. */
@@ -23,6 +23,7 @@ const ENTITY_PART: Record<string, StatePart> = {
   warehouse: "warehouses",
   channel: "channels",
   dish: "dishes",
+  pack: "packs",
 };
 /** Posting and cancelling move lots and may update product costs. */
 const STOCK_PARTS: StatePart[] = ["stock", "products"];
@@ -63,13 +64,20 @@ export async function POST(request: Request) {
       case "saveProduct": {
         const id = await rpc("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
         mirrorStaffLater();
-        return timing.json({ id, patch: await fresh(["products", "packs"]) });
+        return timing.json({ id, patch: await fresh(["products", "packs", "productPacks"]) });
+      }
+      case "savePack": {
+        const id = await rpc("erp_save_pack", { p: object(a.pack, "pack"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["packs", "productPacks"]) });
       }
       case "setArchived":
         if (!ARCHIVE_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         await rpc("erp_set_archived", { p_entity: a.entity, p_id: uuid(a.id), p_archived: a.archived === true, p_actor: actor });
         if (CATALOG_ENTITIES.has(a.entity)) mirrorStaffLater();
-        return timing.json({ ok: true, patch: await fresh([ENTITY_PART[a.entity]]) });
+        return timing.json({
+          ok: true,
+          patch: await fresh(a.entity === "pack" ? ["packs", "productPacks"] : [ENTITY_PART[a.entity]]),
+        });
       case "saveRef":
         if (!REF_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         {

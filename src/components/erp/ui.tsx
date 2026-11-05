@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
-import { formatPackLabel, type PackContainer } from "@/lib/erp/packs";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
 import { locale, T } from "./i18n";
 
@@ -103,6 +102,11 @@ export function errorText(code: string, detail?: string): string {
     ERP_DUPLICATE: T("Такая запись уже есть", "This already exists", "Đã tồn tại"),
     ERP_STALE: T("Данные изменил кто-то другой — обновите страницу", "Changed by someone else — reload the page", "Đã bị thay đổi, hãy tải lại"),
     ERP_INVALID: T("Проверьте заполнение полей", "Check the fields", "Kiểm tra lại thông tin"),
+    ERP_PACK_UNIT: T(
+      "Фасовка в другой единице — выберите совместимую",
+      "This pack uses another unit — pick a compatible one",
+      "Quy cách khác đơn vị — hãy chọn loại tương thích",
+    ),
     ERP_NOT_FOUND: T("Не найдено", "Not found", "Không tìm thấy"),
     ERP_NOT_INSTALLED: T(
       "База ERP ещё не установлена",
@@ -147,17 +151,22 @@ export const qtyText = (value: number | null | undefined, unit?: string | null) 
   }
   return `${numText(value)}${unit ? ` ${unitLabel(unit)}` : ""}`;
 };
-const packContainerLabel = (container: PackContainer) =>
-  ({
-    box: T("Коробка", "Box", "Thùng"),
-    pack: T("Пачка", "Pack", "Gói"),
-    pcs: T("Упаковка", "Unit", "Đơn vị"),
-    btl: T("Бутылка", "Bottle", "Chai"),
-    can: T("Банка", "Can", "Lon"),
-    bag: T("Мешок", "Bag", "Bao"),
-  })[container];
-/** Readable pack name in the current language; the stored label is not changed. */
-export const packText = (label: string) => formatPackLabel(label, { container: packContainerLabel, unit: unitLabel, num: numText });
+/** Catalog name as stored. Do not invent box/bottle/pack types from the text. */
+export const packText = (label: string) => label;
+
+/** Poster-style unit on the packs list: «шт.» with a period in Russian. */
+export const packUnitLabel = (unit: string | null | undefined) => {
+  if (unit === "pcs") return T("шт.", "pcs", "cái");
+  return unitLabel(unit);
+};
+
+/** Poster quantity: 3 decimals for kg/l (1 → 1,000), integers for pcs. */
+export const packQtyText = (value: number, unit?: string | null) => {
+  const rounded = Math.round(value * 1000) / 1000;
+  if (unit === "pcs" && Number.isInteger(rounded)) return rounded.toLocaleString(locale());
+  if (unit === "kg" || unit === "l") return rounded.toLocaleString(locale(), { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return numText(rounded);
+};
 export const dateText = (value: string | null | undefined) => {
   if (!value) return "—";
   const [y, m, d] = value.slice(0, 10).split("-");

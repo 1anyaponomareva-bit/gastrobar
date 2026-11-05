@@ -4,7 +4,7 @@ import { check, erpDb } from "./server";
 /** Parts of the ERP screen data that can be loaded on their own. */
 export type StatePart = keyof ErpState;
 
-export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "stock", "recipes", "dishes", "writeoffReasons"];
+export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons"];
 
 async function loadPart(part: StatePart): Promise<unknown> {
   const db = erpDb();
@@ -22,6 +22,8 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "products":
       return check(await db.from("erp_products").select("*").order("name_en").limit(5000));
     case "packs":
+      return check(await db.from("erp_packs").select("*").is("archived_at", null).limit(10000));
+    case "productPacks":
       return check(await db.from("erp_product_packs").select("*").is("archived_at", null).limit(10000));
     case "stock":
       return check(await db.from("erp_stock").select("*").limit(20000));

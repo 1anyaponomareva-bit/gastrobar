@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { productTitle } from "@/lib/erp/costing";
 import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
@@ -10,7 +8,7 @@ import { InventoryPage } from "./InventoryPage";
 import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
-import { Empty, NavLink, noSearchResults, packText, PageHead, qtyText, T } from "./ui";
+import { Empty, NavLink, PageHead, T } from "./ui";
 import { WriteoffsPage } from "./WriteoffsPage";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
@@ -170,84 +168,4 @@ export function WarehousesPage() {
   );
 }
 
-export function PacksPage() {
-  const { state } = useErp();
-  const [query, setQuery] = useState("");
-  if (!state) return null;
-  const products = new Map(state.products.map((p) => [p.id, p]));
-  const suppliers = new Map(state.suppliers.map((s) => [s.id, s.name]));
-  const all = state.packs
-    .map((pack) => ({ pack, product: products.get(pack.product_id) }))
-    .filter((entry): entry is { pack: typeof entry.pack; product: NonNullable<typeof entry.product> } => Boolean(entry.product && !entry.product.archived_at))
-    .sort((a, b) => a.product.name_en.localeCompare(b.product.name_en) || a.pack.qty_base - b.pack.qty_base);
-  const q = query.trim().toLowerCase();
-  const rows = all.filter(({ pack, product }) => !q || `${pack.label} ${packText(pack.label)} ${product.name_en} ${product.name_vn} ${product.brand ?? ""}`.toLowerCase().includes(q));
-
-  return (
-    <>
-      <PageHead
-        title={T("Фасовки", "Packs", "Quy cách")}
-        sub={T(
-          "В каких упаковках вы покупаете продукты: коробка 5 кг, бутылка 1,8 л, упаковка 10 шт. Поставку можно вводить в фасовках — количество пересчитается само.",
-          "The packs you buy products in: a 5 kg box, a 1.8 l bottle, a pack of 10. Deliveries can be entered in packs and converted automatically.",
-          "Quy cách mua hàng: thùng 5 kg, chai 1,8 l, gói 10 cái. Có thể nhập hàng theo quy cách.",
-        )}
-      />
-      <StockMobileNav active="/erp/stock/packs" />
-      {!all.length ? (
-        <Empty
-          title={T("Фасовок пока нет", "No packs yet", "Chưa có quy cách")}
-          text={T("Фасовка добавляется в карточке продукта, в разделе «Закупка и упаковки».", "Add a pack in the product card, under “Purchasing & packs”.", "Thêm quy cách trong thẻ sản phẩm.")}
-          action={
-            <NavLink href="/erp/products" className="erpBtn primary">
-              {T("К продуктам", "Go to products", "Đến sản phẩm")}
-            </NavLink>
-          }
-        />
-      ) : (
-        <>
-          <div className="erpToolbar">
-            <input type="search" placeholder={T("Найти продукт или фасовку…", "Find a product or pack…", "Tìm sản phẩm hoặc quy cách…")} value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
-          <p className="erpHint">{T("Чтобы изменить или добавить фасовку, откройте продукт.", "To change or add a pack, open the product.", "Để sửa hoặc thêm quy cách, mở sản phẩm.")}</p>
-          {!rows.length ? (
-            noSearchResults(() => setQuery(""))
-          ) : (
-            <div className="erpTableWrap">
-              <table className="erpTable stack">
-                <thead>
-                  <tr>
-                    <th>{T("Фасовка", "Pack", "Quy cách")}</th>
-                    <th className="num">{T("Количество", "Quantity", "Số lượng")}</th>
-                    <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                    <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(({ pack, product }) => (
-                    <tr key={pack.id}>
-                      <td className="main">
-                        <strong className="erpPackName">{packText(pack.label)}</strong>
-                        {pack.is_default ? <span className="erpBadge">{T("основная", "default", "mặc định")}</span> : null}
-                        {packText(pack.label) !== pack.label ? <small className="erpCellSub">{pack.label}</small> : null}
-                      </td>
-                      <td className="num" data-label={T("Количество", "Quantity", "Số lượng")}>
-                        {qtyText(pack.qty_base, product.base_unit)}
-                      </td>
-                      <td data-label={T("Продукт", "Product", "Sản phẩm")}>
-                        <NavLink href={`/erp/products/${product.id}`} className="erpName">
-                          {productTitle(product)}
-                        </NavLink>
-                      </td>
-                      <td data-label={T("Поставщик", "Supplier", "Nhà cung cấp")}>{pack.supplier_id ? (suppliers.get(pack.supplier_id) ?? "—") : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
-    </>
-  );
-}
+export { PacksPage } from "./PacksPage";

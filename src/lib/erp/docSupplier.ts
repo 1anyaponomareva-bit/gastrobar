@@ -1,18 +1,19 @@
-import type { ErpDocument, ErpDocumentLine, ErpPack, ErpProduct, ErpSupplier } from "./types";
+import type { ErpDocument, ErpDocumentLine, ErpProduct, ErpProductPack, ErpSupplier } from "./types";
 
 /** Catalog fields needed to resolve a receipt supplier from packs / the product. */
 export type SupplierCatalog = {
   suppliers: Pick<ErpSupplier, "id" | "name">[];
   products: Pick<ErpProduct, "id" | "staff_supplier_id">[];
-  packs: Array<Pick<ErpPack, "id" | "product_id" | "supplier_id"> & { archived_at?: string | null }>;
+  productPacks?: Array<Pick<ErpProductPack, "id" | "product_id" | "supplier_id"> & { pack_id?: string; archived_at?: string | null }>;
 };
 
 const unique = (ids: Array<string | null | undefined>) => [...new Set(ids.filter((id): id is string => Boolean(id)))];
+const packLinks = (catalog: SupplierCatalog) => catalog.productPacks ?? [];
 
 /** Pack suppliers plus the Staff supplier; never the product brand. */
 export function productSupplierIds(catalog: SupplierCatalog, productId: string): string[] {
   const product = catalog.products.find((p) => p.id === productId);
-  const fromPacks = catalog.packs
+  const fromPacks = packLinks(catalog)
     .filter((pack) => pack.product_id === productId && pack.supplier_id && !pack.archived_at)
     .map((pack) => pack.supplier_id);
   return unique([...fromPacks, product?.staff_supplier_id]);
@@ -22,7 +23,10 @@ export function productSupplierIds(catalog: SupplierCatalog, productId: string):
 export function lineSupplierId(catalog: SupplierCatalog, line: Pick<ErpDocumentLine, "product_id" | "pack_id">): string | null {
   if (!line.product_id) return null;
   if (line.pack_id) {
-    const pack = catalog.packs.find((p) => p.id === line.pack_id);
+    const links = packLinks(catalog);
+    const pack =
+      links.find((p) => p.pack_id === line.pack_id && p.product_id === line.product_id && !p.archived_at) ??
+      links.find((p) => p.id === line.pack_id || p.pack_id === line.pack_id);
     if (pack?.supplier_id) return pack.supplier_id;
   }
   const ids = productSupplierIds(catalog, line.product_id);

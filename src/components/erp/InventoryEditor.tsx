@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { productTitle } from "@/lib/erp/costing";
-import { packToBase } from "@/lib/erp/packs";
+import { compatiblePacks, packToBase } from "@/lib/erp/packs";
 import {
   clearLocalDraft,
   countFromDocument,
@@ -511,7 +511,7 @@ function CountTable({
             {rows.map((line) => {
               const product = productById(state, line.product_id);
               const unit = unitOf(state, line.product_id);
-              const packs = state.packs.filter((pack) => pack.product_id === line.product_id);
+              const packs = compatiblePacks(state.packs, unit);
               const pack = packs.find((p) => p.id === line.pack_id);
               const planned = line.planned_qty;
               const diff = line.fact_qty === null || planned === null ? null : line.fact_qty - planned;
@@ -555,7 +555,7 @@ function CountTable({
                             <option value="">{T("базовая единица", "base unit", "đơn vị gốc")}</option>
                             {packs.map((p) => (
                               <option key={p.id} value={p.id}>
-                                {packText(p.label)} = {qtyText(p.qty_base, unit)}
+                                {packText(p.name)} = {qtyText(p.qty_base, unit)}
                               </option>
                             ))}
                           </select>
