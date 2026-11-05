@@ -230,6 +230,18 @@ const Caret = () => (
   </svg>
 );
 
+const DetailsIcon = ({ open }: { open: boolean }) => (
+  <svg className="erpRcIcon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden>
+    <path d={open ? "M7 14l5-5 5 5z" : "M7 10l5 5 5-5z"} />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg className="erpRcIcon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden>
+    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+  </svg>
+);
+
 const noAccountText = () =>
   T(
     "В ERP пока нет счетов оплаты: назначение колонки «Счёт» в Poster ещё не подтверждено",
@@ -513,7 +525,7 @@ export function ReceiptsPage() {
   );
 
   const head = (c: ReturnType<typeof columns>[number]) => (
-    <th key={c.id} className={c.num ? "num" : ""} aria-sort={c.sort && filters.sort === c.sort ? (filters.desc ? "descending" : "ascending") : undefined}>
+    <th key={c.id} className={`erpRcC-${c.id} ${c.num ? "num" : ""}`} title={c.label} aria-sort={c.sort && filters.sort === c.sort ? (filters.desc ? "descending" : "ascending") : undefined}>
       {c.sort ? (
         <button type="button" className="erpSortBtn" onClick={() => toggleSort(c.sort as SortKey)}>
           {c.label}
@@ -530,62 +542,64 @@ export function ReceiptsPage() {
     switch (id) {
       case "no":
         return (
-          <td key={id} className="erpRcNo">
+          <td key={id} className="erpRcC-no erpRcNo" title={docNo(doc)}>
             {docNo(doc)}
           </td>
         );
       case "date":
         return (
-          <td key={id}>
+          <td key={id} className="erpRcC-date">
             {dateText(doc.doc_date)} <span className="erpRcTime">{timeOf(doc)}</span>
           </td>
         );
       case "supplier":
         return (
-          <td key={id} className="erpRcClip" title={row.supplier}>
-            {row.supplier || "—"}
+          <td key={id} className="erpRcC-supplier erpRcClip" title={row.supplier}>
+            <span className="erpRcText">{row.supplier || "—"}</span>
           </td>
         );
       case "warehouse":
         return (
-          <td key={id} className="erpRcClip" title={row.warehouse}>
-            {row.warehouse || "—"}
+          <td key={id} className="erpRcC-warehouse erpRcClip" title={row.warehouse}>
+            <span className="erpRcText">{row.warehouse || "—"}</span>
           </td>
         );
       case "account":
         return (
-          <td key={id} className="erpRcNone" title={noAccountText()}>
+          <td key={id} className="erpRcC-account erpRcNone" title={noAccountText()}>
             —
           </td>
         );
       case "products":
         return (
-          <td key={id} className="erpRcProducts" title={row.products.join("\n")}>
-            {row.products.slice(0, 2).join(", ") || "—"}
-            {row.products.length > 2 ? <span className="erpRcMore"> {T(`и ещё ${row.products.length - 2}`, `+${row.products.length - 2} more`, `+${row.products.length - 2}`)}</span> : null}
+          <td key={id} className="erpRcC-products erpRcProducts" title={row.products.join("\n")}>
+            <span className="erpRcText">
+              {row.products.slice(0, 2).join(", ") || "—"}
+              {row.products.length > 2 ? <span className="erpRcMore"> {T(`и ещё ${row.products.length - 2}`, `+${row.products.length - 2} more`, `+${row.products.length - 2}`)}</span> : null}
+            </span>
           </td>
         );
       case "comment":
         return (
-          <td key={id} className="erpRcComment" title={doc.comment ?? ""}>
-            {doc.comment || "—"}
+          <td key={id} className={`erpRcC-comment erpRcComment ${doc.comment ? "" : "empty"}`} title={doc.comment ?? ""}>
+            <span className="erpRcText">{doc.comment || "—"}</span>
           </td>
         );
       case "payment":
         return (
-          <td key={id} className="erpRcNone" title={noPaymentText()}>
+          <td key={id} className="erpRcC-payment erpRcNone" title={noPaymentText()}>
             —
           </td>
         );
       case "posting":
         return (
-          <td key={id}>
+          <td key={id} className="erpRcC-posting">
             <StatusBadge status={doc.status} />
           </td>
         );
       case "amount":
         return (
-          <td key={id} className="num erpRcAmount">
+          <td key={id} className="erpRcC-amount num erpRcAmount">
             {row.amount === null ? "—" : doc.cost_known === false ? <span className="erpBadge warn">{T("неполная", "incomplete", "chưa đủ")}</span> : vnd(row.amount)}
           </td>
         );
@@ -718,7 +732,7 @@ export function ReceiptsPage() {
                 {T("Показаны 1000 последних поставок периода — выберите период короче.", "Showing the latest 1000 deliveries of the period — choose a shorter period.", "Chỉ hiện 1000 phiếu mới nhất — hãy chọn kỳ ngắn hơn.")}
               </p>
             ) : null}
-            <div className="erpTableWrap erpScrollX erpPrintArea">
+            <div className="erpTableWrap erpPrintArea">
               <h2 className="erpPrintOnly">
                 {T("Поставки", "Deliveries", "Nhập hàng")} · {periodTitle(filters)}
               </h2>
@@ -726,7 +740,7 @@ export function ReceiptsPage() {
                 <thead>
                   <tr>
                     {shown.map(head)}
-                    <th className="erpNoPrint" aria-label={T("Действия", "Actions", "Thao tác")} />
+                    <th className="erpRcActions erpNoPrint" aria-label={T("Действия", "Actions", "Thao tác")} />
                   </tr>
                 </thead>
                 <tbody>
@@ -746,12 +760,14 @@ export function ReceiptsPage() {
                           <tr className={`${expanded ? "open" : ""} ${doc.status === "cancelled" ? "muted" : ""}`} data-testid="receipt-row">
                             {shown.map((c) => cell(row, c.id))}
                             <td className="erpRcActions erpNoPrint">
-                              <button type="button" className="erpRcLink" aria-expanded={expanded} onClick={() => toggleOpen(id)}>
-                                {T("Детали", "Details", "Chi tiết")}
+                              <button type="button" className="erpRcLink" aria-expanded={expanded} title={T("Детали", "Details", "Chi tiết")} onClick={() => toggleOpen(id)}>
+                                <DetailsIcon open={expanded} />
+                                <span className="erpRcLabel">{T("Детали", "Details", "Chi tiết")}</span>
                               </button>
                               {doc.status === "draft" ? (
                                 <NavLink href={docHref({ id: doc.id, doc_type: doc.doc_type })} className="erpRcLink">
-                                  {T("Ред.", "Edit", "Sửa")}
+                                  <EditIcon />
+                                  <span className="erpRcLabel">{T("Ред.", "Edit", "Sửa")}</span>
                                 </NavLink>
                               ) : (
                                 <span
@@ -762,7 +778,8 @@ export function ReceiptsPage() {
                                     "Không thể sửa phiếu đã ghi sổ hoặc đã hủy.",
                                   )}
                                 >
-                                  {T("Ред.", "Edit", "Sửa")}
+                                  <EditIcon />
+                                  <span className="erpRcLabel">{T("Ред.", "Edit", "Sửa")}</span>
                                 </span>
                               )}
                               {rowMenu(doc)}

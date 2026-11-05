@@ -2010,38 +2010,77 @@
   background: none !important;
 }
 
+/* Fixed layout: the table always fits the panel; long text is clipped with a title tooltip. */
 .erpRcTable {
-  min-width: 940px;
+  table-layout: fixed;
   font-size: 13px;
 }
 
-.erpRcTable th,
-.erpRcTable td {
+.erpRcTable > * > tr > th,
+.erpRcTable > * > tr > td {
   padding: 8px 6px;
   white-space: nowrap;
-}
-
-.erpRcTable th:first-child,
-.erpRcTable td:first-child {
-  padding-left: 12px;
-}
-
-.erpRcTable td.erpRcClip {
-  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.erpRcTable th {
+.erpRcTable > * > tr > th:first-child,
+.erpRcTable > * > tr > td:first-child {
+  padding-left: 12px;
+}
+
+.erpRcTable > thead > tr > th {
   background: none;
   font-weight: 500;
 }
 
-.erpRcTable tbody tr:hover td {
+.erpRcTable > tbody > tr.erpDetailRow > td,
+.erpRcTable > tbody > tr > td.erpNoRows {
+  white-space: normal;
+  overflow: visible;
+}
+
+.erpRcTable th .erpSortBtn {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: inherit;
+}
+
+.erpRcTable th.num .erpSortBtn {
+  margin-left: auto;
+}
+
+.erpRcC-no {
+  width: 84px;
+}
+
+.erpRcC-date {
+  width: 118px;
+}
+
+.erpRcC-account {
+  width: 50px;
+}
+
+.erpRcC-payment {
+  width: 62px;
+}
+
+.erpRcC-posting {
+  width: 92px;
+}
+
+.erpRcC-amount {
+  width: 116px;
+}
+
+.erpRcTable > tbody > tr:hover > td {
   background: var(--erp-soft);
 }
 
-.erpRcTable tr.open td {
+.erpRcTable > tbody > tr.open > td {
   background: var(--erp-soft);
 }
 
@@ -2054,15 +2093,11 @@
   color: var(--erp-muted);
 }
 
-.erpRcProducts,
-.erpRcComment {
-  max-width: 170px;
+.erpRcText {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.erpRcComment {
-  max-width: 130px;
+  white-space: nowrap;
 }
 
 .erpRcMore {
@@ -2078,25 +2113,35 @@
   padding: 2px 8px;
 }
 
-.erpRcTable tfoot td {
+.erpRcTable > tfoot > tr > td {
   font-weight: 700;
   background: var(--erp-soft);
 }
 
-.erpRcActions {
+.erpRcTable .erpRcActions {
+  width: 134px;
   text-align: right;
-  width: 1%;
+  text-overflow: clip;
 }
 
 .erpRcLink {
   font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
   margin-left: 6px;
   padding: 0;
   border: none;
+  border-radius: 6px;
   background: none;
   color: var(--erp-accent);
   text-decoration: none;
   cursor: pointer;
+}
+
+.erpRcIcon {
+  display: none;
 }
 
 .erpRcLink.off {
@@ -2106,6 +2151,7 @@
 
 .erpRcActions .erpDrop {
   display: inline-block;
+  vertical-align: middle;
   margin-left: 4px;
 }
 
@@ -2167,6 +2213,286 @@
   margin: 0;
 }
 
+.erpRcDetail .erpRcLines {
+  min-width: 0;
+}
+
+.erpRcLines td {
+  overflow-wrap: anywhere;
+}
+
+@media screen and (max-width: 1365px) {
+  .erpRcC-date {
+    width: 84px;
+  }
+
+  .erpRcTime {
+    display: block;
+    margin-left: 0;
+    font-size: 12px;
+  }
+}
+
+/* Laptops: icon actions and two-line text so all columns fit about 730 px next to the side menu. */
+@media screen and (max-width: 1279px) {
+  .erpRcTable {
+    font-size: 12px;
+  }
+
+  .erpRcTable > * > tr > th,
+  .erpRcTable > * > tr > td {
+    padding: 8px 3px;
+  }
+
+  .erpRcTable > * > tr > th:first-child,
+  .erpRcTable > * > tr > td:first-child {
+    padding-left: 10px;
+  }
+
+  .erpRcC-no {
+    width: 76px;
+  }
+
+  .erpRcC-date {
+    width: 72px;
+  }
+
+  .erpRcC-account {
+    width: 38px;
+  }
+
+  .erpRcC-payment {
+    width: 48px;
+  }
+
+  .erpRcC-posting {
+    width: 76px;
+  }
+
+  .erpRcC-amount {
+    width: 92px;
+  }
+
+  .erpRcTable .erpRcActions {
+    width: 86px;
+  }
+
+  .erpRcText {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .erpRcIcon {
+    display: block;
+  }
+
+  .erpRcLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .erpRcLink {
+    width: 26px;
+    height: 26px;
+    margin-left: 0;
+  }
+
+  .erpRcLink:not(.off):hover {
+    background: var(--erp-accent-soft);
+  }
+
+  .erpRcActions .erpDrop {
+    margin-left: 0;
+  }
+
+  .erpRcDots {
+    width: 26px;
+  }
+}
+
+/* Phones: every delivery is a compact card, empty payment/account fields are left out. */
+@media screen and (max-width: 760px) {
+  .erpRcTable,
+  .erpRcTable > tbody,
+  .erpRcTable > tfoot,
+  .erpRcTable > tbody > tr,
+  .erpRcTable > tfoot > tr {
+    display: block;
+    width: 100%;
+  }
+
+  .erpRcTable > thead {
+    display: none;
+  }
+
+  .erpRcTable > tbody > tr,
+  .erpRcTable > tfoot > tr {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--erp-line);
+  }
+
+  .erpRcTable > tbody > tr:last-child {
+    border-bottom: none;
+  }
+
+  /* Card lines: № date · badge / supplier · location / products / comment / amount · actions. */
+  .erpRcTable > tbody > tr[data-testid] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+  }
+
+  .erpRcTable > tbody > tr[data-testid]::before {
+    content: "";
+    order: 4;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .erpRcTable > tbody > tr:hover,
+  .erpRcTable > tbody > tr.open,
+  .erpRcTable > tfoot > tr {
+    background: var(--erp-soft);
+  }
+
+  .erpRcTable > * > tr > td,
+  .erpRcTable > * > tr > td:first-child {
+    display: inline;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none !important;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-no {
+    order: 1;
+    font-weight: 700;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-date {
+    order: 2;
+    flex: 1 1 auto;
+    color: var(--erp-muted);
+  }
+
+  .erpRcTime {
+    display: inline;
+    margin-left: 4px;
+    font-size: inherit;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-posting {
+    order: 3;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-supplier {
+    order: 5;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-warehouse {
+    order: 6;
+    flex: 1 1 auto;
+  }
+
+  .erpRcC-warehouse::before {
+    content: "· ";
+    color: var(--erp-muted);
+  }
+
+  .erpRcText {
+    display: inline;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-products,
+  .erpRcTable > tbody > tr > .erpRcC-comment {
+    flex-basis: 100%;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-products {
+    order: 7;
+  }
+
+  .erpRcC-products .erpRcText {
+    display: -webkit-box;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-comment {
+    order: 8;
+    color: var(--erp-muted);
+    font-size: 12px;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-account,
+  .erpRcTable > tbody > tr > .erpRcC-payment,
+  .erpRcTable > tbody > tr > .erpRcC-comment.empty,
+  .erpRcTable > tfoot > tr > td:empty {
+    display: none;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcC-amount {
+    order: 9;
+    margin-top: 4px;
+    font-size: 14px;
+    text-align: left;
+  }
+
+  .erpRcTable > tbody > tr > .erpRcActions {
+    order: 10;
+    display: flex;
+    align-items: center;
+    width: auto;
+    margin: 4px 0 0 auto;
+  }
+
+  .erpRcLink,
+  .erpRcDots {
+    width: 32px;
+    height: 30px;
+  }
+
+  .erpRcTable > tfoot > tr > .erpRcAmount {
+    margin-left: 8px;
+  }
+
+  .erpRcTable > tbody > tr.erpDetailRow {
+    padding: 0;
+  }
+
+  .erpRcLines th,
+  .erpRcLines td,
+  .erpRcLines td.num,
+  .erpRcLines th.num {
+    padding: 6px;
+    white-space: normal;
+  }
+
+  .erpRcLines td:first-child {
+    width: 40%;
+  }
+
+  .erpRcTable > tbody > tr.erpDetailRow > td {
+    display: block;
+    padding: 4px 12px 12px;
+  }
+
+  .erpRcTable > tbody > tr > td.erpNoRows {
+    display: block;
+  }
+}
+
 .erpPrintOnly,
 .erpPrintDoc {
   display: none;
@@ -2204,13 +2530,19 @@
   }
 
   .erpRcTable {
-    min-width: 0;
+    table-layout: auto;
     font-size: 11px;
   }
 
-  .erpRcTable th,
-  .erpRcTable td {
+  .erpRcTable > * > tr > th,
+  .erpRcTable > * > tr > td {
     padding: 4px 6px;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .erpRcText {
+    display: block;
     white-space: normal;
   }
 
