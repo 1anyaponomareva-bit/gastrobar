@@ -34,3 +34,6 @@ Thumbs.db
 # testing
 coverage
 .vercel
+
+# Isolated PGlite used by the inventory worktree (never commit)
+.erp-inventory-db/
