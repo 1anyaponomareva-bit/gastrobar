@@ -1154,6 +1154,38 @@ async function main() {
     assert.equal(await value("select has_function_privilege('service_role', 'public.erp_product_receipts(uuid,integer)', 'execute')"), true);
   });
 
+  await test("average cost shown in stock does not change FIFO: write-offs take the oldest lots at their own cost", async () => {
+    const oil = await saveProduct({ type: "ingredient", name_en: "FIFO oil", name_vn: "Dầu FIFO", base_unit: "l" });
+    const shown = async () => {
+      const rows = await q<ErpStockRow>("select * from public.erp_stock where product_id = $1", [oil]);
+      const t = stockOf(stockByProduct(rows, new Set([prep])), oil);
+      return { qty: t.qty, value: t.knownValue, avg: costNumber(costInfo(t, { est_unit_cost: null })) };
+    };
+    const writeOff = async (qty: number) => {
+      const id = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, reason: "fifo test", lines: [{ product_id: oil, qty }] });
+      await post(id);
+      return one<{ total_cost: string; cost_known: boolean }>("select total_cost, cost_known from public.erp_documents where id = $1", [id]);
+    };
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-08-01", warehouse_id: prep, lines: [{ product_id: oil, qty: 10, unit_price: 100 }] }));
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-08-02", warehouse_id: prep, lines: [{ product_id: oil, qty: 10, unit_price: 200 }] }));
+    assert.deepEqual(await shown(), { qty: 20, value: 3000, avg: 150 }, "display: average of the remaining lots");
+
+    // 5 l leave from the 100-lot: 500, not 5 × average 150 = 750.
+    const first = await writeOff(5);
+    assert.equal(n(first.total_cost), 500);
+    assert.deepEqual(await shown(), { qty: 15, value: 2500, avg: 2500 / 15 }, "the average follows what is left");
+
+    // 10 l: the last 5 of the 100-lot, then 5 of the 200-lot: 500 + 1000.
+    const second = await writeOff(10);
+    assert.equal(n(second.total_cost), 1500);
+    assert.deepEqual(await shown(), { qty: 5, value: 1000, avg: 200 }, "only the newest lot is left");
+    const lots = await q<{ qty_left: string; unit_cost: string }>(
+      "select qty_left, unit_cost from public.erp_lots where product_id = $1 and warehouse_id = $2 order by received_at",
+      [oil, prep],
+    );
+    assert.deepEqual(lots.map((l) => [n(l.qty_left), n(l.unit_cost)]), [[0, 100], [5, 200]], "the old lot is used up first");
+  });
+
   console.log(`\n${passed} checks passed`);
 }
 

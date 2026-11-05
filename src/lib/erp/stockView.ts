@@ -36,7 +36,10 @@ export function addTotals(items: StockTotals[]): StockTotals {
 export const stockValue = (t: StockTotals): number | null => (t.complete ? t.knownValue : null);
 
 export type CostInfo =
-  /** Weighted average of the remaining lots: value / qty. */
+  /**
+   * Weighted average of the remaining lots: value / qty. Display only: write-offs, transfers and
+   * production always take the oldest lots first at their own cost (FIFO, `erp_consume`).
+   */
   | { kind: "lots"; unitCost: number }
   /** There is stock but some lots have no cost. */
   | { kind: "unknown" }

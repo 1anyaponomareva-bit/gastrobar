@@ -356,9 +356,9 @@ export function StockPage() {
             )}
             {" · "}
             {T(
-              "Себестоимость — средняя по оставшимся партиям; при нулевом остатке — справочная цена продукта",
-              "Unit cost is the average of the remaining lots; with no stock, the product's reference price",
-              "Giá vốn = bình quân các lô còn lại; khi hết hàng là giá tham khảo",
+              "Себестоимость — средняя по оставшимся партиям, только для показа: списание всегда идёт по FIFO, с самых старых партий по их цене; при нулевом остатке — справочная цена продукта",
+              "Unit cost is the average of the remaining lots, for display only: stock always leaves first-in, first-out, oldest lots at their own cost; with no stock, the product's reference price",
+              "Giá vốn = bình quân các lô còn lại, chỉ để hiển thị: xuất kho luôn theo FIFO, lô cũ nhất theo giá của lô; khi hết hàng là giá tham khảo",
             )}
           </p>
 
