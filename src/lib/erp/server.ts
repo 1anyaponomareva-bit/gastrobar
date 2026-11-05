@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getSessionEmail } from "@/lib/recipes-admin/auth";
+import { getSessionEmail, RECIPES_ADMIN_COOKIE } from "@/lib/recipes-admin/auth";
 import { ADMIN_LIST_TTL_MS } from "@/lib/recipes-admin/storage";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 import { erpLocalMode, localErpClient, localNetworkDelay } from "./localDb";
@@ -88,8 +89,13 @@ export async function requireAdmin(): Promise<string> {
 /**
  * Runs a read-only query alongside the session check instead of after it. The result is only
  * returned when the check passes, and a failed check wins over any query error.
+ * No session cookie: return 401 without touching the database (anonymous /erp open was loading
+ * the full catalog, then discarding it).
  */
 export async function readAsAdmin<T>(timing: ServerTiming, read: () => PromiseLike<T>): Promise<{ email: string; data: T }> {
+  if (!erpLocalMode() && !(await cookies()).get(RECIPES_ADMIN_COOKIE)?.value) {
+    throw new ErpHttpError(401, "auth");
+  }
   const [email, data] = await Promise.allSettled([timing.time("auth", requireAdmin()), timing.time("db", read)]);
   if (email.status === "rejected") throw email.reason;
   if (data.status === "rejected") throw data.reason;

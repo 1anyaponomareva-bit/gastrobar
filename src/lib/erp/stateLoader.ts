@@ -6,6 +6,41 @@ export type StatePart = keyof ErpState;
 
 export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons"];
 
+/** Warehouse screens need these before recipes/dishes. ErpShell still loads ALL_PARTS today. */
+export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
+
+const MISSING_FN = new Set(["PGRST202", "42883"]);
+let loadStateRpcMissing = false;
+
+function isMissingLoadState(code: string, message: string) {
+  return MISSING_FN.has(code) || /erp_load_state|does not exist|could not find the function/i.test(message);
+}
+
+async function loadStateRpc(parts: StatePart[]): Promise<Partial<ErpState> | null> {
+  if (loadStateRpcMissing) return null;
+  try {
+    const result = await erpDb().rpc("erp_load_state", { p_parts: parts.join(",") });
+    if (result.error) {
+      const message = result.error.message ?? "";
+      if (isMissingLoadState(result.error.code ?? "", message)) {
+        loadStateRpcMissing = true;
+        return null;
+      }
+      check(result);
+    }
+    const data = result.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    return data as Partial<ErpState>;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (isMissingLoadState("", message)) {
+      loadStateRpcMissing = true;
+      return null;
+    }
+    throw error;
+  }
+}
+
 async function loadPart(part: StatePart): Promise<unknown> {
   const db = erpDb();
   switch (part) {
@@ -80,8 +115,13 @@ export async function loadDocument(id: string): Promise<ErpDocument | null> {
   return doc ? { ...doc, lines: check(lines) } : null;
 }
 
-/** Loads the given parts in parallel (one database round trip). */
+/**
+ * Screen payload: one SQL function when `erp_load_state` exists, otherwise one PostgREST
+ * call per part in parallel (recipes and dishes each add nested lookups).
+ */
 export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial<ErpState>> {
+  const batched = await loadStateRpc(parts);
+  if (batched) return batched;
   const values = await Promise.all(parts.map(loadPart));
   return Object.fromEntries(parts.map((part, index) => [part, values[index]])) as Partial<ErpState>;
 }

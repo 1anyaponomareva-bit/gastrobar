@@ -36,19 +36,18 @@ export async function GET(request: Request) {
       const docs = check<DocRow[]>(await query.limit(MAX + 1));
       const shown = docs.slice(0, MAX);
       const ids = shown.map((doc) => doc.id);
-      const lines: LineRow[] = [];
-      for (let i = 0; i < ids.length; i += CHUNK) {
-        const part = check<LineRow[]>(
-          await erpDb()
+      const parts = await Promise.all(
+        Array.from({ length: Math.ceil(ids.length / CHUNK) }, (_, i) =>
+          erpDb()
             .from("erp_document_lines")
             .select("document_id, line_no, product_id, qty, pack_id, pack_qty, unit_price, vat_rate, net_amount, gross_amount, cost_amount")
-            .in("document_id", ids.slice(i, i + CHUNK))
-            .order("line_no"),
-        );
-        lines.push(...part);
-      }
+            .in("document_id", ids.slice(i * CHUNK, i * CHUNK + CHUNK))
+            .order("line_no")
+            .then((result) => check<LineRow[]>(result)),
+        ),
+      );
       const byDoc = new Map<string, LineRow[]>();
-      for (const line of lines) {
+      for (const line of parts.flat()) {
         const list = byDoc.get(line.document_id) ?? [];
         list.push(line);
         byDoc.set(line.document_id, list);
