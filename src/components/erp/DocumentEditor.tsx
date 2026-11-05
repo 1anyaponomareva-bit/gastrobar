@@ -576,6 +576,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                                   });
                                 }}
                                 aria-label={T("Фасовка", "Pack", "Quy cách")}
+                                data-testid="doc-pack"
                               >
                                 <option value="">{T("без фасовки", "no pack", "không")}</option>
                                 {packs.map((p) => (
@@ -585,7 +586,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                                 ))}
                               </select>
                               {pack && coef ? (
-                                <label className="erpPackQty">
+                                <label className="erpPackQty" data-testid="doc-pack-qty">
                                   <span>{T("Количество фасовок", "Number of packs", "Số quy cách")}</span>
                                   <NumberInput
                                     value={line.pack_qty}
@@ -599,7 +600,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                                 </label>
                               ) : null}
                               {pack && coef && line.pack_qty ? (
-                                <small className="erpCellSub">
+                                <small className="erpCellSub" data-testid="doc-pack-qty-base">
                                   {qtyText(packToBase(line.pack_qty, coef), unit)}
                                 </small>
                               ) : null}
@@ -639,19 +640,19 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                       <td className="edit" data-label={pack && coef ? T("Цена за фасовку, ₫", "Pack price, ₫", "Giá quy cách, ₫") : T("Цена за единицу, ₫", "Unit price, ₫", "Đơn giá, ₫")}>
                         {editable ? (
                           pack && coef ? (
-                            <>
+                            <span data-testid="doc-pack-price">
                               <NumberInput
                                 value={onePackPrice}
                                 placeholder={T("Цена за фасовку", "Price per pack", "Giá một quy cách")}
                                 onChange={(v) => update(index, { unit_price: v === null ? null : basePrice(v, coef) })}
                               />
                               {line.pack_qty && onePackPrice != null ? (
-                                <small className="erpCellSub">
+                                <small className="erpCellSub" data-testid="doc-pack-price-hint">
                                   {vnd(onePackPrice * line.pack_qty)}
                                   {unit ? ` · ${vnd(basePrice(onePackPrice, coef))} / ${unitLabel(unit)}` : ""}
                                 </small>
                               ) : null}
-                            </>
+                            </span>
                           ) : (
                             <NumberInput value={line.unit_price} placeholder={unit ? `₫ / ${unitLabel(unit)}` : ""} onChange={(v) => update(index, { unit_price: v })} />
                           )
@@ -697,7 +698,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                             </>
                           )
                         ) : line.unit_price !== null && line.unit_price !== undefined ? (
-                          vnd(line.unit_price * line.qty)
+                          <span data-testid="doc-line-sum">{vnd(line.unit_price * line.qty)}</span>
                         ) : (
                           "—"
                         )}
@@ -720,7 +721,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
       )}
       {editable ? (
         <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
+          <button type="button" className="erpBtn" data-testid="doc-add-line" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
             + {T("Добавить продукт", "Add product", "Thêm sản phẩm")}
           </button>
           {type === "count" && doc.warehouse_id ? (

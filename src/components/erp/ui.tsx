@@ -101,6 +101,12 @@ export function errorText(code: string, detail?: string): string {
     ),
     ERP_DUPLICATE: T("Такая запись уже есть", "This already exists", "Đã tồn tại"),
     ERP_STALE: T("Данные изменил кто-то другой — обновите страницу", "Changed by someone else — reload the page", "Đã bị thay đổi, hãy tải lại"),
+    ERP_COUNT_INCOMPLETE: T("Сначала заполните фактический остаток по всем позициям. Пустое поле — не ноль.", "Fill the actual quantity on every line first. An empty field is not zero.", "Hãy điền tồn thực tế mọi dòng. Ô trống không phải 0."),
+    ERP_COUNT_OVERLAP: T("Эта позиция уже посчитана другой инвентаризацией за тот же период", "This item is already counted in another stock count for the same period", "Mặt hàng này đã được kiểm trong kỳ"),
+    ERP_COUNT_STALE: T("Остатки изменились после открытия документа — обновите книжные количества", "Stock moved after this document was opened — refresh the book quantities", "Tồn đã đổi sau khi mở chứng từ — hãy làm mới"),
+    ERP_COUNT_SUPERSEDED: T("Этот черновик заменён полной инвентаризацией", "This draft was replaced by a full stock count", "Bản nháp đã bị kiểm kê toàn bộ thay thế"),
+    ERP_COUNT_HAS_DEPENDENTS: T("Сначала откройте более поздние инвентаризации", "Reopen later stock counts first", "Hãy mở lại các phiếu kiểm sau trước"),
+    ERP_COUNT_UNKNOWN_COST: T("У излишка нет цены партии и нет справочной цены — укажите оценку, ноль подставлять нельзя", "This surplus has no lot price and no reference price — enter an estimate; do not use zero", "Hàng thừa chưa có giá — hãy nhập giá ước tính, không dùng 0"),
     ERP_INVALID: T("Проверьте заполнение полей", "Check the fields", "Kiểm tra lại thông tin"),
     ERP_PACK_UNIT: T(
       "Фасовка в другой единице — выберите совместимую",

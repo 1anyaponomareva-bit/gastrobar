@@ -1422,6 +1422,61 @@ async function main() {
     assert.equal(u.cost_known, false);
     assert.equal(u.total_cost, null, "unknown surplus is not valued at zero");
     assert.equal(await value("select surplus_cost_source from public.erp_document_lines where document_id = $1", [unk]), "unknown");
+    const mysteryLot = await one<{ unit_cost: string | null }>(
+      "select unit_cost from public.erp_lots where source_document_id = $1",
+      [unk],
+    );
+    assert.equal(mysteryLot.unit_cost, null, "surplus lot cost stays unknown, not 0");
+  });
+
+  await test("count: surplus without lot or reference price does not create a lot with unit_cost=0", async () => {
+    const ghost = await saveProduct({ type: "ingredient", name_en: "Count unpriced surplus", base_unit: "kg" });
+    const id = await saveDoc({
+      doc_type: "count",
+      count_kind: "partial",
+      warehouse_id: prep,
+      count_scope: { product_ids: [ghost] },
+      lines: [{ product_id: ghost, qty: 4, counted: true }],
+    });
+    const posted = await post(id);
+    assert.equal(posted.cost_known, false);
+    assert.equal(posted.total_cost, null);
+    const lot = await one<{ unit_cost: string | null; qty_in: string }>(
+      "select unit_cost, qty_in from public.erp_lots where source_document_id = $1",
+      [id],
+    );
+    assert.equal(n(lot.qty_in), 4);
+    assert.equal(lot.unit_cost, null, "unknown ≠ confirmed 0");
+    assert.notEqual(n(lot.unit_cost), 0);
+    const stockRow = await one<{ qty: string; known_value: string | null; cost_known: boolean }>(
+      "select qty, known_value, cost_known from public.erp_stock where product_id = $1 and warehouse_id = $2",
+      [ghost, prep],
+    );
+    assert.equal(n(stockRow.qty), 4);
+    assert.equal(stockRow.cost_known, false);
+    assert.equal(stockRow.known_value, null, "stock value is incomplete, not 0");
+    const move = await one<{ unit_cost: string | null; amount: string | null }>(
+      "select unit_cost, amount from public.erp_movements where document_id = $1",
+      [id],
+    );
+    assert.equal(move.unit_cost, null);
+    assert.equal(move.amount, null);
+    const report = await one<{ in_value: string | null; closing_value: string | null; closing_qty: string }>(
+      "select in_value, closing_value, closing_qty from public.erp_movement_report((current_date - 2), (current_date + 2), $1) where product_id = $2",
+      [prep, ghost],
+    );
+    assert.equal(n(report.closing_qty), 4);
+    assert.equal(report.in_value, null, "movement report does not value unknown surplus at 0");
+    assert.equal(report.closing_value, null);
+    const view = stockOf(
+      stockByProduct(
+        await q<ErpStockRow>("select * from public.erp_stock where product_id = $1", [ghost]),
+        new Set([prep]),
+      ),
+      ghost,
+    );
+    assert.equal(stockValue(view), null);
+    assert.deepEqual(costInfo(view, { est_unit_cost: null }), { kind: "unknown" });
   });
 
   await test("count: brands stay separate; packs are stored, qty is base units", async () => {
@@ -1630,6 +1685,36 @@ async function main() {
     await expectError(post(other), "ERP_COUNT_OVERLAP");
     assert.equal(await stock(salt2, prep), 3);
     assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [other])), 0);
+  });
+
+  await test("count: two simultaneous posts of one document do not double-consume", async () => {
+    const race = await saveProduct({ type: "ingredient", name_en: "Count simultaneous salt", base_unit: "kg" });
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        occurred_at: "2026-08-11T00:00:00+07:00",
+        warehouse_id: prep,
+        lines: [{ product_id: race, qty: 10, unit_price: 1000 }],
+      }),
+    );
+    const id = await saveDoc({
+      doc_type: "count",
+      counted_at: "2026-08-12T12:00:00+07:00",
+      warehouse_id: prep,
+      lines: [{ product_id: race, qty: 7, counted: true }],
+    });
+    const [a, b] = await Promise.allSettled([post(id), post(id)]);
+    const ok = [a, b].filter((row): row is PromiseFulfilledResult<Record<string, unknown>> => row.status === "fulfilled");
+    const failed = [a, b].filter((row) => row.status === "rejected");
+    assert.ok(ok.length >= 1, "at least one post must succeed");
+    for (const row of failed) {
+      assert.match((row as PromiseRejectedResult).reason.message, /ERP_|idempotent|posted/i);
+    }
+    const fresh = ok.map((row) => row.value).filter((row) => row.idempotent !== true);
+    assert.ok(fresh.length <= 1, "only one non-idempotent consume");
+    assert.equal(await stock(race, prep), 7, "stock is adjusted once");
+    assert.equal(n(await value("select coalesce(sum(qty), 0) from public.erp_movements where document_id = $1", [id])), -3);
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1 and reversal_of is null", [id])), 1);
   });
 
   await test("count: reopen is audited and follows later counts; ordinary edit of a posted count is blocked", async () => {

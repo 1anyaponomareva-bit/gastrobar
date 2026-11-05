@@ -102,7 +102,8 @@ type DbError = { message?: string; details?: string; code?: string };
 export function check<T>(result: { data: T | null; error: DbError | null }): T {
   if (!result.error) return result.data as T;
   const message = result.error.message ?? "db";
-  if (message.startsWith("ERP_")) throw new ErpHttpError(400, message, result.error.details || undefined);
+    if (message.startsWith("ERP_COUNT_OVERLAP")) throw new ErpHttpError(409, message, result.error.details || undefined);
+    if (message.startsWith("ERP_")) throw new ErpHttpError(400, message, result.error.details || undefined);
   // Missing table / function: the ERP migration has not been applied to this database.
   if (["PGRST205", "PGRST202", "42P01", "42883"].includes(result.error.code ?? "")) {
     throw new ErpHttpError(503, "ERP_NOT_INSTALLED");

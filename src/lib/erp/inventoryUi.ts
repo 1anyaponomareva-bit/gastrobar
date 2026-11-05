@@ -64,6 +64,7 @@ export type CountDoc = {
   posted_at?: string | null;
   posted_by?: string | null;
   lines: CountLine[];
+  idle: { product_id: string; qty: number; reason: string }[];
   logic: CountLogic;
   postingReady: boolean;
   periodReady: boolean;
@@ -122,6 +123,7 @@ type DocLike = ErpDocument & {
   counted_at?: string | null;
   occurred_at?: string | null;
   count_scope?: { product_ids?: string[]; category_ids?: string[] } | null;
+  idle?: { product_id: string; qty: number; reason: string }[] | null;
 };
 
 type LineLike = ErpDocumentLine & {
@@ -222,6 +224,7 @@ export function countFromDocument(doc: DocLike, logic: CountLogic, postingReady:
     posted_at: doc.posted_at ?? null,
     posted_by: doc.posted_by ?? null,
     lines: (doc.lines ?? []).map((line) => lineFromDocument(line as LineLike)),
+    idle: doc.idle ?? [],
     logic,
     postingReady,
     periodReady,
@@ -271,15 +274,17 @@ function toLocalInput(value: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Temporary rows until /api/erp/counts returns the period list. Does not explode recipes. */
+/**
+ * Last-resort rows only when `/api/erp/counts` preview is missing.
+ * Full counts never fall back to "current non-zero stock": idle leftover without
+ * movement in the period is not part of the adjustment.
+ */
 export function fallbackCountLines(state: ErpState, warehouseId: string, mode: CountMode, productIds: string[], categoryIds: string[]): CountLine[] {
+  if (mode === "full") return [];
   const cats = new Set(categoryIds);
   const picked = new Set(productIds);
   const products = state.products.filter((p) => !p.archived_at && p.base_unit);
-  const chosen =
-    mode === "partial"
-      ? products.filter((p) => picked.has(p.id) || (p.category_id && cats.has(p.category_id)))
-      : products.filter((p) => stockQty(state, p.id, warehouseId) !== 0);
+  const chosen = products.filter((p) => picked.has(p.id) || (p.category_id && cats.has(p.category_id)));
   return chosen
     .sort((a, b) => productTitle(a).localeCompare(productTitle(b), "ru") || (a.brand ?? "").localeCompare(b.brand ?? "") || a.id.localeCompare(b.id))
     .map((p) => ({
@@ -390,7 +395,7 @@ export async function postCountViaApi(doc: CountDoc): Promise<{ id: string; docu
   return { id: String(data.id ?? doc.id ?? ""), document: data.document as DocLike | undefined, count: data.count as DocLike | undefined };
 }
 
-export async function previewCountViaApi(doc: CountDoc): Promise<DocLike | null> {
+export async function previewCountViaApi(doc: CountDoc, countKind: CountMode = doc.mode): Promise<DocLike | null> {
   const response = await fetch("/api/erp/counts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -398,10 +403,10 @@ export async function previewCountViaApi(doc: CountDoc): Promise<DocLike | null>
       action: "preview",
       preview: {
         warehouse_id: doc.warehouse_id,
-        count_kind: doc.mode,
+        count_kind: countKind,
         counted_at: doc.when === "backdated" ? doc.counted_at : null,
-        product_ids: doc.product_ids,
-        category_ids: doc.category_ids,
+        product_ids: countKind === "full" ? [] : doc.product_ids,
+        category_ids: countKind === "full" ? [] : doc.category_ids,
       },
     }),
   });
@@ -447,6 +452,7 @@ export function mergeDraft(server: CountDoc, local: LocalDraft | null): CountDoc
     logic: server.logic,
     postingReady: server.postingReady,
     periodReady: server.periodReady,
+    idle: server.idle,
     lines: server.lines.map((line) => {
       const saved = facts.get(line.product_id);
       return saved ? { ...line, fact_qty: saved.fact_qty, pack_id: saved.pack_id, pack_qty: saved.pack_qty } : line;

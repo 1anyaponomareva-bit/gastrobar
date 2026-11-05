@@ -37,3 +37,5 @@ coverage
 
 # Isolated PGlite used by the inventory worktree (never commit)
 .erp-inventory-db/
+.erp-ui-scenario-db/
+.erp-receipt-ui-db/

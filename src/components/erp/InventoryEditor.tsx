@@ -64,6 +64,7 @@ function emptyDoc(warehouse: string | null): CountDoc {
     result_known: true,
     comment: "",
     lines: [],
+    idle: [],
     logic: "documents-fallback",
     postingReady: false,
     periodReady: false,
@@ -96,7 +97,7 @@ export function InventoryEditor({ id }: { id: string }) {
     fetchCountDoc(id)
       .then((saved) => {
         const merged = mergeDraft(saved, readLocalDraft(id));
-        if (!merged.lines.length && merged.warehouse_id && merged.status === "draft" && !merged.periodReady) {
+        if (!merged.lines.length && merged.warehouse_id && merged.status === "draft" && !merged.periodReady && merged.mode === "partial") {
           merged.lines = fallbackCountLines(state, merged.warehouse_id, merged.mode, merged.product_ids, merged.category_ids);
         }
         setDoc(merged);
@@ -208,20 +209,35 @@ export function InventoryEditor({ id }: { id: string }) {
 
   const create = async () => {
     if (!doc.warehouse_id) return;
-    let lines = fallbackCountLines(state, doc.warehouse_id, doc.mode, doc.product_ids, doc.category_ids);
+    let lines: CountLine[] = [];
+    let idle = doc.idle;
+    let periodReady = false;
+    let postingReady = false;
+    let logic: CountDoc["logic"] = "documents-fallback";
     try {
       const preview = await previewCountViaApi(doc);
-      if (preview?.lines?.length) {
-        const previewed = countFromDocument({ ...preview, warehouse_id: doc.warehouse_id, comment: doc.comment, status: "draft" }, "counts-api", true, true);
+      if (preview) {
+        const previewed = countFromDocument(
+          { ...preview, warehouse_id: doc.warehouse_id, comment: doc.comment, status: "draft", count_kind: doc.mode },
+          "counts-api",
+          true,
+          true,
+        );
         lines = previewed.lines;
+        idle = previewed.idle;
+        periodReady = true;
+        postingReady = true;
+        logic = "counts-api";
+      } else {
+        lines = fallbackCountLines(state, doc.warehouse_id, doc.mode, doc.product_ids, doc.category_ids);
       }
     } catch {
-      /* preview waits for logic; fallback list stays */
+      lines = fallbackCountLines(state, doc.warehouse_id, doc.mode, doc.product_ids, doc.category_ids);
     }
-    const next = { ...doc, lines };
+    const next = { ...doc, lines, idle, periodReady, postingReady, logic };
     const saved = await persistDraft(next, false);
     if (!saved?.id) return;
-    setDoc({ ...next, ...saved, lines });
+    setDoc({ ...next, ...saved, lines, idle, periodReady, postingReady, logic });
     setStep("table");
     router.replace(countHref(saved.id));
   };
@@ -284,6 +300,40 @@ export function InventoryEditor({ id }: { id: string }) {
   );
 }
 
+function EligibleHint({
+  doc,
+  eligibleCount,
+  idleCount,
+}: {
+  doc: CountDoc;
+  eligibleCount: number | null;
+  idleCount: number;
+}) {
+  if (doc.mode === "full") {
+    return (
+      <p className="erpHint" data-testid="inventory-scope-hint">
+        {T(
+          "В полную проверку входят только позиции с движением за свой период. Остаток без движения в корректировку не попадает.",
+          "A full count includes only items with movement in their own period. Leftover without movement is not adjusted.",
+          "Kiểm toàn bộ chỉ gồm hàng có phát sinh trong kỳ của nó. Tồn không phát sinh không điều chỉnh.",
+        )}
+        {eligibleCount !== null
+          ? ` ${T(`С движением: ${eligibleCount}. Без движения: ${idleCount}.`, `With movement: ${eligibleCount}. Without movement: ${idleCount}.`, `Có phát sinh: ${eligibleCount}. Không phát sinh: ${idleCount}.`)}`
+          : ""}
+      </p>
+    );
+  }
+  return (
+    <p className="erpHint" data-testid="inventory-scope-hint">
+      {T(
+        "Отметьте категории или продукты среди позиций с движением за период. Позиции разных брендов не смешиваются — у каждой свой ID. Без движения в корректировку не входят.",
+        "Tick categories or products among items with movement in the period. Different brands stay separate — each has its own ID. Leftover without movement is not adjusted.",
+        "Chọn nhóm hoặc sản phẩm trong hàng có phát sinh. Mỗi thương hiệu là một ID riêng. Không phát sinh thì không điều chỉnh.",
+      )}
+    </p>
+  );
+}
+
 function CreateForm({
   doc,
   setDoc,
@@ -299,19 +349,55 @@ function CreateForm({
 }) {
   const { state } = useErp();
   const [query, setQuery] = useState("");
+  const [eligibleIds, setEligibleIds] = useState<string[] | null>(null);
+  const [idleCount, setIdleCount] = useState(0);
+  useEffect(() => {
+    if (!doc.warehouse_id) {
+      setEligibleIds(null);
+      setIdleCount(0);
+      return;
+    }
+    let cancelled = false;
+    previewCountViaApi({ ...doc, mode: "full", product_ids: [], category_ids: [] }, "full")
+      .then((preview) => {
+        if (cancelled) return;
+        if (!preview) {
+          setEligibleIds(null);
+          return;
+        }
+        setEligibleIds((preview.lines ?? []).map((line) => line.product_id));
+        setIdleCount(preview.idle?.length ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setEligibleIds(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [doc.warehouse_id, doc.counted_at, doc.when]);
   if (!state) return null;
   const set = (patch: Partial<CountDoc>) => setDoc({ ...doc, ...patch });
   const q = query.trim().toLowerCase();
-  const categories = state.categories.filter((c) => !c.archived_at && (!q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q)));
+  const eligible = eligibleIds ? new Set(eligibleIds) : null;
   const products = state.products.filter(
-    (p) => !p.archived_at && p.base_unit && (!q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q)),
+    (p) =>
+      !p.archived_at &&
+      p.base_unit &&
+      (!eligible || eligible.has(p.id)) &&
+      (!q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q)),
+  );
+  const productCats = new Set(products.map((p) => p.category_id).filter(Boolean) as string[]);
+  const categories = state.categories.filter(
+    (c) => !c.archived_at && (!eligible || productCats.has(c.id) || doc.category_ids.includes(c.id)) && (!q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q)),
   );
   const locked = !doc.warehouse_id;
 
   return (
     <section className="erpCard erpInvForm">
       <Field label={T("Склад", "Location", "Kho")}>
-        <WarehouseSelect warehouses={state.warehouses} value={doc.warehouse_id} onChange={(v) => set({ warehouse_id: v || null })} />
+        <span data-testid="inventory-warehouse">
+          <WarehouseSelect warehouses={state.warehouses} value={doc.warehouse_id} onChange={(v) => set({ warehouse_id: v || null })} />
+        </span>
       </Field>
       <p className="erpHint">{T("Выберите склад, на котором хотите проверить остатки продуктов.", "Choose the location whose stock you want to count.", "Chọn kho cần kiểm tồn.")}</p>
 
@@ -343,23 +429,15 @@ function CreateForm({
       <div className={`erpInvSeg ${locked ? "off" : ""}`}>
         <span>{T("Тип инвентаризации", "Count type", "Loại kiểm kê")}</span>
         <div className="erpInvSegBtns">
-          <button type="button" className={doc.mode === "full" ? "on" : ""} disabled={locked} onClick={() => set({ mode: "full" as CountMode, product_ids: [], category_ids: [] })}>
+          <button type="button" className={doc.mode === "full" ? "on" : ""} disabled={locked} data-testid="inventory-mode-full" onClick={() => set({ mode: "full" as CountMode, product_ids: [], category_ids: [] })}>
             {T("Полная", "Full", "Toàn bộ")}
           </button>
-          <button type="button" className={doc.mode === "partial" ? "on" : ""} disabled={locked} onClick={() => set({ mode: "partial" as CountMode })}>
+          <button type="button" className={doc.mode === "partial" ? "on" : ""} disabled={locked} data-testid="inventory-mode-partial" onClick={() => set({ mode: "partial" as CountMode })}>
             {T("Частичная", "Partial", "Một phần")}
           </button>
         </div>
       </div>
-      <p className="erpHint">
-        {doc.mode === "full"
-          ? T(
-              "По правилам Poster в полную проверку входят только позиции с движением за период. Список периода придёт из API логики; до контракта показываем текущие ненулевые остатки склада.",
-              "Poster includes only items with movement in the period. The period list will come from the logic API; until then the current non-zero stock is shown.",
-              "Poster chỉ gồm hàng có phát sinh trong kỳ. Danh sách kỳ sẽ đến từ API logic.",
-            )
-          : T("Отметьте категории или продукты. Позиции разных брендов не смешиваются — у каждой свой ID.", "Tick categories or products. Different brands stay separate — each has its own ID.", "Chọn nhóm hoặc sản phẩm. Mỗi thương hiệu là một ID riêng.")}
-      </p>
+      <EligibleHint doc={doc} eligibleCount={eligibleIds ? eligibleIds.length : null} idleCount={idleCount} />
 
       {doc.mode === "partial" ? (
         <div className="erpInvScope">
@@ -381,7 +459,7 @@ function CreateForm({
             <div>
               <h3>{T("Продукты", "Products", "Sản phẩm")}</h3>
               {products.slice(0, 80).map((p) => (
-                <label key={p.id} className="erpDropItem">
+                <label key={p.id} className="erpDropItem" data-testid={`inventory-product-${p.id}`}>
                   <input
                     type="checkbox"
                     checked={doc.product_ids.includes(p.id)}
@@ -406,7 +484,7 @@ function CreateForm({
           ))}
         </ul>
       ) : null}
-      <button type="button" className="erpBtn primary" disabled={busy || Boolean(problems.length)} onClick={onSave}>
+      <button type="button" className="erpBtn primary" data-testid="inventory-create" disabled={busy || Boolean(problems.length)} onClick={onSave}>
         {T("Сохранить", "Save", "Lưu")}
       </button>
     </section>
@@ -470,9 +548,17 @@ function CountTable({
       {!doc.periodReady ? (
         <p className="erpNotice warn" data-testid="inventory-logic-todo">
           {T(
-            "TODO: период, поступления/расход/списания, FIFO-стоимость и проведение — контракт логики ещё не влит. Пустое поле факта ≠ 0. Черновик пишется через saveDocument и не создаёт движений. Продажи не показываем как учтённые. Техкарты не разворачиваем в ингредиенты.",
-            "TODO: period, movements, FIFO cost and posting wait for the logic contract. An empty fact is not zero. A draft uses saveDocument and creates no stock moves. Sales are not shown as posted. Recipes are not exploded into ingredients.",
-            "TODO: kỳ, chuyển kho và ghi sổ chờ logic. Ô trống không phải 0. Bản nháp không tạo chuyển kho.",
+            "Список периода и проведение доступны через /api/erp/counts. Пока API нет, полный список не подменяется текущими ненулевыми остатками.",
+            "The period list and posting come from /api/erp/counts. Until that API exists, the full list is not replaced with current non-zero stock.",
+            "Danh sách kỳ và ghi sổ đến từ /api/erp/counts. Không thay bằng tồn khác 0 hiện tại.",
+          )}
+        </p>
+      ) : doc.idle.length ? (
+        <p className="erpHint" data-testid="inventory-idle">
+          {T(
+            `Без движения за период, не в корректировке: ${doc.idle.length}`,
+            `No movement in the period, not adjusted: ${doc.idle.length}`,
+            `Không phát sinh trong kỳ, không điều chỉnh: ${doc.idle.length}`,
           )}
         </p>
       ) : null}
@@ -519,7 +605,9 @@ function CountTable({
               return (
                 <tr key={line.product_id} className={line.fact_qty === null ? "erpInvUncounted" : ""}>
                   <td className="main">
-                    <span className="erpName">{product ? productTitle(product) : line.product_id}</span>
+                    <span className="erpName" data-testid={`inventory-name-${line.product_id}`}>
+                      {product ? productTitle(product) : line.product_id}
+                    </span>
                   </td>
                   <td>{product?.brand || "—"}</td>
                   <td>{unit ?? "—"}</td>
@@ -541,11 +629,13 @@ function CountTable({
                   <td className="edit">
                     {editable ? (
                       <div className="erpInvFact">
-                        <QtyInput
-                          base={unit}
-                          value={line.fact_qty}
-                          onChange={(v) => setLine(line.product_id, { fact_qty: v, pack_qty: null })}
-                        />
+                        <span data-testid={`inventory-fact-${line.product_id}`}>
+                          <QtyInput
+                            base={unit}
+                            value={line.fact_qty}
+                            onChange={(v) => setLine(line.product_id, { fact_qty: v, pack_qty: null })}
+                          />
+                        </span>
                         {packs.length ? (
                           <select
                             value={line.pack_id ?? ""}
@@ -588,12 +678,13 @@ function CountTable({
 
       {editable ? (
         <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={persist}>
+          <button type="button" className="erpBtn" data-testid="inventory-save-draft" onClick={persist}>
             {T("Сохранить черновик", "Save draft", "Lưu nháp")}
           </button>
           <button
             type="button"
             className="erpBtn primary"
+            data-testid="inventory-post"
             title={postTitle}
             onClick={() => {
               setConfirmPost(true);
@@ -610,16 +701,18 @@ function CountTable({
           {uncounted ? (
             <p>
               {T(
-                `Не посчитано позиций: ${uncounted}. Пустое поле — не ноль. Проведение не выполняется, пока логика не подтвердит контракт.`,
-                `${uncounted} items are not counted. An empty field is not zero. Posting does not run until logic confirms the contract.`,
+                `Не посчитано позиций: ${uncounted}. Пустое поле — не ноль.`,
+                `${uncounted} items are not counted. An empty field is not zero.`,
                 `${uncounted} dòng chưa đếm. Ô trống không phải 0.`,
               )}
             </p>
+          ) : doc.postingReady ? (
+            <p>{T("Документ проводится.", "The document is being posted.", "Đang ghi sổ.")}</p>
           ) : (
             <p>
               {T(
-                "Все позиции заполнены, но проведение всё равно ждёт /api/erp/counts. Успех не показываем заранее.",
-                "Every line is filled, but posting still waits for /api/erp/counts. Success is not shown in advance.",
+                "Все позиции заполнены, но проведение ждёт /api/erp/counts.",
+                "Every line is filled, but posting still waits for /api/erp/counts.",
                 "Mọi dòng đã điền, nhưng ghi sổ vẫn chờ /api/erp/counts.",
               )}
             </p>
