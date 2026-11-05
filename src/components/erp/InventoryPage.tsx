@@ -11,7 +11,6 @@ import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, dateTimeText, Empty, errorText, loadingText, NavLink, PageHead, T, today, vnd, warehouseName } from "./ui";
 
 const STORE_KEY = "gastrofood-erp-inventory";
-const VIDEO_HREF = "https://knowledge-base.joinposter.com/ru/how-to-run-an-inventory-check";
 
 type ColumnId = "warehouse" | "periodStart" | "postedAt" | "type" | "result" | "status";
 type SortKey = ColumnId;
@@ -490,9 +489,6 @@ export function InventoryPage() {
               "Kiểm kê là đối chiếu tồn kho. Nên kiểm kê toàn bộ ít nhất mỗi 2 tháng.",
             )}
           </p>
-          <a className="erpInvVideo" href={VIDEO_HREF} target="_blank" rel="noreferrer">
-            ► {T("Смотреть видео", "Watch video", "Xem video")}
-          </a>
         </div>
       </section>
 

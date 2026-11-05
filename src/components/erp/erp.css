@@ -2589,18 +2589,10 @@
   font-weight: 600;
 }
 .erpInvInfo p {
-  margin: 0 0 8px;
+  margin: 0;
   color: var(--erp-muted);
   font-size: 13px;
   max-width: 720px;
-}
-.erpInvVideo {
-  color: var(--erp-accent);
-  font-size: 13px;
-  text-decoration: none;
-}
-.erpInvVideo:hover {
-  text-decoration: underline;
 }
 .erpInvPanel {
   padding-top: 12px;
