@@ -1867,3 +1867,358 @@
   margin: 0;
   padding-left: 18px;
 }
+
+/* ---------- deliveries (Poster layout) ---------- */
+
+.erpHeadCount {
+  margin-left: 6px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--erp-muted);
+}
+
+.erpHeadActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.erpHeadGroup {
+  display: inline-flex;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  background: var(--erp-card);
+}
+
+.erpHeadGroup > .erpDrop + .erpHeadBtn,
+.erpHeadGroup > .erpHeadBtn + .erpHeadBtn {
+  border-left: 1px solid var(--erp-line);
+}
+
+.erpHeadBtn {
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--erp-card);
+  color: var(--erp-accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.erpHeadActions > .erpDrop > .erpHeadBtn {
+  border: 1px solid var(--erp-line);
+}
+
+.erpHeadBtn:hover:not(:disabled) {
+  background: var(--erp-accent-soft);
+}
+
+.erpHeadBtn:disabled {
+  color: var(--erp-muted);
+  cursor: default;
+}
+
+.erpHeadBtn.on {
+  border-color: var(--erp-accent) !important;
+}
+
+.erpHeadActions .erpBtn {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.erpDropAction:disabled {
+  color: var(--erp-muted);
+  cursor: default;
+  background: none;
+}
+
+.erpDropAction.on {
+  font-weight: 700;
+  color: var(--erp-accent);
+}
+
+.erpDropAction.erpDanger {
+  color: var(--erp-bad);
+}
+
+.erpPeriodCustom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 6px;
+}
+
+.erpPeriodCustom input {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 5px 6px;
+  font-size: 13px;
+}
+
+.erpReceipts .erpFilters {
+  gap: 6px;
+  padding-bottom: 10px;
+}
+
+.erpReceipts .erpFilterBtn {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-color: transparent;
+  background: none;
+  color: var(--erp-accent);
+}
+
+.erpReceipts .erpFilterBtn.on {
+  border-color: var(--erp-accent);
+  background: var(--erp-accent-soft);
+}
+
+.erpReceipts .erpFilterBtn:disabled {
+  color: var(--erp-muted);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.erpReceipts .erpFilters .erpSearch {
+  flex: 0 1 220px;
+  min-width: 160px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.erpCondMulti {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--erp-accent);
+  border-radius: 8px;
+  background: var(--erp-accent-soft);
+}
+
+.erpCondMulti .erpFilterBtn {
+  border: none !important;
+  background: none !important;
+}
+
+.erpRcTable {
+  min-width: 940px;
+  font-size: 13px;
+}
+
+.erpRcTable th,
+.erpRcTable td {
+  padding: 8px 6px;
+  white-space: nowrap;
+}
+
+.erpRcTable th:first-child,
+.erpRcTable td:first-child {
+  padding-left: 12px;
+}
+
+.erpRcTable td.erpRcClip {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erpRcTable th {
+  background: none;
+  font-weight: 500;
+}
+
+.erpRcTable tbody tr:hover td {
+  background: var(--erp-soft);
+}
+
+.erpRcTable tr.open td {
+  background: var(--erp-soft);
+}
+
+.erpRcTime {
+  margin-left: 4px;
+  color: var(--erp-muted);
+}
+
+.erpRcNone {
+  color: var(--erp-muted);
+}
+
+.erpRcProducts,
+.erpRcComment {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erpRcComment {
+  max-width: 130px;
+}
+
+.erpRcMore {
+  color: var(--erp-muted);
+}
+
+.erpRcAmount {
+  font-weight: 700;
+}
+
+.erpRcTable .erpBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.erpRcTable tfoot td {
+  font-weight: 700;
+  background: var(--erp-soft);
+}
+
+.erpRcActions {
+  text-align: right;
+  width: 1%;
+}
+
+.erpRcLink {
+  font: inherit;
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--erp-accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.erpRcLink.off {
+  color: var(--erp-muted);
+  cursor: help;
+}
+
+.erpRcActions .erpDrop {
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.erpRcDots {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  width: 28px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--erp-accent);
+  cursor: pointer;
+}
+
+.erpRcDots:hover {
+  background: var(--erp-accent-soft);
+}
+
+.erpRcActions .erpDropMenu {
+  text-align: left;
+  min-width: 200px;
+}
+
+.erpRcFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.erpRcFacts dt {
+  color: var(--erp-muted);
+  font-size: 12px;
+}
+
+.erpRcFacts dd {
+  margin: 0;
+}
+
+.erpRcFacts .wide {
+  flex-basis: 100%;
+  white-space: pre-wrap;
+}
+
+.erpRcLines {
+  font-size: 13px;
+}
+
+.erpRcLines th,
+.erpRcLines td {
+  padding: 7px 10px;
+}
+
+.erpRcNote {
+  padding: 8px 14px 12px;
+  margin: 0;
+}
+
+.erpPrintOnly,
+.erpPrintDoc {
+  display: none;
+}
+
+@media print {
+  .erpSide,
+  .erpTop,
+  .erpPageHead,
+  .erpNoPrint,
+  .erpToast,
+  .erpMobileOnly,
+  .erpScope {
+    display: none !important;
+  }
+
+  .erpApp,
+  .erpBody,
+  .erpMain {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .erpPrintOnly {
+    display: block;
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+
+  .erpPanel,
+  .erpTableWrap {
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .erpRcTable {
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .erpRcTable th,
+  .erpRcTable td {
+    padding: 4px 6px;
+    white-space: normal;
+  }
+
+  .erpPrintingDoc .erpPanel {
+    display: none !important;
+  }
+
+  .erpPrintingDoc .erpPrintDoc {
+    display: block;
+  }
+}

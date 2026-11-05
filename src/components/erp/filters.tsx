@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { T } from "./ui";
 
 const Caret = () => (
@@ -14,12 +14,16 @@ export function DropMenu({
   trigger,
   children,
   align = "left",
+  fixed,
 }: {
   trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
   children: (close: () => void) => ReactNode;
   align?: "left" | "right";
+  /** Positions the popup against the window, for menus inside scrolling tables; closes on scroll. */
+  fixed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<CSSProperties | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -29,17 +33,40 @@ export function DropMenu({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
+    const start = ref.current?.getBoundingClientRect();
+    const onScroll = () => {
+      const now = ref.current?.getBoundingClientRect();
+      if (!start || !now || Math.abs(now.top - start.top) > 2 || Math.abs(now.left - start.left) > 2) setOpen(false);
+    };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
+    if (fixed) window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
     };
-  }, [open]);
+  }, [open, fixed]);
+  const toggle = () => {
+    if (fixed && !open && ref.current) {
+      const box = ref.current.getBoundingClientRect();
+      const below = window.innerHeight - box.bottom > 220;
+      setPlace({
+        position: "fixed",
+        ...(below ? { top: box.bottom + 4 } : { bottom: window.innerHeight - box.top + 4 }),
+        ...(align === "right" ? { right: window.innerWidth - box.right, left: "auto" } : { left: box.left }),
+      });
+    }
+    setOpen((v) => !v);
+  };
   return (
     <div className="erpDrop" ref={ref}>
-      {trigger({ open, toggle: () => setOpen((v) => !v) })}
-      {open ? <div className={`erpDropMenu ${align}`}>{children(() => setOpen(false))}</div> : null}
+      {trigger({ open, toggle })}
+      {open ? (
+        <div className={`erpDropMenu ${align}`} style={fixed ? place : undefined}>
+          {children(() => setOpen(false))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
+import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
 import { Empty, NavLink, noSearchResults, packText, PageHead, qtyText, T } from "./ui";
@@ -73,6 +74,10 @@ const kindTexts = (): Record<string, { title: string; sub: string; empty: string
 });
 
 export function StockDocsPage({ kind }: { kind: string }) {
+  return kind === "receipts" ? <ReceiptsPage /> : <StockDocsList kind={kind} />;
+}
+
+function StockDocsList({ kind }: { kind: string }) {
   const { state } = useErp();
   const config = STOCK_KINDS[kind];
   const docs = useDocuments(config ? config.types : []);

@@ -10,7 +10,7 @@ import { StockMobileNav } from "./stockNav";
 import { costSourceLabel, dateText, Empty, errorText, loadingText, NavLink, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
 
 const STORE_KEY = "gastrofood-erp-balances";
-const PAGE = 100;
+export const PAGE = 100;
 
 type ColumnId = "type" | "category" | "qty" | "cost" | "value";
 type SortKey = "name" | ColumnId;
@@ -443,7 +443,7 @@ export function StockPage() {
   );
 }
 
-function Pager({ total, page, pages, onPage }: { total: number; page: number; pages: number; onPage: (page: number) => void }) {
+export function Pager({ total, page, pages, onPage }: { total: number; page: number; pages: number; onPage: (page: number) => void }) {
   const from = total ? page * PAGE + 1 : 0;
   const to = Math.min(total, (page + 1) * PAGE);
   const btn = (label: string, target: number, disabled: boolean, text: string) => (

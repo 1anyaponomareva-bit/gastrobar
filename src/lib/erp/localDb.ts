@@ -92,6 +92,10 @@ class Query implements PromiseLike<Result> {
     this.filters.push({ sql: `${ident(column)} <= $`, value });
     return this;
   }
+  gte(column: string, value: unknown) {
+    this.filters.push({ sql: `${ident(column)} >= $`, value });
+    return this;
+  }
   in(column: string, values: unknown[]) {
     this.filters.push({ sql: `${ident(column)} = any($`, value: values, after: ")" });
     return this;
