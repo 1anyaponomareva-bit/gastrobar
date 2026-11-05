@@ -7,7 +7,7 @@ import type { ErpDocType, ErpDocument, ErpState } from "@/lib/erp/types";
 import { dateText, docLabel, Empty, errorText, loadingText, productName, qtyText, statusLabel, T, unitOf, vnd, warehouseName } from "./ui";
 
 export const docHref = (doc: Pick<ErpDocument, "id" | "doc_type">) =>
-  doc.doc_type === "production" ? `/erp/preps/batch/${doc.id}` : `/erp/documents/${doc.id}`;
+  doc.doc_type === "production" ? `/erp/preps/batch/${doc.id}` : doc.doc_type === "count" ? `/erp/stock/counts/${doc.id}` : `/erp/documents/${doc.id}`;
 
 type DocPage = { documents: ErpDocument[]; more: boolean };
 type CachedList = DocPage & { docsVersion: number };

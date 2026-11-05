@@ -2554,3 +2554,199 @@
     display: block;
   }
 }
+
+/* inventory / counts */
+.erpInv .erpPageHead {
+  margin-bottom: 12px;
+}
+.erpInv .erpPageHead h1 {
+  font-size: 22px;
+  font-weight: 600;
+}
+.erpInvInfo {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+}
+.erpInvInfoIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--erp-soft);
+  color: var(--erp-muted);
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+}
+.erpInvInfo h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.erpInvInfo p {
+  margin: 0 0 8px;
+  color: var(--erp-muted);
+  font-size: 13px;
+  max-width: 720px;
+}
+.erpInvVideo {
+  color: var(--erp-accent);
+  font-size: 13px;
+  text-decoration: none;
+}
+.erpInvVideo:hover {
+  text-decoration: underline;
+}
+.erpInvPanel {
+  padding-top: 12px;
+}
+.erpInvTable {
+  table-layout: auto;
+}
+.erpInvTable th {
+  font-weight: 500;
+  color: var(--erp-muted);
+  font-size: 13px;
+}
+.erpInvEmpty {
+  padding: 72px 24px !important;
+  text-align: center;
+  color: var(--erp-muted);
+}
+.erpInvEmpty h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--erp-text);
+}
+.erpInvEmpty p {
+  margin: 0 auto;
+  max-width: 460px;
+  font-size: 14px;
+}
+.erpInvActions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.erpInvStatusText {
+  display: none;
+}
+.erpInvSave {
+  font-size: 13px;
+  color: var(--erp-muted);
+}
+.erpInvSave-saved {
+  color: var(--erp-ok);
+}
+.erpInvSave-error,
+.erpInvSave-offline {
+  color: var(--erp-warn);
+}
+.erpInvForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+.erpProblems {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--erp-bad);
+}
+.erpInvSeg {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+.erpInvSeg.off {
+  opacity: 0.55;
+}
+.erpInvSegBtns {
+  display: inline-flex;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.erpInvSegBtns button {
+  font: inherit;
+  font-size: 13px;
+  border: none;
+  background: var(--erp-card);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.erpInvSegBtns button + button {
+  border-left: 1px solid var(--erp-line);
+}
+.erpInvSegBtns button.on {
+  background: var(--erp-accent-soft);
+  color: var(--erp-accent);
+}
+.erpInvScopeCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+.erpInvScope h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.erpInvCountHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.erpInvTabs {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--erp-muted);
+}
+.erpInvTabs .on {
+  color: var(--erp-accent);
+  font-weight: 600;
+}
+.erpInvLines {
+  font-size: 13px;
+}
+.erpInvUncounted {
+  background: var(--erp-soft);
+}
+.erpInvFact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.erpInvMove {
+  font: inherit;
+  font-size: 13px;
+  border: none;
+  background: none;
+  color: var(--erp-accent);
+  cursor: pointer;
+}
+.erpInvMoveList {
+  text-align: left;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+@media (max-width: 900px) {
+  .erpInvSeg,
+  .erpInvScopeCols {
+    grid-template-columns: 1fr;
+  }
+}

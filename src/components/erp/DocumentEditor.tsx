@@ -135,6 +135,11 @@ export function DocumentEditor({ id }: { id: string }) {
         router.replace("/erp/preps/batch/new");
         return;
       }
+      if (type === "count") {
+        const warehouse = params.get("warehouse");
+        router.replace(warehouse ? `/erp/stock/counts/new?warehouse=${encodeURIComponent(warehouse)}` : "/erp/stock/counts/new");
+        return;
+      }
       const initial = defaultDocument(state, TYPES.has(type) ? type : "receipt", params.get("warehouse"));
       if (initial.doc_type === "count" && initial.warehouse_id) initial.lines = countLines(state, initial.warehouse_id);
       const copy = params.get("copy");
@@ -154,6 +159,7 @@ export function DocumentEditor({ id }: { id: string }) {
     fetchDoc(id)
       .then((saved) => {
         if (saved.doc_type === "production") router.replace(`/erp/preps/batch/${id}`);
+        else if (saved.doc_type === "count") router.replace(`/erp/stock/counts/${id}`);
         else loadSaved(saved);
       })
       .catch((error: Error) => setLoadError(errorText(error.message)));

@@ -6,6 +6,7 @@ import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
+import { InventoryPage } from "./InventoryPage";
 import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
@@ -17,7 +18,7 @@ export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string 
   processing: { types: ["production"], newHref: "/erp/preps/batch/new" },
   transfers: { types: ["transfer"], newHref: "/erp/documents/new?type=transfer" },
   writeoffs: { types: ["writeoff"], newHref: "/erp/documents/new?type=writeoff" },
-  counts: { types: ["count"], newHref: "/erp/documents/new?type=count" },
+  counts: { types: ["count"], newHref: "/erp/stock/counts/new" },
 };
 
 export const stockKindOf = (type: ErpDocType) =>
@@ -75,7 +76,10 @@ const kindTexts = (): Record<string, { title: string; sub: string; empty: string
 });
 
 export function StockDocsPage({ kind }: { kind: string }) {
-  return kind === "receipts" ? <ReceiptsPage /> : kind === "writeoffs" ? <WriteoffsPage tab="list" /> : <StockDocsList kind={kind} />;
+  if (kind === "receipts") return <ReceiptsPage />;
+  if (kind === "writeoffs") return <WriteoffsPage tab="list" />;
+  if (kind === "counts") return <InventoryPage />;
+  return <StockDocsList kind={kind} />;
 }
 
 function StockDocsList({ kind }: { kind: string }) {
