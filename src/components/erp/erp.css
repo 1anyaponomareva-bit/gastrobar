@@ -2747,6 +2747,16 @@
   min-width: 560px;
 }
 
+@media (max-width: 760px) {
+  .erpPackTable {
+    min-width: 0;
+  }
+
+  .erpTable.stack td.erpPackActs {
+    justify-content: flex-end;
+  }
+}
+
 .erpPackTable .erpPackActs {
   width: 88px;
   text-align: right;

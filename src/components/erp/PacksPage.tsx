@@ -253,7 +253,7 @@ export function PacksPage() {
         <ConditionFilters fields={fields} value={filters.conditions} onChange={(conditions) => persist({ conditions })} />
       </div>
       <div className="erpTableWrap">
-        <table className="erpTable erpPackTable" data-testid="packs-table">
+        <table className="erpTable stack erpPackTable" data-testid="packs-table">
           <thead>
             <tr>
               {shownCols.map((c) => (
