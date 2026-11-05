@@ -115,8 +115,10 @@ function describe(state: ErpState, doc: ErpDocument): ReactNode {
       );
     case "receipt":
       return `${warehouseName(state, doc.warehouse_id)}${supplier ? ` · ${supplier}` : ""}`;
-    case "writeoff":
-      return `${warehouseName(state, doc.warehouse_id)}${doc.reason ? ` · ${doc.reason}` : ""}`;
+    case "writeoff": {
+      const reason = (doc.reason_id && state.writeoffReasons?.find((r) => r.id === doc.reason_id)?.name) || doc.reason;
+      return `${warehouseName(state, doc.warehouse_id)}${reason ? ` · ${reason}` : ""}`;
+    }
     default:
       return warehouseName(state, doc.warehouse_id);
   }

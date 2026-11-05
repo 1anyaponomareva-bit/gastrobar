@@ -1,0 +1,533 @@
+/* write-offs (Poster layout, ERP theme) */
+
+.erpMain:has(.erpWo) {
+  max-width: none;
+  padding-top: 18px;
+}
+
+.erpWoHead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+
+.erpWoHead h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.erpWoTabs {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+}
+
+.erpWoTabs a {
+  padding: 6px 0;
+  color: var(--erp-accent);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.erpWoTabs a.active {
+  color: var(--erp-text);
+  font-weight: 600;
+  border-bottom-color: var(--erp-text);
+}
+
+.erpWoHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.erpWoAdd {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.erpWoDots {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  width: 28px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--erp-muted);
+  cursor: pointer;
+}
+
+.erpWoDots.big {
+  width: 34px;
+  height: 34px;
+  color: var(--erp-text);
+}
+
+.erpWoDots:hover {
+  background: var(--erp-soft);
+  color: var(--erp-text);
+}
+
+.erpWoPanel {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.erpWoFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.erpWoFilters .erpFilterBtn {
+  font-size: 13px;
+  padding: 5px 10px;
+}
+
+.erpWoSearch {
+  width: auto;
+  flex: 0 1 220px;
+  min-width: 150px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+
+.erpWoReset {
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.erpWoCondMulti {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--erp-accent);
+  border-radius: 8px;
+  background: var(--erp-accent-soft);
+}
+
+.erpWoCondMulti .erpFilterBtn {
+  border: none !important;
+  background: none !important;
+}
+
+.erpWoNote {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--erp-warn);
+  background: var(--erp-warn-soft);
+}
+
+.erpWoTableWrap {
+  overflow-x: auto;
+}
+
+.erpWoTable {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.erpWoTable th,
+.erpWoTable td {
+  padding: 8px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--erp-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erpWoTable th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--erp-muted);
+  background: none;
+}
+
+.erpWoTable .num {
+  text-align: right;
+}
+
+.erpWoTable tbody tr:hover td,
+.erpWoTable tr.open td {
+  background: var(--erp-soft);
+}
+
+.erpWoTable tr.cancelled td {
+  color: var(--erp-muted);
+}
+
+.erpWoTable tr.cancelled .erpWoAmount,
+.erpWoTable tr.cancelled .erpWoDate {
+  text-decoration: line-through;
+}
+
+.erpWoTable tfoot td {
+  font-weight: 700;
+  background: var(--erp-soft);
+  border-bottom: none;
+}
+
+.erpWoExpandCol {
+  width: 34px;
+  padding-right: 0 !important;
+  padding-left: 8px !important;
+}
+
+.erpWoDateCol {
+  width: 170px;
+}
+
+.erpWoTable th:nth-child(3) {
+  width: 16%;
+}
+
+.erpWoTable th.num {
+  width: 130px;
+}
+
+.erpWoMenuCol {
+  width: 40px;
+  text-align: right !important;
+  overflow: visible !important;
+}
+
+.erpWoExpand,
+.erpWoDate,
+.erpWoSort {
+  font: inherit;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.erpWoExpand {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--erp-muted);
+}
+
+.erpWoExpand:hover {
+  background: var(--erp-line);
+  color: var(--erp-text);
+}
+
+.erpWoExpand svg {
+  transition: transform 0.15s ease;
+}
+
+.erpWoExpand svg.open {
+  transform: rotate(90deg);
+}
+
+.erpWoSort {
+  font-weight: 500;
+  color: var(--erp-muted);
+}
+
+.erpWoSort:hover {
+  color: var(--erp-text);
+}
+
+.erpWoStatus {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--erp-warn-soft);
+  color: var(--erp-warn);
+}
+
+.erpWoStatus.cancelled {
+  background: var(--erp-bad-soft);
+  color: var(--erp-bad);
+}
+
+.erpWoAmount {
+  font-variant-numeric: tabular-nums;
+}
+
+.erpWoMuted {
+  color: var(--erp-muted);
+}
+
+.erpWoSub {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--erp-muted);
+}
+
+.erpWoReason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.erpWoReason i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.erpWoReason span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erpWoReason small {
+  color: var(--erp-muted);
+}
+
+.erpWoEmpty {
+  text-align: center !important;
+  padding: 36px 12px !important;
+  white-space: normal !important;
+  color: var(--erp-muted);
+}
+
+.erpWoEmpty strong {
+  display: block;
+  color: var(--erp-text);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.erpWoEmpty span {
+  display: block;
+}
+
+.erpWoEmpty .erpBtn {
+  margin-top: 10px;
+}
+
+.erpWoTotalLabel {
+  font-weight: 700;
+}
+
+.erpWoFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--erp-muted);
+}
+
+.erpWoFoot .erpPager {
+  padding: 6px 8px;
+  gap: 4px 12px;
+  justify-content: flex-start;
+}
+
+.erpWoFound {
+  padding: 6px 10px;
+}
+
+.erpWoDetailRow > td {
+  padding: 4px 12px 14px 42px !important;
+  white-space: normal !important;
+  background: var(--erp-soft);
+  overflow: visible !important;
+}
+
+.erpWoFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 8px 0 10px;
+}
+
+.erpWoFacts dt {
+  font-size: 11px;
+  color: var(--erp-muted);
+}
+
+.erpWoFacts dd {
+  margin: 0;
+}
+
+.erpWoFacts .wide {
+  flex-basis: 100%;
+  white-space: pre-wrap;
+}
+
+.erpWoLines {
+  width: 100%;
+  max-width: 900px;
+  border-collapse: collapse;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+}
+
+.erpWoLines th,
+.erpWoLines td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--erp-line);
+  text-align: left;
+}
+
+.erpWoLines th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--erp-muted);
+}
+
+.erpWoLines .num {
+  text-align: right;
+}
+
+.erpWoLines tfoot td {
+  font-weight: 700;
+  border-bottom: none;
+}
+
+.erpWoDetail > .erpWoMuted {
+  margin: 8px 0 0;
+}
+
+.erpWoPeriodCustom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 6px;
+}
+
+.erpWoPeriodCustom input {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 5px 6px;
+  font-size: 13px;
+}
+
+.erpDropAction.erpWoOn {
+  font-weight: 700;
+  color: var(--erp-accent);
+}
+
+.erpDropAction.erpWoDanger {
+  color: var(--erp-bad);
+}
+
+.erpWoMenuCol .erpDropMenu {
+  text-align: left;
+  min-width: 200px;
+}
+
+.erpWoReasonForm {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  padding: 16px;
+}
+
+.erpWoReasonForm h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.erpWoField {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.erpWoColors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.erpWoColor {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--erp-card);
+}
+
+.erpWoColor.on {
+  border-color: var(--erp-text);
+}
+
+.erpWoColors input[type="color"] {
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--erp-line);
+}
+
+.erpWoRadios {
+  display: flex;
+  gap: 16px;
+}
+
+.erpWoRadios label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.erpWoRadios input {
+  width: auto;
+}
+
+.erpWoFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .erpWoHead {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .erpWoSearch {
+    flex: 1 1 100%;
+  }
+
+  .erpWoTable {
+    min-width: 760px;
+  }
+
+  .erpWoField {
+    grid-template-columns: 1fr;
+  }
+
+  .erpWoDetailRow > td {
+    padding-left: 12px !important;
+  }
+}
