@@ -362,7 +362,7 @@ export function StockPage() {
             )}
           </p>
 
-          <Pager total={list.length} page={current} pages={pages} onPage={setPage} />
+          {list.length ? <Pager total={list.length} page={current} pages={pages} onPage={setPage} /> : null}
 
           <div className="erpTableWrap erpScrollX">
             <table className="erpTable erpBalances">
@@ -378,7 +378,9 @@ export function StockPage() {
                 {!pageRows.length ? (
                   <tr>
                     <td colSpan={shownColumns.length + 1} className="erpNoRows">
-                      {T("Ничего не найдено. Попробуйте изменить поиск или фильтры.", "Nothing found. Try changing the search or filters.", "Không tìm thấy. Hãy đổi từ khóa hoặc bộ lọc.")}
+                      {anyFilter
+                        ? T("Ничего не найдено. Попробуйте изменить поиск или фильтры.", "Nothing found. Try changing the search or filters.", "Không tìm thấy. Hãy đổi từ khóa hoặc bộ lọc.")
+                        : T("Продуктов пока нет. Добавьте их в разделе «Продукты».", "No products yet. Add them in Products.", "Chưa có sản phẩm. Hãy thêm trong mục Sản phẩm.")}
                     </td>
                   </tr>
                 ) : (
