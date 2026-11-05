@@ -411,7 +411,7 @@ export function InventoryPage() {
       {c.sort ? (
         <button type="button" className="erpSortBtn" onClick={() => toggleSort(c.sort as SortKey)}>
           {c.label}
-          {filters.sort === c.sort ? <span aria-hidden>{filters.desc ? " v" : " ^"}</span> : null}
+          {filters.sort === c.sort ? <span aria-hidden>{filters.desc ? " ↓" : " ↑"}</span> : null}
         </button>
       ) : (
         c.label
@@ -532,7 +532,7 @@ export function InventoryPage() {
                 {T("Показаны 300 последних документов периода — выберите период короче.", "Showing the latest 300 documents of the period — choose a shorter period.", "Chỉ hiện 300 phiếu mới nhất — hãy chọn kỳ ngắn hơn.")}
               </p>
             ) : null}
-            <div className="erpTableWrap erpPrintArea">
+            <div className="erpTableWrap erpPrintArea erpScrollX">
               <h2 className="erpPrintOnly">
                 {T("Инвентаризации", "Stock counts", "Kiểm kê")} · {periodTitle(filters)}
               </h2>
