@@ -28,7 +28,12 @@ export function StockMobileNav({ active }: { active: string }) {
   useEffect(() => {
     const nav = ref.current;
     const link = nav?.querySelector<HTMLElement>("a.active");
-    if (nav && link) nav.scrollLeft = link.offsetLeft - (nav.clientWidth - link.offsetWidth) / 2;
+    if (!nav || !link) return;
+    const pad = 16;
+    const min = Math.max(0, link.offsetLeft + link.offsetWidth + pad - nav.clientWidth);
+    const max = Math.max(0, link.offsetLeft - pad);
+    if (nav.scrollLeft < min) nav.scrollLeft = min;
+    else if (nav.scrollLeft > max) nav.scrollLeft = max;
   }, [active]);
   return (
     <nav ref={ref} className="erpSubTabs erpMobileOnly">

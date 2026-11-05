@@ -34,7 +34,17 @@ export function RefList<Row extends RefRow>({
   const [drafts, setDrafts] = useState<Record<string, Record<string, unknown>>>({});
   const [adding, setAdding] = useState<Record<string, unknown> | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  useDirtyGuard(Object.keys(drafts).length > 0 || Boolean(adding && Object.values(adding).some((v) => v !== "" && v !== null)));
+  const blankAdd = () => Object.fromEntries(columns.filter((c) => c.kind === "select").map((c) => [c.key, c.options?.[0]?.[0] ?? ""]));
+  const addingDirty = Boolean(
+    adding &&
+      columns.some((column) => {
+        const value = adding[column.key];
+        if (value === undefined || value === "" || value === null) return false;
+        if (column.kind === "select") return value !== (column.options?.[0]?.[0] ?? "");
+        return true;
+      }),
+  );
+  useDirtyGuard(Object.keys(drafts).length > 0 || addingDirty);
 
   const valueOf = (row: Row, key: string) => (drafts[row.id]?.[key] ?? (row as Record<string, unknown>)[key] ?? "") as string | number;
   const edit = (id: string, key: string, value: unknown) => setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [key]: value } }));
@@ -76,7 +86,7 @@ export function RefList<Row extends RefRow>({
           title={emptyTitle}
           text={emptyText}
           action={
-            <button type="button" className="erpBtn primary" onClick={() => setAdding({})}>
+            <button type="button" className="erpBtn primary" onClick={() => setAdding(blankAdd())}>
               + {addLabel}
             </button>
           }
@@ -172,7 +182,7 @@ export function RefList<Row extends RefRow>({
           <button
             type="button"
             className="erpBtn"
-            onClick={() => setAdding(Object.fromEntries(columns.filter((c) => c.kind === "select").map((c) => [c.key, c.options?.[0]?.[0] ?? ""])))}
+            onClick={() => setAdding(blankAdd())}
           >
             + {addLabel}
           </button>

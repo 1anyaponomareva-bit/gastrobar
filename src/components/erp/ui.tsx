@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
 import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
 import { locale, T } from "./i18n";
@@ -432,19 +432,20 @@ export function NavLink({
   className,
   children,
   onNavigate,
-}: {
-  href: string;
-  className?: string;
-  children: ReactNode;
-  onNavigate?: () => void;
-}) {
+  onClick,
+  ...rest
+}: ComponentProps<typeof Link> & { onNavigate?: () => void }) {
   return (
     <Link
       href={href}
       className={className}
-      onClick={(event: MouseEvent) => {
+      {...rest}
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
         if (!confirmLeave()) event.preventDefault();
-        else onNavigate?.();
+        else {
+          onClick?.(event);
+          onNavigate?.();
+        }
       }}
     >
       {children}

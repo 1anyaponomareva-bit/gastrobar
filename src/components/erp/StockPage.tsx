@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
@@ -8,7 +9,7 @@ import { InventoryPage } from "./InventoryPage";
 import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
-import { Empty, NavLink, PageHead, T } from "./ui";
+import { Empty, NavLink, PageHead, productName, T, warehouseName } from "./ui";
 import { WriteoffsPage } from "./WriteoffsPage";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
@@ -84,6 +85,7 @@ function StockDocsList({ kind }: { kind: string }) {
   const { state } = useErp();
   const config = STOCK_KINDS[kind];
   const docs = useDocuments(config ? config.types : []);
+  const [query, setQuery] = useState("");
   if (!state) return null;
   if (!config) {
     return (
@@ -104,11 +106,35 @@ function StockDocsList({ kind }: { kind: string }) {
       {addText()}
     </NavLink>
   );
+  const q = query.trim().toLowerCase();
+  const filtered = docs.documents?.filter((doc) => {
+    if (!q) return true;
+    const hay = [doc.doc_no, doc.batch_no, doc.comment, warehouseName(state, doc.warehouse_id), warehouseName(state, doc.target_warehouse_id), productName(state, doc.output_product_id)]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+  const empty = q ? (
+    <Empty title={T("Ничего не найдено", "No matches", "Không tìm thấy")} text={T("Попробуйте изменить поиск.", "Try changing the search.", "Hãy đổi từ khóa.")} />
+  ) : (
+    <Empty title={texts.empty} text={texts.text} action={add} />
+  );
   return (
     <>
       <PageHead title={texts.title} sub={texts.sub} actions={add} />
       <StockMobileNav active={`/erp/stock/${kind}`} />
-      <DocTable state={state} {...docs} showType={kind === "receipts"} empty={<Empty title={texts.empty} text={texts.text} action={add} />} />
+      <div className="erpToolbar erpFilters">
+        <input
+          className="erpSearch"
+          type="search"
+          placeholder={T("Поиск…", "Search…", "Tìm…")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label={T("Поиск", "Search", "Tìm")}
+        />
+      </div>
+      <DocTable state={state} {...docs} documents={filtered ?? null} showType={kind === "receipts"} empty={empty} />
     </>
   );
 }
@@ -129,7 +155,7 @@ export function SuppliersPage() {
         ]}
         addLabel={T("Добавить поставщика", "Add supplier", "Thêm nhà cung cấp")}
         emptyTitle={T("Поставщиков пока нет", "No suppliers yet", "Chưa có nhà cung cấp")}
-        emptyText={T("Добавьте поставщиков, чтобы указывать их в поставках и фасовках.", "Add suppliers to use them in deliveries and packs.", "Thêm nhà cung cấp để dùng khi nhập hàng.")}
+        emptyText={T("Добавьте поставщиков, чтобы указывать их в поставках.", "Add suppliers to use them in deliveries.", "Thêm nhà cung cấp để dùng khi nhập hàng.")}
       />
     </>
   );
