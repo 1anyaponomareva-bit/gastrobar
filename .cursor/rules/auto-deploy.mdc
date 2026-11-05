@@ -1,24 +1,31 @@
 ---
-description: Auto commit and push after code changes to trigger Vercel deploy
+description: Publish every finished change to main and verify it on gastrotruck.org
 alwaysApply: true
 ---
 
-# Auto deploy after changes
+# Publish and deploy after every finished task
 
-After completing any task that modifies project files, **always commit and push to `main`** without waiting for the user to ask.
+The site is a test version that only the owner uses. Every finished change goes to `main` and is deployed to the production domain automatically, without asking for each publication. This replaces any earlier "do not publish to main" or "wait for deploy permission" instruction.
 
 ## Workflow
 
-1. Finish the requested code/content changes.
-2. Run `git status` and `git diff` — commit only files related to the task (do not add secrets like `.env`).
-3. Write a concise commit message (1–2 sentences, focus on why).
-4. `git add` relevant files → `git commit` → `git push origin main`.
-5. Briefly tell the user the commit is pushed and Vercel will deploy automatically.
+1. Implement the task.
+2. Run the needed tests and a build check (for this repo: `npx tsx scripts/erp/test-erp.ts` for ERP changes, `npx tsc --noEmit -p .`, `npx next build`; not `npm run build`, its prebuild rewrites menu images in `public/menu`).
+3. When the checks pass, bring the changes into `main` without losing anyone else's changes and without force-push.
+4. Push `main` and wait for the Vercel deployment to succeed (`npx --no-install vercel` is logged in).
+5. Open the affected page on https://www.gastrotruck.org and check that the new version is really there.
+6. Report what was published, with a link to the page.
+
+The task is finished only when the result is live on the site and checked after publication. Do not stop at a commit in a separate branch.
+
+## Database migrations
+
+- Compatible migrations that only add needed tables, columns, indexes or functions without losing data are applied as part of the task, before the code that needs them goes live.
+- Deleting data, resetting the database, or any change that risks losing existing data needs the owner's separate approval.
 
 ## Rules
 
-- Do **not** skip push because the user didn't ask — they expect deploy after every change.
-- Do **not** force-push to `main`.
-- Do **not** commit unrelated untracked files unless the user explicitly included them in the task.
-- If push fails (auth, conflicts), report the error and what the user needs to fix.
-- Deployment is via Vercel on push to GitHub; no separate deploy command is required unless the project adds one later.
+- If tests or the deployment fail, fix the cause. Never report a successful publication without confirmation.
+- Commit only files related to the task. Never commit secrets (`.env`, `.env.local`) or unrelated files (for example other people's images in `food/menu`, `public/menu`).
+- Never force-push `main`.
+- Commit messages: 1–2 sentences, focused on why.
