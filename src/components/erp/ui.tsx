@@ -74,6 +74,7 @@ export function errorText(code: string, detail?: string): string {
       "Không thể hủy: hàng đã được dùng trong",
     ),
     ERP_REASON_REQUIRED: T("Укажите причину", "Enter a reason", "Cần nhập lý do"),
+    ERP_REASON_ARCHIVED: T("Эта причина в архиве — выберите другую", "This reason is archived — choose another", "Lý do đã lưu trữ — chọn lý do khác"),
     ERP_EMPTY_DOCUMENT: T("Добавьте хотя бы один продукт", "Add at least one product", "Thêm ít nhất một sản phẩm"),
     ERP_INVALID_QTY: T("Количество должно быть больше нуля", "Quantity must be greater than 0", "Số lượng phải lớn hơn 0"),
     ERP_PRODUCT_ARCHIVED: T("Продукт в архиве", "The product is archived", "Sản phẩm đã lưu trữ"),

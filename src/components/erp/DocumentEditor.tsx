@@ -42,8 +42,37 @@ const TYPES = new Set<ErpDocType>(["opening", "receipt", "transfer", "writeoff",
 type SetDoc = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => void;
 type SetLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) => void;
 
+/** randomUUID exists only on https and localhost; without it the busy-disabled buttons still guard. */
+const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : null);
+
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
 function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | null): ErpDocument {
-  return { doc_type: type, doc_date: today(), ...initialWarehouses(type, state.warehouses, warehouse), lines: [] };
+  return {
+    doc_type: type,
+    doc_date: today(),
+    ...(type === "writeoff" ? { doc_time: nowTime() } : {}),
+    ...initialWarehouses(type, state.warehouses, warehouse),
+    // A repeated save/post of this new document (double click, retry) returns the same document.
+    client_key: newKey(),
+    lines: [],
+  };
+}
+
+/** A new write-off with the warehouse, reason, comment and lines of another one. */
+function copyOf(state: ErpState, base: ErpDocument, source: ErpDocument): ErpDocument {
+  const reason = state.writeoffReasons.find((r) => r.id === source.reason_id && !r.archived_at);
+  const warehouse = state.warehouses.find((w) => w.id === source.warehouse_id && !w.archived_at);
+  return {
+    ...base,
+    warehouse_id: warehouse?.id ?? base.warehouse_id,
+    reason_id: reason?.id ?? null,
+    comment: source.comment ?? null,
+    lines: source.lines.map((line) => ({ product_id: line.product_id, qty: line.qty, pack_id: line.pack_id ?? null, pack_qty: line.pack_qty ?? null, reason: line.reason ?? null })),
+  };
 }
 
 const newTitle = (type: ErpDocType) =>
@@ -108,6 +137,17 @@ export function DocumentEditor({ id }: { id: string }) {
       }
       const initial = defaultDocument(state, TYPES.has(type) ? type : "receipt", params.get("warehouse"));
       if (initial.doc_type === "count" && initial.warehouse_id) initial.lines = countLines(state, initial.warehouse_id);
+      const copy = params.get("copy");
+      if (copy && initial.doc_type === "writeoff") {
+        fetchDoc(copy)
+          .then((source) => {
+            const next = copyOf(state, initial, source);
+            setDoc(next);
+            setBaseline(JSON.stringify(initial));
+          })
+          .catch((error: Error) => setLoadError(errorText(error.message)));
+        return;
+      }
       loadSaved(initial);
       return;
     }
@@ -152,7 +192,6 @@ export function DocumentEditor({ id }: { id: string }) {
   if (!doc.warehouse_id) problems.push(T("Выберите склад", "Choose a location", "Chọn kho"));
   if (type === "transfer" && (!doc.target_warehouse_id || doc.target_warehouse_id === doc.warehouse_id))
     problems.push(T("Выберите другой склад назначения", "Choose a different destination", "Chọn kho đến khác"));
-  if (type === "writeoff" && !doc.reason?.trim()) problems.push(T("Укажите причину списания", "Enter a reason", "Nhập lý do"));
   if (!doc.lines.length) problems.push(T("Добавьте хотя бы один продукт", "Add at least one product", "Thêm ít nhất một sản phẩm"));
   if (doc.lines.some((line) => !line.product_id)) problems.push(T("В одной из строк не выбран продукт", "A line has no product", "Có dòng chưa chọn sản phẩm"));
   if (doc.lines.some((line) => line.product_id && (type === "count" ? line.qty < 0 : !(line.qty > 0))))
@@ -291,6 +330,7 @@ function countLines(state: ErpState, warehouseId: string): ErpDocumentLine[] {
 }
 
 function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc: ErpDocument; editable: boolean; set: SetDoc; setLines: SetLines }) {
+  const { email } = useErp();
   const type = doc.doc_type;
   const warehouseLabel =
     type === "receipt"
@@ -351,13 +391,46 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
         </Field>
       ) : null}
       {type === "writeoff" ? (
-        <Field label={T("Причина списания *", "Reason *", "Lý do *")}>
-          <input value={doc.reason ?? ""} disabled={!editable} placeholder={T("Испорчено, истёк срок, проба…", "Spoiled, expired, tasting…", "Hư, hết hạn, thử món…")} onChange={(e) => set("reason", e.target.value)} />
+        <Field
+          label={T("Причина", "Reason", "Lý do")}
+          hint={
+            doc.reason && !doc.reason_id
+              ? `${T("Причина, введённая раньше текстом", "Reason typed earlier", "Lý do nhập trước đây")}: ${doc.reason}`
+              : editable && !state.writeoffReasons.some((r) => !r.archived_at)
+                ? T("Причин пока нет — их можно добавить во вкладке «Причины»", "No reasons yet — add them on the Reasons tab", "Chưa có lý do — thêm ở tab Lý do")
+                : undefined
+          }
+        >
+          <select value={doc.reason_id ?? ""} disabled={!editable} onChange={(e) => set("reason_id", e.target.value || null)} data-testid="wo-reason-select">
+            <option value="">{T("Без причины", "No reason", "Không có lý do")}</option>
+            {state.writeoffReasons
+              .filter((r) => !r.archived_at || r.id === doc.reason_id)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                  {r.archived_at ? ` (${T("архив", "archived", "lưu trữ")})` : ""}
+                </option>
+              ))}
+          </select>
         </Field>
       ) : null}
-      <Field label={T("Дата", "Date", "Ngày")}>
-        <input type="date" value={doc.doc_date ?? ""} disabled={!editable} onChange={(e) => set("doc_date", e.target.value)} />
-      </Field>
+      {type === "writeoff" ? (
+        <Field label={T("Дата и время списания", "Write-off date and time", "Ngày giờ xuất hủy")}>
+          <span className="erpRow">
+            <input type="date" value={doc.doc_date ?? ""} disabled={!editable} onChange={(e) => set("doc_date", e.target.value)} />
+            <input type="time" value={doc.doc_time?.slice(0, 5) ?? ""} disabled={!editable} onChange={(e) => set("doc_time", e.target.value || null)} aria-label={T("Время", "Time", "Giờ")} />
+          </span>
+        </Field>
+      ) : (
+        <Field label={T("Дата", "Date", "Ngày")}>
+          <input type="date" value={doc.doc_date ?? ""} disabled={!editable} onChange={(e) => set("doc_date", e.target.value)} />
+        </Field>
+      )}
+      {type === "writeoff" ? (
+        <Field label={T("Сотрудник", "Employee", "Nhân viên")} hint={T("Определяется по входу в ERP", "Taken from the signed-in user", "Theo người đăng nhập")}>
+          <input value={doc.created_by ?? email} disabled readOnly />
+        </Field>
+      ) : null}
       {type === "receipt" && state.settings.input_vat_enabled ? (
         <label className="erpCheck">
           <input type="checkbox" checked={Boolean(doc.prices_include_vat)} disabled={!editable} onChange={(e) => set("prices_include_vat", e.target.checked)} />
@@ -377,6 +450,7 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
   const vatOn = type === "receipt" && state.settings.input_vat_enabled;
   const posted = doc.status === "posted" || doc.status === "cancelled";
   const showStock = type === "transfer" || type === "writeoff" || (type === "count" && !posted);
+  const withPacks = type === "receipt" || type === "writeoff";
   const update = (index: number, patch: Partial<ErpDocumentLine>) => setLines((lines) => lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
   const total = doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
   const missingPrice = priced && doc.lines.some((line) => line.product_id && (line.unit_price === null || line.unit_price === undefined));
@@ -398,7 +472,7 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
             <thead>
               <tr>
                 <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                {type === "receipt" ? <th>{T("Упаковки", "Packs", "Quy cách")}</th> : null}
+                {withPacks ? <th>{T("Упаковки", "Packs", "Quy cách")}</th> : null}
                 <th>{qtyLabel}</th>
                 {showStock ? <th className="num">{stockLabel}</th> : null}
                 {type === "count" ? <th className="num">{T("Разница", "Difference", "Chênh lệch")}</th> : null}
@@ -452,7 +526,7 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                         </span>
                       ) : null}
                     </td>
-                    {type === "receipt" ? (
+                    {withPacks ? (
                       <td className="edit" data-label={T("Упаковки", "Packs", "Quy cách")}>
                         {editable ? (
                           packs.length ? (
@@ -550,7 +624,14 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                           line.cost_known === false ? (
                             <span className="erpBadge warn">{T("цена неизвестна", "price unknown", "chưa rõ giá")}</span>
                           ) : (
-                            vnd(line.cost_amount)
+                            <>
+                              {vnd(line.cost_amount)}
+                              {type === "writeoff" && line.unit_cost !== null && line.unit_cost !== undefined ? (
+                                <small className="erpCellSub">
+                                  {vnd(line.unit_cost)} / {unitLabel(unit)}
+                                </small>
+                              ) : null}
+                            </>
                           )
                         ) : line.unit_price !== null && line.unit_price !== undefined ? (
                           vnd(line.unit_price * line.qty)

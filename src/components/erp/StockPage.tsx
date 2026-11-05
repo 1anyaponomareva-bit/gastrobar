@@ -10,6 +10,7 @@ import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
 import { Empty, NavLink, noSearchResults, packText, PageHead, qtyText, T } from "./ui";
+import { WriteoffsPage } from "./WriteoffsPage";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
   receipts: { types: ["receipt", "opening"], newHref: "/erp/documents/new?type=receipt" },
@@ -74,7 +75,7 @@ const kindTexts = (): Record<string, { title: string; sub: string; empty: string
 });
 
 export function StockDocsPage({ kind }: { kind: string }) {
-  return kind === "receipts" ? <ReceiptsPage /> : <StockDocsList kind={kind} />;
+  return kind === "receipts" ? <ReceiptsPage /> : kind === "writeoffs" ? <WriteoffsPage tab="list" /> : <StockDocsList kind={kind} />;
 }
 
 function StockDocsList({ kind }: { kind: string }) {
