@@ -17,5 +17,5 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "scripts/erp/*-ui-scenario.ts"]
+  "exclude": ["node_modules", "scripts/erp/*-ui-scenario.ts", "scripts/erp/backup-pack-merge.ts", "scripts/erp/apply-pack-merge-sql.ts", "scripts/erp/recount-pack-duplicates.ts", "scripts/erp/verify-pack-merge.ts"]
 }

@@ -1866,7 +1866,7 @@ async function main() {
 
     const a = await savePack({ name: "1 KG", unit: "kg", qty_base: 1 });
     const b = await savePack({ name: "1 KG", unit: "kg", qty_base: 1 });
-    assert.notEqual(a, b, "same name stays two rows");
+    assert.equal(a, b, "same name+unit+qty reuses the live catalog row");
     const dozen = await savePack({ name: "1 ДЕСЯТОК", unit: "pcs", qty_base: 10 });
     const bag = await savePack({ name: "1.284 KG", unit: "kg", qty_base: 1.284 });
     const bottle = await savePack({ name: "1 L", unit: "l", qty_base: 1 });
@@ -1920,11 +1920,108 @@ async function main() {
     assert.ok(n(migrated.packs)! > 0);
     assert.ok(n(migrated.links)! > 0);
     assert.equal(migrated.same, true);
-    const staffPack = await one<{ id: string; pack_id: string }>("select id, pack_id from public.erp_product_packs where label = 'box 5*2 kg' limit 1");
-    assert.equal(staffPack.id, staffPack.pack_id, "migrated product packs kept their ids as catalog ids");
+    const mozzPacks = await q<{ product_id: string; pack_id: string }>(
+      "select k.product_id, k.pack_id from public.erp_product_packs k join public.erp_products p on p.id = k.product_id where k.label = 'box 5*2 kg' and p.name_en = 'Cheese - Mozzarella' and k.archived_at is null order by p.brand, k.id",
+    );
+    const mozzProducts = [...new Set(mozzPacks.map((r) => r.product_id))];
+    const mozzCatalog = [...new Set(mozzPacks.map((r) => r.pack_id))];
+    assert.ok(mozzProducts.length >= 2, "mozzarella brands stay separate products");
+    assert.equal(mozzCatalog.length, 1, "same ordering unit is shared");
     void a;
     void b;
     void bottle;
+  });
+
+  await test("exact pack duplicates merge: links, defaults, snapshots, stock, idempotent, no product merge", async () => {
+    const canon = "00000000-0000-4000-8000-0000000000a1";
+    const dup = "00000000-0000-4000-8000-0000000000a2";
+    const pcsKg = "00000000-0000-4000-8000-0000000000a3";
+    const flourA = await saveProduct({ type: "ingredient", name_en: "Merge flour A", base_unit: "kg" });
+    const flourB = await saveProduct({ type: "ingredient", name_en: "Merge flour B", brand: "Other mill", base_unit: "kg" });
+    const yogurt = await saveProduct({ type: "ingredient", name_en: "Merge yogurt", base_unit: "kg" });
+    await db.exec("drop index if exists public.erp_packs_live_key_uidx");
+    await q("insert into public.erp_packs (id, name, unit, qty_base) values ($1, 'merge-kg 1 kg', 'kg', 1), ($2, 'merge-kg 1 kg', 'kg', 1), ($3, 'merge-pcs 1 kg', 'kg', 1)", [
+      canon,
+      dup,
+      pcsKg,
+    ]);
+    await q("insert into public.erp_product_packs (product_id, pack_id, label, qty_base, is_default) values ($1, $2, 'merge-kg 1 kg', 1, true), ($3, $4, 'merge-kg 1 kg', 1, true), ($5, $6, 'merge-pcs 1 kg', 1, true)", [
+      flourA,
+      canon,
+      flourB,
+      dup,
+      yogurt,
+      pcsKg,
+    ]);
+    const posted = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [{ product_id: flourA, pack_id: dup, pack_qty: 2, qty: 2, unit_price: 10000 }],
+    });
+    await post(posted);
+    const postedSnap = await one<{ pack_id: string; pack_name: string; pack_qty_base: string; qty: string }>(
+      "select pack_id, pack_name, pack_qty_base, qty from public.erp_document_lines where document_id = $1",
+      [posted],
+    );
+    const draft = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [{ product_id: flourB, pack_id: dup, pack_qty: 1, qty: 1, unit_price: 10000 }],
+    });
+    const stockBefore = n(await value("select coalesce(sum(qty_left), 0) from public.erp_lots"));
+    const valueBefore = n(await value("select coalesce(sum(qty_left * unit_cost), 0) from public.erp_lots"));
+    const productsBefore = n(await value("select count(*) from public.erp_products"));
+
+    const first = await value<Record<string, unknown>>("select public.erp_merge_exact_pack_duplicates()");
+    assert.ok(n(first.extra)! >= 1);
+    const second = await value<Record<string, unknown>>("select public.erp_merge_exact_pack_duplicates()");
+    assert.equal(n(second.extra), 0, "second merge is a no-op");
+
+    const links = await q<{ id: string; product_id: string; pack_id: string; is_default: boolean }>(
+      "select id, product_id, pack_id, is_default from public.erp_product_packs where product_id in ($1, $2) and archived_at is null order by product_id",
+      [flourA, flourB],
+    );
+    assert.equal(links.length, 2);
+    assert.equal(links[0].pack_id, canon);
+    assert.equal(links[1].pack_id, canon);
+    assert.equal(links[0].is_default, true);
+    assert.equal(links[1].is_default, true);
+    assert.equal(await value("select archived_at is not null from public.erp_packs where id = $1", [dup]), true);
+    assert.equal(await value("select archived_at is null from public.erp_packs where id = $1", [pcsKg]), true);
+    assert.equal(n(await value("select count(*) from public.erp_products")), productsBefore, "products are not merged");
+
+    const afterPosted = await one<{ pack_id: string; pack_name: string; pack_qty_base: string; qty: string }>(
+      "select pack_id, pack_name, pack_qty_base, qty from public.erp_document_lines where document_id = $1",
+      [posted],
+    );
+    assert.deepEqual(afterPosted, postedSnap, "posted snapshot and pack_id stay");
+    assert.equal(await value("select pack_id from public.erp_document_lines where document_id = $1", [draft]), canon);
+    assert.equal(n(await value("select coalesce(sum(qty_left), 0) from public.erp_lots")), stockBefore, "stock qty unchanged");
+    assert.equal(n(await value("select coalesce(sum(qty_left * unit_cost), 0) from public.erp_lots")), valueBefore, "stock value unchanged");
+
+    const reused = await savePack({ name: "merge-kg 1 kg", unit: "kg", qty_base: 1 });
+    assert.equal(reused, canon, "savePack does not resurrect a duplicate");
+    const saved = await saveProduct({
+      id: flourB,
+      type: "ingredient",
+      name_en: "Merge flour B",
+      brand: "Other mill",
+      base_unit: "kg",
+      packs: [{ id: links.find((l) => l.product_id === flourB)!.id, pack_id: dup, label: "merge-kg 1 kg", qty_base: 1, is_default: true }],
+    });
+    assert.equal(saved, flourB);
+    assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1 and archived_at is null", [flourB]), canon);
+
+    const extra = await saveProduct({ type: "ingredient", name_en: "Merge flour C", base_unit: "kg" });
+    await q("insert into public.erp_product_packs (product_id, label, qty_base, is_default) values ($1, 'merge-kg 1 kg', 1, true)", [extra]);
+    assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1", [extra]), canon);
+
+    const rolled = await value<Record<string, number>>("select public.erp_rollback_pack_merges()");
+    assert.ok(n(rolled.restored)! >= 1);
+    assert.equal(await value("select archived_at is null from public.erp_packs where id = $1", [dup]), true);
+    assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1 and archived_at is null", [flourB]), dup);
+    await q("select public.erp_merge_exact_pack_duplicates()");
+    assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1 and archived_at is null", [flourB]), canon);
   });
 
   console.log(`\n${passed} checks passed`);

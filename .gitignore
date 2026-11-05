@@ -39,3 +39,4 @@ coverage
 .erp-inventory-db/
 .erp-ui-scenario-db/
 .erp-receipt-ui-db/
+.erp-pack-merge-backup/
