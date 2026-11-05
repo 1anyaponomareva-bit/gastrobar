@@ -6,6 +6,7 @@ export type ErpSettings = {
   output_vat_enabled: boolean;
   default_input_vat_rate: number | null;
   default_output_vat_rate: number | null;
+  timezone?: string;
 };
 
 type Archivable = { archived_at: string | null };
@@ -159,11 +160,35 @@ export type ErpState = {
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
 export type ErpDocStatus = "draft" | "posted" | "cancelled";
 
+export type ErpCountKind = "full" | "partial";
+export type ErpCountMode = "stock" | "explode";
+/** Surplus lot cost: last known lot on the warehouse, else product estimate, else unknown (never treated as 0). */
+export type ErpSurplusCostSource = "last_lot" | "product_reference" | "unknown";
+export type ErpCountExcludeReason =
+  | "no_movement_in_period"
+  | "not_selected"
+  | "archived"
+  | "not_found"
+  | "already_counted"
+  | "superseded";
+
+export type ErpCountMove = {
+  document_id: string;
+  doc_no: string;
+  doc_type: ErpDocType;
+  occurred_at: string;
+  qty: number;
+  direction: "in" | "out";
+};
+
 export type ErpDocumentLine = {
   id?: string;
   line_no?: number;
   product_id: string;
   qty: number;
+  /** Count only. false / missing fact_qty = not counted; 0 qty with counted=true is an explicit zero. */
+  counted?: boolean;
+  fact_qty?: number | null;
   planned_qty?: number | null;
   pack_id?: string | null;
   pack_qty?: number | null;
@@ -180,6 +205,16 @@ export type ErpDocumentLine = {
   cost_amount?: number | null;
   unit_cost?: number | null;
   cost_known?: boolean | null;
+  period_start?: string | null;
+  opening_qty?: number | null;
+  in_qty?: number | null;
+  out_qty?: number | null;
+  book_qty?: number | null;
+  last_count_id?: string | null;
+  in_composition_qty?: number | null;
+  surplus_cost_source?: ErpSurplusCostSource | null;
+  count_mode?: ErpCountMode | null;
+  count_moves?: ErpCountMove[] | null;
 };
 
 export type ErpDocument = {
@@ -219,7 +254,38 @@ export type ErpDocument = {
   cancelled_at?: string | null;
   cancelled_by?: string | null;
   cancel_reason?: string | null;
+  occurred_at?: string | null;
+  counted_at?: string | null;
+  count_kind?: ErpCountKind | null;
+  snapshot_hash?: string | null;
+  snapshot_movement_max?: number | null;
+  superseded_by?: string | null;
+  correction_of?: string | null;
+  count_scope?: { product_ids?: string[]; category_ids?: string[]; explode_product_ids?: string[] } | null;
+  accept_stale?: boolean;
+  dish_lines?: ErpCountDishLine[];
   lines: ErpDocumentLine[];
+};
+
+export type ErpCountDishLine = {
+  dish_id: string;
+  qty: number;
+  counted: boolean;
+};
+
+export type ErpCountPreview = {
+  warehouse_id: string;
+  count_kind: ErpCountKind;
+  counted_at: string;
+  timezone: string;
+  snapshot_hash: string;
+  snapshot_movement_max: number | null;
+  lines: ErpDocumentLine[];
+  idle: { product_id: string; qty: number; reason: "no_movement_in_period" }[];
+  excluded: { product_id?: string; reason: ErpCountExcludeReason | string; detail?: string }[];
+  replaces: { id: string; doc_no: string; count_kind: ErpCountKind | null; counted_at: string | null }[];
+  conflicts: { id: string; doc_no: string; product_id: string; reason: string }[];
+  surplus_cost_policy: { order: ErpSurplusCostSource[]; unknown_is_not_zero: true };
 };
 
 export type ErpAction =
@@ -238,4 +304,7 @@ export type ErpAction =
   | { action: "resolveRecipeLine"; lineId: string; productId: string; qty: number; remember: boolean }
   | { action: "saveDish"; dish: Record<string, unknown> }
   | { action: "staffCatalogMerge"; apply: boolean }
-  | { action: "importRecipes" };
+  | { action: "importRecipes" }
+  | { action: "previewCount"; preview: Record<string, unknown> }
+  | { action: "refreshCount"; id: string }
+  | { action: "reopenCount"; id: string; reason: string; cascade?: boolean };

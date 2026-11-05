@@ -1287,6 +1287,386 @@ async function main() {
     assert.deepEqual(audit.map((r) => r.action), ["save", "post", "cancel"]);
   });
 
+  // ---- Inventory count logic (period, book qty, fact, posting, recipes) ----
+  const preview = (p: Record<string, unknown>) =>
+    value<Record<string, unknown>>("select public.erp_count_preview($1::jsonb)", [JSON.stringify(p)]);
+  const countGet = (id: string) => value<Record<string, unknown>>("select public.erp_count_get($1)", [id]);
+  const reopen = (id: string, cascade = false, reason = "fix") =>
+    value<Record<string, unknown>>("select public.erp_reopen_count($1, $2, $3, $4)", [id, ACTOR, cascade, reason]);
+
+  await test("count: first and second full, idle leftover without movement stays out", async () => {
+    const milk = await saveProduct({ type: "ingredient", name_en: "Count milk", base_unit: "l" });
+    const idle = await saveProduct({ type: "ingredient", name_en: "Count idle oil", base_unit: "l" });
+    await post(await saveDoc({ doc_type: "opening", occurred_at: "2026-01-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: milk, qty: 4, unit_price: 20000 }] }));
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-01-02T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: milk, qty: 6, unit_price: 22000 }] }));
+    await post(await saveDoc({ doc_type: "opening", occurred_at: "2026-01-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: idle, qty: 3, unit_price: 10000 }] }));
+    await post(await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: "2026-01-01T12:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: idle, qty: 3 }],
+    }));
+    const seen = await preview({ warehouse_id: prep, count_kind: "full", counted_at: "2026-01-03T12:00:00+07:00" });
+    const lines = seen.lines as { product_id: string; book_qty: number; opening_qty: number; in_qty: number }[];
+    assert.ok(lines.some((l) => l.product_id === milk));
+    assert.ok(!lines.some((l) => l.product_id === idle), "idle after its own count is not auto-included");
+    const idleRows = seen.idle as { product_id: string; reason: string }[];
+    assert.ok(idleRows.some((r) => r.product_id === idle && r.reason === "no_movement_in_period"));
+    const milkLine = lines.find((l) => l.product_id === milk)!;
+    assert.equal(n(milkLine.opening_qty), 0, "first check of milk starts at 0; opening is a movement");
+    assert.equal(n(milkLine.in_qty), 10);
+    assert.equal(n(milkLine.book_qty), 10);
+    const first = await saveDoc({
+      doc_type: "count", count_kind: "full", counted_at: "2026-01-03T12:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: milk, qty: 9 }],
+    });
+    await post(first);
+    assert.equal(await stock(milk, prep), 9);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-01-04T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: milk, qty: 2, unit_price: 22000 }] }));
+    const secondPrev = await preview({ warehouse_id: prep, count_kind: "full", counted_at: "2026-01-05T12:00:00+07:00" });
+    const again = (secondPrev.lines as { product_id: string; book_qty: number; opening_qty: number; in_qty: number; last_count_id: string }[])
+      .find((l) => l.product_id === milk)!;
+    assert.equal(n(again.opening_qty), 9, "second full starts from the previous fact of this product");
+    assert.equal(n(again.in_qty), 2);
+    assert.equal(n(again.book_qty), 11);
+    assert.equal(again.last_count_id, first);
+    const second = await saveDoc({
+      doc_type: "count", count_kind: "full", counted_at: "2026-01-05T12:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: milk, qty: 11 }],
+    });
+    await post(second);
+    assert.equal(await stock(milk, prep), 11);
+  });
+
+  await test("count: partials of different products keep separate periods", async () => {
+    const a = await saveProduct({ type: "ingredient", name_en: "Count partial A", base_unit: "kg" });
+    const b = await saveProduct({ type: "ingredient", name_en: "Count partial B", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-02-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: a, qty: 5, unit_price: 1 }] }));
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-02-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: b, qty: 8, unit_price: 1 }] }));
+    const ca = await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: "2026-02-02T10:00:00+07:00", warehouse_id: prep,
+      count_scope: { product_ids: [a] },
+      lines: [{ product_id: a, qty: 4 }],
+    });
+    await post(ca);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-02-03T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: a, qty: 1, unit_price: 1 }] }));
+    const later = await preview({ warehouse_id: prep, count_kind: "partial", counted_at: "2026-02-04T10:00:00+07:00", product_ids: [a, b] });
+    const lines = later.lines as { product_id: string; opening_qty: number; book_qty: number; last_count_id: string | null }[];
+    const la = lines.find((l) => l.product_id === a)!;
+    const lb = lines.find((l) => l.product_id === b)!;
+    assert.equal(n(la.opening_qty), 4);
+    assert.equal(n(la.book_qty), 5);
+    assert.equal(la.last_count_id, ca);
+    assert.equal(n(lb.opening_qty), 0);
+    assert.equal(n(lb.book_qty), 8);
+    assert.equal(lb.last_count_id, null);
+  });
+
+  await test("count: empty fact blocks posting; 0 is an explicit zero", async () => {
+    const rice = await saveProduct({ type: "ingredient", name_en: "Count rice", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: rice, qty: 2, unit_price: 5000 }] }));
+    const empty = await saveDoc({
+      doc_type: "count", count_kind: "partial", warehouse_id: prep,
+      lines: [{ product_id: rice }],
+    });
+    const emptyLine = await one<{ counted: boolean; qty: string }>("select counted, qty from public.erp_document_lines where document_id = $1", [empty]);
+    assert.equal(emptyLine.counted, false);
+    await expectError(post(empty), "ERP_COUNT_INCOMPLETE");
+    assert.equal(await stock(rice, prep), 2, "draft and incomplete post do not move stock");
+    const zero = await saveDoc({
+      doc_type: "count", count_kind: "partial", warehouse_id: prep,
+      lines: [{ product_id: rice, fact_qty: 0, counted: true }],
+    });
+    await post(zero);
+    assert.equal(await stock(rice, prep), 0);
+    const z = await one<{ qty: string; diff_qty: string; counted: boolean }>("select qty, diff_qty, counted from public.erp_document_lines where document_id = $1", [zero]);
+    assert.equal(z.counted, true);
+    assert.equal(n(z.qty), 0);
+    assert.equal(n(z.diff_qty), -2);
+  });
+
+  await test("count: surplus, shortage and exact zero; surplus cost source is stored", async () => {
+    const sugar = await saveProduct({ type: "ingredient", name_en: "Count sugar", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-03-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: sugar, qty: 10, unit_price: 8000 }] }));
+    const short = await saveDoc({ doc_type: "count", counted_at: "2026-03-02T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: sugar, qty: 7 }] });
+    const s = await post(short);
+    assert.equal(await stock(sugar, prep), 7);
+    assert.equal(n(s.total_cost), -24000);
+    const exact = await saveDoc({ doc_type: "count", counted_at: "2026-03-03T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: sugar, qty: 7 }] });
+    const e = await post(exact);
+    assert.equal(n(e.total_cost), 0);
+    const over = await saveDoc({ doc_type: "count", counted_at: "2026-03-04T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: sugar, qty: 9 }] });
+    await post(over);
+    assert.equal(await stock(sugar, prep), 9);
+    const src = await one<{ surplus_cost_source: string; cost_amount: string }>(
+      "select surplus_cost_source, cost_amount from public.erp_document_lines where document_id = $1",
+      [over],
+    );
+    assert.equal(src.surplus_cost_source, "last_lot");
+    assert.equal(n(src.cost_amount), 16000);
+    const mystery = await saveProduct({ type: "ingredient", name_en: "Count mystery", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "opening", warehouse_id: prep, lines: [{ product_id: mystery, qty: 1 }] }));
+    const unk = await saveDoc({ doc_type: "count", warehouse_id: prep, lines: [{ product_id: mystery, qty: 2 }] });
+    const u = await post(unk);
+    assert.equal(u.cost_known, false);
+    assert.equal(u.total_cost, null, "unknown surplus is not valued at zero");
+    assert.equal(await value("select surplus_cost_source from public.erp_document_lines where document_id = $1", [unk]), "unknown");
+  });
+
+  await test("count: brands stay separate; packs are stored, qty is base units", async () => {
+    const brandA = await saveProduct({ type: "ingredient", name_en: "Count cola", brand: "Brand A", base_unit: "l" });
+    const brandB = await saveProduct({ type: "ingredient", name_en: "Count cola", brand: "Brand B", base_unit: "l" });
+    const packId = await value<string>(
+      "insert into public.erp_product_packs (product_id, label, qty_base, is_default) values ($1, '6x1L', 6, true) returning id",
+      [brandA],
+    );
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: brandA, qty: 6, unit_price: 10000 }] }));
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: brandB, qty: 4, unit_price: 12000 }] }));
+    const ca = await saveDoc({
+      doc_type: "count", count_kind: "partial", warehouse_id: prep,
+      lines: [{ product_id: brandA, qty: 5, pack_id: packId, pack_qty: 1 }],
+    });
+    await post(ca);
+    assert.equal(await stock(brandA, prep), 5);
+    assert.equal(await stock(brandB, prep), 4, "other brand is untouched");
+    const packLine = await one<{ pack_id: string; pack_qty: string; qty: string }>(
+      "select pack_id, pack_qty, qty from public.erp_document_lines where document_id = $1",
+      [ca],
+    );
+    assert.equal(packLine.pack_id, packId);
+    assert.equal(n(packLine.pack_qty), 1);
+    assert.equal(n(packLine.qty), 5);
+  });
+
+  await test("count: produced leftover is counted as itself, ingredients are not added again", async () => {
+    const flour = await saveProduct({ type: "ingredient", name_en: "Count flour", base_unit: "kg" });
+    const sauce = await saveProduct({ type: "semi_finished", name_en: "Count sauce", base_unit: "kg" });
+    const rec = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: sauce, yield_qty: 1, lines: [{ product_id: flour, qty: 1 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [rec, ACTOR]);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-04-01T08:00:00+07:00", warehouse_id: prep, lines: [{ product_id: flour, qty: 5, unit_price: 10000 }] }));
+    await post(await saveDoc({
+      doc_type: "production", occurred_at: "2026-04-01T10:00:00+07:00", warehouse_id: prep, target_warehouse_id: prep,
+      recipe_id: rec, output_product_id: sauce, output_qty: 2,
+      lines: [{ product_id: flour, qty: 2 }],
+    }));
+    const at = "2026-04-01T12:00:00+07:00";
+    const seen = await preview({ warehouse_id: prep, count_kind: "full", counted_at: at });
+    const lines = seen.lines as { product_id: string; book_qty: number }[];
+    assert.ok(lines.some((l) => l.product_id === sauce && n(l.book_qty) === 2));
+    assert.ok(lines.some((l) => l.product_id === flour && n(l.book_qty) === 3));
+    await expectError(
+      preview({ warehouse_id: prep, count_kind: "partial", counted_at: at, product_ids: [sauce], explode_product_ids: [sauce] }),
+      "ERP_COUNT_BOTH_MODES",
+    );
+    const id = await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: at, warehouse_id: prep,
+      lines: [
+        { product_id: sauce, qty: 2 },
+        { product_id: flour, qty: 3 },
+      ],
+    });
+    await post(id);
+    assert.equal(await stock(sauce, prep), 2);
+    assert.equal(await stock(flour, prep), 3);
+    assert.equal(n(await value("select coalesce(in_composition_qty,0) from public.erp_document_lines where document_id = $1 and product_id = $2", [id, flour])), 0);
+  });
+
+  await test("count: dish tech card adds composition without double-counting a stocked prep", async () => {
+    const bun2 = await saveProduct({ type: "ingredient", name_en: "Count bun", base_unit: "pcs" });
+    const patty2 = await saveProduct({ type: "semi_finished", name_en: "Count patty", base_unit: "pcs" });
+    const rec = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: patty2, yield_qty: 1, lines: [{ product_id: bun2, qty: 99 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [rec, ACTOR]);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-04-10T08:00:00+07:00", warehouse_id: prep, lines: [{ product_id: bun2, qty: 20, unit_price: 1000 }] }));
+    await post(await saveDoc({
+      doc_type: "production", occurred_at: "2026-04-10T10:00:00+07:00", warehouse_id: prep, target_warehouse_id: prep,
+      output_product_id: patty2, output_qty: 4, lines: [{ product_id: bun2, qty: 4 }],
+    }));
+    const dishId = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Count burger dish", lines: [{ product_id: bun2, qty: 1 }, { product_id: patty2, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const at = "2026-04-10T12:00:00+07:00";
+    const id = await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: at, warehouse_id: prep,
+      dish_lines: [{ dish_id: dishId, qty: 2, counted: true }],
+      lines: [
+        { product_id: bun2, qty: 10 },
+        { product_id: patty2, qty: 4 },
+      ],
+    });
+    const got = await countGet(id);
+    const lines = got.lines as { product_id: string; in_composition_qty: number }[];
+    assert.equal(n(lines.find((l) => l.product_id === bun2)!.in_composition_qty), 2, "bun from two dishes");
+    assert.equal(n(lines.find((l) => l.product_id === patty2)!.in_composition_qty), 2, "stocked patty stops the walk");
+    const comps = got.components as { product_id: string; qty: number }[];
+    assert.ok(!comps.some((c) => n(c.qty) === 198), "patty recipe is not exploded");
+    await post(id);
+    assert.equal(await stock(bun2, prep), 12, "fact 10 + 2 in dishes, book 16, leftover 12");
+    assert.equal(await stock(patty2, prep), 6, "fact 4 + 2 in dishes");
+  });
+
+  await test("count: posted explosion keeps the recipe version; a later card is not applied", async () => {
+    const water = await saveProduct({ type: "ingredient", name_en: "Count water", base_unit: "l" });
+    const mix = await saveProduct({ type: "semi_finished", name_en: "Count mix ghost", base_unit: "l" });
+    const v1 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: mix, yield_qty: 1, lines: [{ product_id: water, qty: 2 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [v1, ACTOR]);
+    await q("update public.erp_recipes set activated_at = '2026-04-01T00:00:00+07:00', created_at = '2026-04-01T00:00:00+07:00' where id = $1", [v1]);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-05-01T08:00:00+07:00", warehouse_id: prep, lines: [{ product_id: water, qty: 10, unit_price: 1000 }] }));
+    const at = "2026-05-01T12:00:00+07:00";
+    const id = await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: at, warehouse_id: prep,
+      lines: [
+        { product_id: water, qty: 6 },
+        { product_id: mix, qty: 1, counted: true, count_mode: "explode" },
+      ],
+    });
+    await post(id);
+    const before = await q<{ recipe_id: string; qty: string }>("select recipe_id, qty from public.erp_count_components where document_id = $1", [id]);
+    assert.equal(before[0].recipe_id, v1);
+    assert.equal(n(before[0].qty), 2);
+    const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ id: v1, product_id: mix, yield_qty: 1, lines: [{ product_id: water, qty: 9 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [v2, ACTOR]);
+    await q("update public.erp_recipes set activated_at = '2026-05-15T00:00:00+07:00' where id = $1", [v2]);
+    const after = await q<{ recipe_id: string; qty: string }>("select recipe_id, qty from public.erp_count_components where document_id = $1", [id]);
+    assert.equal(after[0].recipe_id, v1, "posted count is not rebuilt on a new card");
+    assert.equal(n(after[0].qty), 2);
+    const fresh = await q<{ qty: string; recipe_id: string }>(
+      "select qty, recipe_id from public.erp_count_explode('recipe', $1, 1, $2::timestamptz, '{}'::uuid[])",
+      [mix, "2026-05-20T12:00:00+07:00"],
+    );
+    assert.equal(fresh[0].recipe_id, v2);
+    assert.equal(n(fresh[0].qty), 9, "a new check would use the new card; the posted one does not");
+    const ghost = await saveProduct({ type: "semi_finished", name_en: "Count no card", base_unit: "kg" });
+    await expectError(
+      q("select public.erp_count_explode('recipe', $1, 1, $2::timestamptz, '{}'::uuid[])", [ghost, at]),
+      "ERP_RECIPE_MISSING",
+    );
+  });
+
+  await test("count: full posting supersedes a partial draft without taking its fact or movements", async () => {
+    const tea = await saveProduct({ type: "ingredient", name_en: "Count tea", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: tea, qty: 5, unit_price: 3000 }] }));
+    const partial = await saveDoc({
+      doc_type: "count", count_kind: "partial", warehouse_id: prep,
+      lines: [{ product_id: tea, qty: 1 }],
+    });
+    const full = await saveDoc({
+      doc_type: "count", count_kind: "full", warehouse_id: prep,
+      lines: [{ product_id: tea, qty: 5 }],
+    });
+    await post(full);
+    const row = await one<{ status: string; superseded_by: string }>("select status, superseded_by from public.erp_documents where id = $1", [partial]);
+    assert.equal(row.status, "draft");
+    assert.equal(row.superseded_by, full);
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [partial])), 0);
+    assert.equal(await stock(tea, prep), 5, "fact 1 from the replaced draft is not applied");
+  });
+
+  await test("count: past date keeps later movements (plan 10, fact 8, then +5 → 13)", async () => {
+    const ice = await saveProduct({ type: "ingredient", name_en: "Count ice", base_unit: "kg" });
+    await post(await saveDoc({
+      doc_type: "receipt", occurred_at: "2026-07-01T08:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: ice, qty: 10, unit_price: 1000 }],
+    }));
+    const later = await saveDoc({
+      doc_type: "receipt", occurred_at: "2026-07-03T09:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: ice, qty: 5, unit_price: 1000 }],
+    });
+    await post(later);
+    assert.equal(await stock(ice, prep), 15);
+    const id = await saveDoc({
+      doc_type: "count", count_kind: "partial", counted_at: "2026-07-02T12:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: ice, qty: 8 }],
+    });
+    const booked = await one<{ book_qty: string; diff_qty: string }>(
+      "select book_qty, diff_qty from public.erp_document_lines where document_id = $1",
+      [id],
+    );
+    assert.equal(n(booked.book_qty), 10);
+    assert.equal(n(booked.diff_qty), -2);
+    await post(id);
+    assert.equal(await stock(ice, prep), 13, "later +5 is kept: 8 + 5, not 8");
+    const report = await q<{ closing_qty: string }>(
+      "select closing_qty from public.erp_movement_report('2026-07-01', '2026-07-31', $1) where product_id = $2",
+      [prep, ice],
+    );
+    assert.equal(n(report[0].closing_qty), 13);
+  });
+
+  await test("count: retry of a posted count is idempotent; overlap is refused", async () => {
+    const salt2 = await saveProduct({ type: "ingredient", name_en: "Count race salt", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-08-09T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: salt2, qty: 3, unit_price: 1 }] }));
+    const at = "2026-08-10T12:00:00+07:00";
+    const id = await saveDoc({ doc_type: "count", counted_at: at, warehouse_id: prep, lines: [{ product_id: salt2, qty: 3 }] });
+    const first = await post(id);
+    const again = await post(id);
+    assert.equal(again.idempotent, true);
+    assert.equal(n(first.total_cost), n(again.total_cost));
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1 and reversal_of is null", [id])), 0);
+    const other = await saveDoc({ doc_type: "count", counted_at: at, warehouse_id: prep, lines: [{ product_id: salt2, qty: 2 }] });
+    await expectError(post(other), "ERP_COUNT_OVERLAP");
+    assert.equal(await stock(salt2, prep), 3);
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [other])), 0);
+  });
+
+  await test("count: reopen is audited and follows later counts; ordinary edit of a posted count is blocked", async () => {
+    const peas = await saveProduct({ type: "ingredient", name_en: "Count peas", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-08-01T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: peas, qty: 10, unit_price: 2000 }] }));
+    const c1 = await saveDoc({
+      doc_type: "count", counted_at: "2026-08-02T00:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: peas, qty: 9 }],
+    });
+    await post(c1);
+    await post(await saveDoc({ doc_type: "receipt", occurred_at: "2026-08-03T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: peas, qty: 2, unit_price: 2000 }] }));
+    const c2 = await saveDoc({
+      doc_type: "count", counted_at: "2026-08-04T00:00:00+07:00", warehouse_id: prep,
+      lines: [{ product_id: peas, qty: 11 }],
+    });
+    await post(c2);
+    await expectError(saveDoc({ id: c1, lines: [{ product_id: peas, qty: 8 }] }), "ERP_DOCUMENT_LOCKED");
+    await expectError(reopen(c1, false), "ERP_COUNT_HAS_DEPENDENTS");
+    await reopen(c1, true, "wrong fact");
+    assert.equal(await value("select status from public.erp_documents where id = $1", [c1]), "draft");
+    assert.equal(await value("select status from public.erp_documents where id = $1", [c2]), "draft");
+    assert.equal(await stock(peas, prep), 12, "both count adjustments reversed; receipts remain");
+    assert.ok(
+      n(await value("select count(*) from public.erp_audit_log where entity_id = $1 and action = 'reopen'", [c1]))! >= 1,
+    );
+    await saveDoc({ id: c1, counted_at: "2026-08-02T00:00:00+07:00", warehouse_id: prep, lines: [{ product_id: peas, qty: 8 }] });
+    await post(c1);
+    assert.equal(await stock(peas, prep), 10, "8 at T1 plus later receipt 2");
+  });
+
+  await test("count: stock and movement report match the posted adjustments", async () => {
+    const corn = await saveProduct({ type: "ingredient", name_en: "Count corn", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-09-01", warehouse_id: prep, lines: [{ product_id: corn, qty: 20, unit_price: 4000 }] }));
+    await post(await saveDoc({ doc_type: "writeoff", doc_date: "2026-09-02", warehouse_id: prep, reason: "test", lines: [{ product_id: corn, qty: 3 }] }));
+    const id = await saveDoc({
+      doc_type: "count", doc_date: "2026-09-03", warehouse_id: prep, lines: [{ product_id: corn, qty: 16 }],
+    });
+    await post(id);
+    assert.equal(await stock(corn, prep), 16);
+    const rows = await q<Record<string, string>>(
+      "select * from public.erp_movement_report('2026-09-01', '2026-09-30', $1) where product_id = $2",
+      [prep, corn],
+    );
+    assert.equal(n(rows[0].closing_qty), 16);
+    assert.equal(n(rows[0].in_qty), 20);
+    assert.equal(n(rows[0].out_qty), 4);
+    const view = await q<{ qty: string }>("select qty from public.erp_stock where product_id = $1 and warehouse_id = $2", [corn, prep]);
+    assert.equal(n(view[0].qty), 16);
+  });
+
   console.log(`\n${passed} checks passed`);
 }
 

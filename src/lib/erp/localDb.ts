@@ -18,7 +18,7 @@ type Db = {
 const shared = globalThis as typeof globalThis & { __erpLocalDb?: Promise<Db> };
 
 /** In order: later files replace functions of earlier ones. */
-export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql", "20261105190000_erp_speed.sql", "20261105220000_erp_writeoff_reasons.sql"];
+export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql", "20261105190000_erp_speed.sql", "20261105220000_erp_writeoff_reasons.sql", "20261105230000_erp_inventory_counts.sql"];
 
 export const erpLocalMode = () =>
   process.env.ERP_LOCAL_DB === "pglite" &&

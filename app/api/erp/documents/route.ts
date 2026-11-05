@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     let query = erpDb()
       .from("erp_documents")
       .select(
-        "id, doc_no, doc_type, status, doc_date, warehouse_id, target_warehouse_id, supplier_id, reason, output_product_id, output_qty, output_pieces, batch_no, total_cost, cost_known, output_unit_cost, created_by, created_at, posted_by, posted_at, cancelled_by, cancelled_at, cancel_reason",
+        "id, doc_no, doc_type, status, doc_date, occurred_at, counted_at, count_kind, warehouse_id, target_warehouse_id, supplier_id, reason, output_product_id, output_qty, output_pieces, batch_no, total_cost, cost_known, output_unit_cost, superseded_by, created_by, created_at, posted_by, posted_at, cancelled_by, cancelled_at, cancel_reason",
       )
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });

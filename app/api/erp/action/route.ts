@@ -144,6 +144,26 @@ export async function POST(request: Request) {
         const recipes = mergeRecipes(erpLocalMode() ? null : await readStoredRecipes());
         return timing.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });
       }
+      case "previewCount":
+        return timing.json({ preview: await rpc("erp_count_preview", { p: object(a.preview, "preview") }) });
+      case "refreshCount": {
+        const id = uuid(a.id);
+        return timing.json({ id, count: await rpc("erp_count_refresh", { p_id: id, p_actor: actor }) });
+      }
+      case "reopenCount": {
+        const id = uuid(a.id);
+        return timing.json({
+          id,
+          count: await rpc("erp_reopen_count", {
+            p_id: id,
+            p_actor: actor,
+            p_cascade: a.cascade === true,
+            p_reason: String(a.reason ?? ""),
+          }),
+          document: await freshDocument(id),
+          patch: await fresh(STOCK_PARTS),
+        });
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }
