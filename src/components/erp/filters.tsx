@@ -53,12 +53,15 @@ export function MultiSelect({
   value,
   onChange,
   searchable,
+  emptyLabel,
 }: {
   label: string;
   options: Option[];
   value: string[];
   onChange: (value: string[]) => void;
   searchable?: boolean;
+  /** Button text when nothing is chosen, e.g. "All locations". */
+  emptyLabel?: string;
 }) {
   const [query, setQuery] = useState("");
   const chosen = new Set(value);
@@ -66,7 +69,7 @@ export function MultiSelect({
   const shown = options.filter((o) => !q || o.label.toLowerCase().includes(q));
   const summary =
     !value.length
-      ? label
+      ? (emptyLabel ?? label)
       : value.length === 1
         ? (options.find((o) => o.id === value[0])?.label ?? label)
         : value.length >= options.length

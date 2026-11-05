@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { productLabel } from "@/lib/erp/costing";
+import { productTitle } from "@/lib/erp/costing";
 import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
-import { Empty, NavLink, noSearchResults, PageHead, qtyText, T } from "./ui";
+import { Empty, NavLink, noSearchResults, packText, PageHead, qtyText, T } from "./ui";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
   receipts: { types: ["receipt", "opening"], newHref: "/erp/documents/new?type=receipt" },
@@ -171,7 +171,7 @@ export function PacksPage() {
     .filter((entry): entry is { pack: typeof entry.pack; product: NonNullable<typeof entry.product> } => Boolean(entry.product && !entry.product.archived_at))
     .sort((a, b) => a.product.name_en.localeCompare(b.product.name_en) || a.pack.qty_base - b.pack.qty_base);
   const q = query.trim().toLowerCase();
-  const rows = all.filter(({ pack, product }) => !q || `${pack.label} ${product.name_en} ${product.name_vn} ${product.brand ?? ""}`.toLowerCase().includes(q));
+  const rows = all.filter(({ pack, product }) => !q || `${pack.label} ${packText(pack.label)} ${product.name_en} ${product.name_vn} ${product.brand ?? ""}`.toLowerCase().includes(q));
 
   return (
     <>
@@ -217,15 +217,16 @@ export function PacksPage() {
                   {rows.map(({ pack, product }) => (
                     <tr key={pack.id}>
                       <td className="main">
-                        <strong>{pack.label}</strong>
+                        <strong className="erpPackName">{packText(pack.label)}</strong>
                         {pack.is_default ? <span className="erpBadge">{T("основная", "default", "mặc định")}</span> : null}
+                        {packText(pack.label) !== pack.label ? <small className="erpCellSub">{pack.label}</small> : null}
                       </td>
                       <td className="num" data-label={T("Количество", "Quantity", "Số lượng")}>
                         {qtyText(pack.qty_base, product.base_unit)}
                       </td>
                       <td data-label={T("Продукт", "Product", "Sản phẩm")}>
                         <NavLink href={`/erp/products/${product.id}`} className="erpName">
-                          {productLabel(product)}
+                          {productTitle(product)}
                         </NavLink>
                       </td>
                       <td data-label={T("Поставщик", "Supplier", "Nhà cung cấp")}>{pack.supplier_id ? (suppliers.get(pack.supplier_id) ?? "—") : "—"}</td>

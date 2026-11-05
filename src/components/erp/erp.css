@@ -1791,3 +1791,37 @@
     padding-left: 12px;
   }
 }
+
+.erpScope {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--erp-muted);
+}
+
+.erpScope b {
+  color: inherit;
+  font-weight: 700;
+}
+
+.erpMutedRow td {
+  color: var(--erp-muted);
+  font-weight: 500;
+}
+
+.erpChosen td {
+  background: rgba(46, 125, 50, 0.06);
+}
+
+.erpChosen .erpBadge,
+.erpBalances .erpBadge {
+  margin-left: 6px;
+}
+
+.erpPackName {
+  overflow-wrap: anywhere;
+}
+
+.erpBalances td.erpTotalLabel,
+.erpDetail td:first-child {
+  white-space: normal;
+}

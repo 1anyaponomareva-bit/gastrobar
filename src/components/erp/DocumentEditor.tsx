@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { productLabel } from "@/lib/erp/costing";
+import { productTitle } from "@/lib/erp/costing";
+import { initialWarehouses } from "@/lib/erp/docDefaults";
+import { packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
@@ -16,7 +18,9 @@ import {
   Field,
   loadingText,
   NavLink,
+  numText,
   NumberInput,
+  packText,
   PageHead,
   productById,
   ProductPicker,
@@ -39,18 +43,7 @@ type SetDoc = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => vo
 type SetLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) => void;
 
 function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | null): ErpDocument {
-  const active = state.warehouses.filter((w) => !w.archived_at);
-  const byKind = (kind: string) => active.find((w) => w.kind === kind)?.id ?? null;
-  const preset = active.find((w) => w.id === warehouse)?.id ?? null;
-  const main = byKind("warehouse") ?? active[0]?.id ?? null;
-  const prep = byKind("prep_kitchen");
-  return {
-    doc_type: type,
-    doc_date: today(),
-    warehouse_id: preset ?? main,
-    target_warehouse_id: type === "transfer" ? (prep && prep !== (preset ?? main) ? prep : (active.find((w) => w.id !== (preset ?? main))?.id ?? null)) : null,
-    lines: [],
-  };
+  return { doc_type: type, doc_date: today(), ...initialWarehouses(type, state.warehouses, warehouse), lines: [] };
 }
 
 const newTitle = (type: ErpDocType) =>
@@ -305,9 +298,27 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
         : type === "count"
           ? T("Какой склад считаем *", "Location to count *", "Kho kiểm kê *")
           : T("Склад *", "Location *", "Kho *");
+  const hasPrep = state.warehouses.some((w) => w.kind === "prep_kitchen" && !w.archived_at);
+  const receiptHint =
+    type !== "receipt" || !editable
+      ? undefined
+      : hasPrep
+        ? T("По умолчанию поставка идёт на кухню заготовок (Prep Kitchen)", "Deliveries go to the prep kitchen by default", "Mặc định nhập vào bếp sơ chế")
+        : T("Кухня заготовок не найдена — выберите склад вручную", "No prep kitchen found — choose a location", "Không có bếp sơ chế — hãy chọn kho");
   return (
     <div className="erpGrid two">
-      <Field label={warehouseLabel} hint={type === "receipt" ? T("Можно сразу на кухню заготовок", "Can go straight to the prep kitchen", "Có thể nhập thẳng vào bếp sơ chế") : undefined}>
+      {type === "receipt" && editable && !doc.warehouse_id ? (
+        <div className="erpNotice warn" style={{ gridColumn: "1 / -1" }} data-testid="receipt-no-warehouse">
+          {hasPrep
+            ? T("Выберите склад, куда принять поставку.", "Choose where to receive the delivery.", "Chọn kho nhận hàng.")
+            : T(
+                "Активной кухни заготовок (Prep Kitchen) нет. Выберите склад, куда принять поставку.",
+                "There is no active prep kitchen. Choose where to receive the delivery.",
+                "Không có bếp sơ chế đang hoạt động. Hãy chọn kho nhận hàng.",
+              )}
+        </div>
+      ) : null}
+      <Field label={warehouseLabel} hint={receiptHint}>
         <WarehouseSelect
           warehouses={state.warehouses}
           value={doc.warehouse_id}
@@ -426,8 +437,13 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                           }}
                         />
                       ) : (
-                        <span className="erpName">{product ? productLabel(product) : "—"}</span>
+                        <span className="erpName">{product ? productTitle(product) : "—"}</span>
                       )}
+                      {editable && product?.brand ? (
+                        <small className="erpCellSub">
+                          {T("Бренд", "Brand", "Thương hiệu")}: {product.brand}
+                        </small>
+                      ) : null}
                       {short ? (
                         <span className="erpShort">
                           {T("Не хватает", "Short by", "Thiếu")} {qtyText(line.qty - available, unit)}
@@ -443,7 +459,7 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                                 <option value="">{T("без упаковки", "no pack", "không")}</option>
                                 {packs.map((p) => (
                                   <option key={p.id} value={p.id}>
-                                    {p.label} = {qtyText(p.qty_base, unit)}
+                                    {packText(p.label)} = {qtyText(p.qty_base, unit)}
                                   </option>
                                 ))}
                               </select>
@@ -451,15 +467,20 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                                 <NumberInput
                                   value={line.pack_qty}
                                   placeholder={T("сколько", "how many", "bao nhiêu")}
-                                  onChange={(v) => update(index, { pack_qty: v, qty: v === null ? line.qty : Math.round(v * pack.qty_base * 1e6) / 1e6 })}
+                                  onChange={(v) => update(index, { pack_qty: v, qty: v === null ? line.qty : packToBase(v, pack.qty_base) })}
                                 />
+                              ) : null}
+                              {pack ? (
+                                <small className="erpCellSub erpPackName">
+                                  {packText(pack.label)} = {qtyText(pack.qty_base, unit)}
+                                </small>
                               ) : null}
                             </div>
                           ) : (
                             <span className="erpMuted">—</span>
                           )
                         ) : pack && line.pack_qty ? (
-                          `${line.pack_qty} × ${pack.label}`
+                          `${numText(line.pack_qty)} × ${packText(pack.label)} = ${qtyText(line.qty, unit)}`
                         ) : (
                           "—"
                         )}
@@ -493,7 +514,7 @@ function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDo
                             <NumberInput value={line.unit_price} placeholder={unit ? `₫ / ${unitLabel(unit)}` : ""} onChange={(v) => update(index, { unit_price: v })} />
                             {pack && line.unit_price !== null && line.unit_price !== undefined ? (
                               <small className="erpCellSub">
-                                {pack.label}: {vnd(line.unit_price * pack.qty_base)}
+                                {packText(pack.label)} — {vnd(packPrice(line.unit_price, pack.qty_base))}
                               </small>
                             ) : null}
                           </>

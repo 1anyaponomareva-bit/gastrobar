@@ -7,7 +7,7 @@ import {
   costLine,
   isPackaging,
   LOSS_METHODS,
-  productLabel,
+  productTitle,
   type ErpProductType,
   type ErpUnit,
   type LossPcts,
@@ -24,6 +24,7 @@ import {
   NavLink,
   noSearchResults,
   NumberInput,
+  packText,
   PageHead,
   PRODUCT_TYPES,
   qtyText,
@@ -191,7 +192,7 @@ export function ProductsPage() {
                         >
                           <td className="main">
                             <NavLink href={`/erp/products/${p.id}`} className="erpName">
-                              {productLabel(p)}
+                              {productTitle(p)}
                             </NavLink>
                             {p.brand ? <span className="erpCellSub">{p.brand}</span> : null}
                           </td>
@@ -413,6 +414,7 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
                   <tr key={pack.id ?? `new-${index}`}>
                     <td className="main">
                       <input value={pack.label} placeholder={T("Коробка, мешок…", "Box, bag…", "Thùng, bao…")} onChange={(e) => update({ label: e.target.value })} />
+                      {pack.label && packText(pack.label) !== pack.label ? <small className="erpCellSub">{packText(pack.label)}</small> : null}
                     </td>
                     <td className="edit" data-label={T("Сколько в ней", "Contains", "Số lượng")}>
                       <QtyInput base={unit} value={pack.qty_base || null} onChange={(v) => update({ qty_base: v ?? 0 })} />
@@ -525,7 +527,7 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
       <PageHead
         title={
           <>
-            {product ? productLabel(product) : T("Новый продукт", "New product", "Sản phẩm mới")}
+            {product ? productTitle(product) : T("Новый продукт", "New product", "Sản phẩm mới")}
             {product?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
           </>
         }

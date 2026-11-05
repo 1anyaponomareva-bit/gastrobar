@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { buildCostContext, costLine, plannedUnitCost, productLabel, type ErpUnit } from "@/lib/erp/costing";
+import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
@@ -129,7 +129,7 @@ export function PrepsPage() {
                     return (
                       <tr key={p.id}>
                         <td className="main">
-                          <span className="erpName">{productLabel(p)}</span>
+                          <span className="erpName">{productTitle(p)}</span>
                           {!active ? (
                             <span className="erpBadge warn">
                               {draft
@@ -417,7 +417,7 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
     <>
       <BackLink />
       <PageHead
-        title={productLabel(product)}
+        title={productTitle(product)}
         sub={
           active
             ? `${T("Действующая версия", "Active version", "Phiên bản đang dùng")} v${active.version} · ${T("выход", "yield", "sản lượng")} ${yieldText(active, unit)}`
@@ -525,7 +525,7 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
                           </div>
                         ) : null}
                         {readOnly ? (
-                          <span className="erpName">{line.product_id ? productLabel(state.products.find((p) => p.id === line.product_id) ?? { name_en: "?", name_vn: "" }) : "—"}</span>
+                          <span className="erpName">{line.product_id ? productTitle(state.products.find((p) => p.id === line.product_id) ?? { name_en: "?", name_vn: "" }) : "—"}</span>
                         ) : (
                           <ProductPicker
                             state={state}

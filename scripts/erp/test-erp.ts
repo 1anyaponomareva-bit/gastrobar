@@ -10,10 +10,15 @@ import {
   buildCostContext,
   channelResult,
   costLine,
+  productTitle,
   summarize,
   type CostProduct,
   type CostRecipe,
 } from "../../src/lib/erp/costing";
+import { initialWarehouses } from "../../src/lib/erp/docDefaults";
+import { formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
+import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
+import type { ErpStockRow } from "../../src/lib/erp/types";
 import { applyMigration, createTestDb } from "./testDb";
 
 const ACTOR = "test@gastrofood";
@@ -650,6 +655,236 @@ async function main() {
     assert.equal(other.length, 0, "filtered by warehouse");
     const json = await value<Record<string, unknown>[]>("select public.erp_movement_report_json('2026-10-03', '2026-10-31', $1)", [w]);
     assert.deepEqual(json.map((row) => [row.product_id, row.closing_qty, row.closing_value]), [[salt, 11, 16000]]);
+  });
+
+  // ---- Stock fixes: brands, categories on re-import, packs, default receipt location, full cycle ----
+
+  await test("staff re-import keeps a corrected category; a real source change still applies", async () => {
+    const fries = await one<{ id: string; category_id: string; staff_category: string }>(
+      "select id, category_id, staff_category from public.erp_products where name_en = 'French Fries'",
+    );
+    const source = catalog.items.find((i) => i.name === "French Fries")!;
+    assert.equal(fries.staff_category, source.category);
+    const counts = async () =>
+      one<Record<string, string>>("select (select count(*) from public.erp_products) p, (select count(*) from public.erp_product_packs) k");
+    const before = await counts();
+    const fixed = await value<string>("select id from public.erp_categories where code = 'fruits-vegetables'");
+    await q("update public.erp_products set category_id = $1 where id = $2", [fixed, fries.id]);
+    const sync = (c: StaffCatalog) => q("select public.erp_sync_staff_catalog($1::jsonb, $2)", [JSON.stringify(c), ACTOR]);
+
+    await sync(catalog);
+    assert.equal(await value("select category_id from public.erp_products where id = $1", [fries.id]), fixed, "same source keeps the fix");
+    assert.deepEqual(await counts(), before, "no duplicates");
+
+    const moved: StaffCatalog = { ...catalog, items: catalog.items.map((i) => (i.id === source.id ? { ...i, category: "pantry" } : i)) };
+    await sync(moved);
+    const pantry = await value<string>("select id from public.erp_categories where code = 'pantry'");
+    assert.equal(await value("select category_id from public.erp_products where id = $1", [fries.id]), pantry, "a changed source applies");
+
+    // Imported before staff_category existed: the ERP category wins, the source is only recorded.
+    await q("update public.erp_products set category_id = $1, staff_category = null where id = $2", [fixed, fries.id]);
+    await sync(catalog);
+    const after = await one<{ category_id: string; staff_category: string }>("select category_id, staff_category from public.erp_products where id = $1", [fries.id]);
+    assert.deepEqual([after.category_id, after.staff_category], [fixed, source.category]);
+    assert.deepEqual(await counts(), before);
+  });
+
+  await test("brands: same name, different brands stay separate and distinguishable", async () => {
+    const rows = await q<{ id: string; name_en: string; name_vn: string; brand: string; code: string }>(
+      "select id, name_en, name_vn, brand, code from public.erp_products where name_en = 'Cheese - Mozzarella' order by brand",
+    );
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map((r) => r.brand), ["Golden Pizza", "Mlekpol"]);
+    const titles = rows.map((r) => productTitle(r));
+    assert.notEqual(titles[0], titles[1]);
+    assert.ok(titles[1].endsWith(" · Mlekpol"), titles[1]);
+    assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: null }), "Salt / Muối");
+    assert.equal(productTitle({ name_en: "Salt", name_vn: "Salt", brand: "  " }), "Salt");
+    await q("select public.erp_sync_staff_catalog($1::jsonb, $2)", [JSON.stringify(catalog), ACTOR]);
+    const again = await q<{ id: string }>("select id from public.erp_products where name_en = 'Cheese - Mozzarella' order by brand");
+    assert.deepEqual(again.map((r) => r.id), rows.map((r) => r.id), "ids unchanged by re-import");
+  });
+
+  await test("pack labels: readable in each language, unknown patterns unchanged, never guessed", async () => {
+    const ru: PackWords = {
+      container: (c) => ({ box: "Коробка", pack: "Пачка", pcs: "Упаковка", btl: "Бутылка", can: "Банка", bag: "Мешок" })[c],
+      unit: (u) => ({ g: "г", kg: "кг", ml: "мл", l: "л", pcs: "шт" })[u],
+      num: (v) => new Intl.NumberFormat("ru-RU").format(v).replace(/\s/g, " "),
+    };
+    const en: PackWords = { container: (c) => ({ box: "Box", pack: "Pack", pcs: "Unit", btl: "Bottle", can: "Can", bag: "Bag" })[c], unit: (u) => u, num: (v) => v.toLocaleString("en-US") };
+    assert.equal(formatPackLabel("pcs 1 L", ru), "Упаковка: 1 л");
+    assert.equal(formatPackLabel("box 10*1040 g", ru), "Коробка: 10 × 1 040 г");
+    assert.equal(formatPackLabel("box 10*1040 g", en), "Box: 10 × 1,040 g");
+    assert.equal(formatPackLabel("pack 100 pcs", ru), "Пачка: 100 шт");
+    assert.equal(formatPackLabel("box 13-15 kg", ru), "Коробка: 13–15 кг");
+    assert.equal(formatPackLabel("kg 1 kg", ru), "1 кг");
+    assert.equal(formatPackLabel("pcs 10 000 pcs", ru), "Упаковка: 10 000 шт");
+    for (const raw of ["Коробка большая", "box ~5 kg", "box 5 lb", "tray 6 pcs", "", "5 kg"]) assert.equal(formatPackLabel(raw, ru), raw);
+    // Every pack the import created reads cleanly and its label agrees with the stored coefficient.
+    const packs = await q<{ label: string; qty_base: string; base_unit: string }>(
+      "select k.label, k.qty_base, p.base_unit from public.erp_product_packs k join public.erp_products p on p.id = k.product_id where p.staff_listed",
+    );
+    assert.ok(packs.length > 50);
+    const toBase: Record<string, number> = { g: 0.001, kg: 1, ml: 0.001, l: 1, pcs: 1 };
+    for (const pack of packs) {
+      const parsed = parsePackLabel(pack.label);
+      assert.ok(parsed && parsed.sizeTo === null, `unreadable stored pack: ${pack.label}`);
+      const total = (parsed.count ?? 1) * parsed.size * toBase[parsed.unit];
+      assert.ok(Math.abs(total - n(pack.qty_base)!) < 1e-6, `${pack.label} vs ${pack.qty_base}`);
+    }
+  });
+
+  await test("receipt location: Prep by default, explicit wins, never Warehouse, none without Prep", async () => {
+    const list = await q<{ id: string; kind: string; archived_at: string | null }>("select id, kind, archived_at from public.erp_warehouses");
+    const main = list.find((w) => w.kind === "warehouse")!.id;
+    assert.deepEqual(initialWarehouses("receipt", list, null), { warehouse_id: prep, target_warehouse_id: null });
+    assert.equal(initialWarehouses("receipt", list, online).warehouse_id, online, "explicit location wins");
+    assert.equal(initialWarehouses("receipt", list, main).warehouse_id, main, "explicit Warehouse is allowed");
+    assert.equal(initialWarehouses("receipt", list, "00000000-0000-0000-0000-000000000000").warehouse_id, prep, "unknown id falls back to Prep");
+    const noPrep = list.map((w) => (w.kind === "prep_kitchen" ? { ...w, archived_at: "2026-11-01" } : w));
+    assert.equal(initialWarehouses("receipt", noPrep, null).warehouse_id, null, "no active Prep: the user must choose");
+    assert.equal(initialWarehouses("receipt", noPrep, prep).warehouse_id, null, "an archived Prep is not offered");
+    assert.equal(initialWarehouses("receipt", list.filter((w) => w.kind !== "prep_kitchen"), null).warehouse_id, null);
+    // Other documents keep their old defaults.
+    assert.deepEqual(initialWarehouses("transfer", list, null), { warehouse_id: main, target_warehouse_id: prep });
+    assert.equal(initialWarehouses("writeoff", list, null).warehouse_id, main);
+    assert.equal(initialWarehouses("count", list, online).warehouse_id, online);
+    assert.equal(n(await value("select count(*) from public.erp_warehouses")), list.length, "no location created");
+
+    // A saved draft keeps its location when the supplier and lines change.
+    const supplier = await value<string>("select id from public.erp_suppliers order by code limit 1");
+    const draft = await saveDoc({ doc_type: "receipt", warehouse_id: online, lines: [{ product_id: salt, qty: 1, unit_price: 1000 }] });
+    await saveDoc({ id: draft, warehouse_id: online, supplier_id: supplier, lines: [{ product_id: salt, qty: 1, unit_price: 1000 }, { product_id: beef, qty: 2, unit_price: 5000 }] });
+    const saved = await one<{ warehouse_id: string; supplier_id: string; status: string }>("select warehouse_id, supplier_id, status from public.erp_documents where id = $1", [draft]);
+    assert.deepEqual([saved.warehouse_id, saved.supplier_id, saved.status], [online, supplier, "draft"]);
+    await q("delete from public.erp_document_lines where document_id = $1", [draft]);
+    await q("delete from public.erp_documents where id = $1", [draft]);
+  });
+
+  await test("packs convert quantity and cost correctly", async () => {
+    const mozz = await value<string>("select id from public.erp_products where name_en = 'Cheese - Mozzarella' and brand = 'Mlekpol'");
+    const pack = await one<{ id: string; label: string; qty_base: string }>("select id, label, qty_base from public.erp_product_packs where product_id = $1", [mozz]);
+    assert.equal(pack.label, "box 5*2 kg");
+    const qtyBase = n(pack.qty_base)!;
+    assert.equal(qtyBase, 10);
+    const qty = packToBase(3, qtyBase);
+    assert.equal(qty, 30);
+    assert.equal(packPrice(150000, qtyBase), 1500000, "price per box from price per kg");
+    assert.equal(packToBase(1.5, 10.4), 15.6);
+    const doc = await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: mozz, pack_id: pack.id, pack_qty: 3, qty, unit_price: 150000 }] });
+    const res = await post(doc);
+    assert.equal(n(res.total_cost), 4500000);
+    const line = await one<Record<string, string>>("select qty, pack_qty, unit_cost, cost_amount from public.erp_document_lines where document_id = $1", [doc]);
+    assert.deepEqual([line.qty, line.pack_qty, line.unit_cost, line.cost_amount].map(n), [30, 3, 150000, 4500000]);
+    assert.equal(await stock(mozz, prep), 30);
+  });
+
+  await test("full cycle: receipt into Prep → transfer to Online → write-off → count, report after each step", async () => {
+    const cheese = await saveProduct({ type: "ingredient", name_en: "Cycle cheese", name_vn: "Phô mai chu trình", brand: "Mlekpol", base_unit: "kg" });
+    const view = async (warehouses: string[] | null) => {
+      const rows = await q<ErpStockRow>("select * from public.erp_stock where product_id = $1", [cheese]);
+      return stockOf(stockByProduct(rows, warehouses ? new Set(warehouses) : null), cheese);
+    };
+    const report = async (w: string) => {
+      const rows = await q<Record<string, string>>("select * from public.erp_movement_report('2026-10-01', '2026-10-31', $1) where product_id = $2", [w, cheese]);
+      if (!rows.length) return [0, 0, 0, 0, 0, 0];
+      const r = rows[0];
+      return [r.in_qty, r.in_value, r.out_qty, r.out_value, r.closing_qty, r.closing_value].map(n);
+    };
+    const check = async (label: string, prepQty: number, prepValue: number, onlineQty: number, onlineValue: number) => {
+      assert.equal(await stock(cheese, prep), prepQty, `${label}: prep qty`);
+      assert.equal(await stock(cheese, online), onlineQty, `${label}: online qty`);
+      const p = await view([prep]);
+      const o = await view([online]);
+      const all = await view(null);
+      assert.deepEqual([p.qty, p.knownValue, p.complete], [prepQty, prepValue, true], `${label}: prep view`);
+      assert.deepEqual([o.qty, o.knownValue, o.complete], [onlineQty, onlineValue, true], `${label}: online view`);
+      assert.deepEqual([all.qty, all.knownValue], [prepQty + onlineQty, prepValue + onlineValue], `${label}: all locations`);
+      const both = await view([prep, online]);
+      assert.deepEqual([both.qty, both.knownValue], [all.qty, all.knownValue]);
+      assert.deepEqual((await report(prep)).slice(4), [prepQty, prepValue], `${label}: report prep closing`);
+      assert.deepEqual((await report(online)).slice(4), [onlineQty, onlineValue], `${label}: report online closing`);
+    };
+
+    // Two lots at different prices.
+    const r1 = await saveDoc({ doc_type: "receipt", doc_date: "2026-10-10", warehouse_id: prep, lines: [{ product_id: cheese, qty: 10, unit_price: 100000 }] });
+    const r2 = await saveDoc({ doc_type: "receipt", doc_date: "2026-10-11", warehouse_id: prep, lines: [{ product_id: cheese, qty: 5, unit_price: 130000 }] });
+    await check("drafts", 0, 0, 0, 0);
+    await post(r1);
+    await post(r2);
+    await check("receipts", 15, 1650000, 0, 0);
+    assert.deepEqual(await report(prep), [15, 1650000, 0, 0, 15, 1650000]);
+    const lots = await view([prep]);
+    assert.deepEqual(costInfo(lots, { est_unit_cost: 130000, est_cost_source: "receipt" }), { kind: "lots", unitCost: 110000 }, "remaining lots, not the last price");
+
+    await expectError(post(r1), "ERP_ALREADY_POSTED");
+    assert.equal(n(await value("select count(*) from public.erp_lots where source_document_id = $1", [r1])), 1);
+
+    await expectError(
+      saveDoc({ doc_type: "transfer", doc_date: "2026-10-12", warehouse_id: prep, target_warehouse_id: prep, lines: [{ product_id: cheese, qty: 1 }] }).then(post),
+      "ERP_SAME_WAREHOUSE",
+    );
+
+    // Shortage blocks everything and keeps the entered draft.
+    const t = await saveDoc({ doc_type: "transfer", doc_date: "2026-10-12", warehouse_id: prep, target_warehouse_id: online, comment: "to online", lines: [{ product_id: cheese, qty: 20 }] });
+    await expectError(post(t), "ERP_INSUFFICIENT_STOCK");
+    await check("shortage", 15, 1650000, 0, 0);
+    const kept = await one<{ status: string; comment: string; qty: string }>(
+      "select d.status, d.comment, l.qty from public.erp_documents d join public.erp_document_lines l on l.document_id = d.id where d.id = $1",
+      [t],
+    );
+    assert.deepEqual([kept.status, kept.comment, n(kept.qty)], ["draft", "to online", 20]);
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [t])), 0);
+
+    await saveDoc({ id: t, doc_type: "transfer", doc_date: "2026-10-12", warehouse_id: prep, target_warehouse_id: online, lines: [{ product_id: cheese, qty: 12 }] });
+    const tr = await post(t);
+    assert.equal(n(tr.total_cost), 1260000, "FIFO: 10 × 100 000 + 2 × 130 000");
+    await check("transfer", 3, 390000, 12, 1260000);
+    assert.deepEqual(await report(prep), [15, 1650000, 12, 1260000, 3, 390000]);
+    assert.deepEqual(await report(online), [12, 1260000, 0, 0, 12, 1260000]);
+    assert.deepEqual(costInfo(await view([online]), { est_unit_cost: null }), { kind: "lots", unitCost: 105000 });
+
+    const wo = await saveDoc({ doc_type: "writeoff", doc_date: "2026-10-13", warehouse_id: online, reason: "spoiled", lines: [{ product_id: cheese, qty: 2 }] });
+    assert.equal(n((await post(wo)).total_cost), 200000);
+    await check("write-off", 3, 390000, 10, 1060000);
+    assert.deepEqual(await report(online), [12, 1260000, 2, 200000, 10, 1060000]);
+
+    const cnt = await saveDoc({ doc_type: "count", doc_date: "2026-10-14", warehouse_id: online, lines: [{ product_id: cheese, qty: 9.5 }] });
+    await post(cnt);
+    await check("count", 3, 390000, 9.5, 1010000);
+    assert.deepEqual(await report(online), [12, 1260000, 2.5, 250000, 9.5, 1010000]);
+
+    // Cancelling respects what came later.
+    await expectError(cancel(r1), "ERP_CANCEL_BLOCKED");
+    await expectError(cancel(t), "ERP_CANCEL_BLOCKED");
+    await cancel(cnt);
+    await cancel(wo);
+    await check("write-off and count cancelled", 3, 390000, 12, 1260000);
+    await cancel(t);
+    await check("transfer cancelled", 15, 1650000, 0, 0);
+    await cancel(r2);
+    await check("second receipt cancelled", 10, 1000000, 0, 0);
+  });
+
+  await test("unknown cost stays unknown in stock values; zero stock shows only a reference price", async () => {
+    const mystery = await saveProduct({ type: "ingredient", name_en: "Unpriced test", base_unit: "kg" });
+    const priced = await saveDoc({ doc_type: "receipt", warehouse_id: online, lines: [{ product_id: mystery, qty: 2, unit_price: 50000 }] });
+    await post(priced);
+    const unpriced = await saveDoc({ doc_type: "opening", warehouse_id: prep, lines: [{ product_id: mystery, qty: 3 }] });
+    await post(unpriced);
+    const rows = await q<ErpStockRow>("select * from public.erp_stock where product_id = $1", [mystery]);
+    const product = { est_unit_cost: 50000, est_cost_source: "receipt" };
+    const prepOnly = stockOf(stockByProduct(rows, new Set([prep])), mystery);
+    assert.deepEqual([prepOnly.qty, prepOnly.complete, stockValue(prepOnly)], [3, false, null], "never 0");
+    assert.deepEqual(costInfo(prepOnly, product), { kind: "unknown" }, "the last delivery price is not used for unpriced lots");
+    const onlineOnly = stockOf(stockByProduct(rows, new Set([online])), mystery);
+    assert.deepEqual([stockValue(onlineOnly), costInfo(onlineOnly, product)], [100000, { kind: "lots", unitCost: 50000 }]);
+    const all = stockOf(stockByProduct(rows, null), mystery);
+    assert.deepEqual([all.qty, all.knownValue, all.complete, stockValue(all)], [5, 100000, false, null], "lower bound only");
+    const nothing = stockOf(stockByProduct(rows, new Set([warehouse])), mystery);
+    assert.deepEqual(costInfo(nothing, product), { kind: "reference", unitCost: 50000, source: "receipt" });
+    assert.deepEqual(costInfo(nothing, { est_unit_cost: null }), { kind: "none" });
+    assert.equal(costNumber({ kind: "unknown" }), null);
   });
 
   console.log(`\n${passed} checks passed`);

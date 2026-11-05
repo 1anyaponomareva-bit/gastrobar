@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { productLabel, type ErpProductType } from "@/lib/erp/costing";
+import { productTitle, type ErpProductType } from "@/lib/erp/costing";
 import type { ErpMovementRow } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { addDays, Empty, errorText, loadingText, NavLink, noSearchResults, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
@@ -94,7 +94,7 @@ export function MovementReport({ tabs }: { tabs: ReactNode }) {
     };
     const lines = list.map(({ row, product }) =>
       [
-        productLabel(product!),
+        productTitle(product!),
         whName(row.warehouse_id),
         product!.base_unit,
         row.opening_qty,
@@ -248,7 +248,7 @@ export function MovementReport({ tabs }: { tabs: ReactNode }) {
                       <tr key={`${row.product_id}-${row.warehouse_id}`} className={row.closing_qty < 0 ? "short" : ""}>
                         <td className="main">
                           <NavLink href={`/erp/products/${product!.id}`} className="erpName">
-                            {productLabel(product!)}
+                            {productTitle(product!)}
                           </NavLink>
                           <span className="erpCellSub">
                             {typeLabel(product!.type)}

@@ -3,7 +3,7 @@ import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 
 /** In order: later files replace functions of earlier ones. */
-export const MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql"].map((file) =>
+export const MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql"].map((file) =>
   path.join(process.cwd(), "supabase/migrations", file),
 );
 

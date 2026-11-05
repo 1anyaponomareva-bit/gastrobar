@@ -1,12 +1,13 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { productLabel } from "@/lib/erp/costing";
-import type { ErpCategory, ErpProduct, ErpProductReceipt, ErpState, ErpStockRow } from "@/lib/erp/types";
+import { productTitle, type CostSource } from "@/lib/erp/costing";
+import { addTotals, costInfo, costNumber, stockByProduct, stockOf, stockValue, type CostInfo, type StockTotals } from "@/lib/erp/stockView";
+import type { ErpCategory, ErpProduct, ErpProductReceipt, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { ConditionFilters, DropMenu, matches, MultiSelect, type CondField, type Condition } from "./filters";
 import { StockMobileNav } from "./stockNav";
-import { dateText, Empty, errorText, loadingText, NavLink, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
+import { costSourceLabel, dateText, Empty, errorText, loadingText, NavLink, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
 
 const STORE_KEY = "gastrofood-erp-balances";
 const PAGE = 100;
@@ -39,41 +40,60 @@ type Row = {
   product: ErpProduct;
   name: string;
   category: string;
+  /** Stock on the chosen warehouses (all when none chosen). */
+  stock: StockTotals;
+  /** Stock on all warehouses, for the separate grand total. */
+  all: StockTotals;
   qty: number;
-  /** Sum of the known part; `known` says whether it covers all of the stock. */
-  value: number;
-  known: boolean;
-  cost: number | null;
+  value: number | null;
+  cost: CostInfo;
 };
-
-const unitCost = (product: ErpProduct, qty: number, value: number, known: boolean) =>
-  qty > 0 ? (known ? value / qty : null) : product.est_unit_cost;
 
 function buildRows(state: ErpState, warehouses: Set<string>): Row[] {
   const categories = new Map(state.categories.map((c) => [c.id, c]));
-  const stock = new Map<string, { qty: number; value: number; known: boolean }>();
-  for (const row of state.stock) {
-    if (warehouses.size && !warehouses.has(row.warehouse_id)) continue;
-    const entry = stock.get(row.product_id) ?? { qty: 0, value: 0, known: true };
-    entry.qty += row.qty;
-    entry.value += row.known_value ?? 0;
-    if (row.qty !== 0 && !row.cost_known) entry.known = false;
-    stock.set(row.product_id, entry);
-  }
+  const chosen = stockByProduct(state.stock, warehouses);
+  const all = stockByProduct(state.stock, null);
   return state.products
-    .filter((p) => !p.archived_at || (stock.get(p.id)?.qty ?? 0) !== 0)
+    .filter((p) => !p.archived_at || stockOf(all, p.id).qty !== 0)
     .map((product) => {
-      const s = stock.get(product.id) ?? { qty: 0, value: 0, known: true };
+      const s = stockOf(chosen, product.id);
       return {
         product,
-        name: productLabel(product),
+        name: productTitle(product),
         category: categoryName(product.category_id ? categories.get(product.category_id) : undefined),
+        stock: s,
+        all: stockOf(all, product.id),
         qty: s.qty,
-        value: s.value,
-        known: s.known,
-        cost: unitCost(product, s.qty, s.value, s.known),
+        value: stockValue(s),
+        cost: costInfo(s, product),
       };
     });
+}
+
+function CostCell({ cost, unit }: { cost: CostInfo; unit: string | null }) {
+  if (cost.kind === "lots") return <>{`${vnd(cost.unitCost)} / ${unitLabel(unit)}`}</>;
+  if (cost.kind === "unknown") return <span className="erpBadge warn">{T("неизвестна", "unknown", "chưa rõ")}</span>;
+  if (cost.kind === "reference") {
+    return (
+      <span title={T("Остатка нет. Это справочная цена продукта, а не стоимость остатка.", "No stock. This is the product's reference price, not a stock value.", "Không có tồn. Đây là giá tham khảo, không phải giá trị tồn kho.")}>
+        {`${vnd(cost.unitCost)} / ${unitLabel(unit)}`} <span className="erpBadge">{T("справочная", "reference", "tham khảo")}</span>
+        {cost.source ? <small className="erpCellSub">{costSourceLabel(cost.source as CostSource)}</small> : null}
+      </span>
+    );
+  }
+  return <>—</>;
+}
+
+function ValueCell({ totals }: { totals: StockTotals }) {
+  if (totals.complete) return <>{vnd(totals.knownValue)}</>;
+  return (
+    <span
+      className="erpBadge warn"
+      title={T("У части партий нет цены: показана только известная часть", "Some lots have no price: only the known part is shown", "Một số lô chưa có giá")}
+    >
+      {totals.knownValue > 0 ? `≥ ${vnd(totals.knownValue)}` : T("неизвестна", "unknown", "chưa rõ")}
+    </span>
+  );
 }
 
 const sortValue = (row: Row, key: SortKey): string | number => {
@@ -87,14 +107,14 @@ const sortValue = (row: Row, key: SortKey): string | number => {
     case "qty":
       return row.qty;
     case "cost":
-      return row.cost ?? -Infinity;
+      return costNumber(row.cost) ?? -Infinity;
     case "value":
-      return row.value;
+      return row.value ?? row.stock.knownValue;
   }
 };
 
 const fieldValue = (row: Row, field: string): string | number | null =>
-  field === "name" ? row.name : field === "qty" ? row.qty : field === "cost" ? row.cost : field === "value" ? (row.known ? row.value : null) : null;
+  field === "name" ? row.name : field === "qty" ? row.qty : field === "cost" ? costNumber(row.cost) : field === "value" ? row.value : null;
 
 function readSaved(): Saved {
   try {
@@ -147,8 +167,11 @@ export function StockPage() {
   const pages = Math.max(1, Math.ceil(list.length / PAGE));
   const current = Math.min(page, pages - 1);
   const pageRows = list.slice(current * PAGE, current * PAGE + PAGE);
-  const totalValue = list.reduce((sum, row) => sum + row.value, 0);
-  const totalKnown = list.every((row) => row.known);
+  const chosenWarehouses = activeWarehouses.filter((w) => filters.warehouses.includes(w.id));
+  const filtered = chosenWarehouses.length > 0 && chosenWarehouses.length < activeWarehouses.length;
+  const chosenNames = chosenWarehouses.map((w) => w.name).join(", ");
+  const totalChosen = addTotals(list.map((row) => row.stock));
+  const totalAll = addTotals(list.map((row) => row.all));
   const anyFilter = Boolean(query || filters.warehouses.length || filters.types.length || filters.categories.length || filters.conditions.length);
 
   const toggleSort = (key: SortKey) => set(filters.sort === key ? { desc: !filters.desc } : { sort: key, desc: false });
@@ -165,9 +188,18 @@ export function StockPage() {
       const s = v === null || v === undefined ? "" : String(v);
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const header = ["Product", "Type", "Category", "Unit", "In stock", "Unit cost", "Value"];
+    const header = ["Product", "Type", "Category", "Unit", filtered ? `In stock (${chosenNames})` : "In stock (all locations)", "Avg cost of remaining lots", "Reference price (no stock)", "Value"];
     const lines = list.map((row) =>
-      [row.name, typeLabel(row.product.type), row.category, row.product.base_unit, row.qty, row.cost === null ? "" : Math.round(row.cost), row.known ? Math.round(row.value) : ""]
+      [
+        row.name,
+        typeLabel(row.product.type),
+        row.category,
+        row.product.base_unit,
+        row.qty,
+        row.cost.kind === "lots" ? Math.round(row.cost.unitCost) : "",
+        row.cost.kind === "reference" ? Math.round(row.cost.unitCost) : "",
+        row.value === null ? "" : Math.round(row.value),
+      ]
         .map(cell)
         .join(","),
     );
@@ -248,13 +280,13 @@ export function StockPage() {
       case "cost":
         return (
           <td key={id} className="num">
-            {row.cost === null ? "—" : `${vnd(row.cost)} / ${unitLabel(row.product.base_unit)}`}
+            <CostCell cost={row.cost} unit={row.product.base_unit} />
           </td>
         );
       case "value":
         return (
           <td key={id} className="num">
-            {row.known ? vnd(row.value) : <span className="erpBadge warn">≥ {vnd(row.value)}</span>}
+            <ValueCell totals={row.stock} />
           </td>
         );
     }
@@ -284,6 +316,7 @@ export function StockPage() {
               options={activeWarehouses.map((w) => ({ id: w.id, label: w.name }))}
               value={filters.warehouses}
               onChange={(warehouses) => set({ warehouses })}
+              emptyLabel={T("Все склады", "All locations", "Tất cả kho")}
             />
             <MultiSelect label={T("Тип", "Type", "Loại")} options={PRODUCT_TYPES.map((t) => ({ id: t, label: typeLabel(t) }))} value={filters.types} onChange={(types) => set({ types })} />
             <MultiSelect
@@ -310,6 +343,22 @@ export function StockPage() {
               </button>
             ) : null}
           </div>
+
+          <p className="erpScope" data-testid="stock-scope">
+            {filtered ? (
+              <>
+                {T("Остатки и суммы — только по складам:", "Stock and values for:", "Tồn kho và giá trị tại:")} <b>{chosenNames}</b>
+              </>
+            ) : (
+              T("Остатки и суммы — по всем складам", "Stock and values — all locations", "Tồn kho và giá trị — tất cả kho")
+            )}
+            {" · "}
+            {T(
+              "Себестоимость — средняя по оставшимся партиям; при нулевом остатке — справочная цена продукта",
+              "Unit cost is the average of the remaining lots; with no stock, the product's reference price",
+              "Giá vốn = bình quân các lô còn lại; khi hết hàng là giá tham khảo",
+            )}
+          </p>
 
           <Pager total={list.length} page={current} pages={pages} onPage={setPage} />
 
@@ -349,7 +398,7 @@ export function StockPage() {
                         {expanded ? (
                           <tr className="erpDetailRow">
                             <td colSpan={shownColumns.length + 1}>
-                              <ProductDetail state={state} product={row.product} />
+                              <ProductDetail state={state} product={row.product} selected={filtered ? new Set(filters.warehouses) : null} />
                             </td>
                           </tr>
                         ) : null}
@@ -360,14 +409,26 @@ export function StockPage() {
               </tbody>
               {list.length && !filters.hidden.includes("value") ? (
                 <tfoot>
-                  <tr>
-                    <td>{T("Всего", "Total", "Tổng")}</td>
-                    {shownColumns.map((c) => (
-                      <td key={c.id} className="num">
-                        {c.id === "value" ? `${totalKnown ? "" : "≥ "}${vnd(totalValue)}` : ""}
-                      </td>
-                    ))}
+                  <tr data-testid="total-chosen">
+                    <td colSpan={shownColumns.length} className="erpTotalLabel">
+                      {filtered
+                        ? `${T("Всего по выбранным складам", "Total, chosen locations", "Tổng kho đã chọn")} (${chosenNames})`
+                        : T("Всего по всем складам", "Total, all locations", "Tổng tất cả kho")}
+                    </td>
+                    <td className="num">
+                      <ValueCell totals={totalChosen} />
+                    </td>
                   </tr>
+                  {filtered ? (
+                    <tr data-testid="total-all" className="erpMutedRow">
+                      <td colSpan={shownColumns.length} className="erpTotalLabel">
+                        {T("Всего по всем складам", "Total, all locations", "Tổng tất cả kho")}
+                      </td>
+                      <td className="num">
+                        <ValueCell totals={totalAll} />
+                      </td>
+                    </tr>
+                  ) : null}
                 </tfoot>
               ) : null}
             </table>
@@ -406,7 +467,7 @@ function Pager({ total, page, pages, onPage }: { total: number; page: number; pa
   );
 }
 
-function ProductDetail({ state, product }: { state: ErpState; product: ErpProduct }) {
+function ProductDetail({ state, product, selected }: { state: ErpState; product: ErpProduct; selected: Set<string> | null }) {
   const [receipts, setReceipts] = useState<ErpProductReceipt[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -425,19 +486,20 @@ function ProductDetail({ state, product }: { state: ErpState; product: ErpProduc
   }, [product.id]);
 
   const unit = product.base_unit;
-  const byWarehouse = new Map<string, ErpStockRow>(state.stock.filter((s) => s.product_id === product.id).map((s) => [s.warehouse_id, s]));
-  const warehouses = state.warehouses.filter((w) => !w.archived_at || byWarehouse.get(w.id)?.qty);
+  const rows = state.stock.filter((s) => s.product_id === product.id);
+  const warehouses = state.warehouses.filter((w) => !w.archived_at || rows.some((s) => s.warehouse_id === w.id && s.qty));
   const lines = warehouses.map((w) => {
-    const s = byWarehouse.get(w.id);
-    const qty = s?.qty ?? 0;
-    const known = !s || qty === 0 || s.cost_known;
-    const value = s?.known_value ?? 0;
-    return { w, s, qty, known, value, cost: unitCost(product, qty, value, known) };
+    const s = rows.find((r) => r.warehouse_id === w.id);
+    const totals = stockOf(stockByProduct(s ? [s] : [], null), product.id);
+    return { w, s, totals, chosen: Boolean(selected?.has(w.id)) };
   });
-  const total = lines.reduce((acc, l) => ({ qty: acc.qty + l.qty, value: acc.value + l.value, known: acc.known && l.known }), { qty: 0, value: 0, known: true });
-  const totalCost = unitCost(product, total.qty, total.value, total.known);
+  const totalChosen = addTotals(lines.filter((l) => l.chosen).map((l) => l.totals));
+  const totalAll = addTotals(lines.map((l) => l.totals));
   const costText = (cost: number | null) => (cost === null ? "—" : `${vnd(cost)} / ${unitLabel(unit)}`);
-  const valueText = (value: number, known: boolean) => (known ? vnd(value) : `≥ ${vnd(value)}`);
+  const lotCost = (t: StockTotals) => {
+    const c = costInfo(t, { est_unit_cost: null });
+    return c.kind === "lots" ? costText(c.unitCost) : c.kind === "unknown" ? <span className="erpBadge warn">{T("неизвестна", "unknown", "chưa rõ")}</span> : "—";
+  };
   const now = today();
   const supplier = (id: string | null) => state.suppliers.find((s) => s.id === id)?.name ?? "—";
   const warehouse = (id: string | null) => state.warehouses.find((w) => w.id === id)?.name ?? "—";
@@ -445,7 +507,7 @@ function ProductDetail({ state, product }: { state: ErpState; product: ErpProduc
   return (
     <div className="erpDetail">
       <div className="erpDetailHead">
-        <h3>{T("Остатки по складам", "Stock by location", "Tồn theo kho")}</h3>
+        <h3>{T("Остатки по всем складам", "Stock at all locations", "Tồn tại tất cả kho")}</h3>
         <NavLink href={`/erp/products/${product.id}`} className="erpLink">
           {T("Открыть продукт", "Open product", "Mở sản phẩm")}
         </NavLink>
@@ -456,18 +518,25 @@ function ProductDetail({ state, product }: { state: ErpState; product: ErpProduc
             <tr>
               <th>{T("Склад", "Location", "Kho")}</th>
               <th className="num">{T("Остаток", "In stock", "Tồn")}</th>
-              <th className="num">{T("Себестоимость", "Unit cost", "Giá vốn")}</th>
+              <th className="num" title={T("Средняя по оставшимся партиям", "Average of the remaining lots", "Bình quân các lô còn lại")}>
+                {T("Себестоимость партий", "Lot cost", "Giá vốn lô")}
+              </th>
               <th className="num">{T("Стоимость", "Value", "Giá trị")}</th>
               <th>{T("Ближайший срок", "Nearest use-by", "Hạn gần nhất")}</th>
             </tr>
           </thead>
           <tbody>
-            {lines.map(({ w, s, qty, known, value, cost }) => (
-              <tr key={w.id}>
-                <td>{w.name}</td>
-                <td className={`num ${qty < 0 ? "erpNeg" : ""}`}>{qtyText(qty, unit)}</td>
-                <td className="num">{costText(cost)}</td>
-                <td className="num">{valueText(value, known)}</td>
+            {lines.map(({ w, s, totals, chosen }) => (
+              <tr key={w.id} className={chosen ? "erpChosen" : ""}>
+                <td>
+                  {w.name}
+                  {chosen ? <span className="erpBadge ok">{T("в фильтре", "filtered", "đã lọc")}</span> : null}
+                </td>
+                <td className={`num ${totals.qty < 0 ? "erpNeg" : ""}`}>{qtyText(totals.qty, unit)}</td>
+                <td className="num">{lotCost(totals)}</td>
+                <td className="num">
+                  <ValueCell totals={totals} />
+                </td>
                 <td>
                   {!s?.nearest_expiry ? (
                     "—"
@@ -483,16 +552,35 @@ function ProductDetail({ state, product }: { state: ErpState; product: ErpProduc
             ))}
           </tbody>
           <tfoot>
-            <tr>
-              <td>{T("Всего", "Total", "Tổng")}</td>
-              <td className="num">{qtyText(total.qty, unit)}</td>
-              <td className="num">{costText(totalCost)}</td>
-              <td className="num">{valueText(total.value, total.known)}</td>
+            {selected ? (
+              <tr data-testid="detail-chosen">
+                <td>{T("Итого по выбранным складам", "Total, chosen locations", "Tổng kho đã chọn")}</td>
+                <td className="num">{qtyText(totalChosen.qty, unit)}</td>
+                <td className="num">{lotCost(totalChosen)}</td>
+                <td className="num">
+                  <ValueCell totals={totalChosen} />
+                </td>
+                <td />
+              </tr>
+            ) : null}
+            <tr data-testid="detail-all">
+              <td>{T("Всего по всем складам", "Total, all locations", "Tổng tất cả kho")}</td>
+              <td className="num">{qtyText(totalAll.qty, unit)}</td>
+              <td className="num">{lotCost(totalAll)}</td>
+              <td className="num">
+                <ValueCell totals={totalAll} />
+              </td>
               <td />
             </tr>
           </tfoot>
         </table>
       </div>
+      {totalAll.qty <= 0 && product.est_unit_cost !== null ? (
+        <p className="erpHint">
+          {T("Справочная цена (остатка нет)", "Reference price (no stock)", "Giá tham khảo (hết hàng)")}: {costText(product.est_unit_cost)}
+          {product.est_cost_source ? ` · ${costSourceLabel(product.est_cost_source)}` : ""}
+        </p>
+      ) : null}
 
       <h3>{T("Поставки", "Deliveries", "Nhập hàng")}</h3>
       {error ? (

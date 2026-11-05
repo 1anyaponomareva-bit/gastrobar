@@ -76,6 +76,10 @@ export const isPackaging = (type: ErpProductType) => type === "packaging" || typ
 export const productLabel = (product: Pick<CostProduct, "name_en" | "name_vn">) =>
   product.name_vn && product.name_vn !== product.name_en ? `${product.name_en} / ${product.name_vn}` : product.name_en;
 
+/** Name with the brand: items that differ only by brand are separate products. */
+export const productTitle = (product: Pick<CostProduct, "name_en" | "name_vn"> & { brand?: string | null }) =>
+  product.brand?.trim() ? `${productLabel(product)} · ${product.brand.trim()}` : productLabel(product);
+
 /** Cost of `qty` base units of a product with its composition. */
 export function costLine(ctx: CostContext, productId: string, qty: number, stack: string[] = []): CostLine {
   const product = ctx.products.get(productId);

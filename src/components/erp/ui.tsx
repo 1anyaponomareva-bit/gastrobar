@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
-import { productLabel, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
+import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
+import { formatPackLabel, type PackContainer } from "@/lib/erp/packs";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
 import { locale, T } from "./i18n";
 
@@ -129,6 +130,17 @@ export const qtyText = (value: number | null | undefined, unit?: string | null) 
   }
   return `${numText(value)}${unit ? ` ${unitLabel(unit)}` : ""}`;
 };
+const packContainerLabel = (container: PackContainer) =>
+  ({
+    box: T("Коробка", "Box", "Thùng"),
+    pack: T("Пачка", "Pack", "Gói"),
+    pcs: T("Упаковка", "Unit", "Đơn vị"),
+    btl: T("Бутылка", "Bottle", "Chai"),
+    can: T("Банка", "Can", "Lon"),
+    bag: T("Мешок", "Bag", "Bao"),
+  })[container];
+/** Readable pack name in the current language; the stored label is not changed. */
+export const packText = (label: string) => formatPackLabel(label, { container: packContainerLabel, unit: unitLabel, num: numText });
 export const dateText = (value: string | null | undefined) => {
   if (!value) return "—";
   const [y, m, d] = value.slice(0, 10).split("-");
@@ -233,7 +245,7 @@ export function QtyInput({
 
 export function productName(state: ErpState, id: string | null | undefined): string {
   const product = id ? state.products.find((p) => p.id === id) : undefined;
-  return product ? productLabel(product) : "—";
+  return product ? productTitle(product) : "—";
 }
 
 export function warehouseName(state: ErpState, id: string | null | undefined): string {
@@ -289,8 +301,7 @@ export function ProductPicker({
         </option>
         {options.map((p) => (
           <option key={p.id} value={p.id}>
-            {productLabel(p)}
-            {p.brand ? ` · ${p.brand}` : ""}
+            {productTitle(p)}
             {p.base_unit ? ` (${unitLabel(p.base_unit)})` : ""}
           </option>
         ))}

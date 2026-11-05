@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { buildCostContext, costLine, productLabel } from "@/lib/erp/costing";
+import { buildCostContext, costLine, productTitle } from "@/lib/erp/costing";
 import type { ErpDocument, ErpDocumentLine, ErpRecipe, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
@@ -243,7 +243,7 @@ export function ProductionWizard({ id }: { id: string }) {
         }
         sub={
           output
-            ? `${productLabel(output)}${doc.doc_no && !posted ? ` · ${T("черновик", "draft", "nháp")} ${doc.doc_no}` : ""}`
+            ? `${productTitle(output)}${doc.doc_no && !posted ? ` · ${T("черновик", "draft", "nháp")} ${doc.doc_no}` : ""}`
             : T("Выпуск полуфабриката по рецептуре", "Produce a semi-finished product from its recipe", "Sản xuất bán thành phẩm theo công thức")
         }
       />
@@ -406,7 +406,7 @@ function StepWhat({
             <option value="">{T("— выберите —", "— choose —", "— chọn —")}</option>
             {recipes.map((r) => (
               <option key={r.id} value={r.id}>
-                {productLabel(productById(state, r.product_id)!)}
+                {productTitle(productById(state, r.product_id)!)}
                 {r.status !== "active" ? ` (v${r.version})` : ""}
               </option>
             ))}
@@ -530,7 +530,7 @@ function StepUsage({
                     <td className="main" style={{ minWidth: 220 }}>
                       {fromRecipe || !doc.id || line.product_id ? (
                         line.product_id && fromRecipe ? (
-                          <span className="erpName">{productLabel(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}</span>
+                          <span className="erpName">{productTitle(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}</span>
                         ) : (
                           <ProductPicker state={state} value={line.product_id} onChange={(productId) => update(index, { product_id: productId })} />
                         )
@@ -647,7 +647,7 @@ function StepReview({
           <ul>
             {shortages.map(({ line, available }) => (
               <li key={line.product_id}>
-                {productLabel(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}:{" "}
+                {productTitle(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}:{" "}
                 {T("нужно", "need", "cần")} {qtyText(line.qty, unitOf(state, line.product_id))}, {T("есть", "have", "có")}{" "}
                 {qtyText(available, unitOf(state, line.product_id))}
               </li>
@@ -667,7 +667,7 @@ function StepReview({
               return (
                 <li key={line.id ?? index}>
                   <span>
-                    {productLabel(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}
+                    {productTitle(productById(state, line.product_id) ?? { name_en: "?", name_vn: "" })}
                     <small className="erpCellSub">{cost === null ? T("стоимость неизвестна", "cost unknown", "chưa rõ giá") : vnd(cost)}</small>
                   </span>
                   <span>{qtyText(line.qty, unitOf(state, line.product_id))}</span>
@@ -683,7 +683,7 @@ function StepReview({
           </h3>
           <ul className="erpList">
             <li>
-              <span>{output ? productLabel(output) : "—"}</span>
+              <span>{output ? productTitle(output) : "—"}</span>
               <span>{qtyText(doc.output_qty, outUnit)}</span>
             </li>
             {doc.output_weight_kg && outUnit !== "kg" ? (

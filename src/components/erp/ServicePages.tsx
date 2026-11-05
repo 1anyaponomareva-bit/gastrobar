@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { productLabel, type ErpUnit } from "@/lib/erp/costing";
+import { productTitle, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { RefList } from "./RefList";
@@ -315,7 +315,7 @@ export function ReviewPage() {
                 {noPack.map((product) => (
                   <tr key={product.id}>
                     <td className="main">
-                      <span className="erpName">{productLabel(product)}</span>
+                      <span className="erpName">{productTitle(product)}</span>
                       <span className="erpCellSub">
                         Staff: {product.staff_unit ?? "—"} · {product.staff_pack ?? "—"}
                       </span>
@@ -353,7 +353,7 @@ function ResolveRow({ state, recipe, line }: { state: ErpState; recipe: ErpRecip
           {line.raw_name?.vn ? ` / ${line.raw_name.vn}` : ""}
         </span>
         <span className="erpCellSub">
-          {line.raw_amount} {line.raw_unit} · {T("рецептура", "recipe", "công thức")}: {recipeProduct ? productLabel(recipeProduct) : "?"}
+          {line.raw_amount} {line.raw_unit} · {T("рецептура", "recipe", "công thức")}: {recipeProduct ? productTitle(recipeProduct) : "?"}
         </span>
       </td>
       <td className="edit" data-label={T("Продукт", "Product", "Sản phẩm")} style={{ minWidth: 240 }}>
@@ -417,7 +417,7 @@ function UnitRow({ product }: { product: ErpProduct }) {
   return (
     <tr>
       <td className="main">
-        <span className="erpName">{productLabel(product)}</span>
+        <span className="erpName">{productTitle(product)}</span>
       </td>
       <td data-label={T("В Staff", "In Staff", "Trong Staff")}>
         {product.staff_unit ?? "—"} · {product.staff_pack ?? "—"}

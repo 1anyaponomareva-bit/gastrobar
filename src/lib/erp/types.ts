@@ -43,6 +43,7 @@ export type ErpProduct = Archivable & LossPcts & {
   staff_unit: string | null;
   staff_pack: string | null;
   staff_supplier_id: string | null;
+  staff_category?: string | null;
 };
 
 export type ErpStockRow = {
