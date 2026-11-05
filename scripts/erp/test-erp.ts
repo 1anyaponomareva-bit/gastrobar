@@ -1125,6 +1125,35 @@ async function main() {
     }
   });
 
+  await test("product delivery history: one query, posted deliveries and openings only, newest first", async () => {
+    const butter = await saveProduct({ type: "ingredient", name_en: "History butter", name_vn: "Bơ lịch sử", base_unit: "kg" });
+    const history = () =>
+      value<{ doc_no: string; doc_type: string; doc_date: string; qty: number; unit_cost: number | null }[]>("select public.erp_product_receipts($1, 20)", [butter]);
+    assert.deepEqual(await history(), []);
+    const opening = await saveDoc({ doc_type: "opening", doc_date: "2026-09-01", warehouse_id: prep, lines: [{ product_id: butter, qty: 2 }] });
+    await post(opening);
+    const r1 = await saveDoc({ doc_type: "receipt", doc_date: "2026-09-10", warehouse_id: prep, lines: [{ product_id: butter, qty: 4, unit_price: 200000 }] });
+    await post(r1);
+    const r2 = await saveDoc({ doc_type: "receipt", doc_date: "2026-09-12", warehouse_id: prep, lines: [{ product_id: butter, qty: 1, unit_price: 210000 }] });
+    await post(r2);
+    await cancel(r2);
+    await saveDoc({ doc_type: "receipt", doc_date: "2026-09-15", warehouse_id: prep, lines: [{ product_id: butter, qty: 9, unit_price: 1 }] });
+    const rows = await history();
+    assert.deepEqual(
+      rows.map((r) => [r.doc_type, r.doc_date, n(r.qty), n(r.unit_cost)]),
+      [
+        ["receipt", "2026-09-10", 4, 200000],
+        ["opening", "2026-09-01", 2, null],
+      ],
+      "cancelled deliveries and drafts are not history",
+    );
+    assert.equal(n(await value("select jsonb_array_length(public.erp_product_receipts($1, 1))", [butter])), 1, "limit");
+    for (const role of ["anon", "authenticated"]) {
+      assert.equal(await value("select has_function_privilege($1, 'public.erp_product_receipts(uuid,integer)', 'execute')", [role]), false, role);
+    }
+    assert.equal(await value("select has_function_privilege('service_role', 'public.erp_product_receipts(uuid,integer)', 'execute')"), true);
+  });
+
   console.log(`\n${passed} checks passed`);
 }
 

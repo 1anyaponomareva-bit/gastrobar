@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { productTitle, type CostSource } from "@/lib/erp/costing";
 import { addTotals, costInfo, costNumber, stockByProduct, stockOf, stockValue, type CostInfo, type StockTotals } from "@/lib/erp/stockView";
 import type { ErpCategory, ErpProduct, ErpProductReceipt, ErpState } from "@/lib/erp/types";
@@ -137,9 +137,11 @@ export function StockPage() {
   }, [saved]);
 
   const filters = saved ?? initial;
+  // Typing stays instant; the table follows as soon as the browser is free.
+  const search = useDeferredValue(query);
   const rows = useMemo(() => (state ? buildRows(state, new Set(filters.warehouses)) : []), [state, filters.warehouses]);
   const list = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
     const types = new Set(filters.types);
     const cats = new Set(filters.categories);
     const fields = condFields();
@@ -156,7 +158,7 @@ export function StockPage() {
       const y = sortValue(b, filters.sort);
       return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * dir || a.name.localeCompare(b.name);
     });
-  }, [rows, query, filters]);
+  }, [rows, search, filters]);
 
   useEffect(() => setPage(0), [query, filters.warehouses, filters.types, filters.categories, filters.conditions]);
 

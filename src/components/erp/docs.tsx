@@ -1,39 +1,96 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useErp } from "./ErpShell";
 import type { ErpDocType, ErpDocument, ErpState } from "@/lib/erp/types";
 import { dateText, docLabel, Empty, errorText, loadingText, productName, qtyText, statusLabel, T, unitOf, vnd, warehouseName } from "./ui";
 
 export const docHref = (doc: Pick<ErpDocument, "id" | "doc_type">) =>
   doc.doc_type === "production" ? `/erp/preps/batch/${doc.id}` : `/erp/documents/${doc.id}`;
 
-export function useDocuments(types: ErpDocType[] | null) {
-  const [documents, setDocuments] = useState<ErpDocument[] | null>(null);
+type DocPage = { documents: ErpDocument[]; more: boolean };
+type CachedList = DocPage & { docsVersion: number };
+
+/** Lists seen during this visit, so going back to a section shows it at once while it refreshes. */
+const listCache = new Map<string, CachedList>();
+
+async function fetchDocPage(types: string, limit: number | undefined, before?: string): Promise<DocPage> {
+  const params = new URLSearchParams();
+  if (types) params.set("type", types);
+  if (limit) params.set("limit", String(limit));
+  if (before) params.set("before", before);
+  const response = await fetch(`/api/erp/documents?${params}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? "server");
+  return data as DocPage;
+}
+
+const loadErrorText = (e: unknown) => errorText(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "network");
+
+/**
+ * Newest documents of the given types (all types for null), a page at a time. A list seen before
+ * shows immediately and refreshes in the background; after a document change in this visit it is
+ * loaded again before showing, so statuses are never shown out of date.
+ */
+export function useDocuments(types: ErpDocType[] | null, limit?: number) {
+  const { docsVersion } = useErp();
+  const typeList = types?.join(",") ?? "";
+  const key = `${typeList}|${limit ?? ""}`;
+  const cached = listCache.get(key);
+  const [page, setPage] = useState<DocPage | null>(cached && cached.docsVersion === docsVersion ? cached : null);
   const [error, setError] = useState<string | null>(null);
-  const key = types?.join(",") ?? "";
+  const [loadingMore, setLoadingMore] = useState(false);
+  /** Only the newest request may change the list. */
+  const request = useRef(0);
+
+  const show = useCallback(
+    (next: DocPage) => {
+      listCache.set(key, { ...next, docsVersion });
+      setPage(next);
+    },
+    [key, docsVersion],
+  );
 
   const load = useCallback(async () => {
-    setDocuments(null);
+    const id = ++request.current;
+    const fresh = listCache.get(key);
+    if (fresh && fresh.docsVersion === docsVersion) setPage(fresh);
+    else setPage(null);
     setError(null);
     try {
-      const single = types && types.length === 1 ? `?type=${types[0]}` : "";
-      const response = await fetch(`/api/erp/documents${single}`, { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "server");
-      const list = data.documents as ErpDocument[];
-      setDocuments(types && types.length > 1 ? list.filter((doc) => types.includes(doc.doc_type)) : list);
+      const next = await fetchDocPage(typeList, limit);
+      if (id === request.current) show(next);
     } catch (e) {
-      setError(errorText(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "network"));
+      if (id !== request.current) return;
+      // A list already on screen stays; only an empty screen shows the error.
+      if (!(fresh && fresh.docsVersion === docsVersion)) setError(loadErrorText(e));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, typeList, limit, docsVersion, show]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  return { documents, error, reload: load };
+  const loadMore = useCallback(async () => {
+    const current = page;
+    const last = current?.documents.at(-1);
+    if (!current || !last?.created_at) return;
+    const id = ++request.current;
+    setLoadingMore(true);
+    try {
+      const next = await fetchDocPage(typeList, limit, last.created_at);
+      if (id !== request.current) return;
+      const seen = new Set(current.documents.map((doc) => doc.id));
+      show({ documents: [...current.documents, ...next.documents.filter((doc) => !seen.has(doc.id))], more: next.more });
+    } catch (e) {
+      if (id === request.current) setError(loadErrorText(e));
+    } finally {
+      if (id === request.current) setLoadingMore(false);
+    }
+  }, [typeList, limit, page, show]);
+
+  return { documents: page?.documents ?? null, more: page?.more ?? false, loadMore, loadingMore, error, reload: load };
 }
 
 export function StatusBadge({ status }: { status?: string | null }) {
@@ -72,6 +129,9 @@ export function DocTable({
   reload,
   showType,
   empty,
+  more,
+  loadMore,
+  loadingMore,
 }: {
   state: ErpState;
   documents: ErpDocument[] | null;
@@ -79,6 +139,9 @@ export function DocTable({
   reload: () => void;
   showType?: boolean;
   empty: ReactNode;
+  more?: boolean;
+  loadMore?: () => void;
+  loadingMore?: boolean;
 }) {
   const router = useRouter();
   if (error) {
@@ -135,6 +198,13 @@ export function DocTable({
           ))}
         </tbody>
       </table>
+      {more && loadMore ? (
+        <div className="erpDocMore">
+          <button type="button" className="erpBtn" disabled={loadingMore} onClick={loadMore}>
+            {loadingMore ? loadingText() : T("Показать ещё", "Show more", "Xem thêm")}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

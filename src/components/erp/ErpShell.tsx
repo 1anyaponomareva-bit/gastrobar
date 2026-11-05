@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
@@ -12,15 +12,43 @@ import "./erp.css";
 
 type Notice = { ok: boolean; text: string } | null;
 
+type ActOptions = {
+  /** Called with the error response, e.g. to show the draft that was saved before posting failed. */
+  onFail?: (data: Record<string, unknown>) => void;
+};
+
 type ErpContextValue = {
   email: string;
   state: ErpState | null;
   reload: () => Promise<void>;
-  /** Runs an action; on success shows `successText` (or "Saved") and reloads data. */
-  act: <T = Record<string, unknown>>(action: ErpAction, successText?: string | false) => Promise<T | null>;
+  /**
+   * Runs an action; on success shows `successText` (or "Saved") and applies the data the server
+   * returns as changed (or reloads everything when it returns none).
+   */
+  act: <T = Record<string, unknown>>(action: ErpAction, successText?: string | false, options?: ActOptions) => Promise<T | null>;
   busy: boolean;
   notify: (notice: Notice) => void;
+  /** Grows after every document change, so document lists know to refresh. */
+  docsVersion: number;
 };
+
+const DOCUMENT_ACTIONS = new Set<ErpAction["action"]>(["saveDocument", "postDocument", "cancelDocument", "deleteDraft"]);
+/** Comes back to the ERP after this long away: catalog changes from Staff or another tab are loaded. */
+const FOCUS_REFRESH_MS = 30_000;
+
+type StateResponse = ErpState & { email: string };
+
+async function fetchState(): Promise<{ status: number; data: StateResponse | null; error: string | null }> {
+  const response = await fetch("/api/erp/state", { cache: "no-store" }).catch(() => null);
+  if (!response) return { status: 0, data: null, error: "network" };
+  const body = await response.json().catch(() => null);
+  if (!response.ok) return { status: response.status, data: null, error: body?.error ?? "server" };
+  return { status: response.status, data: body as StateResponse, error: null };
+}
+
+function withoutEmail({ email: _email, ...state }: StateResponse): ErpState {
+  return state;
+}
 
 const ErpContext = createContext<ErpContextValue | null>(null);
 
@@ -84,6 +112,7 @@ export function ErpShell({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [invite, setInvite] = useState<string | null>(null);
+  const [initial, setInitial] = useState<ErpState | null>(null);
   setErpLang(lang);
 
   useEffect(() => {
@@ -93,10 +122,20 @@ export function ErpShell({ children }: { children: ReactNode }) {
       setInvite(code);
       setMode("register");
     }
-    fetch("/api/erp/session", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { email?: string | null }) => setEmail(data.email ?? null))
-      .catch(() => setEmail(null));
+    // One request opens the ERP: the data answer also tells who is signed in (401: nobody).
+    void fetchState().then(async ({ status, data }) => {
+      if (data) {
+        setInitial(withoutEmail(data));
+        setEmail(data.email);
+        return;
+      }
+      if (status === 401) return setEmail(null);
+      // Data failed for another reason: find out about the session; the data screen shows the error.
+      const session = await fetch("/api/erp/session", { cache: "no-store" })
+        .then((response) => response.json() as Promise<{ email?: string | null }>)
+        .catch(() => null);
+      setEmail(session?.email ?? null);
+    });
   }, []);
 
   useEffect(() => {
@@ -112,9 +151,15 @@ export function ErpShell({ children }: { children: ReactNode }) {
     }
   };
 
+  // Stable, so page changes (which re-render this layout) do not restart the data loading.
+  const expire = useCallback(() => {
+    setInitial(null);
+    setEmail(null);
+  }, []);
+
   const logout = async () => {
     await fetch("/api/recipes-admin/logout", { method: "POST" }).catch(() => {});
-    setEmail(null);
+    expire();
   };
 
   if (email === undefined) {
@@ -146,7 +191,14 @@ export function ErpShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ErpData email={email} onExpired={() => setEmail(null)} lang={lang} onLang={changeLang} onLogout={logout}>
+    <ErpData
+      email={email}
+      initial={initial}
+      onExpired={expire}
+      lang={lang}
+      onLang={changeLang}
+      onLogout={logout}
+    >
       {children}
     </ErpData>
   );
@@ -154,6 +206,7 @@ export function ErpShell({ children }: { children: ReactNode }) {
 
 function ErpData({
   email,
+  initial,
   onExpired,
   lang,
   onLang,
@@ -161,6 +214,7 @@ function ErpData({
   children,
 }: {
   email: string;
+  initial: ErpState | null;
   onExpired: () => void;
   lang: ErpLang;
   onLang: (lang: ErpLang) => void;
@@ -170,28 +224,37 @@ function ErpData({
   const pathname = usePathname();
   const section = sectionOf(pathname);
   const stockActive = activeStockHref(pathname);
-  const [state, setState] = useState<ErpState | null>(null);
+  const [state, setState] = useState<ErpState | null>(initial);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState(false);
+  const [docsVersion, setDocsVersion] = useState(0);
+  const hasState = useRef(Boolean(initial));
+  /** Counts writes, so a reload that started before a write does not overwrite its newer data. */
+  const writes = useRef(0);
 
   const reload = useCallback(async () => {
-    const response = await fetch("/api/erp/state", { cache: "no-store" }).catch(() => null);
-    if (response?.status === 401) return onExpired();
-    if (!response?.ok) {
-      setLoadError(response ? ((await response.json().catch(() => null))?.error ?? "server") : "network");
+    const startedAt = writes.current;
+    const { status, data, error } = await fetchState();
+    if (status === 401) return onExpired();
+    if (!data) {
+      // With data on screen a failed refresh only shows a notice: open forms keep what was typed.
+      if (hasState.current) setNotice({ ok: false, text: errorText(error ?? "server") });
+      else setLoadError(error ?? "server");
       return;
     }
+    if (writes.current !== startedAt) return;
     setLoadError(null);
-    setState((await response.json()) as ErpState);
+    hasState.current = true;
+    setState(withoutEmail(data));
   }, [onExpired]);
 
   useEffect(() => {
-    void reload();
+    if (!hasState.current) void reload();
     // Catalog changes made in Staff (or another tab) show up when the user comes back to the ERP.
     let last = Date.now();
     const refresh = () => {
-      if (document.visibilityState !== "visible" || Date.now() - last < 10_000) return;
+      if (document.visibilityState !== "visible" || Date.now() - last < FOCUS_REFRESH_MS) return;
       last = Date.now();
       void reload();
     };
@@ -210,7 +273,7 @@ function ErpData({
   }, [notice]);
 
   const act = useCallback(
-    async <T,>(action: ErpAction, successText?: string | false): Promise<T | null> => {
+    async <T,>(action: ErpAction, successText?: string | false, options?: ActOptions): Promise<T | null> => {
       setBusy(true);
       try {
         const response = await fetch("/api/erp/action", {
@@ -222,13 +285,18 @@ function ErpData({
           onExpired();
           return null;
         }
-        const data = (await response.json().catch(() => ({}))) as { error?: string; detail?: string } & T;
+        const data = (await response.json().catch(() => ({}))) as { error?: string; detail?: string; patch?: Partial<ErpState> } & T;
+        writes.current += 1;
+        if (DOCUMENT_ACTIONS.has(action.action)) setDocsVersion((version) => version + 1);
         if (!response.ok) {
           setNotice({ ok: false, text: errorText(data.error ?? "server", data.detail) });
+          options?.onFail?.(data);
           return null;
         }
         if (successText !== false) setNotice({ ok: true, text: successText ?? T("Сохранено", "Saved", "Đã lưu") });
-        await reload();
+        const patch = data.patch;
+        if (patch) setState((prev) => (prev ? { ...prev, ...patch } : prev));
+        else await reload();
         return data;
       } catch {
         setNotice({ ok: false, text: errorText("network") });
@@ -243,7 +311,7 @@ function ErpData({
   const items = navItems();
 
   return (
-    <ErpContext.Provider value={{ email, state, reload, act, busy, notify: setNotice }}>
+    <ErpContext.Provider value={{ email, state, reload, act, busy, notify: setNotice, docsVersion }}>
       <div className="erp erpApp">
         <aside className="erpSide">
           <div className="erpSideBrand">

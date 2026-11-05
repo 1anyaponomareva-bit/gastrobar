@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { readAdmins, type RecipesAdminAccount } from "./storage";
+import { readAdminEmails, type RecipesAdminAccount } from "./storage";
 
 export const RECIPES_ADMIN_COOKIE = "gf_recipes_admin";
 const SESSION_DAYS = 30;
@@ -69,8 +69,7 @@ export async function getSessionEmail(): Promise<string | null> {
   try {
     const { e, x } = JSON.parse(Buffer.from(payload, "base64url").toString()) as { e: string; x: number };
     if (typeof e !== "string" || typeof x !== "number" || x < Date.now()) return null;
-    const admins = await readAdmins();
-    return admins.some((admin) => admin.email === e) ? e : null;
+    return (await readAdminEmails()).has(e) ? e : null;
   } catch {
     return null;
   }

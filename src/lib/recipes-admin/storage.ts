@@ -71,8 +71,29 @@ export function readAdmins() {
   return readJson<RecipesAdminAccount[]>(ADMINS_FILE, []);
 }
 
-export function writeAdmins(admins: RecipesAdminAccount[]) {
-  return writeJson(ADMINS_FILE, admins);
+/** How long a server instance trusts its copy of the admin list for session checks. */
+export const ADMIN_LIST_TTL_MS = 60_000;
+let adminEmails: { at: number; emails: Promise<Set<string>> } | null = null;
+
+/**
+ * Admin emails for session checks. Signed session cookies are verified on every request; the
+ * list (only needed to reject deleted accounts) is re-read at most once a minute per instance.
+ */
+export function readAdminEmails(): Promise<Set<string>> {
+  if (!adminEmails || Date.now() - adminEmails.at > ADMIN_LIST_TTL_MS) {
+    const emails = readAdmins().then((admins) => new Set(admins.map((admin) => admin.email)));
+    adminEmails = { at: Date.now(), emails };
+    emails.catch(() => {
+      adminEmails = null;
+    });
+  }
+  return adminEmails.emails;
+}
+
+export async function writeAdmins(admins: RecipesAdminAccount[]) {
+  adminEmails = null;
+  await writeJson(ADMINS_FILE, admins);
+  adminEmails = null;
 }
 
 export function readOverrides() {

@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { mergeRecipes } from "@/data/recipes";
 import { erpLocalMode } from "@/lib/erp/localDb";
-import { ErpHttpError, errorResponse, requireAdmin, rpc } from "@/lib/erp/server";
+import { ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
+import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
 import type { ErpAction } from "@/lib/erp/types";
 import { readStoredRecipes } from "@/lib/recipes-admin/storage";
 import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalogSource";
@@ -13,6 +14,18 @@ const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel"]);
 const CATALOG_ENTITIES = new Set(["product", "category", "supplier"]);
 const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Screen data each entity lives in. */
+const ENTITY_PART: Record<string, StatePart> = {
+  product: "products",
+  category: "categories",
+  supplier: "suppliers",
+  warehouse: "warehouses",
+  channel: "channels",
+  dish: "dishes",
+};
+/** Posting and cancelling move lots and may update product costs. */
+const STOCK_PARTS: StatePart[] = ["stock", "products"];
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -27,10 +40,21 @@ function object(value: unknown, name: string): Record<string, unknown> {
   return value;
 }
 
-/** All ERP writes. Every action requires an admin session; the email is stored as the author. */
+/**
+ * All ERP writes. Every action requires an admin session; the email is stored as the author.
+ * Responses carry `patch` — the screen data the action changed, read after the write — and, for
+ * documents, the saved `document`, so the client needs no follow-up requests. Actions without a
+ * `patch` change too much; the client reloads everything.
+ */
 export async function POST(request: Request) {
+  const timing = new ServerTiming();
+  const rpc = <T = unknown>(fn: string, args: Record<string, unknown>) => timing.time("db", rawRpc<T>(fn, args));
+  const fresh = (parts: StatePart[]) => timing.time("db", loadState(parts));
+  const freshDocument = (id: string) => timing.time("db", loadDocument(id));
+  // The Staff rollback copy is refreshed after the response; failures there are only logged.
+  const mirrorStaffLater = () => after(() => refreshStaffMirror());
   try {
-    const actor = await requireAdmin();
+    const actor = await timing.time("auth", requireAdmin());
     const body = (await request.json().catch(() => null)) as ErpAction | null;
     if (!isObject(body)) throw new ErpHttpError(400, "ERP_INVALID", "body");
     const a = body as ErpAction;
@@ -38,62 +62,88 @@ export async function POST(request: Request) {
     switch (a.action) {
       case "saveProduct": {
         const id = await rpc("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
-        await refreshStaffMirror();
-        return NextResponse.json({ id });
+        mirrorStaffLater();
+        return timing.json({ id, patch: await fresh(["products", "packs"]) });
       }
       case "setArchived":
         if (!ARCHIVE_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         await rpc("erp_set_archived", { p_entity: a.entity, p_id: uuid(a.id), p_archived: a.archived === true, p_actor: actor });
-        if (CATALOG_ENTITIES.has(a.entity)) await refreshStaffMirror();
-        return NextResponse.json({ ok: true });
+        if (CATALOG_ENTITIES.has(a.entity)) mirrorStaffLater();
+        return timing.json({ ok: true, patch: await fresh([ENTITY_PART[a.entity]]) });
       case "saveRef":
         if (!REF_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         {
           const id = await rpc("erp_save_ref", { p_entity: a.entity, p: object(a.value, "value"), p_actor: actor });
-          if (CATALOG_ENTITIES.has(a.entity)) await refreshStaffMirror();
-          return NextResponse.json({ id });
+          if (CATALOG_ENTITIES.has(a.entity)) mirrorStaffLater();
+          return timing.json({ id, patch: await fresh([ENTITY_PART[a.entity]]) });
         }
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
-        return NextResponse.json({ ok: true });
-      case "saveDocument":
-        return NextResponse.json({ id: await rpc("erp_save_document", { p_doc: object(a.document, "document"), p_actor: actor }) });
-      case "postDocument":
-        return NextResponse.json({ result: await rpc("erp_post_document", { p_id: uuid(a.id), p_actor: actor }) });
-      case "cancelDocument":
-        return NextResponse.json({
-          result: await rpc("erp_cancel_document", { p_id: uuid(a.id), p_actor: actor, p_reason: String(a.reason ?? "") }),
-        });
+        return timing.json({ ok: true, patch: await fresh(["settings"]) });
+      case "saveDocument": {
+        const id = await rpc<string>("erp_save_document", { p_doc: object(a.document, "document"), p_actor: actor });
+        return timing.json({ id, document: await freshDocument(id), patch: {} });
+      }
+      case "postDocument": {
+        // Saving the edited draft and posting it is one request; each step keeps all its checks
+        // and its own transaction, as when they were sent separately.
+        const id = a.document
+          ? await rpc<string>("erp_save_document", { p_doc: object(a.document, "document"), p_actor: actor })
+          : uuid(a.id);
+        let result: unknown;
+        try {
+          result = await rpc("erp_post_document", { p_id: id, p_actor: actor });
+        } catch (error) {
+          if (a.document && error instanceof ErpHttpError) {
+            error.extra = { id, document: await freshDocument(id).catch(() => null) };
+          }
+          throw error;
+        }
+        const [document, patch] = await Promise.all([freshDocument(id), fresh(STOCK_PARTS)]);
+        return timing.json({ id, result, document, patch });
+      }
+      case "cancelDocument": {
+        const id = uuid(a.id);
+        const result = await rpc("erp_cancel_document", { p_id: id, p_actor: actor, p_reason: String(a.reason ?? "") });
+        const [document, patch] = await Promise.all([freshDocument(id), fresh(STOCK_PARTS)]);
+        return timing.json({ result, document, patch });
+      }
       case "deleteDraft":
         await rpc("erp_delete_draft", { p_id: uuid(a.id), p_actor: actor });
-        return NextResponse.json({ ok: true });
-      case "saveRecipe":
-        return NextResponse.json({ id: await rpc("erp_save_recipe", { p: object(a.recipe, "recipe"), p_actor: actor }) });
+        return timing.json({ ok: true, patch: {} });
+      case "saveRecipe": {
+        const id = await rpc("erp_save_recipe", { p: object(a.recipe, "recipe"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["recipes"]) });
+      }
       case "activateRecipe":
         await rpc("erp_activate_recipe", { p_id: uuid(a.id), p_actor: actor });
-        return NextResponse.json({ ok: true });
-      case "resolveRecipeLine":
-        return NextResponse.json({
-          applied: await rpc("erp_resolve_recipe_line", {
-            p_line: uuid(a.lineId),
-            p_product: uuid(a.productId),
-            p_qty: Number(a.qty),
-            p_remember: a.remember === true,
-            p_actor: actor,
-          }),
+        return timing.json({ ok: true, patch: await fresh(["recipes"]) });
+      case "resolveRecipeLine": {
+        const applied = await rpc("erp_resolve_recipe_line", {
+          p_line: uuid(a.lineId),
+          p_product: uuid(a.productId),
+          p_qty: Number(a.qty),
+          p_remember: a.remember === true,
+          p_actor: actor,
         });
-      case "saveDish":
-        return NextResponse.json({ id: await rpc("erp_save_dish", { p: object(a.dish, "dish"), p_actor: actor }) });
-      case "staffCatalogMerge":
-        return NextResponse.json(await mergeOldStaffCatalog(a.apply === true, actor));
+        return timing.json({ applied, patch: await fresh(["recipes"]) });
+      }
+      case "saveDish": {
+        const id = await rpc("erp_save_dish", { p: object(a.dish, "dish"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["dishes"]) });
+      }
+      case "staffCatalogMerge": {
+        const result = await mergeOldStaffCatalog(a.apply === true, actor);
+        return timing.json(a.apply === true ? result : { ...result, patch: {} });
+      }
       case "importRecipes": {
         const recipes = mergeRecipes(erpLocalMode() ? null : await readStoredRecipes());
-        return NextResponse.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });
+        return timing.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });
       }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }
   } catch (error) {
-    return errorResponse(error);
+    return timing.error(error);
   }
 }

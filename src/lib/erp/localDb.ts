@@ -18,9 +18,22 @@ type Db = {
 const shared = globalThis as typeof globalThis & { __erpLocalDb?: Promise<Db> };
 
 /** In order: later files replace functions of earlier ones. */
-export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql"];
+export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql", "20261105190000_erp_speed.sql"];
 
-export const erpLocalMode = () => process.env.NODE_ENV === "development" && process.env.ERP_LOCAL_DB === "pglite";
+export const erpLocalMode = () =>
+  process.env.ERP_LOCAL_DB === "pglite" &&
+  (process.env.NODE_ENV === "development" ||
+    // Speed measurements of a production build on this machine; never on Vercel.
+    (process.env.ERP_LOCAL_PROD_TEST === "1" && !process.env.VERCEL));
+
+/**
+ * Optional emulated network round trip to a remote database (ERP_LOCAL_LATENCY_MS), for
+ * measuring how many sequential trips a screen makes. Parallel calls wait in parallel.
+ */
+export function localNetworkDelay(): Promise<void> | null {
+  const ms = Number(process.env.ERP_LOCAL_LATENCY_MS) || 0;
+  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : null;
+}
 
 async function getDb(): Promise<Db> {
   if (!shared.__erpLocalDb) {
@@ -60,7 +73,7 @@ const ident = (name: string) => {
 
 class Query implements PromiseLike<Result> {
   private columns = "*";
-  private filters: { sql: string; value?: unknown }[] = [];
+  private filters: { sql: string; value?: unknown; after?: string }[] = [];
   private orders: string[] = [];
   private max: number | null = null;
   private mode: "many" | "single" | "maybe" = "many";
@@ -73,6 +86,14 @@ class Query implements PromiseLike<Result> {
   }
   eq(column: string, value: unknown) {
     this.filters.push({ sql: `${ident(column)} = $`, value });
+    return this;
+  }
+  lte(column: string, value: unknown) {
+    this.filters.push({ sql: `${ident(column)} <= $`, value });
+    return this;
+  }
+  in(column: string, values: unknown[]) {
+    this.filters.push({ sql: `${ident(column)} = any($`, value: values, after: ")" });
     return this;
   }
   is(column: string, value: null) {
@@ -98,12 +119,13 @@ class Query implements PromiseLike<Result> {
   }
 
   private async run(): Promise<Result> {
+    await localNetworkDelay();
     try {
       const params: unknown[] = [];
       const where = this.filters.map((f) => {
         if (!f.sql.endsWith("$")) return f.sql;
         params.push(f.value);
-        return `${f.sql}${params.length}`;
+        return `${f.sql}${params.length}${f.after ?? ""}`;
       });
       const sql =
         `select ${this.columns} from public.${ident(this.table)}` +
@@ -125,6 +147,7 @@ class Query implements PromiseLike<Result> {
 }
 
 async function rpc(fn: string, args: Record<string, unknown>): Promise<Result> {
+  await localNetworkDelay();
   try {
     const names = Object.keys(args);
     const values = names.map((name) => {

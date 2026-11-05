@@ -27,7 +27,7 @@ const svg = (path: ReactNode) => (
 
 export function ErpHome() {
   const { state } = useErp();
-  const docs = useDocuments(null);
+  const docs = useDocuments(null, 6);
   if (!state) return null;
   const counts = reviewCounts(state);
   const toCheck = counts.lines + counts.units;
@@ -82,7 +82,7 @@ export function ErpHome() {
           <h2>{T("Последние документы", "Recent documents", "Chứng từ gần đây")}</h2>
           <DocTable
             state={state}
-            documents={docs.documents ? docs.documents.slice(0, 6) : null}
+            documents={docs.documents}
             error={docs.error}
             reload={docs.reload}
             showType

@@ -221,7 +221,8 @@ export type ErpAction =
   | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
   | { action: "saveDocument"; document: Record<string, unknown> }
-  | { action: "postDocument"; id: string }
+  /** With `document`, the draft is saved first (and stays saved if posting fails). */
+  | { action: "postDocument"; id?: string; document?: Record<string, unknown> }
   | { action: "cancelDocument"; id: string; reason: string }
   | { action: "deleteDraft"; id: string }
   | { action: "saveRecipe"; recipe: Record<string, unknown> }

@@ -6,7 +6,7 @@ import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, Erp
 import { useErp } from "./ErpShell";
 import { RefList } from "./RefList";
 import { productsWithoutPack, productsWithoutUnit, unresolvedLines } from "./review";
-import { Field, NavLink, NumberInput, PageHead, ProductPicker, QtyInput, savingText, SubTabs, T, toBase, unitLabel, unitOf, useDirtyGuard } from "./ui";
+import { errorText, Field, NavLink, NumberInput, PageHead, ProductPicker, QtyInput, savingText, SubTabs, T, toBase, unitLabel, unitOf, useDirtyGuard } from "./ui";
 
 const serviceTabs = () => [
   { href: "/erp/service", label: T("Настройки", "Settings", "Cài đặt") },
@@ -99,7 +99,74 @@ export function SettingsPage() {
           emptyText={T("Например: в заведении, Grab Food, Shopee Food.", "For example: dine-in, Grab Food, Shopee Food.", "Ví dụ: tại quán, Grab Food, Shopee Food.")}
         />
       </section>
+
+      <SpeedCard />
     </>
+  );
+}
+
+type Ping = { region: string | null; authMs: number; dbMs: number[]; totalMs: number };
+const ms = () => T("мс", "ms", "ms");
+
+/** Shows where the time of one ERP request goes, to tell network distance from slow screens. */
+function SpeedCard() {
+  const [result, setResult] = useState<Ping | null>(null);
+  const [running, setRunning] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  const run = async () => {
+    setRunning(true);
+    setFailed(null);
+    try {
+      const runs: Ping[] = [];
+      for (let i = 0; i < 3; i += 1) {
+        const start = performance.now();
+        const response = await fetch("/api/erp/ping", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error ?? "server");
+        runs.push({ ...(data as Omit<Ping, "totalMs">), totalMs: Math.round(performance.now() - start) });
+      }
+      // The fastest run: the first may include a server start-up.
+      setResult(runs.reduce((best, run) => (run.totalMs < best.totalMs ? run : best)));
+    } catch (e) {
+      setFailed(errorText(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "network"));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const db = result ? Math.min(...result.dbMs) : 0;
+  return (
+    <section className="erpCard">
+      <h2>{T("Скорость связи", "Connection speed", "Tốc độ kết nối")}</h2>
+      <p className="erpHint">
+        {T(
+          "Каждое действие — запрос к серверу, который обращается к базе данных. Если база отвечает дольше 50 мс, сервер и база, скорее всего, в разных регионах.",
+          "Every action is a request to the server, which queries the database. If the database takes over 50 ms, the server and the database are probably in different regions.",
+          "Mỗi thao tác là một yêu cầu tới máy chủ, máy chủ truy vấn cơ sở dữ liệu. Nếu CSDL phản hồi quá 50 ms, có lẽ máy chủ và CSDL ở khác khu vực.",
+        )}
+      </p>
+      {result ? (
+        <dl className="erpFacts">
+          <dt>{T("Регион сервера", "Server region", "Khu vực máy chủ")}</dt>
+          <dd>{result.region ?? T("локальный", "local", "cục bộ")}</dd>
+          <dt>{T("Проверочный запрос (3 обращения к базе)", "Test request (3 database queries)", "Yêu cầu thử (3 truy vấn CSDL)")}</dt>
+          <dd>{result.totalMs} {ms()}</dd>
+          <dt>{T("Проверка входа", "Sign-in check", "Kiểm tra đăng nhập")}</dt>
+          <dd>{result.authMs} {ms()}</dd>
+          <dt>{T("Один запрос к базе", "One database query", "Một truy vấn CSDL")}</dt>
+          <dd>
+            {db} {ms()} {db > 50 ? <span className="erpBadge warn">{T("далеко", "far", "xa")}</span> : null}
+          </dd>
+        </dl>
+      ) : null}
+      {failed ? <div className="erpNotice bad">{failed}</div> : null}
+      <div className="erpActions end">
+        <button type="button" className="erpBtn" disabled={running} onClick={run}>
+          {running ? T("Проверяем…", "Checking…", "Đang kiểm tra…") : T("Проверить скорость", "Check speed", "Kiểm tra tốc độ")}
+        </button>
+      </div>
+    </section>
   );
 }
 

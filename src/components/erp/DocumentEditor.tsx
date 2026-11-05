@@ -76,6 +76,8 @@ const postedText = (type: ErpDocType) =>
     production: T("Производство подтверждено", "Production confirmed", "Đã xác nhận sản xuất"),
   })[type];
 
+type SavedDoc = { id: string; document?: ErpDocument | null };
+
 async function fetchDoc(id: string): Promise<ErpDocument> {
   const response = await fetch(`/api/erp/documents/${id}`, { cache: "no-store" });
   const data = await response.json().catch(() => ({}));
@@ -157,33 +159,33 @@ export function DocumentEditor({ id }: { id: string }) {
     problems.push(T("Укажите количество в каждой строке", "Enter a quantity on every line", "Nhập số lượng cho mỗi dòng"));
   if (shortages.length) problems.push(T("На складе не хватает части продуктов", "Some products are short", "Thiếu hàng trong kho"));
 
-  const save = async (successText: string | false): Promise<string | null> => {
-    const result = await act<{ id: string }>({ action: "saveDocument", document: { ...doc } as unknown as Record<string, unknown> }, successText);
-    if (!result) return null;
-    if (!doc.id) window.history.replaceState(null, "", `/erp/documents/${result.id}`);
-    try {
-      loadSaved(await fetchDoc(result.id));
-    } catch {
-      setBaseline(JSON.stringify(doc));
-    }
-    return result.id;
+  /** Shows the document as the server saved it. */
+  const showSaved = (saved: ErpDocument | null | undefined) => {
+    if (!saved) return setBaseline(JSON.stringify(doc));
+    if (!doc.id) window.history.replaceState(null, "", `/erp/documents/${saved.id}`);
+    loadSaved(saved);
+  };
+
+  const save = async (successText: string | false) => {
+    const result = await act<SavedDoc>({ action: "saveDocument", document: { ...doc } as unknown as Record<string, unknown> }, successText);
+    if (result) showSaved(result.document);
   };
 
   const post = async () => {
-    const savedId = await save(false);
-    if (!savedId) return;
-    await act({ action: "postDocument", id: savedId }, postedText(type));
-    try {
-      loadSaved(await fetchDoc(savedId));
-    } catch {
-      /* the list shows the result */
-    }
+    // One request saves the edits and posts; posting is shown only after the server confirms it.
+    const result = await act<SavedDoc>(
+      { action: "postDocument", id: doc.id, document: dirty || !doc.id ? ({ ...doc } as unknown as Record<string, unknown>) : undefined },
+      postedText(type),
+      { onFail: (data) => showSaved(data.document as ErpDocument | undefined) },
+    );
+    if (result) showSaved(result.document);
   };
 
   const cancel = async () => {
     const reason = window.prompt(T("Причина отмены документа", "Why is this document cancelled?", "Lý do hủy chứng từ"));
     if (!reason?.trim() || !doc.id) return;
-    if (await act({ action: "cancelDocument", id: doc.id, reason }, T("Документ отменён", "Document cancelled", "Đã hủy chứng từ"))) loadSaved(await fetchDoc(doc.id));
+    const result = await act<SavedDoc>({ action: "cancelDocument", id: doc.id, reason }, T("Документ отменён", "Document cancelled", "Đã hủy chứng từ"));
+    if (result?.document) loadSaved(result.document);
   };
 
   const remove = async () => {

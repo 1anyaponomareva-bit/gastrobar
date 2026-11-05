@@ -742,6 +742,28 @@
   padding-top: 12px;
 }
 
+.erpFacts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0 0 12px;
+}
+
+.erpFacts dt {
+  color: var(--erp-muted);
+}
+
+.erpFacts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.erpDocMore {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
 .erpTip {
   display: inline-block;
   position: relative;

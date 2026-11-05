@@ -89,18 +89,28 @@ export async function saveStaffCatalog(catalog: StaffCatalog, baseVersion: strin
   return { catalog, version: fileVersion(catalog), source: "file", reserved: NONE };
 }
 
+/** The backup is never removed, so once seen it need not be looked up again by this instance. */
+let backupExists = false;
+
 async function backupOldFileOnce(): Promise<void> {
+  if (backupExists) return;
   if (erpLocalMode()) {
     const backup = LOCAL_FILE().replace(/\.json$/, ".before-erp.json");
     const exists = await readFile(backup, "utf8").then(() => true, () => false);
-    if (exists) return;
-    const old = await readFile(LOCAL_FILE(), "utf8").catch(() => null);
-    if (old !== null) await writeFile(backup, old, "utf8");
+    if (exists) backupExists = true;
+    else {
+      const old = await readFile(LOCAL_FILE(), "utf8").catch(() => null);
+      if (old !== null) await writeFile(backup, old, "utf8");
+      backupExists = old !== null;
+    }
     return;
   }
-  if (await readStaffCatalogBackup()) return;
-  const old = await readStaffCatalog();
-  if (old) await writeStaffCatalogBackup(old);
+  if (await readStaffCatalogBackup()) backupExists = true;
+  else {
+    const old = await readStaffCatalog();
+    if (old) await writeStaffCatalogBackup(old);
+    backupExists = Boolean(old);
+  }
 }
 
 /** Keeps the old Staff file equal to the shared catalog, so turning the switch off loses nothing. */

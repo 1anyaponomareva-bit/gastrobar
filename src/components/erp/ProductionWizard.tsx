@@ -75,6 +75,8 @@ function withPlan(state: ErpState, doc: ErpDocument, recipe: ErpRecipe, plan: nu
   };
 }
 
+type SavedDoc = { id: string; document?: ErpDocument | null };
+
 async function fetchDoc(id: string): Promise<ErpDocument> {
   const response = await fetch(`/api/erp/documents/${id}`, { cache: "no-store" });
   const data = await response.json().catch(() => ({}));
@@ -180,35 +182,33 @@ export function ProductionWizard({ id }: { id: string }) {
     return body as unknown as Record<string, unknown>;
   };
 
-  const saveDraft = async (successText: string | false): Promise<string | null> => {
-    const result = await act<{ id: string }>({ action: "saveDocument", document: payload() }, successText);
-    if (!result) return null;
-    if (!doc.id) window.history.replaceState(null, "", `/erp/preps/batch/${result.id}`);
-    try {
-      loadSaved(await fetchDoc(result.id));
-    } catch {
-      setBaseline(JSON.stringify(doc));
-    }
-    return result.id;
+  /** Shows the batch as the server saved it. */
+  const showSaved = (saved: ErpDocument | null | undefined) => {
+    if (!saved) return setBaseline(JSON.stringify(doc));
+    if (!doc.id) window.history.replaceState(null, "", `/erp/preps/batch/${saved.id}`);
+    loadSaved(saved);
+  };
+
+  const saveDraft = async (successText: string | false) => {
+    const result = await act<SavedDoc>({ action: "saveDocument", document: payload() }, successText);
+    if (result) showSaved(result.document);
   };
 
   const confirmProduction = async () => {
-    const savedId = await saveDraft(false);
-    if (!savedId) return;
-    await act({ action: "postDocument", id: savedId }, T("Производство подтверждено", "Production confirmed", "Đã xác nhận sản xuất"));
-    try {
-      loadSaved(await fetchDoc(savedId));
-    } catch {
-      /* the list shows the result */
-    }
+    // One request saves the batch and posts it; it is shown as done only after the server confirms.
+    const result = await act<SavedDoc>(
+      { action: "postDocument", id: doc.id, document: payload() },
+      T("Производство подтверждено", "Production confirmed", "Đã xác nhận sản xuất"),
+      { onFail: (data) => showSaved(data.document as ErpDocument | undefined) },
+    );
+    if (result) showSaved(result.document);
   };
 
   const cancelBatch = async () => {
     const reason = window.prompt(T("Причина отмены производства", "Why is this production cancelled?", "Lý do hủy sản xuất"));
     if (!reason?.trim() || !doc.id) return;
-    if (await act({ action: "cancelDocument", id: doc.id, reason }, T("Производство отменено", "Production cancelled", "Đã hủy sản xuất"))) {
-      loadSaved(await fetchDoc(doc.id));
-    }
+    const result = await act<SavedDoc>({ action: "cancelDocument", id: doc.id, reason }, T("Производство отменено", "Production cancelled", "Đã hủy sản xuất"));
+    if (result?.document) loadSaved(result.document);
   };
 
   const deleteDraft = async () => {
