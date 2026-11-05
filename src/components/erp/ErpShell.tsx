@@ -188,6 +188,19 @@ function ErpData({
 
   useEffect(() => {
     void reload();
+    // Catalog changes made in Staff (or another tab) show up when the user comes back to the ERP.
+    let last = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 10_000) return;
+      last = Date.now();
+      void reload();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [reload]);
 
   useEffect(() => {

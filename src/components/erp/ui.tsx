@@ -112,6 +112,22 @@ export function errorText(code: string, detail?: string): string {
     network: T("Нет связи с сервером", "No connection", "Mất kết nối"),
     server: T("Ошибка сервера", "Server error", "Lỗi máy chủ"),
   };
+  if (code === "ERP_STAFF_INCOMPLETE") {
+    const fields: Record<string, string> = {
+      category: T("категория", "category", "nhóm hàng"),
+      supplier: T("поставщик", "supplier", "nhà cung cấp"),
+      unit: T("единица заказа", "order unit", "đơn vị đặt"),
+    };
+    const missing = (detail ?? "").split(",").filter(Boolean).map((f) => fields[f] ?? f).join(", ");
+    return `${T("Чтобы показать продукт в Staff, заполните", "To show the product in Staff, fill in", "Để hiện trong Staff, hãy điền")}: ${missing}`;
+  }
+  if (code === "ERP_DUPLICATE" && detail?.startsWith("item:")) {
+    return T(
+      "Этот код уже занят другим продуктом ERP — позиция не сохранена, чтобы не смешать разные товары",
+      "This code belongs to another ERP product — not saved so different items are not mixed",
+      "Mã này đã thuộc sản phẩm khác trong ERP",
+    );
+  }
   const text = texts[code] ?? code;
   return detail ? `${text}: ${detail}` : text;
 }

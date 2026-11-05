@@ -109,7 +109,7 @@ export function staffItemPackLabel(item: StaffCatalogItem, unitLabel = item.unit
 }
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
-const LIMITS = { categories: 60, suppliers: 80, items: 2000 };
+const LIMITS = { categories: 200, suppliers: 300, items: 5000 };
 
 function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";

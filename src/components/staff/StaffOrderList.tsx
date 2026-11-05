@@ -5,7 +5,6 @@ import {
   staffCategoryLabel,
   staffItemLabel,
   staffItemPackLabel,
-  staffUnitLabel,
   type StaffCatalog,
   type StaffCatalogItem,
 } from "@/data/staffCatalog";
@@ -27,6 +26,7 @@ import {
   setStoredOrderTab,
   setStoredOrderValue,
 } from "@/lib/staffInventoryStorage";
+import { supplierOrderRows } from "@/lib/staffOrderRows";
 
 const ALL = "all";
 
@@ -139,14 +139,9 @@ export function StaffOrderList({
       employeeLine: `Employee / Nhân viên: ${employee.trim() || "-"}`,
       emptyMessage: "No items marked for order. / Không có mặt hàng nào được chọn để đặt.",
       footerLines: STAFF_ORDER_COMPANY_FOOTER,
-      rows: supplierMarked.map((item) => ({
-        name: staffItemLabel(item),
-        details: item.brand ?? "",
-        packInfo: staffItemPackLabel(item, staffUnitLabel(item.unit)) ?? undefined,
-        quantity: parseNumber(values.get(item.id) ?? ""),
-        unit: staffUnitLabel(item.unit),
-        itemNo: item.itemNo,
-      })),
+      rows: supplierOrderRows(supplierMarked, supplier.id, (id) =>
+        parseNumber(values.get(id) ?? ""),
+      ),
     };
   }, [supplier, supplierMarked, venueLabel, date, employee, values]);
 

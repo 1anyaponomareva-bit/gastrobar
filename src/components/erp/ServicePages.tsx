@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
-import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState } from "@/lib/erp/types";
+import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, StaffMergeResult } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { RefList } from "./RefList";
 import { productsWithoutPack, productsWithoutUnit, unresolvedLines } from "./review";
@@ -105,64 +105,179 @@ export function SettingsPage() {
 
 type ImportResult = Record<string, number>;
 
-/** Staff catalog import: runs only when the user presses the button. */
+const FIELD_NAMES = (): Record<string, string> => ({
+  name: T("Название", "Name", "Tên"),
+  nameVn: T("Название VN", "Name VN", "Tên VN"),
+  brand: T("Бренд", "Brand", "Thương hiệu"),
+  category: T("Категория", "Category", "Nhóm"),
+  supplier: T("Поставщик", "Supplier", "Nhà cung cấp"),
+  unit: T("Единица заказа", "Order unit", "Đơn vị đặt"),
+  pack: T("Фасовка", "Pack", "Quy cách"),
+  itemNo: T("Артикул", "Item no.", "Mã hàng"),
+  hidden: T("Скрыт в заявках", "Hidden in orders", "Ẩn"),
+  listed: T("Показан в Staff", "Listed in Staff", "Hiện trong Staff"),
+});
+
+/**
+ * Staff and the ERP share one catalog. This card compares the old Staff file with the ERP and
+ * adds only what the ERP is missing; it never changes existing ERP rows.
+ */
 export function StaffImportCard({ compact }: { compact?: boolean }) {
   const { state, act, busy } = useErp();
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [result, setResult] = useState<StaffMergeResult | null>(null);
   if (!state) return null;
   const noUnit = productsWithoutUnit(state).length;
+  const run = async (apply: boolean) => {
+    if (apply && !window.confirm(T("Добавить в ERP записи, которых в нём нет? Существующие записи не изменятся.", "Add the records the ERP is missing? Existing records will not change.", "Thêm các bản ghi còn thiếu?"))) return;
+    const data = await act<StaffMergeResult>({ action: "staffCatalogMerge", apply }, apply ? T("Недостающие записи перенесены", "Missing records added", "Đã thêm") : false);
+    if (data) setResult(data);
+  };
+  const plan = result?.plan;
+  const toAdd = plan ? plan.add.items.length + plan.add.suppliers.length + plan.add.categories.length : 0;
+  const names = FIELD_NAMES();
+  const list = (items: string[]) =>
+    items.length > 30 ? `${items.slice(0, 30).join(", ")} ${T("и ещё", "and", "và")} ${items.length - 30}` : items.join(", ");
+
   return (
-    <section className="erpCard">
-      <h2>{T("Загрузите существующие продукты из Staff", "Import existing products from Staff", "Nhập sản phẩm có sẵn từ Staff")}</h2>
+    <section className="erpCard" data-testid="staff-catalog-card">
+      <h2>{T("Справочник Staff", "Staff catalog", "Danh mục Staff")}</h2>
       <p className="erpHint">
         {T(
-          "Продукты, поставщики и категории из приложения заказов Staff попадут в каталог. Повторная загрузка ничего не дублирует и не затирает то, что вы уже поправили здесь.",
-          "Products, suppliers and categories from the Staff ordering app go into the catalog. Running it again creates no duplicates and keeps your edits.",
-          "Sản phẩm, nhà cung cấp và nhóm hàng từ Staff sẽ vào danh mục. Chạy lại không tạo trùng.",
+          "Товары, поставщики и категории приложения заказов Staff и ERP — один справочник. Сверка сравнивает старый файл Staff с ERP; перенос добавляет только недостающие записи и ничего не меняет в существующих. Остатки и складские документы при этом не создаются.",
+          "The Staff ordering app and the ERP share one catalog. The check compares the old Staff file with the ERP; the transfer only adds missing records and changes nothing that exists. No stock or documents are created.",
+          "Staff và ERP dùng chung danh mục. Đối chiếu so sánh tệp Staff cũ với ERP; chỉ thêm bản ghi còn thiếu.",
         )}
       </p>
       <div className="erpActions">
-        <button
-          type="button"
-          className="erpBtn primary"
-          disabled={busy}
-          onClick={async () => setResult((await act<{ result: ImportResult }>({ action: "importStaffCatalog" }, false))?.result ?? null)}
-        >
-          {busy ? T("Загрузка…", "Importing…", "Đang nhập…") : T("Загрузить продукты из Staff", "Import products from Staff", "Nhập sản phẩm từ Staff")}
+        <button type="button" className="erpBtn" disabled={busy} onClick={() => run(false)}>
+          {T("Сверить со Staff", "Compare with Staff", "Đối chiếu với Staff")}
         </button>
+        {plan && toAdd ? (
+          <button type="button" className="erpBtn primary" disabled={busy} onClick={() => run(true)}>
+            {T(`Перенести недостающие (${toAdd})`, `Add missing (${toAdd})`, `Thêm còn thiếu (${toAdd})`)}
+          </button>
+        ) : null}
       </div>
-      {result ? (
-        <div className="erpNotice ok">
-          <strong>{T("Готово", "Done", "Xong")}</strong>
-          <ul>
-            <li>
-              {T("Новых продуктов", "New products", "Sản phẩm mới")}: {result.created ?? 0}
-            </li>
-            <li>
-              {T("Обновлено", "Updated", "Đã cập nhật")}: {result.updated ?? 0}
-            </li>
-            {result.pack_review ? (
-              <li>
-                {T("Упаковок нужно уточнить", "Packs to check", "Quy cách cần kiểm tra")}: {result.pack_review}
-              </li>
-            ) : null}
-          </ul>
+      {result && plan ? (
+        <div className="erpMergeReport" data-testid="staff-merge-report">
           <p>
-            {T("Следующий шаг", "Next step", "Bước tiếp theo")}:{" "}
-            {noUnit ? (
-              <NavLink href="/erp/service/review" className="erpLink">
-                {T(`выберите единицу учёта для ${noUnit} продуктов`, `choose a unit for ${noUnit} products`, `chọn đơn vị cho ${noUnit} sản phẩm`)}
-              </NavLink>
-            ) : compact ? (
-              <NavLink href="/erp/products" className="erpLink">
-                {T("откройте каталог продуктов", "open the product catalog", "mở danh mục sản phẩm")}
-              </NavLink>
-            ) : (
-              <NavLink href="/erp/stock" className="erpLink">
-                {T("внесите остатки или примите первую поставку", "enter opening stock or receive the first delivery", "nhập tồn đầu kỳ hoặc nhận hàng")}
-              </NavLink>
-            )}
+            {T("Staff сейчас работает с", "Staff currently uses", "Staff đang dùng")}{" "}
+            <b>
+              {result.source === "erp"
+                ? T("общим справочником ERP", "the shared ERP catalog", "danh mục chung ERP")
+                : T("старым файлом Staff (ERP видит его только после переноса)", "the old Staff file (the ERP sees it only after a transfer)", "tệp Staff cũ")}
+            </b>
+            {!result.fileFound ? ` · ${T("файл Staff не найден — сравнивается начальный каталог", "no Staff file — the starting catalog is compared", "không có tệp Staff")}` : ""}
           </p>
+          {result.applied ? (
+            <div className="erpNotice ok">
+              {T("Добавлено", "Added", "Đã thêm")}: {T("товаров", "items", "mặt hàng")} {result.applied.items ?? 0}, {T("поставщиков", "suppliers", "nhà cung cấp")} {result.applied.suppliers ?? 0},{" "}
+              {T("категорий", "categories", "nhóm")} {result.applied.categories ?? 0}
+            </div>
+          ) : null}
+          <ul className="erpMergeSummary">
+            <li>{T("Совпадают", "Identical", "Trùng khớp")}: {plan.same}</li>
+            <li>{T("Можно добавить", "Can be added", "Có thể thêm")}: {toAdd}</li>
+            <li>{T("Отличаются (оставлено значение ERP)", "Different (ERP value kept)", "Khác nhau")}: {plan.differs.length}</li>
+            <li>{T("На ручную проверку", "Manual check", "Cần kiểm tra")}: {plan.ambiguous.length + plan.archivedRefs.length}</li>
+            <li>{T("Есть только в ERP", "Only in the ERP", "Chỉ có trong ERP")}: {plan.onlyInErp.length}</li>
+          </ul>
+          {toAdd ? (
+            <>
+              <h3>{T("Можно добавить", "Can be added", "Có thể thêm")}</h3>
+              {plan.add.items.length ? <p>{T("Товары", "Items", "Mặt hàng")}: {list(plan.add.items.map((i) => (i.brand ? `${i.name} · ${i.brand}` : i.name)))}</p> : null}
+              {plan.add.suppliers.length ? <p>{T("Поставщики", "Suppliers", "Nhà cung cấp")}: {list(plan.add.suppliers.map((s) => s.label))}</p> : null}
+              {plan.add.categories.length ? <p>{T("Категории", "Categories", "Nhóm")}: {list(plan.add.categories.map((c) => c.en))}</p> : null}
+            </>
+          ) : null}
+          {plan.needsSetup.length ? (
+            <div className="erpNotice warn">
+              {T(
+                "У этих новых товаров фасовка не указывает единицу — они будут добавлены без единицы учёта. Заказы в Staff работают; для поставок и остатков выберите единицу в карточке продукта:",
+                "These new items have no unit in their pack — they are added without a stock unit. Staff orders work; choose a unit in the product card before stock operations:",
+                "Các mặt hàng này chưa có đơn vị — chọn đơn vị trước khi nhập kho:",
+              )}{" "}
+              {list(plan.needsSetup.map((i) => `${i.name}${i.pack ? ` (${i.pack})` : ""}`))}
+            </div>
+          ) : null}
+          {plan.ambiguous.length ? (
+            <>
+              <h3>{T("На ручную проверку — не перенесены", "Manual check — not added", "Cần kiểm tra — chưa thêm")}</h3>
+              <div className="erpScrollX">
+                <table className="erpTable">
+                  <thead>
+                    <tr>
+                      <th>{T("В Staff", "In Staff", "Trong Staff")}</th>
+                      <th>{T("Похожие в ERP", "Similar in the ERP", "Tương tự trong ERP")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plan.ambiguous.map((a) => (
+                      <tr key={a.id}>
+                        <td>
+                          {a.name}
+                          {a.brand ? ` · ${a.brand}` : ""} <small className="erpCellSub">{a.id}</small>
+                        </td>
+                        <td>{a.candidates.map((c) => `${c.name}${c.brand ? ` · ${c.brand}` : ""} (${c.code})`).join("; ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+          {plan.archivedRefs.length ? (
+            <p className="erpNotice warn">
+              {T("В ERP в архиве, а в Staff используются", "Archived in the ERP but used in Staff", "Đã lưu trữ trong ERP nhưng Staff dùng")}: {list(plan.archivedRefs.map((r) => `${r.name} (${r.id})`))}
+            </p>
+          ) : null}
+          {plan.differs.length ? (
+            <details>
+              <summary>
+                {T("Отличаются", "Different", "Khác nhau")}: {plan.differs.length} — {T("значения ERP сохранены", "ERP values kept", "giữ giá trị ERP")}
+              </summary>
+              <div className="erpScrollX">
+                <table className="erpTable">
+                  <thead>
+                    <tr>
+                      <th>{T("Позиция", "Item", "Mặt hàng")}</th>
+                      <th>{T("Поле", "Field", "Trường")}</th>
+                      <th>Staff</th>
+                      <th>ERP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plan.differs.flatMap((d) =>
+                      d.fields.map((f) => (
+                        <tr key={`${d.id}-${f.field}`}>
+                          <td>{d.name}</td>
+                          <td>{names[f.field] ?? f.field}</td>
+                          <td>{f.staff || "—"}</td>
+                          <td>{f.erp || "—"}</td>
+                        </tr>
+                      )),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ) : null}
+          {plan.onlyInErp.length ? (
+            <p className="erpHint">
+              {T("Есть только в ERP (например, созданы в ERP)", "Only in the ERP (for example created there)", "Chỉ có trong ERP")}: {list(plan.onlyInErp.map((p) => (p.brand ? `${p.name} · ${p.brand}` : p.name)))}
+            </p>
+          ) : null}
+          {noUnit ? (
+            <p>
+              <NavLink href="/erp/service/review" className="erpLink">
+                {T(`Выберите единицу учёта для ${noUnit} продуктов`, `Choose a unit for ${noUnit} products`, `Chọn đơn vị cho ${noUnit} sản phẩm`)}
+              </NavLink>
+            </p>
+          ) : compact ? (
+            <NavLink href="/erp/products" className="erpLink">
+              {T("Открыть каталог продуктов", "Open the product catalog", "Mở danh mục sản phẩm")}
+            </NavLink>
+          ) : null}
         </div>
       ) : null}
     </section>

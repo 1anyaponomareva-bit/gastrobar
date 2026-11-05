@@ -3,7 +3,10 @@
  * Run: npm run test:erp
  */
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
+import { PDFDocument } from "pdf-lib";
 import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog, type StaffCatalog } from "../../src/data/staffCatalog";
 import { RECIPES } from "../../src/data/recipes";
 import {
@@ -18,7 +21,10 @@ import {
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import { formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
+import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import type { ErpStockRow } from "../../src/lib/erp/types";
+import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
+import { supplierOrderRows } from "../../src/lib/staffOrderRows";
 import { applyMigration, createTestDb } from "./testDb";
 
 const ACTOR = "test@gastrofood";
@@ -885,6 +891,238 @@ async function main() {
     assert.deepEqual(costInfo(nothing, product), { kind: "reference", unitCost: 50000, source: "receipt" });
     assert.deepEqual(costInfo(nothing, { est_unit_cost: null }), { kind: "none" });
     assert.equal(costNumber({ kind: "unknown" }), null);
+  });
+
+  // ---- One catalog for Staff and ERP ----
+  const staffExport = async () => sanitizeStaffCatalog(await value<unknown>("select public.erp_staff_catalog()"))!;
+  const staffVersion = () => value<string>("select public.erp_staff_catalog_version()");
+  const saveStaff = (c: StaffCatalog, version: string | null) =>
+    value<Record<string, unknown>>("select public.erp_save_staff_catalog($1::jsonb, $2, $3)", [JSON.stringify(c), version, ACTOR]);
+  const workCounts = () =>
+    one<Record<string, string>>(
+      `select (select count(*) from public.erp_lots) lots, (select count(*) from public.erp_movements) movements,
+              (select count(*) from public.erp_documents) documents, (select count(*) from public.erp_document_lines) document_lines,
+              (select count(*) from public.erp_recipes) recipes, (select count(*) from public.erp_recipe_lines) recipe_lines,
+              (select coalesce(sum(qty_left), 0) from public.erp_lots) qty_left`,
+    );
+  const catalogRows = async (): Promise<ErpCatalogRows> => ({
+    categories: await q("select id, code, name_en, name_vn, archived_at from public.erp_categories"),
+    suppliers: await q("select id, code, name, zalo_url, archived_at from public.erp_suppliers"),
+    products: await q("select * from public.erp_products"),
+    itemLinks: await q("select legacy_id, target_id from public.erp_legacy_map where source = 'staff' and entity = 'item'"),
+  });
+  const work = await workCounts();
+
+  await test("shared catalog: item and supplier created in Staff appear in the ERP with brand, unit, pack and link", async () => {
+    const c = await staffExport();
+    const version = await staffVersion();
+    c.suppliers.push({ id: "test-oat-supplier", label: "Oat Supplier Co" });
+    c.items.push({
+      id: "test-oat-milk",
+      category: c.categories[0].id,
+      name: "Oat milk",
+      nameVn: "Sữa yến mạch",
+      brand: "Oatly",
+      unit: "box",
+      pack: "12*1 L",
+      supplier: "test-oat-supplier",
+      itemNo: "OAT-1",
+    });
+    const result = await saveStaff(c, version);
+    assert.notEqual(result.version, version, "a save gives a new version");
+    assert.equal(result.version, await staffVersion());
+    const row = await one<Record<string, string>>(
+      `select p.name_en, p.name_vn, p.brand, p.base_unit, p.staff_unit, p.staff_pack, p.staff_item_no, s.code supplier, c.code category
+       from public.erp_products p join public.erp_suppliers s on s.id = p.staff_supplier_id join public.erp_categories c on c.id = p.category_id
+       where p.code = 'test-oat-milk'`,
+    );
+    assert.deepEqual(row, {
+      name_en: "Oat milk",
+      name_vn: "Sữa yến mạch",
+      brand: "Oatly",
+      base_unit: "l",
+      staff_unit: "box",
+      staff_pack: "12*1 L",
+      staff_item_no: "OAT-1",
+      supplier: "test-oat-supplier",
+      category: c.categories[0].id,
+    });
+    const pack = await one<{ label: string; qty_base: string; is_default: boolean; supplier: string }>(
+      `select k.label, k.qty_base, k.is_default, s.code supplier from public.erp_product_packs k
+       join public.erp_products p on p.id = k.product_id join public.erp_suppliers s on s.id = k.supplier_id where p.code = 'test-oat-milk'`,
+    );
+    assert.deepEqual([pack.label, n(pack.qty_base), pack.is_default, pack.supplier], ["box 12*1 L", 12, true, "test-oat-supplier"]);
+    const back = (await staffExport()).items.find((i) => i.id === "test-oat-milk");
+    assert.deepEqual(back, c.items.at(-1), "Staff reads back exactly what it saved");
+    assert.deepEqual(await workCounts(), work, "no stock, documents or movements");
+  });
+
+  await test("shared catalog: a save based on an old version is refused and changes nothing", async () => {
+    const old = await staffVersion();
+    const first = await staffExport();
+    first.items.find((i) => i.id === "test-oat-milk")!.brand = "Oatly Barista";
+    await saveStaff(first, old);
+    const stale = await staffExport();
+    stale.items.find((i) => i.id === "test-oat-milk")!.itemNo = "OLD-COPY";
+    await expectError(saveStaff(stale, old), "ERP_STALE");
+    await expectError(saveStaff(stale, null), "ERP_STALE");
+    const row = await one<{ brand: string; staff_item_no: string }>("select brand, staff_item_no from public.erp_products where code = 'test-oat-milk'");
+    assert.deepEqual(row, { brand: "Oatly Barista", staff_item_no: "OAT-1" }, "the newer save is kept");
+  });
+
+  let lime = "";
+  await test("shared catalog: products created and edited in the ERP show up in Staff", async () => {
+    const supplier = await value<string>("select id from public.erp_suppliers where code = 'test-oat-supplier'");
+    const category = await value<string>("select id from public.erp_categories where archived_at is null order by sort limit 1");
+    const base = { type: "ingredient", name_en: "Test lime", name_vn: "", brand: "Farm A", base_unit: "kg", category_id: category };
+    const staff = { listed: true, supplier_id: supplier, unit: "kg", pack: "1 kg", item_no: "L-1", hidden: false };
+    lime = await saveProduct({ ...base, staff });
+    const code = await value<string>("select code from public.erp_products where id = $1", [lime]);
+    let item = (await staffExport()).items.find((i) => i.id === code);
+    assert.ok(item, "visible in Staff");
+    assert.deepEqual([item!.name, item!.brand, item!.unit, item!.pack, item!.supplier, item!.itemNo], ["Test lime", "Farm A", "kg", "1 kg", "test-oat-supplier", "L-1"]);
+    // An edit without Staff settings keeps them; brand changes reach Staff.
+    await saveProduct({ ...base, id: lime, brand: "Farm B" });
+    item = (await staffExport()).items.find((i) => i.id === code);
+    assert.deepEqual([item!.brand, item!.supplier, item!.pack], ["Farm B", "test-oat-supplier", "1 kg"]);
+    await saveProduct({ ...base, id: lime, brand: "Farm B", staff: { ...staff, hidden: true } });
+    assert.equal((await staffExport()).items.find((i) => i.id === code)!.hidden, true);
+    await saveProduct({ ...base, id: lime, brand: "Farm B", staff: { ...staff, listed: false } });
+    assert.equal((await staffExport()).items.some((i) => i.id === code), false, "unlisted in the ERP → gone from Staff orders");
+    await saveProduct({ ...base, id: lime, brand: "Farm B", staff });
+    // Missing Staff settings: refused with the list of fields, nothing saved.
+    const before = n(await value("select count(*) from public.erp_products"));
+    const failure = async (p: Record<string, unknown>) => {
+      const error = (await saveProduct(p).then(() => null, (e: Error & { detail?: string }) => e))!;
+      assert.ok(error, "expected an error");
+      return [error.message, error.detail];
+    };
+    assert.deepEqual(await failure({ ...base, name_en: "Test lemon", staff: { ...staff, supplier_id: null, unit: "" } }), ["ERP_STAFF_INCOMPLETE", "supplier,unit"]);
+    assert.deepEqual(await failure({ ...base, name_en: "Test lemon", category_id: null, staff }), ["ERP_STAFF_INCOMPLETE", "category"]);
+    assert.equal(n(await value("select count(*) from public.erp_products")), before);
+    assert.deepEqual(await workCounts(), work);
+  });
+
+  await test("shared catalog: a Staff save of unchanged data changes nothing in the ERP", async () => {
+    const snapshot = () =>
+      q("select code, name_en, name_vn, brand, category_id, base_unit, staff_unit, staff_pack, staff_supplier_id, staff_item_no, staff_hidden, staff_listed, archived_at from public.erp_products order by code");
+    const packs = () => q("select product_id, supplier_id, label, qty_base, is_default, archived_at from public.erp_product_packs order by product_id, label");
+    const products = await snapshot();
+    const packsBefore = await packs();
+    const suppliers = await q("select code, name, archived_at from public.erp_suppliers order by code");
+    await saveStaff(await staffExport(), await staffVersion());
+    assert.deepEqual(await snapshot(), products, "no product field rewritten (empty VN names stay empty)");
+    assert.deepEqual(await packs(), packsBefore, "no pack added or switched");
+    assert.deepEqual(await q("select code, name, archived_at from public.erp_suppliers order by code"), suppliers);
+    assert.equal(await value("select name_vn from public.erp_products where id = $1", [lime]), "");
+  });
+
+  await test("shared catalog: Staff cannot take a code of an ERP-only product; hidden products are not unlisted", async () => {
+    const prepOnly = await saveProduct({ type: "ingredient", name_en: "Staff collision prep", base_unit: "kg" });
+    const code = await value<string>("select code from public.erp_products where id = $1", [prepOnly]);
+    const reserved = await value<{ items: string[] }>("select public.erp_staff_reserved_ids()");
+    assert.ok(reserved.items.includes(code), "reserved for the Staff editor");
+    const c = await staffExport();
+    c.items.push({ id: code, category: c.categories[0].id, name: "Something else", nameVn: "", unit: "kg", supplier: "test-oat-supplier" });
+    await expectError(saveStaff(c, await staffVersion()), "ERP_DUPLICATE");
+    const kept = await one<{ name_en: string; staff_listed: boolean }>("select name_en, staff_listed from public.erp_products where id = $1", [prepOnly]);
+    assert.deepEqual(kept, { name_en: "Staff collision prep", staff_listed: false });
+
+    // Supplier archived in the ERP: Staff does not see the product, and its save must not unlist it.
+    await q("update public.erp_suppliers set archived_at = now() where code = 'test-oat-supplier'");
+    const hidden = await q<{ code: string }>("select code from public.erp_products where staff_supplier_id = (select id from public.erp_suppliers where code = 'test-oat-supplier')");
+    assert.ok(hidden.length >= 2);
+    const without = await staffExport();
+    assert.equal(without.items.some((i) => hidden.some((h) => h.code === i.id)), false);
+    await saveStaff(without, await staffVersion());
+    assert.equal(n(await value("select count(*) from public.erp_products where staff_listed and code = any($1)", [hidden.map((h) => h.code)])), hidden.length);
+    await q("update public.erp_suppliers set archived_at = null where code = 'test-oat-supplier'");
+    assert.ok((await staffExport()).items.some((i) => i.id === "test-oat-milk"), "back in Staff with its settings");
+  });
+
+  await test("old Staff file merge: adds only missing records, ambiguous ones go to review, never overwrites, repeatable", async () => {
+    const erpOnly = await value<string>("select code from public.erp_products where name_en = 'Staff collision prep'");
+    const old = structuredClone(await staffExport());
+    const mozzarella = await one<{ code: string; brand: string }>("select code, brand from public.erp_products where name_en = 'Cheese - Mozzarella' and brand = 'Mlekpol'");
+    const changed = old.items.find((i) => i.id === "test-oat-milk")!;
+    changed.brand = "Old brand";
+    const limeCode = await value<string>("select code from public.erp_products where id = $1", [lime]);
+    old.items = old.items.filter((i) => i.id !== limeCode);
+    old.suppliers.push({ id: "test-old-supplier", label: "Old Supplier" });
+    old.items.push(
+      { id: "test-old-fish", category: old.categories[0].id, name: "Old fish", nameVn: "Cá", unit: "box", pack: "13-15 kg", supplier: "test-old-supplier" },
+      { id: "test-old-mozzarella", category: old.categories[0].id, name: "Cheese - Mozzarella", nameVn: "", brand: "Mlekpol", unit: "box", pack: "5*2 kg", supplier: "test-old-supplier" },
+      { id: "test-old-mozzarella-arla", category: old.categories[0].id, name: "Cheese - Mozzarella", nameVn: "", brand: "Arla", unit: "box", pack: "5*2 kg", supplier: "test-old-supplier" },
+      { id: erpOnly, category: old.categories[0].id, name: "Other thing", nameVn: "", unit: "kg", supplier: "test-old-supplier" },
+    );
+    const plan = planStaffMerge(old, await catalogRows());
+    assert.deepEqual(plan.add.suppliers.map((s) => s.id), ["test-old-supplier"]);
+    assert.deepEqual(plan.add.items.map((i) => i.id).sort(), ["test-old-fish", "test-old-mozzarella-arla"], "different brand is a different item");
+    assert.deepEqual(plan.ambiguous.map((a) => a.id).sort(), [erpOnly, "test-old-mozzarella"].sort(), "same name and brand, or a taken code → manual check");
+    assert.deepEqual(plan.ambiguous.find((a) => a.id === "test-old-mozzarella")!.candidates.map((c) => c.code), [mozzarella.code]);
+    assert.deepEqual(plan.needsSetup.map((i) => i.id), ["test-old-fish"], "a range pack gives no unit");
+    assert.deepEqual(plan.differs.find((d) => d.id === "test-oat-milk")!.fields, [{ field: "brand", staff: "Old brand", erp: "Oatly Barista" }]);
+    assert.ok(plan.onlyInErp.some((p) => p.code === limeCode), "created in the ERP, not in the old file");
+
+    const applied = await value<Record<string, number>>("select public.erp_add_staff_catalog($1::jsonb, $2)", [JSON.stringify(plan.add), ACTOR]);
+    assert.deepEqual([applied.items, applied.suppliers, applied.categories, applied.pack_review], [2, 1, 0, 1]);
+    assert.equal(await value("select brand from public.erp_products where code = 'test-oat-milk'"), "Oatly Barista", "existing ERP data not overwritten");
+    const fish = await one<{ base_unit: string | null; staff_unit: string; staff_listed: boolean; packs: string }>(
+      "select base_unit, staff_unit, staff_listed, (select count(*) from public.erp_product_packs k where k.product_id = p.id) packs from public.erp_products p where code = 'test-old-fish'",
+    );
+    assert.deepEqual([fish.base_unit, fish.staff_unit, fish.staff_listed, n(fish.packs)], [null, "box", true, 0], "unit not guessed, item kept");
+    const arla = await one<{ base_unit: string; qty_base: string }>(
+      "select p.base_unit, k.qty_base from public.erp_products p join public.erp_product_packs k on k.product_id = p.id where p.code = 'test-old-mozzarella-arla'",
+    );
+    assert.deepEqual([arla.base_unit, n(arla.qty_base)], ["kg", 10]);
+    assert.ok((await staffExport()).items.some((i) => i.id === "test-old-fish"), "a transferred item is in Staff orders");
+
+    const counts = () => one("select (select count(*) from public.erp_products) p, (select count(*) from public.erp_suppliers) s, (select count(*) from public.erp_product_packs) k");
+    const before = await counts();
+    const again = planStaffMerge(old, await catalogRows());
+    assert.equal(again.add.items.length + again.add.suppliers.length + again.add.categories.length, 0, "nothing left to add");
+    const second = await value<Record<string, number>>("select public.erp_add_staff_catalog($1::jsonb, $2)", [JSON.stringify(plan.add), ACTOR]);
+    assert.deepEqual([second.items, second.suppliers, second.skipped], [0, 0, 2]);
+    assert.deepEqual(await counts(), before, "no duplicates");
+    assert.deepEqual(await workCounts(), work, "no stock, documents, movements or recipe changes");
+
+    // Incomplete settings block only stock operations.
+    const fishId = await value<string>("select id from public.erp_products where code = 'test-old-fish'");
+    const draft = await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: fishId, qty: 1, unit_price: 1000 }] }).catch((e: Error) => e);
+    if (typeof draft === "string") {
+      await expectError(post(draft), "ERP_PRODUCT_NO_UNIT");
+      await q("delete from public.erp_document_lines where document_id = $1", [draft]);
+      await q("delete from public.erp_documents where id = $1", [draft]);
+    } else assert.match(draft.message, /ERP_PRODUCT_NO_UNIT/);
+    assert.deepEqual(await workCounts(), work);
+  });
+
+  await test("supplier order PDF from the shared catalog", async () => {
+    const c = await staffExport();
+    c.items.push({ id: "test-hidden", category: c.categories[0].id, name: "Hidden", nameVn: "", unit: "kg", supplier: "test-oat-supplier", hidden: true });
+    const qty: Record<string, number> = { "test-oat-milk": 3, "test-hidden": 5 };
+    const rows = supplierOrderRows(c.items, "test-oat-supplier", (id) => qty[id] ?? 0);
+    assert.equal(rows.length, 1, "only marked, visible items of this supplier");
+    assert.equal(rows[0].quantity, 3);
+    assert.equal(rows[0].details, "Oatly Barista");
+    assert.equal(rows[0].itemNo, "OAT-1");
+    assert.ok(rows[0].name.includes("Oat milk"), rows[0].name);
+    assert.ok(rows[0].packInfo?.includes("12*1 L"), rows[0].packInfo);
+    const fonts = path.join(process.cwd(), "public");
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input).split("?")[0];
+      return new Response(await readFile(path.join(fonts, url.replace(/^https?:\/\/[^/]+/, ""))));
+    }) as typeof fetch;
+    try {
+      const blob = await makeSupplierOrderPdfBlob({ title: "ORDER: OAT SUPPLIER CO", dateLine: "Date: 2026-11-05", employeeLine: "Employee: test", rows, emptyMessage: "-" });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      assert.equal(new TextDecoder().decode(bytes.slice(0, 5)), "%PDF-");
+      const pdf = await PDFDocument.load(bytes);
+      assert.equal(pdf.getPageCount(), 1);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   console.log(`\n${passed} checks passed`);

@@ -1,4 +1,5 @@
 import type { ErpProductType, ErpUnit, LossMethod, LossPcts } from "./costing";
+export type { StaffMergeResult } from "./staffMerge";
 
 export type ErpSettings = {
   input_vat_enabled: boolean;
@@ -43,6 +44,8 @@ export type ErpProduct = Archivable & LossPcts & {
   staff_unit: string | null;
   staff_pack: string | null;
   staff_supplier_id: string | null;
+  staff_item_no?: string | null;
+  staff_hidden?: boolean;
   staff_category?: string | null;
 };
 
@@ -225,5 +228,5 @@ export type ErpAction =
   | { action: "activateRecipe"; id: string }
   | { action: "resolveRecipeLine"; lineId: string; productId: string; qty: number; remember: boolean }
   | { action: "saveDish"; dish: Record<string, unknown> }
-  | { action: "importStaffCatalog" }
+  | { action: "staffCatalogMerge"; apply: boolean }
   | { action: "importRecipes" };

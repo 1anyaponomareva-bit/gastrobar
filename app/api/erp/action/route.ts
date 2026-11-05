@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { mergeRecipes } from "@/data/recipes";
-import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog } from "@/data/staffCatalog";
 import { erpLocalMode } from "@/lib/erp/localDb";
 import { ErpHttpError, errorResponse, requireAdmin, rpc } from "@/lib/erp/server";
 import type { ErpAction } from "@/lib/erp/types";
-import { readStaffCatalog, readStoredRecipes } from "@/lib/recipes-admin/storage";
+import { readStoredRecipes } from "@/lib/recipes-admin/storage";
+import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalogSource";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel"]);
+const CATALOG_ENTITIES = new Set(["product", "category", "supplier"]);
 const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -35,15 +36,23 @@ export async function POST(request: Request) {
     const a = body as ErpAction;
 
     switch (a.action) {
-      case "saveProduct":
-        return NextResponse.json({ id: await rpc("erp_save_product", { p: object(a.product, "product"), p_actor: actor }) });
+      case "saveProduct": {
+        const id = await rpc("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
+        await refreshStaffMirror();
+        return NextResponse.json({ id });
+      }
       case "setArchived":
         if (!ARCHIVE_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         await rpc("erp_set_archived", { p_entity: a.entity, p_id: uuid(a.id), p_archived: a.archived === true, p_actor: actor });
+        if (CATALOG_ENTITIES.has(a.entity)) await refreshStaffMirror();
         return NextResponse.json({ ok: true });
       case "saveRef":
         if (!REF_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
-        return NextResponse.json({ id: await rpc("erp_save_ref", { p_entity: a.entity, p: object(a.value, "value"), p_actor: actor }) });
+        {
+          const id = await rpc("erp_save_ref", { p_entity: a.entity, p: object(a.value, "value"), p_actor: actor });
+          if (CATALOG_ENTITIES.has(a.entity)) await refreshStaffMirror();
+          return NextResponse.json({ id });
+        }
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
         return NextResponse.json({ ok: true });
@@ -75,12 +84,8 @@ export async function POST(request: Request) {
         });
       case "saveDish":
         return NextResponse.json({ id: await rpc("erp_save_dish", { p: object(a.dish, "dish"), p_actor: actor }) });
-      case "importStaffCatalog": {
-        const stored = erpLocalMode() ? null : await readStaffCatalog();
-        const catalog = sanitizeStaffCatalog(stored ?? DEFAULT_STAFF_CATALOG);
-        if (!catalog) throw new ErpHttpError(400, "ERP_INVALID", "staff catalog");
-        return NextResponse.json({ result: await rpc("erp_sync_staff_catalog", { p_catalog: catalog, p_actor: actor }) });
-      }
+      case "staffCatalogMerge":
+        return NextResponse.json(await mergeOldStaffCatalog(a.apply === true, actor));
       case "importRecipes": {
         const recipes = mergeRecipes(erpLocalMode() ? null : await readStoredRecipes());
         return NextResponse.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });

@@ -100,6 +100,17 @@ export function writeStaffCatalog(catalog: StaffCatalog) {
   return writeJson(STAFF_CATALOG_FILE, catalog);
 }
 
+/** Copy of the Staff file taken once before the shared catalog first overwrites it. */
+const STAFF_CATALOG_BACKUP_FILE = "staff-catalog.before-erp.json";
+
+export function readStaffCatalogBackup() {
+  return readJson<StaffCatalog | null>(STAFF_CATALOG_BACKUP_FILE, null);
+}
+
+export function writeStaffCatalogBackup(catalog: StaffCatalog) {
+  return writeJson(STAFF_CATALOG_BACKUP_FILE, catalog);
+}
+
 let photosBucketReady = false;
 
 /** Uploads a JPEG to the public photos bucket and returns its public URL. */

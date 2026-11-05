@@ -1825,3 +1825,23 @@
 .erpDetail td:first-child {
   white-space: normal;
 }
+.erpMergeReport {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.erpMergeReport h3 {
+  margin: 6px 0 0;
+  font-size: 15px;
+}
+.erpMergeReport p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.erpMergeSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding-left: 18px;
+}

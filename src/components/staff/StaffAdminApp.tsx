@@ -28,6 +28,10 @@ type Editing =
 
 type Notice = { ok: boolean; text: string } | null;
 
+/** Codes used by ERP rows that Staff does not list; new ids must avoid them. */
+type Reserved = { items: string[]; suppliers: string[]; categories: string[] };
+const NO_RESERVED: Reserved = { items: [], suppliers: [], categories: [] };
+
 const UNITS = ["kg", "g", "l", "ml", "pcs", "box", "pack", "btl", "can"];
 
 const t = (key: string) => translate("ru", key);
@@ -186,12 +190,34 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
   const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
 
-  useEffect(() => {
-    fetch("/api/staff-catalog", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data: { catalog?: unknown }) => setCatalog(sanitizeStaffCatalog(data.catalog)))
-      .catch(() => setNotice({ ok: false, text: t("recipes_admin_err_server") }));
+  const [version, setVersion] = useState("");
+  const [reserved, setReserved] = useState<Reserved>(NO_RESERVED);
+  const editingRef = useRef(false);
+  editingRef.current = Boolean(editing) || busy;
+
+  const load = useCallback(async () => {
+    const response = await fetch("/api/staff-catalog", { cache: "no-store" });
+    const data = (await response.json()) as { catalog?: unknown; version?: string; reserved?: Reserved };
+    const fresh = sanitizeStaffCatalog(data.catalog);
+    if (!response.ok || !fresh || !data.version) throw new Error("load");
+    setCatalog(fresh);
+    setVersion(data.version);
+    setReserved(data.reserved ?? NO_RESERVED);
   }, []);
+
+  useEffect(() => {
+    load().catch(() => setNotice({ ok: false, text: t("recipes_admin_err_server") }));
+    // Changes made in the ERP show up when the page is opened again or gets focus.
+    const refresh = () => {
+      if (document.visibilityState === "visible" && !editingRef.current) load().catch(() => {});
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
 
   const save = useCallback(
     async (next: StaffCatalog, message: string) => {
@@ -201,15 +227,32 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         const response = await fetch("/api/staff-admin/catalog", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ catalog: next }),
+          body: JSON.stringify({ catalog: next, version }),
         });
         if (response.status === 401) {
           onExpired();
           return false;
         }
-        const data = (await response.json().catch(() => null)) as { catalog?: StaffCatalog } | null;
-        if (!response.ok || !data?.catalog) throw new Error("save");
+        if (response.status === 409) {
+          await load().catch(() => {});
+          setNotice({
+            ok: false,
+            text: "Справочник успели изменить (в ERP или на другом устройстве). Загружена актуальная версия — проверьте данные и сохраните ещё раз.",
+          });
+          return false;
+        }
+        const data = (await response.json().catch(() => null)) as
+          | { catalog?: StaffCatalog; version?: string; reserved?: Reserved; error?: string }
+          | null;
+        if (data?.error === "ERP_DUPLICATE") {
+          setNotice({ ok: false, text: "Такой код уже занят другой позицией в ERP. Измените название или бренд и сохраните ещё раз." });
+          await load().catch(() => {});
+          return false;
+        }
+        if (!response.ok || !data?.catalog || !data.version) throw new Error("save");
         setCatalog(data.catalog);
+        setVersion(data.version);
+        setReserved(data.reserved ?? NO_RESERVED);
         setNotice({ ok: true, text: message });
         return true;
       } catch {
@@ -219,7 +262,7 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         setBusy(false);
       }
     },
-    [onExpired],
+    [onExpired, version, load],
   );
 
   if (!catalog) {
@@ -262,6 +305,7 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
         initial={editing.value}
         isNew={editing.isNew}
         catalog={catalog}
+        reserved={reserved}
         busy={busy}
         onCancel={() => setEditing(null)}
         onSave={(value, extras) =>
@@ -286,7 +330,7 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
     body = (
       <SupplierForm
         initial={editing.value}
-        takenIds={catalog.suppliers.map((supplier) => supplier.id)}
+        takenIds={[...catalog.suppliers.map((supplier) => supplier.id), ...reserved.suppliers]}
         isNew={editing.isNew}
         usedBy={usage("supplier", editing.value.id)}
         busy={busy}
@@ -312,7 +356,7 @@ function CatalogEditor({ email, onLogout, onExpired }: CatalogEditorProps) {
     body = (
       <CategoryForm
         initial={editing.value}
-        takenIds={catalog.categories.map((category) => category.id)}
+        takenIds={[...catalog.categories.map((category) => category.id), ...reserved.categories]}
         isNew={editing.isNew}
         usedBy={usage("category", editing.value.id)}
         busy={busy}
@@ -574,6 +618,7 @@ type ItemFormProps = {
   initial: StaffCatalogItem;
   isNew: boolean;
   catalog: StaffCatalog;
+  reserved: Reserved;
   busy: boolean;
   onCancel: () => void;
   onSave: (
@@ -585,7 +630,7 @@ type ItemFormProps = {
 
 const NEW_OPTION = "__new__";
 
-function ItemForm({ initial, isNew, catalog, busy, onCancel, onSave, onDelete }: ItemFormProps) {
+function ItemForm({ initial, isNew, catalog, reserved, busy, onCancel, onSave, onDelete }: ItemFormProps) {
   const [draft, setDraft] = useState(() => ({ ...initial, name: isNew ? "" : staffItemLabel(initial) }));
   const [newCategory, setNewCategory] = useState("");
   const [newSupplier, setNewSupplier] = useState({ label: "", zaloUrl: "" });
@@ -615,14 +660,14 @@ function ItemForm({ initial, isNew, catalog, busy, onCancel, onSave, onDelete }:
     const categoryName = newCategory.trim();
     const category = addingCategory
       ? {
-          id: uniqueCatalogId(categoryName, catalog.categories.map((entry) => entry.id)),
+          id: uniqueCatalogId(categoryName, [...catalog.categories.map((entry) => entry.id), ...reserved.categories]),
           en: categoryName,
           vn: categoryName,
         }
       : undefined;
     const supplier = addingSupplier
       ? {
-          id: uniqueCatalogId(newSupplier.label, catalog.suppliers.map((entry) => entry.id)),
+          id: uniqueCatalogId(newSupplier.label, [...catalog.suppliers.map((entry) => entry.id), ...reserved.suppliers]),
           label: newSupplier.label.trim(),
           zaloUrl: newSupplier.zaloUrl.trim() || undefined,
         }
@@ -630,7 +675,7 @@ function ItemForm({ initial, isNew, catalog, busy, onCancel, onSave, onDelete }:
     const id = isNew
       ? uniqueCatalogId(
           `${name} ${draft.brand ?? ""}`,
-          catalog.items.map((item) => item.id),
+          [...catalog.items.map((item) => item.id), ...reserved.items],
         )
       : draft.id;
     onSave(
