@@ -75,6 +75,7 @@ export function InventoryEditor({ id }: { id: string }) {
   const { state, act, busy } = useErp();
   const router = useRouter();
   const [doc, setDoc] = useState<CountDoc | null>(null);
+  const [baseline, setBaseline] = useState("");
   const [step, setStep] = useState<"form" | "table">(id === "new" ? "form" : "table");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -85,12 +86,17 @@ export function InventoryEditor({ id }: { id: string }) {
   const saveTimer = useRef<number | null>(null);
   const openedLogged = useRef(false);
 
+  const adopt = (next: CountDoc) => {
+    setDoc(next);
+    setBaseline(JSON.stringify(next));
+  };
+
   useEffect(() => {
     if (!state) return;
     if (id === "new") {
       const warehouse = new URLSearchParams(window.location.search).get("warehouse");
       const local = readLocalDraft("new");
-      setDoc(local?.doc ?? emptyDoc(warehouse));
+      adopt(local?.doc ?? emptyDoc(warehouse));
       return;
     }
     const started = performance.now();
@@ -100,7 +106,7 @@ export function InventoryEditor({ id }: { id: string }) {
         if (!merged.lines.length && merged.warehouse_id && merged.status === "draft" && !merged.periodReady && merged.mode === "partial") {
           merged.lines = fallbackCountLines(state, merged.warehouse_id, merged.mode, merged.product_ids, merged.category_ids);
         }
-        setDoc(merged);
+        adopt(merged);
         setStep("table");
         if (!openedLogged.current) {
           openedLogged.current = true;
@@ -111,7 +117,7 @@ export function InventoryEditor({ id }: { id: string }) {
   }, [id, Boolean(state)]);
 
   const editable = Boolean(doc) && (!doc?.status || doc.status === "draft" || doc.status === "editing");
-  const dirty = Boolean(doc) && editable;
+  const dirty = Boolean(doc) && editable && JSON.stringify(doc) !== baseline;
   useDirtyGuard(dirty && saveState !== "saved");
 
   useEffect(() => {
