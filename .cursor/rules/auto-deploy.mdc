@@ -23,6 +23,13 @@ The task is finished only when the result is live on the site and checked after 
 - Compatible migrations that only add needed tables, columns, indexes or functions without losing data are applied as part of the task, before the code that needs them goes live.
 - Deleting data, resetting the database, or any change that risks losing existing data needs the owner's separate approval.
 
+## Services where the owner is logged in (Supabase and others)
+
+- Standing permission: for actions in Supabase and other services where the owner is logged in, control the owner's real Chrome with Computer Use (`cursor-computer-use`).
+- Do not use Cursor's built-in browser for Supabase.
+- Paste long SQL through the clipboard, not by typing; check the start and end of the pasted text before running it.
+- Stop and report on a login, captcha or unexpected state instead of retrying blindly.
+
 ## Rules
 
 - If tests or the deployment fail, fix the cause. Never report a successful publication without confirmation.
