@@ -348,7 +348,7 @@ export function PackEditor({ id }: { id: string }) {
   const [unit, setUnit] = useState<ErpUnit | "">(pack?.unit ?? "");
   const [qty, setQty] = useState<number | null>(pack?.qty_base ?? null);
   const [error, setError] = useState<string | null>(null);
-  const dirty = isNew || name !== (pack?.name ?? "") || unit !== (pack?.unit ?? "") || qty !== (pack?.qty_base ?? null);
+  const dirty = name !== (pack?.name ?? "") || unit !== (pack?.unit ?? "") || qty !== (pack?.qty_base ?? null);
   useDirtyGuard(dirty);
   if (!isNew && !pack) {
     return (
