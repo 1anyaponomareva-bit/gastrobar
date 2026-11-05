@@ -62,6 +62,14 @@
 
 Откат: `select public.erp_rollback_pack_merges();`. Бэкап JSON в `.erp-pack-merge-backup/` (не в git).
 
+## 7. Склад: период инвентаризации, производство, FIFO (этот прогон)
+
+- **Код реализован?** Да: `20261105280000_erp_production_post_guards.sql` (`erp_post_document`: отказ нулевого выхода и партии без ингредиентов), `20261105290000_erp_consume_same_time_fifo.sql` (`erp_consume`: партии с одним `received_at` идут по `line_no`, не по UUID), UI читает `moves` из counts API и считает списание без знака.
+- **В main?** Да, коммиты `bceafd1` и `4a3fd50` (этот пуш).
+- **Миграция применена?** Да, SQL Editor рабочей базы `1anyaponomareva-bit's Project` / `main (PRODUCTION)`, 2026-11-06. Результат: Success. No rows returned (оба `create or replace`).
+- **Включено на сайте?** После деплоя этого пуша.
+- **Проверено на сайте?** После деплоя (инвентаризация: колонка списания и ссылки на документы периода).
+
 ## Уточнения
 
 - Средняя цена в «Остатках» только для показа. Списание — FIFO по партиям (`erp_consume`). Тест: «average cost shown in stock does not change FIFO».
