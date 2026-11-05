@@ -159,6 +159,15 @@ function listItemFromDocument(doc: DocLike): CountListItem | null {
   };
 }
 
+/** Ledger qty is signed (consume < 0). Period columns and related-doc amounts are unsigned. */
+const unsignedQty = (qty: number) => Math.abs(Number(qty));
+
+function relatedDocHref(docType: string, id: string): string {
+  if (docType === "production") return `/erp/preps/batch/${id}`;
+  if (docType === "count") return `/erp/stock/counts/${id}`;
+  return `/erp/documents/${id}`;
+}
+
 function movesFromLine(line: LineLike): CountLine["movements"] {
   const raw = line.count_moves ?? [];
   if (!raw.length) return undefined;
@@ -168,8 +177,8 @@ function movesFromLine(line: LineLike): CountLine["movements"] {
     doc_id: m.document_id,
     doc_no: m.doc_no,
     at: m.occurred_at,
-    qty: m.qty,
-    href: `/erp/documents/${m.document_id}`,
+    qty: kind === "in" ? Number(m.qty) : unsignedQty(m.qty),
+    href: relatedDocHref(m.doc_type, m.document_id),
   });
   return {
     in: raw.filter((m) => m.direction === "in").map((m) => toMove(m, "in")),
@@ -182,7 +191,11 @@ function lineFromDocument(line: LineLike): CountLine {
   const counted = line.counted === true || (line.counted !== false && line.reason !== "uncounted" && line.fact_qty !== null && line.fact_qty !== undefined);
   const fact = counted ? (line.fact_qty ?? line.qty) : null;
   const outQty = line.out_qty ?? null;
-  const writeoff = line.count_moves?.filter((m) => m.doc_type === "writeoff").reduce((sum, m) => sum + m.qty, 0) ?? null;
+  // count_moves.qty is signed; summing it as write-off volume inverted out_qty (5 − (−2) = 7).
+  const writeoff =
+    line.count_moves == null
+      ? null
+      : line.count_moves.filter((m) => m.doc_type === "writeoff").reduce((sum, m) => sum + unsignedQty(m.qty), 0);
   return {
     product_id: line.product_id,
     last_check: line.period_start ?? null,

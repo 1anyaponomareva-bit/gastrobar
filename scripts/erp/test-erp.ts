@@ -29,7 +29,8 @@ import { basePrice, formatPackLabel, packPrice, packToBase, parsePackLabel, type
 import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
-import type { ErpStockRow } from "../../src/lib/erp/types";
+import { countFromDocument } from "../../src/lib/erp/inventoryUi";
+import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
 import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
 import { supplierOrderRows } from "../../src/lib/staffOrderRows";
 import { applyMigration, createTestDb } from "./testDb";
@@ -2022,6 +2023,203 @@ async function main() {
     assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1 and archived_at is null", [flourB]), dup);
     await q("select public.erp_merge_exact_pack_duplicates()");
     assert.equal(await value("select pack_id from public.erp_product_packs where product_id = $1 and archived_at is null", [flourB]), canon);
+  });
+
+  await test("inventory period: write-off qty is unsigned and is split out of other outbound", async () => {
+    const mapped = countFromDocument(
+      {
+        doc_type: "count",
+        warehouse_id: "wh",
+        status: "draft",
+        lines: [
+          {
+            product_id: "p",
+            qty: 5,
+            counted: true,
+            in_qty: 10,
+            out_qty: 5,
+            count_moves: [
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", doc_no: "TR-1", doc_type: "transfer", occurred_at: "2026-10-01T00:00:00Z", qty: -3, direction: "out" },
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2", doc_no: "WO-1", doc_type: "writeoff", occurred_at: "2026-10-02T00:00:00Z", qty: -2, direction: "out" },
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3", doc_no: "PR-1", doc_type: "production", occurred_at: "2026-10-03T00:00:00Z", qty: 4, direction: "in" },
+            ],
+          },
+        ],
+      },
+      "counts-api",
+      true,
+      true,
+    );
+    const line = mapped.lines[0];
+    assert.equal(line.writeoff_qty, 2, "write-off volume is positive");
+    assert.equal(line.out_qty, 3, "other outbound excludes write-offs");
+    assert.equal(line.in_qty, 10);
+    assert.equal(line.movements?.writeoff?.[0].qty, 2);
+    assert.equal(line.movements?.writeoff?.[0].href, "/erp/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2");
+    assert.equal(line.movements?.out?.[0].qty, 3);
+    assert.equal(line.movements?.out?.[0].href, "/erp/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
+    assert.equal(line.movements?.in?.[0].href, "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
+  });
+
+  await test("production posting rejects a missing yield and batches with no ingredients consumed", async () => {
+    const mix = await saveProduct({ type: "ingredient", name_en: "Guard mix", base_unit: "kg" });
+    const dough = await saveProduct({ type: "semi_finished", name_en: "Guard dough", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: mix, qty: 4, unit_price: 8000 }] }));
+    const noYield = await saveDoc({
+      doc_type: "production",
+      warehouse_id: prep,
+      target_warehouse_id: online,
+      output_product_id: dough,
+      lines: [{ product_id: mix, qty: 1 }],
+    });
+    await expectError(post(noYield), "ERP_INVALID");
+    assert.equal(await value("select status from public.erp_documents where id = $1", [noYield]), "draft");
+    assert.equal(await stock(mix, prep), 4);
+    assert.equal(await stock(dough, online), 0);
+    const empty = await saveDoc({
+      doc_type: "production",
+      warehouse_id: prep,
+      target_warehouse_id: online,
+      output_product_id: dough,
+      output_qty: 2,
+      lines: [{ product_id: mix, qty: 0 }],
+    });
+    await expectError(post(empty), "ERP_EMPTY_DOCUMENT");
+    assert.equal(await stock(mix, prep), 4);
+    assert.equal(await stock(dough, online), 0);
+  });
+
+  await test("movement report: production ingredients out, output in, leftover after transfer", async () => {
+    const w = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ name: "Report production", kind: "other" }), ACTOR]);
+    const dest = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ name: "Report dest", kind: "other" }), ACTOR]);
+    const flour = await saveProduct({ type: "ingredient", name_en: "Report flour", base_unit: "kg" });
+    const dough = await saveProduct({ type: "semi_finished", name_en: "Report dough", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-10-01", warehouse_id: w, lines: [{ product_id: flour, qty: 10, unit_price: 5000 }] }));
+    const batch = await saveDoc({
+      doc_type: "production",
+      doc_date: "2026-10-05",
+      warehouse_id: w,
+      target_warehouse_id: dest,
+      output_product_id: dough,
+      output_qty: 8,
+      lines: [{ product_id: flour, qty: 9 }],
+    });
+    const posted = await post(batch);
+    assert.equal(n(posted.total_cost), 45000);
+    assert.equal(await stock(flour, w), 1);
+    assert.equal(await stock(dough, dest), 8);
+    assert.equal(await stock(dough, w), 0);
+    const report = async (warehouse: string, product: string) =>
+      one<Record<string, string | null>>("select * from public.erp_movement_report($1::date, $2::date, $3) where product_id = $4", [
+        "2026-10-01",
+        "2026-10-31",
+        warehouse,
+        product,
+      ]);
+    const flourAtW = await report(w, flour);
+    assert.deepEqual([flourAtW.in_qty, flourAtW.in_value, flourAtW.out_qty, flourAtW.out_value, flourAtW.closing_qty, flourAtW.closing_value].map(n), [
+      10, 50000, 9, 45000, 1, 5000,
+    ]);
+    const doughAtDest = await report(dest, dough);
+    assert.deepEqual([doughAtDest.in_qty, doughAtDest.in_value, doughAtDest.out_qty, doughAtDest.closing_qty, doughAtDest.closing_value].map(n), [
+      8, 45000, 0, 8, 45000,
+    ]);
+    const doughAtW = await q("select * from public.erp_movement_report('2026-10-01', '2026-10-31', $1) where product_id = $2", [w, dough]);
+    assert.equal(doughAtW.length, 0);
+    const tr = await saveDoc({
+      doc_type: "transfer",
+      doc_date: "2026-10-06",
+      warehouse_id: dest,
+      target_warehouse_id: w,
+      lines: [{ product_id: dough, qty: 3 }],
+    });
+    await post(tr);
+    assert.equal(await stock(dough, dest), 5);
+    assert.equal(await stock(dough, w), 3);
+    const afterTr = await report(dest, dough);
+    assert.deepEqual([afterTr.in_qty, afterTr.out_qty, afterTr.closing_qty, afterTr.closing_value].map(n), [8, 3, 5, 28125]);
+    const doughBack = await report(w, dough);
+    assert.deepEqual([doughBack.in_qty, doughBack.in_value, doughBack.closing_qty].map(n), [3, 16875, 3]);
+  });
+
+  await test("write-off with pack consumes base qty, freezes snapshot, leftover follows FIFO", async () => {
+    const oil = await saveProduct({ type: "ingredient", name_en: "Pack writeoff oil", base_unit: "l" });
+    const pack = await savePack({ name: "WO 2 L", unit: "l", qty_base: 2 });
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        warehouse_id: prep,
+        lines: [
+          { product_id: oil, qty: 6, unit_price: 100 },
+          { product_id: oil, qty: 4, unit_price: 250 },
+        ],
+      }),
+    );
+    const wo = await saveDoc({
+      doc_type: "writeoff",
+      warehouse_id: prep,
+      reason: "pack test",
+      lines: [{ product_id: oil, pack_id: pack, pack_qty: 3, qty: 6 }],
+    });
+    const res = await post(wo);
+    assert.equal(n(res.total_cost), 600, "FIFO: 6 l of the 100-lot, not pack count or average");
+    assert.equal(await stock(oil, prep), 4);
+    const snap = await one<{ pack_name: string; pack_qty_base: string; pack_qty: string; qty: string }>(
+      "select pack_name, pack_qty_base, pack_qty, qty from public.erp_document_lines where document_id = $1",
+      [wo],
+    );
+    assert.deepEqual([snap.pack_name, n(snap.pack_qty_base), n(snap.pack_qty), n(snap.qty)], ["WO 2 L", 2, 3, 6]);
+    await savePack({ id: pack, name: "WO 2 L edited", unit: "l", qty_base: 9 });
+    const after = await one<{ pack_name: string; pack_qty_base: string; qty: string }>(
+      "select pack_name, pack_qty_base, qty from public.erp_document_lines where document_id = $1",
+      [wo],
+    );
+    assert.deepEqual([after.pack_name, n(after.pack_qty_base), n(after.qty)], ["WO 2 L", 2, 6], "posted write-off keeps pack snapshot");
+    assert.equal(await stock(oil, prep), 4);
+  });
+
+  await test("count_moves related docs match ledger document_ids for transfer, write-off and production", async () => {
+    const item = await saveProduct({ type: "ingredient", name_en: "Moves link item", base_unit: "kg" });
+    const prepOut = await saveProduct({ type: "semi_finished", name_en: "Moves link prep", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: item, qty: 20, unit_price: 1000 }] }));
+    const tr = await saveDoc({ doc_type: "transfer", warehouse_id: prep, target_warehouse_id: online, lines: [{ product_id: item, qty: 4 }] });
+    await post(tr);
+    const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, reason: "link", lines: [{ product_id: item, qty: 3 }] });
+    await post(wo);
+    const pr = await saveDoc({
+      doc_type: "production",
+      warehouse_id: prep,
+      target_warehouse_id: prep,
+      output_product_id: prepOut,
+      output_qty: 2,
+      lines: [{ product_id: item, qty: 5 }],
+    });
+    await post(pr);
+    const book = await one<{ in_qty: string; out_qty: string; moves: ErpCountMove[] }>(
+      "select in_qty, out_qty, moves from public.erp_count_book($1, $2, now(), now(), null)",
+      [prep, item],
+    );
+    assert.equal(n(book.in_qty), 20);
+    assert.equal(n(book.out_qty), 12);
+    const types = new Map(book.moves.map((m) => [m.document_id, m.doc_type]));
+    assert.equal(types.get(tr), "transfer");
+    assert.equal(types.get(wo), "writeoff");
+    assert.equal(types.get(pr), "production");
+    const mapped = countFromDocument(
+      {
+        doc_type: "count",
+        warehouse_id: prep,
+        status: "draft",
+        lines: [{ product_id: item, qty: 8, counted: true, in_qty: n(book.in_qty), out_qty: n(book.out_qty), count_moves: book.moves }],
+      },
+      "counts-api",
+      true,
+      true,
+    );
+    assert.equal(mapped.lines[0].writeoff_qty, 3);
+    assert.equal(mapped.lines[0].out_qty, 9);
+    assert.equal(mapped.lines[0].movements?.writeoff?.[0].href, `/erp/documents/${wo}`);
+    assert.equal(mapped.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
   });
 
   console.log(`\n${passed} checks passed`);
