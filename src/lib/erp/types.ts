@@ -14,6 +14,7 @@ export type ErpCategory = Archivable & { id: string; code: string; name_en: stri
 export type ErpSupplier = Archivable & { id: string; code: string; name: string; zalo_url: string | null; sort: number };
 export type ErpWarehouseKind = "warehouse" | "prep_kitchen" | "online_kitchen" | "food_truck" | "other";
 export type ErpWarehouse = Archivable & { id: string; code: string; name: string; kind: ErpWarehouseKind; sort: number };
+export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
 export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
 
 export type ErpPack = {
@@ -152,6 +153,7 @@ export type ErpState = {
   stock: ErpStockRow[];
   recipes: ErpRecipe[];
   dishes: ErpDish[];
+  writeoffReasons: ErpWriteoffReason[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
@@ -190,6 +192,11 @@ export type ErpDocument = {
   target_warehouse_id?: string | null;
   supplier_id?: string | null;
   reason?: string | null;
+  reason_id?: string | null;
+  /** Time of day of the document (write-offs), HH:MM[:SS]. */
+  doc_time?: string | null;
+  /** Sent with a new document so that a repeated save/post returns the same document. */
+  client_key?: string | null;
   comment?: string | null;
   prices_include_vat?: boolean;
   recipe_id?: string | null;
@@ -220,6 +227,7 @@ export type ErpAction =
   | { action: "setArchived"; entity: string; id: string; archived: boolean }
   | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
+  | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
   | { action: "saveDocument"; document: Record<string, unknown> }
   /** With `document`, the draft is saved first (and stays saved if posting fails). */
   | { action: "postDocument"; id?: string; document?: Record<string, unknown> }

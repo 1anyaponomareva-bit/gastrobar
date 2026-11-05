@@ -455,11 +455,11 @@ async function main() {
     await expectError(q("update public.erp_movements set qty = 1"), "ERP_LEDGER_IMMUTABLE");
   });
 
-  await test("write-off needs a reason; count posts the difference", async () => {
+  await test("write-off without a reason posts (shown as 'No reason'); count posts the difference", async () => {
     const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, lines: [{ product_id: salt, qty: 0.1 }] });
-    await expectError(post(wo), "ERP_REASON_REQUIRED");
-    await saveDoc({ id: wo, warehouse_id: prep, reason: "spilled", lines: [{ product_id: salt, qty: 0.1 }] });
     await post(wo);
+    const posted = await one<{ reason: string | null; reason_id: string | null }>("select reason, reason_id from public.erp_documents where id = $1", [wo]);
+    assert.deepEqual([posted.reason, posted.reason_id], [null, null]);
     const before = (await stock(salt, prep))!;
     const count = await saveDoc({ doc_type: "count", warehouse_id: prep, lines: [{ product_id: salt, qty: 0.5 }] });
     await post(count);
@@ -1184,6 +1184,107 @@ async function main() {
       [oil, prep],
     );
     assert.deepEqual(lots.map((l) => [n(l.qty_left), n(l.unit_cost)]), [[0, 100], [5, 200]], "the old lot is used up first");
+  });
+
+  const saveReason = (p: Record<string, unknown>) => value<string>("select public.erp_save_writeoff_reason($1::jsonb, $2)", [JSON.stringify(p), ACTOR]);
+
+  await test("write-off reasons: create, edit, archive; archived reason stays on old documents and cannot be newly chosen", async () => {
+    const spoiled = await saveReason({ name: "Испорчено", color: "#E11D48" });
+    const row = await one<{ name: string; color: string; pnl_block: string; archived_at: string | null }>("select * from public.erp_writeoff_reasons where id = $1", [spoiled]);
+    assert.deepEqual([row.name, row.color, row.pnl_block, row.archived_at], ["Испорчено", "#e11d48", "cost", null]);
+    await expectError(saveReason({ name: " испорчено " }), "duplicate key");
+    await expectError(saveReason({ name: "  " }), "ERP_INVALID");
+    await expectError(saveReason({ name: "x", color: "red" }), "check constraint");
+    await saveReason({ id: spoiled, name: "Испорчено (порча)", color: "#e11d48", pnl_block: "expense" });
+
+    const cheese = await saveProduct({ type: "ingredient", name_en: "Reason cheese", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: cheese, qty: 5, unit_price: 1000 }] }));
+    const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, reason_id: spoiled, doc_time: "17:26", lines: [{ product_id: cheese, qty: 1 }] });
+    await post(wo);
+    const draft = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, reason_id: spoiled, lines: [{ product_id: cheese, qty: 1 }] });
+
+    await saveReason({ id: spoiled, name: "Испорчено (порча)", color: "#e11d48", archived: true });
+    const doc = await one<{ reason_id: string; doc_time: string; name: string; archived_at: string | null }>(
+      "select d.reason_id, d.doc_time::text as doc_time, r.name, r.archived_at from public.erp_documents d join public.erp_writeoff_reasons r on r.id = d.reason_id where d.id = $1",
+      [wo],
+    );
+    assert.equal(doc.reason_id, spoiled, "the posted document keeps its reason");
+    assert.equal(doc.name, "Испорчено (порча)");
+    assert.ok(doc.archived_at, "archived, not deleted");
+    assert.equal(doc.doc_time, "17:26:00");
+    // A draft that already had the reason may be saved again; a new document cannot pick it.
+    await saveDoc({ id: draft, warehouse_id: prep, reason_id: spoiled, lines: [{ product_id: cheese, qty: 1 }] });
+    await expectError(saveDoc({ doc_type: "writeoff", warehouse_id: prep, reason_id: spoiled, lines: [{ product_id: cheese, qty: 1 }] }), "ERP_REASON_ARCHIVED");
+    // The same name can be used again once the old one is archived.
+    await saveReason({ name: "Испорчено (порча)" });
+    await saveReason({ id: spoiled, name: "Испорчено (порча) old", color: "#e11d48", archived: false });
+    for (const role of ["anon", "authenticated"]) {
+      assert.equal(await value("select has_function_privilege($1, 'public.erp_save_writeoff_reason(jsonb,text)', 'execute')", [role]), false, role);
+      assert.equal(await value("select has_table_privilege($1, 'public.erp_writeoff_reasons', 'select')", [role]), false, role);
+    }
+  });
+
+  await test("write-off: draft keeps stock, posting takes FIFO lots at their own cost", async () => {
+    const flour = await saveProduct({ type: "ingredient", name_en: "WO flour", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-09-01", warehouse_id: prep, lines: [{ product_id: flour, qty: 2, unit_price: 10000 }] }));
+    await post(await saveDoc({ doc_type: "receipt", doc_date: "2026-09-02", warehouse_id: prep, lines: [{ product_id: flour, qty: 2, unit_price: 30000 }] }));
+    const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, lines: [{ product_id: flour, qty: 3 }] });
+    assert.equal(await stock(flour, prep), 4, "a draft does not change stock");
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [wo])), 0);
+    await post(wo);
+    assert.equal(await stock(flour, prep), 1);
+    const doc = await one<{ total_cost: string; cost_known: boolean }>("select total_cost, cost_known from public.erp_documents where id = $1", [wo]);
+    // 2 kg × 10 000 from the first lot + 1 kg × 30 000 from the second = 50 000 (an average would give 60 000).
+    assert.equal(n(doc.total_cost), 50000);
+    assert.equal(doc.cost_known, true);
+    const line = await one<{ cost_amount: string; unit_cost: string }>("select cost_amount, unit_cost from public.erp_document_lines where document_id = $1", [wo]);
+    assert.equal(n(line.cost_amount), 50000);
+    assert.ok(Math.abs(n(line.unit_cost)! - 50000 / 3) < 1e-3);
+    const moved = await one<{ qty: string; value: string }>("select sum(qty) as qty, sum(qty * unit_cost) as value from public.erp_movements where document_id = $1", [wo]);
+    assert.deepEqual([n(moved.qty), n(moved.value)], [-3, -50000], "the movements carry the same cost");
+  });
+
+  await test("write-off: a shortage on one line blocks the whole document and changes nothing", async () => {
+    const a = await saveProduct({ type: "ingredient", name_en: "WO short A", base_unit: "pcs" });
+    const b = await saveProduct({ type: "ingredient", name_en: "WO short B", base_unit: "pcs" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: a, qty: 5, unit_price: 100 }, { product_id: b, qty: 1, unit_price: 100 }] }));
+    const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, lines: [{ product_id: a, qty: 2 }, { product_id: b, qty: 3 }] });
+    await expectError(post(wo), "ERP_INSUFFICIENT_STOCK");
+    assert.deepEqual([await stock(a, prep), await stock(b, prep)], [5, 1], "the first line is not taken either");
+    assert.equal(await value("select status from public.erp_documents where id = $1", [wo]), "draft");
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id = $1", [wo])), 0);
+  });
+
+  await test("write-off: a repeated save/post of a new document is one document, posted once", async () => {
+    const egg = await saveProduct({ type: "ingredient", name_en: "WO egg", base_unit: "pcs" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: egg, qty: 10, unit_price: 3000 }] }));
+    const key = "6f7e3b52-27a4-4c55-9c1f-0a6f4f3c2b11";
+    const body = { doc_type: "writeoff", client_key: key, warehouse_id: prep, lines: [{ product_id: egg, qty: 2 }] };
+    const first = await saveDoc(body);
+    assert.equal(await saveDoc(body), first, "the same key returns the same draft");
+    await post(first);
+    await expectError(saveDoc(body), "ERP_ALREADY_POSTED");
+    await expectError(post(first), "ERP_ALREADY_POSTED");
+    assert.equal(n(await value("select count(*) from public.erp_documents where client_key = $1", [key])), 1);
+    assert.equal(await stock(egg, prep), 8, "written off once");
+  });
+
+  await test("write-off: posted documents cannot be edited or deleted; cancelling is explicit and returns stock", async () => {
+    const tea = await saveProduct({ type: "ingredient", name_en: "WO tea", base_unit: "pcs" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: tea, qty: 4, unit_price: 500 }] }));
+    const wo = await saveDoc({ doc_type: "writeoff", warehouse_id: prep, lines: [{ product_id: tea, qty: 1 }] });
+    await post(wo);
+    await expectError(saveDoc({ id: wo, warehouse_id: prep, lines: [{ product_id: tea, qty: 3 }] }), "ERP_DOCUMENT_LOCKED");
+    await expectError(value("select public.erp_delete_draft($1, $2)", [wo, ACTOR]), "ERP_DOCUMENT_LOCKED");
+    await expectError(q("delete from public.erp_documents where id = $1", [wo]), "ERP_DOCUMENT_LOCKED");
+    await expectError(q("update public.erp_document_lines set qty = 3 where document_id = $1", [wo]), "ERP_DOCUMENT_LOCKED");
+    await expectError(q("update public.erp_documents set warehouse_id = warehouse_id where id = $1", [wo]), "ERP_DOCUMENT_LOCKED");
+    assert.equal(await stock(tea, prep), 3);
+    await expectError(cancel(wo, " "), "ERP_REASON_REQUIRED");
+    await cancel(wo, "wrong product");
+    assert.equal(await stock(tea, prep), 4, "cancelling returns the stock");
+    const audit = await q("select action from public.erp_audit_log where entity_id = $1 order by id", [wo]);
+    assert.deepEqual(audit.map((r) => r.action), ["save", "post", "cancel"]);
   });
 
   console.log(`\n${passed} checks passed`);

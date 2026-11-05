@@ -18,7 +18,7 @@ type Db = {
 const shared = globalThis as typeof globalThis & { __erpLocalDb?: Promise<Db> };
 
 /** In order: later files replace functions of earlier ones. */
-export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql", "20261105190000_erp_speed.sql"];
+export const ERP_MIGRATIONS = ["20261103120000_erp_v1.sql", "20261105120000_erp_losses_report.sql", "20261105150000_erp_staff_category.sql", "20261105170000_erp_shared_catalog.sql", "20261105190000_erp_speed.sql", "20261105220000_erp_writeoff_reasons.sql"];
 
 export const erpLocalMode = () =>
   process.env.ERP_LOCAL_DB === "pglite" &&
@@ -39,7 +39,8 @@ async function getDb(): Promise<Db> {
   if (!shared.__erpLocalDb) {
     shared.__erpLocalDb = (async () => {
       const { PGlite } = await import(/* webpackIgnore: true */ "@electric-sql/pglite");
-      const dir = path.join(process.cwd(), "node_modules", ".erp-local-db");
+      // ERP_LOCAL_DB_DIR: a separate local database, e.g. for a second working copy sharing node_modules.
+      const dir = process.env.ERP_LOCAL_DB_DIR?.trim() || path.join(process.cwd(), "node_modules", ".erp-local-db");
       const db = new PGlite(dir, {
         parsers: {
           20: (v: string) => Number(v),

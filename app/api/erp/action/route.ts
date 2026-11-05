@@ -80,6 +80,10 @@ export async function POST(request: Request) {
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
         return timing.json({ ok: true, patch: await fresh(["settings"]) });
+      case "saveWriteoffReason": {
+        const id = await rpc("erp_save_writeoff_reason", { p: object(a.reason, "reason"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["writeoffReasons"]) });
+      }
       case "saveDocument": {
         const id = await rpc<string>("erp_save_document", { p_doc: object(a.document, "document"), p_actor: actor });
         return timing.json({ id, document: await freshDocument(id), patch: {} });
