@@ -2059,6 +2059,33 @@ async function main() {
     assert.equal(line.movements?.out?.[0].qty, 3);
     assert.equal(line.movements?.out?.[0].href, "/erp/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
     assert.equal(line.movements?.in?.[0].href, "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
+    const viaApi = countFromDocument(
+      {
+        doc_type: "count",
+        warehouse_id: "wh",
+        status: "draft",
+        lines: [
+          {
+            product_id: "p",
+            qty: 5,
+            counted: true,
+            in_qty: 10,
+            out_qty: 5,
+            moves: [
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", doc_no: "TR-1", doc_type: "transfer", occurred_at: "2026-10-01T00:00:00Z", qty: -3, direction: "out" },
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2", doc_no: "WO-1", doc_type: "writeoff", occurred_at: "2026-10-02T00:00:00Z", qty: -2, direction: "out" },
+              { document_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3", doc_no: "PR-1", doc_type: "production", occurred_at: "2026-10-03T00:00:00Z", qty: 4, direction: "in" },
+            ],
+          },
+        ],
+      },
+      "counts-api",
+      true,
+      true,
+    );
+    assert.equal(viaApi.lines[0].writeoff_qty, 2, "erp_count_get 'moves' is the same period jsonb as count_moves");
+    assert.equal(viaApi.lines[0].out_qty, 3);
+    assert.equal(viaApi.lines[0].movements?.in?.[0].href, "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
   });
 
   await test("production posting rejects a missing yield and batches with no ingredients consumed", async () => {
@@ -2148,11 +2175,17 @@ async function main() {
     await post(
       await saveDoc({
         doc_type: "receipt",
+        doc_date: "2026-09-01",
         warehouse_id: prep,
-        lines: [
-          { product_id: oil, qty: 6, unit_price: 100 },
-          { product_id: oil, qty: 4, unit_price: 250 },
-        ],
+        lines: [{ product_id: oil, qty: 6, unit_price: 100 }],
+      }),
+    );
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        doc_date: "2026-09-02",
+        warehouse_id: prep,
+        lines: [{ product_id: oil, qty: 4, unit_price: 250 }],
       }),
     );
     const wo = await saveDoc({
@@ -2176,6 +2209,34 @@ async function main() {
     );
     assert.deepEqual([after.pack_name, n(after.pack_qty_base), n(after.qty)], ["WO 2 L", 2, 6], "posted write-off keeps pack snapshot");
     assert.equal(await stock(oil, prep), 4);
+  });
+
+  await test("FIFO on one receipt follows line order, not lot uuid", async () => {
+    const spice = await saveProduct({ type: "ingredient", name_en: "FIFO same-time spice", base_unit: "kg" });
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        warehouse_id: prep,
+        lines: [
+          { product_id: spice, qty: 6, unit_price: 100 },
+          { product_id: spice, qty: 4, unit_price: 250 },
+        ],
+      }),
+    );
+    const wo = await saveDoc({
+      doc_type: "writeoff",
+      warehouse_id: prep,
+      reason: "same-time fifo",
+      lines: [{ product_id: spice, qty: 6 }],
+    });
+    const res = await post(wo);
+    assert.equal(n(res.total_cost), 600, "first receipt line is consumed before the later line of the same document");
+    assert.equal(await stock(spice, prep), 4);
+    const left = await one<{ unit_cost: string; qty_left: string }>(
+      "select unit_cost, qty_left from public.erp_lots where product_id = $1 and qty_left > 0",
+      [spice],
+    );
+    assert.deepEqual([n(left.unit_cost), n(left.qty_left)], [250, 4]);
   });
 
   await test("count_moves related docs match ledger document_ids for transfer, write-off and production", async () => {
@@ -2220,6 +2281,19 @@ async function main() {
     assert.equal(mapped.lines[0].out_qty, 9);
     assert.equal(mapped.lines[0].movements?.writeoff?.[0].href, `/erp/documents/${wo}`);
     assert.equal(mapped.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
+    const viaGet = countFromDocument(
+      {
+        doc_type: "count",
+        warehouse_id: prep,
+        status: "draft",
+        lines: [{ product_id: item, qty: 8, counted: true, in_qty: n(book.in_qty), out_qty: n(book.out_qty), moves: book.moves }],
+      },
+      "counts-api",
+      true,
+      true,
+    );
+    assert.equal(viaGet.lines[0].writeoff_qty, 3);
+    assert.equal(viaGet.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
   });
 
   console.log(`\n${passed} checks passed`);

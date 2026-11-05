@@ -126,6 +126,15 @@ type DocLike = ErpDocument & {
   idle?: { product_id: string; qty: number; reason: string }[] | null;
 };
 
+type CountMoveRow = {
+  document_id: string;
+  doc_no: string;
+  doc_type: string;
+  occurred_at: string;
+  qty: number;
+  direction: "in" | "out";
+};
+
 type LineLike = ErpDocumentLine & {
   counted?: boolean;
   fact_qty?: number | null;
@@ -135,8 +144,16 @@ type LineLike = ErpDocumentLine & {
   book_qty?: number | null;
   period_start?: string | null;
   last_count_id?: string | null;
-  count_moves?: { document_id: string; doc_no: string; doc_type: string; occurred_at: string; qty: number; direction: "in" | "out" }[] | null;
+  count_moves?: CountMoveRow[] | null;
+  moves?: CountMoveRow[] | null;
 };
+
+/** Column `count_moves` on saved lines; JSON key `moves` on erp_count_get / preview. */
+function periodMoves(line: LineLike): CountMoveRow[] | null {
+  if (line.count_moves != null) return line.count_moves;
+  if (line.moves != null) return line.moves;
+  return null;
+}
 
 function listItemFromDocument(doc: DocLike): CountListItem | null {
   if (!doc.id) return null;
@@ -169,9 +186,9 @@ function relatedDocHref(docType: string, id: string): string {
 }
 
 function movesFromLine(line: LineLike): CountLine["movements"] {
-  const raw = line.count_moves ?? [];
+  const raw = periodMoves(line) ?? [];
   if (!raw.length) return undefined;
-  const toMove = (m: NonNullable<LineLike["count_moves"]>[number], kind: "in" | "out" | "writeoff"): CountMovement => ({
+  const toMove = (m: CountMoveRow, kind: "in" | "out" | "writeoff"): CountMovement => ({
     id: `${m.document_id}-${m.occurred_at}-${kind}`,
     doc_type: m.doc_type,
     doc_id: m.document_id,
@@ -191,11 +208,10 @@ function lineFromDocument(line: LineLike): CountLine {
   const counted = line.counted === true || (line.counted !== false && line.reason !== "uncounted" && line.fact_qty !== null && line.fact_qty !== undefined);
   const fact = counted ? (line.fact_qty ?? line.qty) : null;
   const outQty = line.out_qty ?? null;
-  // count_moves.qty is signed; summing it as write-off volume inverted out_qty (5 − (−2) = 7).
+  const moves = periodMoves(line);
+  // Ledger qty is signed; summing it as write-off volume inverted out_qty (5 − (−2) = 7).
   const writeoff =
-    line.count_moves == null
-      ? null
-      : line.count_moves.filter((m) => m.doc_type === "writeoff").reduce((sum, m) => sum + unsignedQty(m.qty), 0);
+    moves == null ? null : moves.filter((m) => m.doc_type === "writeoff").reduce((sum, m) => sum + unsignedQty(m.qty), 0);
   return {
     product_id: line.product_id,
     last_check: line.period_start ?? null,

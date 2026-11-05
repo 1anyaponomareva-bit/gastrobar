@@ -231,6 +231,8 @@ export type ErpDocumentLine = {
   surplus_cost_source?: ErpSurplusCostSource | null;
   count_mode?: ErpCountMode | null;
   count_moves?: ErpCountMove[] | null;
+  /** Counts API (`erp_count_get` / preview) uses this key for the same jsonb as `count_moves`. */
+  moves?: ErpCountMove[] | null;
 };
 
 export type ErpDocument = {
