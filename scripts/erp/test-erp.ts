@@ -2092,6 +2092,7 @@ async function main() {
     const mix = await saveProduct({ type: "ingredient", name_en: "Guard mix", base_unit: "kg" });
     const dough = await saveProduct({ type: "semi_finished", name_en: "Guard dough", base_unit: "kg" });
     await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: mix, qty: 4, unit_price: 8000 }] }));
+    const movesAfterReceipt = n(await value("select count(*) from public.erp_movements"));
     const noYield = await saveDoc({
       doc_type: "production",
       warehouse_id: prep,
@@ -2114,6 +2115,8 @@ async function main() {
     await expectError(post(empty), "ERP_EMPTY_DOCUMENT");
     assert.equal(await stock(mix, prep), 4);
     assert.equal(await stock(dough, online), 0);
+    assert.equal(n(await value("select count(*) from public.erp_movements")), movesAfterReceipt, "failed production post leaves no partial movements");
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id in ($1, $2)", [noYield, empty])), 0);
   });
 
   await test("movement report: production ingredients out, output in, leftover after transfer", async () => {
