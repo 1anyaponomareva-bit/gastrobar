@@ -2599,6 +2599,7 @@
 }
 .erpInvTable {
   table-layout: auto;
+  min-width: 720px;
 }
 .erpInvTable th {
   font-weight: 500;
