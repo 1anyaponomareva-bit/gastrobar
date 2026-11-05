@@ -1305,6 +1305,9 @@ async function main() {
       lines: [{ product_id: idle, qty: 3 }],
     }));
     const seen = await preview({ warehouse_id: prep, count_kind: "full", counted_at: "2026-01-03T12:00:00+07:00" });
+    const naive = await preview({ warehouse_id: prep, count_kind: "full", counted_at: "2026-01-03T12:00:00" });
+    assert.equal(String(naive.timezone), "Asia/Ho_Chi_Minh");
+    assert.equal(new Date(String(naive.counted_at)).toISOString(), new Date("2026-01-03T12:00:00+07:00").toISOString(), "naive counted_at is business TZ, not UTC");
     const lines = seen.lines as { product_id: string; book_qty: number; opening_qty: number; in_qty: number }[];
     assert.ok(lines.some((l) => l.product_id === milk));
     assert.ok(!lines.some((l) => l.product_id === idle), "idle after its own count is not auto-included");

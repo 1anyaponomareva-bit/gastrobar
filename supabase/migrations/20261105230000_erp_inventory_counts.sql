@@ -403,7 +403,7 @@ as $$
 declare
   v_wh uuid := nullif(p->>'warehouse_id', '')::uuid;
   v_kind text := coalesce(nullif(p->>'count_kind', ''), 'full');
-  v_at timestamptz := coalesce(nullif(p->>'counted_at', '')::timestamptz, now());
+  v_at timestamptz := coalesce(public.erp_parse_at(p->>'counted_at'), now());
   v_ids uuid[] := coalesce(array(select jsonb_array_elements_text(p->'product_ids')::uuid), '{}'::uuid[]);
   v_cats uuid[] := coalesce(array(select jsonb_array_elements_text(p->'category_ids')::uuid), '{}'::uuid[]);
   v_explode uuid[] := coalesce(array(select jsonb_array_elements_text(p->'explode_product_ids')::uuid), '{}'::uuid[]);
@@ -1429,7 +1429,7 @@ declare
 begin
   for r in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and (p.proname like 'erp\_count%' or p.proname in (
-             'erp_business_tz', 'erp_parse_at', 'erp_doc_at', 'erp_recipe_at', 'erp_save_document', 'erp_post_document', 'erp_post_count'
+             'erp_business_tz', 'erp_parse_at', 'erp_doc_at', 'erp_recipe_at', 'erp_save_document', 'erp_post_document', 'erp_post_count', 'erp_reopen_count'
            ))
   loop
     execute format('revoke all on function %s from public, anon, authenticated', r.sig);
