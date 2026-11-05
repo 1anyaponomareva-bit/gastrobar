@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
+import { documentSupplierIds, documentSupplierLabel, receiptMatchesSupplier } from "@/lib/erp/docSupplier";
 import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { docHref, StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
@@ -157,6 +158,7 @@ function useReceipts(from: string, to: string) {
 type Row = {
   doc: ErpDocument;
   supplier: string;
+  supplierIds: string[];
   warehouse: string;
   products: string[];
   categories: Set<string>;
@@ -168,13 +170,13 @@ type Row = {
 const personName = (email: string | null | undefined) => (email ? email.split("@")[0] : "");
 
 function buildRows(state: ErpState, documents: ErpDocument[]): Row[] {
-  const suppliers = new Map(state.suppliers.map((s) => [s.id, s.name]));
   const products = new Map(state.products.map((p) => [p.id, p]));
   return documents.map((doc) => {
     const lines = doc.lines ?? [];
     return {
       doc,
-      supplier: doc.supplier_id ? (suppliers.get(doc.supplier_id) ?? "") : "",
+      supplier: documentSupplierLabel(state, doc),
+      supplierIds: documentSupplierIds(state, doc),
       warehouse: doc.warehouse_id ? warehouseName(state, doc.warehouse_id) : "",
       products: lines.map((line) => {
         const product = products.get(line.product_id);
@@ -282,7 +284,7 @@ export function ReceiptsPage() {
     const out = rows.filter(
       (row) =>
         (!q || `${row.doc.doc_no ?? ""} ${row.supplier} ${row.warehouse} ${row.products.join(" ")} ${row.doc.comment ?? ""}`.toLowerCase().includes(q)) &&
-        (!sup.size || sup.has(row.doc.supplier_id ?? "none")) &&
+        receiptMatchesSupplier(row.supplierIds, sup) &&
         (!wh.size || wh.has(row.doc.warehouse_id ?? "")) &&
         (!cats.size || [...row.categories].some((c) => cats.has(c))) &&
         (!posting.size || posting.has(row.doc.status ?? "draft")) &&

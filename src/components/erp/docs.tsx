@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { documentSupplierLabel } from "@/lib/erp/docSupplier";
 import { useErp } from "./ErpShell";
 import type { ErpDocType, ErpDocument, ErpState } from "@/lib/erp/types";
 import { dateText, docLabel, Empty, errorText, loadingText, productName, qtyText, statusLabel, T, unitOf, vnd, warehouseName } from "./ui";
@@ -99,7 +100,7 @@ export function StatusBadge({ status }: { status?: string | null }) {
 }
 
 function describe(state: ErpState, doc: ErpDocument): ReactNode {
-  const supplier = state.suppliers.find((s) => s.id === doc.supplier_id)?.name;
+  const supplier = documentSupplierLabel(state, doc);
   switch (doc.doc_type) {
     case "transfer":
       return `${warehouseName(state, doc.warehouse_id)} → ${warehouseName(state, doc.target_warehouse_id)}`;

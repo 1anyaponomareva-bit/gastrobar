@@ -19,6 +19,12 @@ import {
   type CostRecipe,
 } from "../../src/lib/erp/costing";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
+import {
+  applyReceiptSupplier,
+  documentSupplierLabel,
+  documentSupplierIds,
+  receiptMatchesSupplier,
+} from "../../src/lib/erp/docSupplier";
 import { formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
@@ -1668,6 +1674,96 @@ async function main() {
     assert.equal(n(rows[0].out_qty), 4);
     const view = await q<{ qty: string }>("select qty from public.erp_stock where product_id = $1 and warehouse_id = $2", [corn, prep]);
     assert.equal(n(view[0].qty), 16);
+  });
+
+  await test("receipt list shows the pack supplier when the document header is empty", async () => {
+    const mm = await value<string>("select id from public.erp_suppliers where code = 'mm'");
+    const other = await value<string>("select public.erp_save_ref('supplier', $1::jsonb, $2)", [JSON.stringify({ name: "Receipt other supplier" }), ACTOR]);
+    const foil = await value<string>("select id from public.erp_products where name_en = 'Aluminum Foil (45x285m)'");
+    const pack = await value<string>("select id from public.erp_product_packs where product_id = $1 and supplier_id = $2", [foil, mm]);
+    const catalog = {
+      suppliers: [
+        { id: mm, name: "MM" },
+        { id: other, name: "Receipt other supplier" },
+      ],
+      products: [{ id: foil, staff_supplier_id: null }],
+      packs: [{ id: pack, product_id: foil, supplier_id: mm }],
+    };
+    const emptyHeader = { doc_type: "receipt" as const, supplier_id: null, lines: [{ product_id: foil, pack_id: pack, qty: 1 }] };
+    assert.equal(documentSupplierLabel(catalog, emptyHeader), "MM", "brand MM Pro is not used as the supplier");
+    assert.deepEqual(documentSupplierIds(catalog, emptyHeader), [mm]);
+    assert.equal(receiptMatchesSupplier(documentSupplierIds(catalog, emptyHeader), new Set([mm])), true);
+    assert.equal(receiptMatchesSupplier(documentSupplierIds(catalog, emptyHeader), new Set(["none"])), false);
+    assert.equal(applyReceiptSupplier(catalog, emptyHeader).supplier_id, mm);
+
+    const mixed = {
+      ...emptyHeader,
+      lines: [
+        { product_id: foil, pack_id: pack, qty: 1 },
+        { product_id: foil, pack_id: "missing", qty: 1 },
+      ],
+    };
+    // Second line has no pack supplier and no unique product supplier besides the pack — still MM.
+    assert.equal(documentSupplierLabel(catalog, mixed), "MM");
+
+    const twoSuppliers = {
+      suppliers: catalog.suppliers,
+      products: [
+        { id: foil, staff_supplier_id: null },
+        { id: "oil", staff_supplier_id: other },
+      ],
+      packs: catalog.packs,
+    };
+    const several = {
+      doc_type: "receipt" as const,
+      supplier_id: null,
+      lines: [
+        { product_id: foil, pack_id: pack, qty: 1 },
+        { product_id: "oil", qty: 1 },
+      ],
+    };
+    assert.equal(documentSupplierLabel(twoSuppliers, several), "MM…");
+    assert.equal(receiptMatchesSupplier(documentSupplierIds(twoSuppliers, several), new Set([mm])), true);
+    assert.equal(applyReceiptSupplier(twoSuppliers, several).supplier_id, null, "do not invent a header when lines disagree");
+  });
+
+  await test("saving a receipt without supplier_id takes the pack supplier; posted lots stay untouched", async () => {
+    const mm = await value<string>("select id from public.erp_suppliers where code = 'mm'");
+    const other = await value<string>("select id from public.erp_suppliers where name = 'Receipt other supplier'");
+    const foil = await value<string>("select id from public.erp_products where name_en = 'Aluminum Foil (45x285m)'");
+    const pack = await value<string>("select id from public.erp_product_packs where product_id = $1", [foil]);
+    const oil = await saveProduct({
+      type: "ingredient",
+      name_en: "Receipt supplier oil",
+      base_unit: "l",
+      packs: [{ label: "can", qty_base: 1, is_default: true, supplier_id: other }],
+    });
+
+    const draft = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [{ product_id: foil, pack_id: pack, qty: 2, unit_price: 10000 }],
+    });
+    const saved = await one<{ supplier_id: string; status: string }>("select supplier_id, status from public.erp_documents where id = $1", [draft]);
+    assert.deepEqual([saved.supplier_id, saved.status], [mm, "draft"], "header filled from the pack");
+
+    const mixed = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [
+        { product_id: foil, pack_id: pack, qty: 1, unit_price: 10000 },
+        { product_id: oil, qty: 1, unit_price: 20000 },
+      ],
+    });
+    assert.equal(await value("select supplier_id from public.erp_documents where id = $1", [mixed]), null, "mixed line suppliers stay empty");
+
+    await post(draft);
+    const lotsBefore = n(await value("select count(*) from public.erp_lots where source_document_id = $1", [draft]));
+    await q("select public.erp_apply_receipt_supplier($1)", [draft]);
+    const after = await one<{ supplier_id: string; status: string }>("select supplier_id, status from public.erp_documents where id = $1", [draft]);
+    assert.deepEqual([after.supplier_id, after.status], [mm, "posted"]);
+    assert.equal(n(await value("select count(*) from public.erp_lots where source_document_id = $1", [draft])), lotsBefore, "apply does not create lots");
+    assert.equal(await stock(foil, prep), 2);
   });
 
   console.log(`\n${passed} checks passed`);

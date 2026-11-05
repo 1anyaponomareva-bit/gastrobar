@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
+import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
 import { packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
@@ -211,15 +212,17 @@ export function DocumentEditor({ id }: { id: string }) {
     loadSaved(saved);
   };
 
+  const payload = () => applyReceiptSupplier(state, doc) as unknown as Record<string, unknown>;
+
   const save = async (successText: string | false) => {
-    const result = await act<SavedDoc>({ action: "saveDocument", document: { ...doc } as unknown as Record<string, unknown> }, successText);
+    const result = await act<SavedDoc>({ action: "saveDocument", document: payload() }, successText);
     if (result) showSaved(result.document);
   };
 
   const post = async () => {
     // One request saves the edits and posts; posting is shown only after the server confirms it.
     const result = await act<SavedDoc>(
-      { action: "postDocument", id: doc.id, document: dirty || !doc.id ? ({ ...doc } as unknown as Record<string, unknown>) : undefined },
+      { action: "postDocument", id: doc.id, document: dirty || !doc.id ? payload() : undefined },
       postedText(type),
       { onFail: (data) => showSaved(data.document as ErpDocument | undefined) },
     );
@@ -268,7 +271,7 @@ export function DocumentEditor({ id }: { id: string }) {
         <Header state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
       </section>
 
-      <Lines state={state} doc={doc} editable={editable} setLines={setLines} />
+      <Lines state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
 
       {editable ? (
         <>
@@ -450,14 +453,23 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
   );
 }
 
-function Lines({ state, doc, editable, setLines }: { state: ErpState; doc: ErpDocument; editable: boolean; setLines: SetLines }) {
+function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: ErpDocument; editable: boolean; set: SetDoc; setLines: SetLines }) {
   const type = doc.doc_type;
   const priced = type === "receipt" || type === "opening";
   const vatOn = type === "receipt" && state.settings.input_vat_enabled;
   const posted = doc.status === "posted" || doc.status === "cancelled";
   const showStock = type === "transfer" || type === "writeoff" || (type === "count" && !posted);
   const withPacks = type === "receipt" || type === "writeoff";
-  const update = (index: number, patch: Partial<ErpDocumentLine>) => setLines((lines) => lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  const takeSupplier = (lines: ErpDocumentLine[]) => {
+    const id = inferredReceiptSupplier(state, { ...doc, lines });
+    if (id) set("supplier_id", id);
+  };
+  const update = (index: number, patch: Partial<ErpDocumentLine>) =>
+    setLines((lines) => {
+      const next = lines.map((line, i) => (i === index ? { ...line, ...patch } : line));
+      takeSupplier(next);
+      return next;
+    });
   const total = doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
   const missingPrice = priced && doc.lines.some((line) => line.product_id && (line.unit_price === null || line.unit_price === undefined));
   const qtyLabel = type === "count" ? T("Фактически", "Counted", "Thực tế") : type === "receipt" ? T("Принято", "Received", "Đã nhận") : T("Количество", "Quantity", "Số lượng");
