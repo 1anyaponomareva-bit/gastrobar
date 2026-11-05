@@ -192,6 +192,16 @@ export function DocumentEditor({ id }: { id: string }) {
   const set: SetDoc = (key, value) => setDoc((prev) => (prev ? { ...prev, [key]: value } : prev));
   const setLines: SetLines = (update) => setDoc((prev) => (prev ? { ...prev, lines: update(prev.lines) } : prev));
   const kindHref = `/erp/stock/${stockKindOf(type)}`;
+  const backLabel =
+    (
+      {
+        receipts: T("Поставки", "Deliveries", "Nhập hàng"),
+        transfers: T("Перемещения", "Transfers", "Chuyển kho"),
+        writeoffs: T("Списания", "Write-offs", "Xuất hủy"),
+        processing: T("Переработки", "Processing", "Chế biến"),
+        counts: T("Инвентаризации", "Stock counts", "Kiểm kê"),
+      } as Record<string, string>
+    )[stockKindOf(type)] ?? T("Склад", "Stock", "Kho");
 
   const usesStock = type === "transfer" || type === "writeoff";
   const shortages = usesStock ? doc.lines.filter((line) => line.product_id && stockQty(state, line.product_id, doc.warehouse_id) < line.qty) : [];
@@ -258,7 +268,7 @@ export function DocumentEditor({ id }: { id: string }) {
   return (
     <>
       <NavLink href={kindHref} className="erpBack">
-        ← {T("Склад", "Stock", "Kho")}
+        ← {backLabel}
       </NavLink>
       <PageHead
         title={
