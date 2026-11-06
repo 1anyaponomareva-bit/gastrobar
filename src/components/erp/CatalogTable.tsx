@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
@@ -216,7 +216,7 @@ export function CatalogTable<Row extends { id: string }>({
   onSortChange?: (sort: string, desc: boolean) => void;
 }) {
   const { notify, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const defaultHiddenKey = columns
     .filter((c) => c.defaultHidden && !c.locked)
     .map((c) => c.id)

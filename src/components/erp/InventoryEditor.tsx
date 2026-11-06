@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useErpStripPrefix, useErpRouter } from "./erpHref";
+import { publicErpHref } from "@/lib/erp/publicPath";
 import { productTitle } from "@/lib/erp/costing";
 import { compatiblePacks, packToBase } from "@/lib/erp/packs";
 import {
@@ -73,7 +74,8 @@ function emptyDoc(warehouse: string | null): CountDoc {
 
 export function InventoryEditor({ id }: { id: string }) {
   const { state, act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
+  const stripPrefix = useErpStripPrefix();
   const [doc, setDoc] = useState<CountDoc | null>(null);
   const [baseline, setBaseline] = useState("");
   const [step, setStep] = useState<"form" | "table">(id === "new" ? "form" : "table");
@@ -161,7 +163,7 @@ export function InventoryEditor({ id }: { id: string }) {
       if (!next.id && saved.id) {
         writeLocalDraft(saved.id, { ...next, ...saved, lines: next.lines });
         clearLocalDraft("new");
-        window.history.replaceState(null, "", countHref(saved.id));
+        window.history.replaceState(null, "", publicErpHref(countHref(saved.id), stripPrefix));
       }
       setDoc((prev) => (prev ? { ...prev, ...saved, lines: prev.lines } : saved));
       setSaveState("saved");

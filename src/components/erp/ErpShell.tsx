@@ -8,6 +8,7 @@ import { translate } from "@/lib/i18n";
 import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
 import { activeMenuHref, menuNavItems } from "./menuNav";
 import { activeStockHref, stockNavItems } from "./stockNav";
+import { ErpHrefProvider, useInternalPathname } from "./erpHref";
 import { Empty, errorText, loadingText, NavLink, T } from "./ui";
 import "./erp.css";
 import "./menu.css";
@@ -103,7 +104,7 @@ function LangSwitch({ lang, onChange }: { lang: ErpLang; onChange: (lang: ErpLan
   );
 }
 
-export function ErpShell({ children }: { children: ReactNode }) {
+export function ErpShell({ children, stripPrefix = false }: { children: ReactNode; stripPrefix?: boolean }) {
   const [lang, setLang] = useState<ErpLang>("ru");
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -158,16 +159,12 @@ export function ErpShell({ children }: { children: ReactNode }) {
     expire();
   };
 
-  if (email === undefined) {
-    return (
+  const body =
+    email === undefined ? (
       <div className="erp">
         <div className="erpLoading">{loadingText()}</div>
       </div>
-    );
-  }
-
-  if (!email) {
-    return (
+    ) : !email ? (
       <div className="erp">
         <header className="erpAuthHead">
           <span className="erpBrand">GASTROFOOD</span>
@@ -183,21 +180,20 @@ export function ErpShell({ children }: { children: ReactNode }) {
           />
         </div>
       </div>
+    ) : (
+      <ErpData
+        email={email}
+        initial={initial}
+        onExpired={expire}
+        lang={lang}
+        onLang={changeLang}
+        onLogout={logout}
+      >
+        {children}
+      </ErpData>
     );
-  }
 
-  return (
-    <ErpData
-      email={email}
-      initial={initial}
-      onExpired={expire}
-      lang={lang}
-      onLang={changeLang}
-      onLogout={logout}
-    >
-      {children}
-    </ErpData>
-  );
+  return <ErpHrefProvider stripPrefix={stripPrefix}>{body}</ErpHrefProvider>;
 }
 
 function ErpData({
@@ -217,7 +213,7 @@ function ErpData({
   onLogout: () => void;
   children: ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = useInternalPathname(usePathname());
   const section = sectionOf(pathname);
   const stockActive = activeStockHref(pathname);
   const menuActive = activeMenuHref(pathname);

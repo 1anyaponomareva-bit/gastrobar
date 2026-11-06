@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import type { ErpUnit } from "@/lib/erp/costing";
 import type { ErpPack } from "@/lib/erp/types";
 import { downloadXlsx } from "@/lib/erp/xlsx";
@@ -341,7 +341,7 @@ function eqText(value: number, unit: ErpUnit | "") {
 
 export function PackEditor({ id }: { id: string }) {
   const { state, act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const isNew = id === "new";
   const pack = isNew ? null : state!.packs.find((p) => p.id === id);
   const [name, setName] = useState(pack?.name ?? "");

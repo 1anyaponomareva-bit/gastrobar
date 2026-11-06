@@ -1,6 +1,6 @@
 import dns from "node:dns";
 import { NextRequest, NextResponse } from "next/server";
-import { decideErpHostGate, readErpHostGateConfig } from "@/lib/erp/hostGate";
+import { decideErpHostGate, productionErpHostEnv, readErpHostGateConfig } from "@/lib/erp/hostGate";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 import {
   assertBodySizeAllowed,
@@ -84,7 +84,13 @@ async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
       search: req.nextUrl.search,
       method: req.method,
     },
-    readErpHostGateConfig(process.env),
+    readErpHostGateConfig(
+      productionErpHostEnv({
+        ERP_HOSTS: process.env.ERP_HOSTS,
+        ERP_REDIRECT_FROM_LEGACY: process.env.ERP_REDIRECT_FROM_LEGACY,
+        ERP_CLOSE_LEGACY_API: process.env.ERP_CLOSE_LEGACY_API,
+      }),
+    ),
   );
   if (hostGate.action === "json") {
     return NextResponse.json(hostGate.body, { status: hostGate.status, headers: { "Cache-Control": "no-store" } });

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   decideErpHostGate,
   ERP_HOST_GATE_NO_STORE,
+  productionErpHostEnv,
   readErpHostGateConfig,
 } from "@/lib/erp/hostGate";
 
@@ -42,11 +43,13 @@ export function middleware(request: NextRequest) {
       search: request.nextUrl.search,
       method: request.method,
     },
-    readErpHostGateConfig({
-      ERP_HOSTS: process.env.ERP_HOSTS,
-      ERP_REDIRECT_FROM_LEGACY: process.env.ERP_REDIRECT_FROM_LEGACY,
-      ERP_CLOSE_LEGACY_API: process.env.ERP_CLOSE_LEGACY_API,
-    }),
+    readErpHostGateConfig(
+      productionErpHostEnv({
+        ERP_HOSTS: process.env.ERP_HOSTS,
+        ERP_REDIRECT_FROM_LEGACY: process.env.ERP_REDIRECT_FROM_LEGACY,
+        ERP_CLOSE_LEGACY_API: process.env.ERP_CLOSE_LEGACY_API,
+      }),
+    ),
   );
 
   if (gate.action === "redirect") {
@@ -54,6 +57,11 @@ export function middleware(request: NextRequest) {
   }
   if (gate.action === "json") {
     return noStore(withMenuPeriod(NextResponse.json(gate.body, { status: gate.status }), period));
+  }
+  if (gate.action === "rewrite") {
+    const url = request.nextUrl.clone();
+    url.pathname = gate.pathname;
+    return withMenuPeriod(NextResponse.rewrite(url), period);
   }
 
   if (isKitchenHost(host) && request.nextUrl.pathname === "/") {
@@ -83,6 +91,22 @@ export const config = {
     "/staff/:path*",
     "/erp",
     "/erp/:path*",
+    "/stock",
+    "/stock/:path*",
+    "/menu",
+    "/menu/:path*",
+    "/products",
+    "/products/:path*",
+    "/preps",
+    "/preps/:path*",
+    "/documents",
+    "/documents/:path*",
+    "/service",
+    "/service/:path*",
+    "/settings",
+    "/catalog",
+    "/production",
+    "/review",
     "/api/:path*",
     /* supabase-proxy: без лишнего edge-hop перед Node Route Handler (меньше сбоев fetch). */
     "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.json|sw.js|supabase-proxy|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",

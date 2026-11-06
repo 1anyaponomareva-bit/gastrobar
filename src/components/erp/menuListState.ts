@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import {
   menuListHref,
   parseMenuListSearch,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/erp/menuListQuery";
 
 export function useMenuListQuery(listPath: MenuListPath) {
-  const router = useRouter();
+  const router = useErpRouter();
   const searchParams = useSearchParams();
   const search = searchParams?.toString() ?? "";
   const query = useMemo(() => parseMenuListSearch(search), [search]);

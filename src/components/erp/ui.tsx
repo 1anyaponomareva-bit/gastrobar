@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import { useErpHref } from "./erpHref";
 import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
 import { locale, T } from "./i18n";
@@ -456,9 +457,11 @@ export function NavLink({
   onClick,
   ...rest
 }: ComponentProps<typeof Link> & { onNavigate?: () => void }) {
+  const publicHref = useErpHref(typeof href === "string" ? href : "");
+  const mapped = typeof href === "string" ? publicHref : href;
   return (
     <Link
-      href={href}
+      href={mapped}
       className={className}
       {...rest}
       onClick={(event: MouseEvent<HTMLAnchorElement>) => {

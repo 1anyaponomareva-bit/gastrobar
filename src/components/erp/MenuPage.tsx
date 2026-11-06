@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import {
   costLine,
@@ -146,7 +146,7 @@ function missingParts(state: ErpState, lines: CostLine[]): Missing[] {
 
 export function MenuPage() {
   const { state } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [query, setQuery] = useState("");
   const [archived, setArchived] = useState(false);
   const ctx = useMemo(() => (state ? menuCostContext(state) : null), [state]);
@@ -292,7 +292,7 @@ export function DishPage({ id, from }: { id: string; from?: string }) {
 
 function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | null; from?: string }) {
   const { act, busy, notify } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const defaultCategory = defaultDishCategoryId(state.categories);
   const [form, setForm] = useState<DishForm>(() => toForm(dish, defaultCategory));
   const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish, defaultCategory)));

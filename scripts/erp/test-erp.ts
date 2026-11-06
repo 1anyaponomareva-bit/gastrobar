@@ -145,7 +145,18 @@ async function main() {
 
   await test("dual-run: named host serves ERP while old /erp still works", async () => {
     const cfg = gateCfg({ redirectFromLegacy: false });
-    assert.equal(gate("erp.example.test", "/erp?invite=abc", "GET", cfg).action, "allow");
+    const home = gate("erp.example.test", "/", "GET", cfg);
+    assert.equal(home.action, "rewrite");
+    if (home.action === "rewrite") assert.equal(home.pathname, "/erp");
+    const stock = gate("erp.example.test", "/stock/receipts", "GET", cfg);
+    assert.equal(stock.action, "rewrite");
+    if (stock.action === "rewrite") assert.equal(stock.pathname, "/erp/stock/receipts");
+    const invite = gate("erp.example.test", "/erp?invite=abc", "GET", cfg);
+    assert.equal(invite.action, "redirect");
+    if (invite.action === "redirect") {
+      assert.equal(invite.status, 307);
+      assert.equal(invite.location, "https://erp.example.test/?invite=abc");
+    }
     assert.equal(gate("erp.example.test", "/api/erp/state", "GET", cfg).action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/login", "POST", cfg).action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/logout", "POST", cfg).action, "allow");
@@ -177,6 +188,9 @@ async function main() {
     assert.equal(proxy.action, "json");
     assert.equal(isErpHostAllowedPath("/_next/static/chunks/app.js"), true);
     assert.equal(isErpHostAllowedPath("/favicon.ico"), true);
+    assert.equal(isErpHostAllowedPath("/"), true);
+    assert.equal(isErpHostAllowedPath("/stock/receipts"), true);
+    assert.equal(isErpHostAllowedPath("/menu"), true);
   });
 
   await test("legacy 307 is GET/HEAD only, preserves path+query, never 308", async () => {
@@ -185,7 +199,7 @@ async function main() {
     assert.equal(get.action, "redirect");
     if (get.action === "redirect") {
       assert.equal(get.status, 307);
-      assert.equal(get.location, "https://erp.example.test/erp/menu/ingredients?from=packaging");
+      assert.equal(get.location, "https://erp.example.test/menu/ingredients?from=packaging");
     }
     const head = gate("gastrotruck.org", "/erp", "HEAD", cfg);
     assert.equal(head.action, "redirect");
@@ -194,6 +208,19 @@ async function main() {
     assert.equal(gate("www.gastrotruck.org", "/api/erp/action", "POST", cfg).action, "allow");
     assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
     assert.equal(gate("www.gastrotruck.org", "/staff", "GET", cfg).action, "allow");
+    const root = gate("www.gastrotruck.org", "/erp", "GET", cfg);
+    assert.equal(root.action, "redirect");
+    if (root.action === "redirect") assert.equal(root.location, "https://erp.example.test/");
+  });
+
+  await test("www ERP host 307s to apex without /erp", async () => {
+    const cfg = gateCfg({ erpHosts: ["erp.example.test", "www.erp.example.test"] });
+    const www = gate("www.erp.example.test", "/erp/stock?x=1", "GET", cfg);
+    assert.equal(www.action, "redirect");
+    if (www.action === "redirect") {
+      assert.equal(www.status, 307);
+      assert.equal(www.location, "https://erp.example.test/stock?x=1");
+    }
   });
 
   await test("redirect OFF restores old ERP even if close-API flag is on", async () => {

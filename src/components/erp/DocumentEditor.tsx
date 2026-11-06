@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { useEffect, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
@@ -117,7 +117,7 @@ async function fetchDoc(id: string): Promise<ErpDocument> {
 
 export function DocumentEditor({ id }: { id: string }) {
   const { state, act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [doc, setDoc] = useState<ErpDocument | null>(null);
   const [baseline, setBaseline] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { erpRedirect } from "@/lib/erp/erpRedirect";
 
-export default function ErpSuppliersRedirect() {
-  redirect("/erp/stock/suppliers");
+export default async function ErpProductSuppliersRedirect() {
+  await erpRedirect("/erp/stock/suppliers");
 }

@@ -1,3 +1,5 @@
+import { toInternalErpPathname } from "@/lib/erp/publicPath";
+
 /** Menu catalog list filters in the URL so Back / Назад restore the same list. */
 
 export type MenuListQuery = {
@@ -70,7 +72,7 @@ function isMenuListPath(pathname: string): pathname is MenuListPath {
 export function safeMenuListReturn(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (!trimmed.startsWith("/erp/menu")) return null;
+  if (!trimmed.startsWith("/erp/menu") && !trimmed.startsWith("/menu")) return null;
   if (/[\r\n\\]/.test(trimmed) || trimmed.includes("://")) return null;
   let parsed: URL;
   try {
@@ -79,7 +81,7 @@ export function safeMenuListReturn(raw: string | null | undefined): string | nul
     return null;
   }
   if (parsed.origin !== "https://gastrotruck.local") return null;
-  const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+  const pathname = toInternalErpPathname(parsed.pathname.replace(/\/+$/, "") || "/");
   if (!isMenuListPath(pathname)) return null;
   return menuListHref(pathname, parseMenuListSearch(parsed.searchParams));
 }

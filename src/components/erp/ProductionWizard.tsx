@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { useEffect, useMemo, useState } from "react";
 import { buildCostContext, costLine, productTitle } from "@/lib/erp/costing";
 import type { ErpDocument, ErpDocumentLine, ErpRecipe, ErpState } from "@/lib/erp/types";
@@ -86,7 +86,7 @@ async function fetchDoc(id: string): Promise<ErpDocument> {
 
 export function ProductionWizard({ id }: { id: string }) {
   const { state, act, busy, email } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [doc, setDoc] = useState<ErpDocument | null>(null);
   const [baseline, setBaseline] = useState("");
   const [step, setStep] = useState<Step>(1);

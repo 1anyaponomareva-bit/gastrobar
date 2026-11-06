@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { documentSupplierLabel } from "@/lib/erp/docSupplier";
 import { downloadXlsx } from "@/lib/erp/xlsx";
@@ -223,7 +223,7 @@ export function DocTable({
   loadMore?: () => void;
   loadingMore?: boolean;
 }) {
-  const router = useRouter();
+  const router = useErpRouter();
   if (error) {
     return (
       <Empty

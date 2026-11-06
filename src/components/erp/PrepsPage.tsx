@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { useMemo, useState } from "react";
 import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
@@ -246,7 +246,7 @@ const BackLink = ({ from }: { from?: string }) => (
 
 function NewPrep({ from }: { from?: string }) {
   const { act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [nameEn, setNameEn] = useState("");
   const [nameVn, setNameVn] = useState("");
   const [unit, setUnit] = useState<ErpUnit | "">("");

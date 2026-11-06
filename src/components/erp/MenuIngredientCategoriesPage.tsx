@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import type { ErpCategory } from "@/lib/erp/types";
 import {
   CATEGORY_TRASH_DAYS,
@@ -204,7 +204,7 @@ export function MenuIngredientCategoryEditPage({ id }: { id: string }) {
 
 function MenuIngredientCategoryForm({ category }: { category?: ErpCategory }) {
   const { act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [nameEn, setNameEn] = useState(category?.name_en ?? "");
   const [nameVn, setNameVn] = useState(category?.name_vn ?? "");
   const title = category

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import { useMemo, useState } from "react";
 import {
   buildCostContext,
@@ -70,7 +70,7 @@ function productSuppliers(state: ErpState, product: ErpProduct): string[] {
 
 export function ProductsPage() {
   const { state } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const [query, setQuery] = useState("");
   const [type, setType] = useState<ErpProductType | "">("");
   const [category, setCategory] = useState("");
@@ -301,7 +301,7 @@ function ProductEditor({
   from?: string;
 }) {
   const { act, busy, notify } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const initialPacks = (): PackDraft[] =>
     state.productPacks
       .filter((link) => link.product_id === product?.id)

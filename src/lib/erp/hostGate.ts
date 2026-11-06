@@ -2,31 +2,46 @@
  * ERP domain-move host gate. Same Vercel project `gastrobar`, same Supabase DB.
  * Split flags: (A) new ERP hostname(s) vs (B) redirect-from-legacy. Independent.
  *
+ * Canonical public site: https://gastrofood.vn (no www, no `/erp` prefix).
+ * www.gastrofood.vn → 307 to gastrofood.vn, same path+query.
+ *
  * Exact allowlist on the NEW ERP host (session/permission checks stay in route
  * handlers; this gate does not weaken auth):
- *   - ERP pages: `/erp`, `/erp/*`
+ *   - Public ERP pages: `/`, `/stock`, `/stock/*`, `/menu`, `/products`, `/preps`,
+ *     `/documents`, `/catalog`, `/production`, `/review`, `/service`, `/settings`
+ *     and the same paths under `/erp` (those GET/HEAD 307 to the clean URL)
+ *   - Internal rewrite: those public pages → `/erp` + path
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
  *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
- *       POST/GET `/api/recipes-admin/login`
- *       POST/GET `/api/recipes-admin/logout`
- *       POST/GET `/api/recipes-admin/register` (invite query on `/erp?invite=`)
- *       GET `/api/recipes-admin/session` (shared cookie helper; ERP shell uses `/api/erp/session`)
+ *       `/api/recipes-admin/login` | `logout` | `register` | `session`
  *   - `/_next/*` plus favicon/icon and image/font files Next serves for the ERP UI
  *
- * Other PAGES on the new host: 307/302 to the same path on https://www.gastrotruck.org
+ * Other PAGES on the new host: 307 to the same path on https://www.gastrotruck.org
  * Other APIs on the new host: JSON 404/403 — never an HTML redirect
  *
  * Legacy public hosts (www.gastrotruck.org, gastrotruck.org):
  *   - B OFF → old `/erp` and `/api/erp` stay as today (dual-run / rollback)
- *   - B ON  → GET/HEAD `/erp` 307 only (never 308 here; never POST/PUT/PATCH/DELETE)
+ *   - B ON  → GET/HEAD `/erp` 307 to https://gastrofood.vn/… without `/erp`
  *   - C (close old API) only applies while B is ON; B OFF keeps old API authorized
  *
  * Do not put gastrotruck.org (or its subdomains) in ERP_HOSTS.
  * Do not set cookie Domain= across gastrotruck.org and the new host.
  */
 
+import {
+  CANONICAL_ERP_HOST,
+  CANONICAL_ERP_ORIGIN,
+  ERP_WWW_HOST,
+  isErpPagePath,
+  isErpPublicPagePath,
+  toInternalErpPathname,
+  toPublicErpHref,
+  toPublicErpPathname,
+} from "./publicPath";
+
 export const LEGACY_PUBLIC_HOSTS = ["www.gastrotruck.org", "gastrotruck.org"] as const;
 export const LEGACY_PUBLIC_ORIGIN = "https://www.gastrotruck.org";
+export { CANONICAL_ERP_HOST, CANONICAL_ERP_ORIGIN, ERP_WWW_HOST };
 
 const RECIPES_ADMIN_AUTH_PATHS = [
   "/api/recipes-admin/login",
@@ -53,6 +68,7 @@ export type ErpHostGateInput = {
 
 export type ErpHostGateResult =
   | { action: "allow" }
+  | { action: "rewrite"; pathname: string }
   | { action: "redirect"; status: 307; location: string }
   | { action: "json"; status: number; body: Record<string, unknown> };
 
@@ -98,6 +114,15 @@ export function readErpHostGateConfig(env: Record<string, string | undefined>): 
   };
 }
 
+/** Middleware default once the owner named gastrofood.vn. Tests pass an explicit list. */
+export function productionErpHostEnv(env: Record<string, string | undefined> = {}): Record<string, string | undefined> {
+  return {
+    ERP_HOSTS: env.ERP_HOSTS?.trim() ? env.ERP_HOSTS : `${CANONICAL_ERP_HOST},${ERP_WWW_HOST}`,
+    ERP_REDIRECT_FROM_LEGACY: env.ERP_REDIRECT_FROM_LEGACY,
+    ERP_CLOSE_LEGACY_API: env.ERP_CLOSE_LEGACY_API,
+  };
+}
+
 export function isNamedErpHost(hostname: string, config: ErpHostGateConfig): boolean {
   if (!hostname || config.erpHosts.length === 0) return false;
   return config.erpHosts.includes(hostnameOf(hostname));
@@ -108,16 +133,25 @@ export function isLegacyPublicHost(hostname: string): boolean {
   return (LEGACY_PUBLIC_HOSTS as readonly string[]).includes(host);
 }
 
+export function canonicalErpHost(config: ErpHostGateConfig): string | null {
+  if (config.erpHosts.includes(CANONICAL_ERP_HOST)) return CANONICAL_ERP_HOST;
+  return config.erpHosts.find((host) => !host.startsWith("www.")) ?? config.erpHosts[0] ?? null;
+}
+
+export function isWwwErpHost(hostname: string, config: ErpHostGateConfig): boolean {
+  const host = hostnameOf(hostname);
+  if (!isNamedErpHost(host, config)) return false;
+  if (host === ERP_WWW_HOST) return true;
+  const canonical = canonicalErpHost(config);
+  return Boolean(canonical && host === `www.${canonical}`);
+}
+
 function pathExact(pathname: string, exact: string): boolean {
   return pathname === exact || pathname === `${exact}/`;
 }
 
 function pathUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
-}
-
-export function isErpPagePath(pathname: string): boolean {
-  return pathUnder(pathname, "/erp");
 }
 
 export function isErpApiPath(pathname: string): boolean {
@@ -145,7 +179,13 @@ function isNextOrStaticPath(pathname: string): boolean {
 
 /** Paths the new ERP host may serve. Everything else is redirected or JSON-refused. */
 export function isErpHostAllowedPath(pathname: string): boolean {
-  return isErpPagePath(pathname) || isErpApiPath(pathname) || isRecipesAdminAuthPath(pathname) || isNextOrStaticPath(pathname);
+  return (
+    isErpPagePath(pathname) ||
+    isErpPublicPagePath(pathname) ||
+    isErpApiPath(pathname) ||
+    isRecipesAdminAuthPath(pathname) ||
+    isNextOrStaticPath(pathname)
+  );
 }
 
 export function isApiOrProxyPath(pathname: string): boolean {
@@ -172,33 +212,54 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
   const pathname = input.pathname || "/";
   const search = input.search || "";
   const method = input.method || "GET";
+  const canonical = canonicalErpHost(config);
 
   if (isNamedErpHost(host, config)) {
-    if (isErpHostAllowedPath(pathname)) return { action: "allow" };
-    if (isApiOrProxyPath(pathname)) return { action: "json", status: 404, body: OTHER_API_BODY };
-    if (isGetLike(method)) {
-      return { action: "redirect", status: 307, location: absoluteUrl(LEGACY_PUBLIC_ORIGIN, pathname, search) };
+    if (isNextOrStaticPath(pathname) || isErpApiPath(pathname) || isRecipesAdminAuthPath(pathname)) {
+      return { action: "allow" };
     }
-    return { action: "json", status: 403, body: OTHER_WRITE_BODY };
+
+    if (isWwwErpHost(host, config) && canonical && isGetLike(method)) {
+      const publicPath = toPublicErpPathname(pathname);
+      return { action: "redirect", status: 307, location: absoluteUrl(`https://${canonical}`, publicPath, search) };
+    }
+
+    if (isErpPagePath(pathname) && isGetLike(method)) {
+      const destHost = canonical && host === canonical ? canonical : canonical || host;
+      return {
+        action: "redirect",
+        status: 307,
+        location: absoluteUrl(`https://${destHost}`, toPublicErpPathname(pathname), search),
+      };
+    }
+
+    if (isErpPublicPagePath(pathname)) {
+      return { action: "rewrite", pathname: toInternalErpPathname(pathname) };
+    }
+
+    if (isApiOrProxyPath(pathname)) return { action: "json", status: 404, body: OTHER_API_BODY };
+    if (!isGetLike(method)) return { action: "json", status: 403, body: OTHER_WRITE_BODY };
+    return { action: "redirect", status: 307, location: absoluteUrl(LEGACY_PUBLIC_ORIGIN, pathname, search) };
   }
 
   if (isLegacyPublicHost(host) && isErpPagePath(pathname)) {
-    const target = config.erpHosts[0];
-    if (config.redirectFromLegacy && target && isGetLike(method)) {
-      return { action: "redirect", status: 307, location: absoluteUrl(`https://${target}`, pathname, search) };
+    if (config.redirectFromLegacy && canonical && isGetLike(method)) {
+      return {
+        action: "redirect",
+        status: 307,
+        location: absoluteUrl(`https://${canonical}`, toPublicErpPathname(pathname), search),
+      };
     }
     return { action: "allow" };
   }
 
   if (isLegacyPublicHost(host) && isErpApiPath(pathname)) {
-    // Writes are never redirected. Close only after cutover (B ON + C ON + named host).
-    if (config.redirectFromLegacy && config.closeLegacyApi && config.erpHosts[0]) {
+    if (config.redirectFromLegacy && config.closeLegacyApi && canonical) {
       const body: Record<string, unknown> = {
         error: "erp_moved",
-        message:
-          "ERP API moved off this host. Open ERP on the new hostname. POST, PUT, PATCH and DELETE are not redirected.",
+        message: `ERP API moved off this host. Open ERP on https://${canonical}. POST, PUT, PATCH and DELETE are not redirected.`,
+        newOrigin: `https://${canonical}`,
       };
-      if (config.erpHosts[0]) body.newOrigin = `https://${config.erpHosts[0]}`;
       return { action: "json", status: 410, body };
     }
     return { action: "allow" };
@@ -208,3 +269,7 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
 }
 
 export const ERP_HOST_GATE_NO_STORE = "no-store, no-cache, max-age=0, must-revalidate";
+
+export function publicPathOnCanonical(href: string): string {
+  return `${CANONICAL_ERP_ORIGIN}${toPublicErpHref(href)}`;
+}

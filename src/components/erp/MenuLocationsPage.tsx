@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useErpRouter } from "./erpHref";
 import type { ErpLocation } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { MenuFormShell } from "./MenuFormShell";
@@ -130,7 +130,7 @@ export function MenuLocationEditPage({ id }: { id: string }) {
 
 export function MenuLocationForm({ location }: { location?: ErpLocation }) {
   const { state, act, busy } = useErp();
-  const router = useRouter();
+  const router = useErpRouter();
   const warehouses = useMemo(() => (state?.warehouses ?? []).filter((w) => !w.archived_at), [state?.warehouses]);
   const [name, setName] = useState(location?.name ?? "");
   const [address, setAddress] = useState(location?.address ?? "");
