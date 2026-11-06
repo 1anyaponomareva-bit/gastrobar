@@ -43,3 +43,5 @@ coverage
 .erp-logic-accept-db/
 .erp-stock-ui-accept-db/
 .erp-pack-merge-backup/
+.erp-menu-backup/
+.erp-menu-accept-db/
