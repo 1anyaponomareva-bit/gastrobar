@@ -76,9 +76,11 @@
 
 ## 8. ERP «Меню» (Poster-вкладки)
 
-- **Код реализован?** Частично: оболочка вкладок, Товары = `finished`, техкарты = `erp_dishes`, п/ф/ингредиенты на том же каталоге, фудкост-список, stub цехов. Не клон Poster (нет Postie, модификаторов, дерева кассы, печати всех filtered).
-- **В main?** Да, `490d1dd` (логика `8d2af42`, UI `cc6d30d`). Новых коммитов UI/logic после этого нет.
-- **Миграция применена?** Да: `20261106143000` на production (подтверждение 2026-11-06: `erp_product_cost_quotes_view`, `erp_card_revisions`, `erp_card_history`). Повторно не накатывали.
-- **Включено на сайте?** Да, после деплоя `dpl_AzBCTXdhzVw4aGniP9Xuq2HUmng8` (15:49 +07, Ready, алиас https://www.gastrotruck.org). `/erp/menu` — Товары; `/erp/products` — полный каталог.
-- **Проверено на сайте?** Да, в `5cc4740`: live `/erp/menu` отдаёт RSC `MenuGoodsPage`, `/erp/products` — `ProductsPage` и 127 продуктов. Повторный залогиненный клик по вкладкам в 16:40 **не** снимали (Chrome владельца в Poster). Склад не проводили. Staff↔ERP не включали.
+- **Код реализован?** Частично. Оболочка вкладок, Товары = `finished`, техкарты = `erp_dishes`, п/ф и ингредиенты на том же `erp_products`. Вкладка продаж — **Точки продаж** (`erp_locations`: Online Kitchen + Food Truck), не Poster «Цехи» и не `erp_workshops`. Gastrobar в точки продаж не входит. Ингредиенты: колонка/фильтр **Поставщик** с `erp_product_packs.supplier_id`; **Тип** с этой вкладки убран (внутренние типы остаются, чтобы не смешивать блюда). Категории ингредиентов — `erp_categories` + 14-дневная корзина. Не клон Poster (нет Postie, модификаторов, дерева кассы, печати всех filtered). В списках Меню ещё есть stub-фильтр «Цех».
+- **В main?** Да, `bef1ae5` (ингредиенты: поставщик вместо типа) поверх `9059645` (точки продаж). `origin/erp-menu-ui` `687a034` и `origin/erp-menu-logic` `be18c7f` (схема Цехи/workshops) **не** вливались.
+- **Миграция применена?** Да: `20261106143000` (cost history) ранее; `20261106180000_erp_locations_and_category_trash.sql` на production 2026-11-06, SQL Editor `1anyaponomareva-bit's Project` / `main (PRODUCTION)`, Success. Повторно при публикации `bef1ae5` не накатывали (аддитивно уже было, нового SQL в `bef1ae5` нет). Live: 2 точки, 127 продуктов.
+- **Включено на сайте?** Да, production Ready `dpl_ErXjsdjgEBGhe5PaTgoP1V9PBe8K` (20:43 +07, алиас https://www.gastrotruck.org) на SHA `bef1ae5`.
+- **Проверено на сайте?** 2026-11-06 ~20:50 +07, залогиненный Chrome: https://www.gastrotruck.org/erp/menu/locations — заголовок и вкладка «Точки продаж 2», food-truck и online-kitchen, без Gastrobar/Prep Kitchen, без «Цехи». https://www.gastrotruck.org/erp/menu/ingredients — фильтр и колонка «Поставщик», колонки «Тип» нет. https://www.gastrotruck.org/erp/products — «Найдено: 127», полный каталог (сырьё/упаковка/расходники). `/erp/menu/workshops` на сервере редирект на locations. Склад не проводили. Staff↔ERP не включали. Сохранение карточки по-прежнему не двигает склад (тест `card save does not move stock`).
+
+Бэкап каталога перед этим прогоном (не в git): `.erp-menu-backup/before-2026-11-06T13-38-48-556Z.json`, products 127.
 
