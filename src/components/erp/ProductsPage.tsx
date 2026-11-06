@@ -261,17 +261,6 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   ...preset,
 });
 
-type StaffForm = { listed: boolean; supplier_id: string; unit: string; pack: string; item_no: string; hidden: boolean };
-
-const staffOf = (product: ErpProduct | null): StaffForm => ({
-  listed: product?.staff_listed ?? false,
-  supplier_id: product?.staff_supplier_id ?? "",
-  unit: product?.staff_unit ?? "",
-  pack: product?.staff_pack ?? "",
-  item_no: product?.staff_item_no ?? "",
-  hidden: product?.staff_hidden ?? false,
-});
-
 export function ProductCard({ id, presetType }: { id: string; presetType?: string }) {
   const { state } = useErp();
   const type = PRODUCT_TYPES.includes(presetType as ErpProductType) ? (presetType as ErpProductType) : undefined;
@@ -315,11 +304,8 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
       });
   const [form, setForm] = useState<ProductForm>(() => formOf(product, presetType ? { type: presetType } : undefined));
   const [packs, setPacks] = useState<PackDraft[]>(initialPacks);
-  const [staff, setStaff] = useState<StaffForm>(() => staffOf(product));
-  const [staffBaseline, setStaffBaseline] = useState(() => JSON.stringify(staffOf(product)));
   const [baseline, setBaseline] = useState(() => JSON.stringify([formOf(product, presetType ? { type: presetType } : undefined), initialPacks()]));
-  const staffDirty = JSON.stringify(staff) !== staffBaseline;
-  const dirty = JSON.stringify([form, packs]) !== baseline || staffDirty;
+  const dirty = JSON.stringify([form, packs]) !== baseline;
   useDirtyGuard(dirty);
   const set = <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
   const unit = form.base_unit || null;
@@ -346,16 +332,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
     return v === null || v === undefined || (v >= 0 && v < 100);
   });
   const showLosses = (unit === "kg" || unit === "l") && !isPackaging(form.type);
-  const staffMissing = staff.listed
-    ? [
-        !form.category_id ? T("категория", "category", "nhóm hàng") : "",
-        !staff.supplier_id || !state.suppliers.some((s) => s.id === staff.supplier_id && !s.archived_at) ? T("поставщик", "supplier", "nhà cung cấp") : "",
-        !staff.unit.trim() ? T("единица заказа", "order unit", "đơn vị đặt") : "",
-      ].filter(Boolean)
-    : [];
-  const staffUnits = [...new Set(state.products.map((p) => p.staff_unit).filter((u): u is string => Boolean(u)))].sort();
-  const canSave =
-    form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (!staffDirty || !staffMissing.length) && (dirty || isNew);
+  const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
     const result = await act<{ id: string }>(
@@ -367,7 +344,6 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
           base_unit: form.base_unit || null,
           category_id: form.category_id || null,
           packs,
-          ...(staffDirty ? { staff: { ...staff, supplier_id: staff.supplier_id || null } } : {}),
         },
       },
       isNew ? T("Продукт создан", "Product created", "Đã tạo sản phẩm") : T("Изменения сохранены", "Changes saved", "Đã lưu thay đổi"),
@@ -377,13 +353,10 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
       const next = formOf(null, { type: form.type });
       setForm(next);
       setPacks([]);
-      setStaff(staffOf(null));
-      setStaffBaseline(JSON.stringify(staffOf(null)));
       setBaseline(JSON.stringify([next, []]));
       return;
     }
     setBaseline(JSON.stringify([form, packs]));
-    setStaffBaseline(JSON.stringify(staff));
     if (isNew) router.replace(`/erp/products/${result.id}`);
   };
 
@@ -600,62 +573,6 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
     </>
   );
 
-  const setS = <K extends keyof StaffForm>(key: K, value: StaffForm[K]) => setStaff((prev) => ({ ...prev, [key]: value }));
-  const staffOrders = (
-    <>
-      <p className="erpHint">
-        {T(
-          "Общий справочник с приложением заказов Staff: изменения здесь сразу видны в Staff, и наоборот. Остатки при этом не меняются.",
-          "Shared with the Staff ordering app: changes here show up in Staff right away and vice versa. Stock is not changed.",
-          "Dùng chung với ứng dụng Staff: thay đổi hiển thị ngay. Tồn kho không đổi.",
-        )}
-      </p>
-      <label className="erpCheck">
-        <input type="checkbox" checked={staff.listed} onChange={(e) => setS("listed", e.target.checked)} />
-        {T("Показывать в заявках Staff", "Show in Staff orders", "Hiện trong đơn Staff")}
-      </label>
-      {staff.listed ? (
-        <div className="erpGrid two">
-          <Field label={T("Поставщик для заявки *", "Order supplier *", "Nhà cung cấp *")}>
-            <select value={staff.supplier_id} onChange={(e) => setS("supplier_id", e.target.value)}>
-              <option value="">{T("— выберите поставщика —", "— choose a supplier —", "— chọn nhà cung cấp —")}</option>
-              {state.suppliers
-                .filter((s) => !s.archived_at || s.id === staff.supplier_id)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </select>
-          </Field>
-          <Field label={T("Единица заказа *", "Order unit *", "Đơn vị đặt *")} hint={T("Как считает повар в заявке: box, bag, kg…", "What the cook counts in the order: box, bag, kg…", "Đơn vị khi đặt: box, bag, kg…")}>
-            <input value={staff.unit} list="erpStaffUnits" maxLength={20} onChange={(e) => setS("unit", e.target.value)} />
-            <datalist id="erpStaffUnits">
-              {staffUnits.map((u) => (
-                <option key={u} value={u} />
-              ))}
-            </datalist>
-          </Field>
-          <Field label={T("Фасовка", "Pack", "Quy cách")} hint={T("Например: 5 kg, 12 pcs", "For example: 5 kg, 12 pcs", "VD: 5 kg, 12 pcs")}>
-            <input value={staff.pack} maxLength={80} onChange={(e) => setS("pack", e.target.value)} />
-          </Field>
-          <Field label={T("Артикул поставщика", "Supplier item no.", "Mã hàng NCC")}>
-            <input value={staff.item_no} maxLength={40} onChange={(e) => setS("item_no", e.target.value)} />
-          </Field>
-          <label className="erpCheck">
-            <input type="checkbox" checked={staff.hidden} onChange={(e) => setS("hidden", e.target.checked)} />
-            {T("Временно скрыть в заявке", "Temporarily hide in orders", "Tạm ẩn trong đơn")}
-          </label>
-        </div>
-      ) : null}
-      {staffDirty && staffMissing.length ? (
-        <div className="erpNotice warn">
-          {T("Чтобы показать продукт в Staff, заполните", "To show the product in Staff, fill in", "Để hiện trong Staff, hãy điền")}: {staffMissing.join(", ")}
-        </div>
-      ) : null}
-    </>
-  );
-
   const losses = (
     <>
       <p className="erpHint">
@@ -800,8 +717,6 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
           <summary>{T("Закупка и хранение (необязательно)", "Purchasing and storage (optional)", "Mua hàng và bảo quản (không bắt buộc)")}</summary>
           <h2>{T("Закупка и упаковки", "Purchasing & packs", "Mua hàng và quy cách")}</h2>
           {purchasing}
-          <h2>{T("Заявки Staff", "Staff orders", "Đơn Staff")}</h2>
-          {staffOrders}
           <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
           {storage}
           {showLosses ? (
@@ -816,10 +731,6 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
           <section className="erpCard">
             <h2>{T("Закупка и упаковки", "Purchasing & packs", "Mua hàng và quy cách")}</h2>
             {purchasing}
-          </section>
-          <section className="erpCard" data-testid="staff-orders">
-            <h2>{T("Заявки Staff", "Staff orders", "Đơn Staff")}</h2>
-            {staffOrders}
           </section>
           {showLosses ? (
             <section className="erpCard">
