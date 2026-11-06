@@ -12,10 +12,25 @@ export type ErpSettings = {
 
 type Archivable = { archived_at: string | null };
 
-export type ErpCategory = Archivable & { id: string; code: string; name_en: string; name_vn: string; sort: number };
+export type ErpCategory = Archivable & {
+  id: string;
+  code: string;
+  name_en: string;
+  name_vn: string;
+  sort: number;
+  /** POS tree parent. Null = root / «Главный экран» level. */
+  parent_id?: string | null;
+};
+/** Warehouse grouping for ingredients. Not the POS tree (`erp_categories`). */
+export type ErpIngredientCategory = Archivable & { id: string; code: string; name_en: string; name_vn: string; sort: number };
 export type ErpSupplier = Archivable & { id: string; code: string; name: string; zalo_url: string | null; sort: number };
 export type ErpWarehouseKind = "warehouse" | "prep_kitchen" | "online_kitchen" | "food_truck" | "other";
 export type ErpWarehouse = Archivable & { id: string; code: string; name: string; kind: ErpWarehouseKind; sort: number };
+/** Kitchen station / ticket printer. Not a warehouse and not a venue. Null workshop_id on a card = «Без цеха». */
+export type ErpWorkshop = Archivable & { id: string; code: string; name: string; print_tickets: boolean; sort: number };
+/** Poster «Заведение» list filter. Not 1:1 with workshops or warehouses. */
+export type ErpVenue = Archivable & { id: string; code: string; name: string; sort: number };
+export type ErpVenuePrice = { venue_id: string; visible: boolean; sale_price: number | null };
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
 export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
 
@@ -47,6 +62,16 @@ export type ErpProduct = Archivable & LossPcts & {
   name_en: string;
   name_vn: string;
   category_id: string | null;
+  /** POS / finished-goods category stays `category_id`. Ingredients use this catalog. */
+  ingredient_category_id?: string | null;
+  /** Null = «Без цеха». Shown on Товары and tech cards, not on preps. */
+  workshop_id?: string | null;
+  sale_price?: number | null;
+  vat_rate?: number | null;
+  barcode?: string | null;
+  is_weighted?: boolean;
+  no_discounts?: boolean;
+  venue_prices?: ErpVenuePrice[];
   base_unit: ErpUnit | null;
   unit_weight_kg: number | null;
   brand: string | null;
@@ -149,11 +174,19 @@ export type ErpDish = Archivable & {
   name_en: string;
   name_vn: string;
   category_id: string | null;
+  workshop_id?: string | null;
+  /** Portion yield in the dish base sense Poster lists in kg (`0.258` = 258 g). */
+  yield_qty?: number | null;
   sale_price: number | null;
   vat_rate: number | null;
+  barcode?: string | null;
+  is_weighted?: boolean;
+  no_discounts?: boolean;
   note: string | null;
   lines: ErpDishLine[];
   channel_prices: { channel_id: string; sale_price: number }[];
+  /** Empty = visible at every venue with `sale_price`. */
+  venue_prices?: ErpVenuePrice[];
 };
 
 /** Planned unit prices for a tech-card. Unknown stays null, never 0. */
@@ -191,6 +224,9 @@ export type ErpState = {
   writeoffReasons: ErpWriteoffReason[];
   /** Optional: loaded with `?parts=costSources` or the full state after the menu migration. */
   costSources?: ErpProductCostQuote[];
+  workshops?: ErpWorkshop[];
+  venues?: ErpVenue[];
+  ingredientCategories?: ErpIngredientCategory[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
@@ -333,7 +369,7 @@ export type ErpAction =
   | { action: "saveProduct"; product: Record<string, unknown> }
   | { action: "savePack"; pack: Record<string, unknown> }
   | { action: "setArchived"; entity: string; id: string; archived: boolean }
-  | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }
+  | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel" | "workshop" | "ingredient_category"; value: Record<string, unknown> }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
   | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
   | { action: "saveDocument"; document: Record<string, unknown> }

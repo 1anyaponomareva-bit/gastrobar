@@ -19,7 +19,15 @@ import {
   type CostProduct,
   type CostRecipe,
 } from "../../src/lib/erp/costing";
-import { dishCost, menuCostContext } from "../../src/lib/erp/menu";
+import {
+  catalogUsage,
+  dishCost,
+  goodsCost,
+  ingredientCategoryStats,
+  menuCostContext,
+  venueOffer,
+  visibleAtVenue,
+} from "../../src/lib/erp/menu";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -139,8 +147,11 @@ async function main() {
     for (const key of [
       "settings",
       "categories",
+      "ingredientCategories",
       "suppliers",
       "warehouses",
+      "workshops",
+      "venues",
       "channels",
       "products",
       "packs",
@@ -2605,6 +2616,321 @@ async function main() {
     ]);
     assert.ok(priced.main);
     assert.ok(Math.abs(priced.summary.foodCost! - 1351) < 1e-9);
+  });
+
+  await test("workshops and venues are seeded and are not warehouses", async () => {
+    const workshops = await q<{ id: string; code: string; name: string }>(
+      "select id, code, name from public.erp_workshops where archived_at is null order by sort",
+    );
+    const venues = await q<{ id: string; code: string; name: string }>(
+      "select id, code, name from public.erp_venues where archived_at is null order by sort",
+    );
+    const warehouses = await q<{ id: string; name: string }>("select id, name from public.erp_warehouses");
+    assert.deepEqual(
+      workshops.map((row) => row.name),
+      ["GASTROBAR", "GASTROFOOD", "GASTROTRUCK WORKSHOP"],
+    );
+    assert.deepEqual(
+      venues.map((row) => row.name),
+      ["GASTROBAR", "FOODTRUCK", "PREP KITCHEN", "ONLINE KITCHEN"],
+    );
+    assert.equal(workshops.some((row) => row.name === "FOODTRUCK"), false);
+    assert.equal(venues.some((row) => row.name === "GASTROFOOD"), false);
+    const warehouseIds = new Set(warehouses.map((row) => row.id));
+    for (const row of [...workshops, ...venues]) {
+      assert.equal(warehouseIds.has(row.id), false, `${row.name} must not reuse a warehouse id`);
+    }
+    const state = await value<Record<string, unknown[]>>("select public.erp_load_state($1)", ["workshops,venues"]);
+    assert.equal(state.workshops.length, 3);
+    assert.equal(state.venues.length, 4);
+    const quoteCols = await q<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_schema = 'public' and table_name = 'erp_product_cost_quotes_view' order by ordinal_position`,
+    );
+    assert.deepEqual(
+      quoteCols.map((row) => row.column_name),
+      ["product_id", "last_lot", "fifo_remaining", "reference"],
+    );
+  });
+
+  await test("dish workshop and venue availability; omitted venues key does not wipe rows", async () => {
+    const gastrofood = await value<string>("select id from public.erp_workshops where code = 'gastrofood'");
+    const gastrobarVenue = await value<string>("select id from public.erp_venues where code = 'gastrobar'");
+    const truckVenue = await value<string>("select id from public.erp_venues where code = 'foodtruck'");
+    const bun = await saveProduct({ type: "ingredient", name_en: "Venue bun", base_unit: "pcs", est_unit_cost: 1000 });
+    const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "Venue burger",
+        sale_price: 180000,
+        workshop_id: gastrofood,
+        yield_qty: 0.258,
+        lines: [{ product_id: bun, qty: 1 }],
+        venues: [
+          { venue_id: gastrobarVenue, visible: true, sale_price: 180000 },
+          { venue_id: truckVenue, visible: false, sale_price: 150000 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    const saved = await one<{ workshop_id: string; yield_qty: string }>(
+      "select workshop_id, yield_qty from public.erp_dishes where id = $1",
+      [dish],
+    );
+    assert.equal(saved.workshop_id, gastrofood);
+    assert.equal(n(saved.yield_qty), 0.258);
+    await value("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        id: dish,
+        name_en: "Venue burger",
+        sale_price: 180000,
+        lines: [{ product_id: bun, qty: 1 }],
+      }),
+      ACTOR,
+    ]);
+    const venues = await q<{ venue_id: string; visible: boolean; sale_price: string }>(
+      "select venue_id, visible, sale_price from public.erp_dish_venues where dish_id = $1 order by venue_id",
+      [dish],
+    );
+    assert.equal(venues.length, 2);
+    assert.equal(
+      venues.find((row) => row.venue_id === truckVenue)?.visible,
+      false,
+    );
+    await expectError(
+      q("select public.erp_save_dish($1::jsonb, $2)", [
+        JSON.stringify({ name_en: "Bad workshop dish", workshop_id: bun, lines: [{ product_id: bun, qty: 1 }] }),
+        ACTOR,
+      ]),
+      "ERP_NOT_FOUND",
+    );
+
+    const none = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Legacy visible dish", sale_price: 10000, lines: [{ product_id: bun, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const loaded = await value<{ dishes: { id: string; venue_prices: { venue_id: string; visible: boolean; sale_price: number | null }[] }[] }>(
+      "select public.erp_load_state($1)",
+      ["dishes"],
+    );
+    const withVenues = loaded.dishes.find((row) => row.id === dish)!;
+    const legacy = loaded.dishes.find((row) => row.id === none)!;
+    assert.equal(visibleAtVenue([withVenues, legacy], gastrobarVenue).map((row) => row.id).sort().join(), [dish, none].sort().join());
+    assert.deepEqual(
+      visibleAtVenue([withVenues, legacy], truckVenue).map((row) => row.id),
+      [none],
+    );
+    assert.equal(venueOffer(legacy, gastrobarVenue).visible, true);
+    assert.equal(venueOffer(withVenues, truckVenue).visible, false);
+    assert.equal(venueOffer(withVenues, truckVenue).price, 150000);
+
+    const products = [
+      {
+        id: bun,
+        type: "ingredient" as const,
+        name_en: "Venue bun",
+        name_vn: "",
+        base_unit: "pcs" as const,
+        est_unit_cost: 1000,
+        est_cost_source: "manual" as const,
+      },
+    ];
+    const ctx = menuCostContext({ products, recipes: [] });
+    const atTruck = dishCost(
+      ctx,
+      {
+        lines: [{ id: "1", dish_id: dish, line_no: 1, product_id: bun, qty: 1, note: null }],
+        sale_price: 180000,
+        vat_rate: null,
+        channel_prices: [],
+        venue_prices: withVenues.venue_prices,
+      },
+      { output_vat_enabled: false, default_output_vat_rate: null },
+      [{ id: "d", code: "direct", name: "Direct", commission_pct: 0, sort: 0, archived_at: null }],
+      truckVenue,
+    );
+    assert.equal(atTruck.main?.price, 150000);
+    assert.equal(atTruck.summary.foodCost, 1000);
+  });
+
+  await test("finished goods cost, ingredient categories, usage; card save still does not move stock", async () => {
+    const kitchen = await wh("prep-kitchen");
+    const workshop = await value<string>("select id from public.erp_workshops where code = 'gastrobar'");
+    const venue = await value<string>("select id from public.erp_venues where code = 'gastrobar'");
+    const cat = await value<string>(
+      "select public.erp_save_ref('ingredient_category', $1::jsonb, $2)",
+      [JSON.stringify({ name_en: "Menu veg", name_vn: "Rau" }), ACTOR],
+    );
+    const lime = await saveProduct({
+      type: "ingredient",
+      name_en: "Menu lime",
+      base_unit: "kg",
+      ingredient_category_id: cat,
+      est_unit_cost: 20000,
+    });
+    const bottle = await saveProduct({
+      type: "finished",
+      name_en: "Menu lemonade bottle",
+      base_unit: "pcs",
+      workshop_id: workshop,
+      sale_price: 30000,
+      est_unit_cost: 8000,
+      venues: [{ venue_id: venue, visible: true, sale_price: 32000 }],
+    });
+    const prep = await saveProduct({ type: "semi_finished", name_en: "Menu unused prep", base_unit: "kg" });
+    const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: prep, yield_qty: 1, lines: [{ product_id: lime, qty: 0.1 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [recipe, ACTOR]);
+    const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Menu lime soda", sale_price: 45000, lines: [{ product_id: lime, qty: 0.05 }] }),
+      ACTOR,
+    ]);
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: lime, qty: 2, unit_price: 20000 }] }));
+    const lotsBefore = n(await value("select count(*) from public.erp_lots"));
+    await saveProduct({
+      id: bottle,
+      type: "finished",
+      name_en: "Menu lemonade bottle",
+      base_unit: "pcs",
+      workshop_id: workshop,
+      sale_price: 33000,
+    });
+    assert.equal(n(await value("select count(*) from public.erp_lots")), lotsBefore);
+    assert.equal(n(await value("select sale_price from public.erp_products where id = $1", [bottle])), 33000);
+
+    const products = (await q<Record<string, unknown>>("select * from public.erp_products where id = any($1)", [[lime, bottle, prep]])).map(
+      (p) => ({
+        id: p.id as string,
+        type: p.type as "ingredient" | "semi_finished" | "finished",
+        name_en: p.name_en as string,
+        name_vn: p.name_vn as string,
+        base_unit: p.base_unit as "kg" | "l" | "pcs",
+        est_unit_cost: n(p.est_unit_cost),
+        est_cost_source: p.est_cost_source as "receipt" | "manual" | null,
+        sale_price: n(p.sale_price),
+        vat_rate: null as number | null,
+        venue_prices:
+          p.id === bottle
+            ? [{ venue_id: venue, visible: true, sale_price: 32000 }]
+            : [],
+      }),
+    );
+    const ctx = menuCostContext({ products, recipes: [] });
+    const priced = goodsCost(
+      ctx,
+      products.find((p) => p.id === bottle)!,
+      { output_vat_enabled: false, default_output_vat_rate: null },
+      [{ id: "d", code: "direct", name: "Direct", commission_pct: 0, sort: 0, archived_at: null }],
+      venue,
+    );
+    assert.equal(priced.summary.foodCost, 8000);
+    assert.equal(priced.main?.price, 32000);
+    assert.ok(priced.main?.foodCostOnPricePct != null);
+    assert.ok(Math.abs(priced.main!.foodCostOnPricePct! - (8000 / 32000) * 100) < 1e-9);
+
+    const unknown = goodsCost(
+      menuCostContext({
+        products: [
+          {
+            id: "missing-cost",
+            type: "finished",
+            name_en: "No cost bottle",
+            name_vn: "",
+            base_unit: "pcs",
+            est_unit_cost: null,
+            est_cost_source: null,
+          },
+        ],
+        recipes: [],
+      }),
+      { id: "missing-cost", sale_price: 10000, vat_rate: null, venue_prices: [] },
+      { output_vat_enabled: false, default_output_vat_rate: null },
+      [{ id: "d", code: "direct", name: "Direct", commission_pct: 0, sort: 0, archived_at: null }],
+    );
+    assert.equal(unknown.summary.foodCost, null);
+    assert.equal(unknown.summary.complete, false);
+    assert.notEqual(unknown.summary.foodCost, 0);
+
+    const usage = catalogUsage(
+      {
+        dishes: [
+          {
+            id: dish,
+            code: "x",
+            name_en: "Menu lime soda",
+            name_vn: "",
+            category_id: null,
+            sale_price: 45000,
+            vat_rate: null,
+            note: null,
+            archived_at: null,
+            lines: [{ id: "1", dish_id: dish, line_no: 1, product_id: lime, qty: 0.05, note: null }],
+            channel_prices: [],
+          },
+        ],
+        recipes: [
+          {
+            id: recipe,
+            product_id: prep,
+            version: 1,
+            status: "active",
+            yield_qty: 1,
+            yield_pieces: null,
+            instructions: [],
+            shelf_life_days: null,
+            storage_conditions: null,
+            note: null,
+            legacy_recipe_id: null,
+            created_at: "",
+            created_by: null,
+            activated_at: null,
+            lines: [{ id: "1", recipe_id: recipe, line_no: 1, product_id: lime, qty: 0.1, note: null, raw_name: null, raw_amount: null, raw_unit: null }],
+          },
+        ],
+      },
+      lime,
+    );
+    assert.equal(usage.dishes.length, 1);
+    assert.equal(usage.recipes.length, 1);
+
+    const stock = await q<{ product_id: string; warehouse_id: string; qty: string; known_value: string | null; cost_known: boolean; nearest_expiry: string | null }>(
+      "select product_id, warehouse_id, qty, known_value, cost_known, nearest_expiry from public.erp_stock where product_id = $1",
+      [lime],
+    );
+    const stats = ingredientCategoryStats(
+      cat,
+      [
+        { id: lime, ingredient_category_id: cat, archived_at: null },
+        { id: bottle, ingredient_category_id: null, archived_at: null },
+      ],
+      stock.map((row) => ({
+        product_id: row.product_id,
+        warehouse_id: row.warehouse_id,
+        qty: n(row.qty) ?? 0,
+        known_value: n(row.known_value),
+        cost_known: row.cost_known,
+        nearest_expiry: row.nearest_expiry,
+      })),
+    );
+    assert.equal(stats.ingredientCount, 1);
+    assert.equal(stats.remainingValue, 40000);
+
+    await q("select public.erp_set_archived('ingredient_category', $1, true, $2)", [cat, ACTOR]);
+    assert.ok(await value("select archived_at from public.erp_ingredient_categories where id = $1", [cat]));
+    assert.equal(await value("select id from public.erp_products where id = $1", [lime]), lime);
+
+    const extraWorkshop = await value<string>("select public.erp_save_ref('workshop', $1::jsonb, $2)", [
+      JSON.stringify({ name: "Bar tickets", print_tickets: true }),
+      ACTOR,
+    ]);
+    assert.equal(await value("select print_tickets from public.erp_workshops where id = $1", [extraWorkshop]), true);
+    await q("select public.erp_set_archived('workshop', $1, true, $2)", [extraWorkshop, ACTOR]);
+    assert.equal(n(await value("select count(*) from public.erp_workshops where archived_at is null")), 3);
+
+    assert.equal(await value("select to_regclass('public.erp_ingredients')"), null);
+    assert.ok(await value("select to_regclass('public.erp_ingredient_categories')"));
+    assert.ok(await value("select id from public.erp_categories where lower(name_en) = lower('Главный экран')"));
   });
 
   console.log(`\n${passed} checks passed`);

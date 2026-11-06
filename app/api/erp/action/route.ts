@@ -10,9 +10,9 @@ import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalog
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel"]);
+const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel", "workshop", "ingredient_category"]);
 const CATALOG_ENTITIES = new Set(["product", "category", "supplier"]);
-const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish", "pack"]);
+const ARCHIVE_ENTITIES = new Set(["product", "category", "supplier", "warehouse", "channel", "dish", "pack", "workshop", "ingredient_category"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Screen data each entity lives in. */
@@ -24,6 +24,8 @@ const ENTITY_PART: Record<string, StatePart> = {
   channel: "channels",
   dish: "dishes",
   pack: "packs",
+  workshop: "workshops",
+  ingredient_category: "ingredientCategories",
 };
 /** Posting and cancelling move lots and may update product costs. */
 const STOCK_PARTS: StatePart[] = ["stock", "products"];

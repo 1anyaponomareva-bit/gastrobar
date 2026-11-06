@@ -17,6 +17,10 @@
  * Write-off / production posting still uses FIFO in erp_consume. These sources are display
  * and planned food-cost only; they do not change lots or posted documents.
  *
+ * There is no 4th source «all deliveries average». Poster KB remaining-stock average
+ * (стоимость остатка / количество) is `fifo_remaining`. Poster «нет поставок → 0» is
+ * rejected: unknown stays null.
+ *
  * Preps (semi_finished / finished with an active recipe) are exploded into ingredients.
  * The prep's own warehouse lots are NOT added on top — that would double-count the same
  * goods as both produced stock and recipe inputs. Set explodeRecipes=false to value a

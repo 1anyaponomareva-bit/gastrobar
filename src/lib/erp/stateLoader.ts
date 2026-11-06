@@ -1,15 +1,71 @@
-import type { ErpDish, ErpDocument, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
+import type {
+  ErpDish,
+  ErpDocument,
+  ErpIngredientCategory,
+  ErpProduct,
+  ErpProductCostQuote,
+  ErpRecipe,
+  ErpRecipeLine,
+  ErpState,
+  ErpVenue,
+  ErpVenuePrice,
+  ErpWorkshop,
+} from "./types";
 import { check, erpDb } from "./server";
 
 /** Parts of the ERP screen data that can be loaded on their own. */
 export type StatePart = keyof ErpState;
 
-export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons", "costSources"];
+export const ALL_PARTS: StatePart[] = [
+  "settings",
+  "categories",
+  "ingredientCategories",
+  "suppliers",
+  "warehouses",
+  "workshops",
+  "venues",
+  "channels",
+  "products",
+  "packs",
+  "productPacks",
+  "stock",
+  "recipes",
+  "dishes",
+  "writeoffReasons",
+  "costSources",
+];
 
 /** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
 export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
 
 const MISSING_FN = new Set(["PGRST202", "42883"]);
+const MISSING_TABLE = new Set(["PGRST205", "PGRST202", "42P01", "42883"]);
+
+function isMissingRelation(code: string, message: string) {
+  return MISSING_TABLE.has(code) || /does not exist|could not find/i.test(message);
+}
+
+function emptyIfMissing<T>(result: { data: T | null; error: { code?: string; message?: string } | null }, fallback: T): T {
+  if (result.error) {
+    if (isMissingRelation(result.error.code ?? "", result.error.message ?? "")) return fallback;
+    check(result);
+  }
+  return (result.data ?? fallback) as T;
+}
+
+function groupVenuePrices<K extends "product_id" | "dish_id">(
+  rows: (ErpVenuePrice & Record<K, string>)[],
+  key: K,
+): Map<string, ErpVenuePrice[]> {
+  const map = new Map<string, ErpVenuePrice[]>();
+  for (const row of rows) {
+    const item: ErpVenuePrice = { venue_id: row.venue_id, visible: row.visible, sale_price: row.sale_price };
+    const list = map.get(row[key]);
+    if (list) list.push(item);
+    else map.set(row[key], [item]);
+  }
+  return map;
+}
 /** Skip a missing RPC for a while, then try again (migration may land after the first warm instance). */
 let loadStateRpcMissingUntil = 0;
 const LOAD_STATE_RETRY_MS = 60_000;
@@ -55,14 +111,29 @@ async function loadPart(part: StatePart): Promise<unknown> {
       return check(await db.from("erp_settings").select("*").eq("id", 1).single());
     case "categories":
       return check(await db.from("erp_categories").select("*").order("sort"));
+    case "ingredientCategories":
+      return emptyIfMissing(await db.from("erp_ingredient_categories").select("*").order("sort"), [] as ErpIngredientCategory[]);
     case "suppliers":
       return check(await db.from("erp_suppliers").select("*").order("sort"));
     case "warehouses":
       return check(await db.from("erp_warehouses").select("*").order("sort"));
+    case "workshops":
+      return emptyIfMissing(await db.from("erp_workshops").select("*").order("sort"), [] as ErpWorkshop[]);
+    case "venues":
+      return emptyIfMissing(await db.from("erp_venues").select("*").order("sort"), [] as ErpVenue[]);
     case "channels":
       return check(await db.from("erp_sales_channels").select("*").order("sort"));
-    case "products":
-      return check(await db.from("erp_products").select("*").order("name_en").limit(5000));
+    case "products": {
+      const [products, venues] = await Promise.all([
+        db.from("erp_products").select("*").order("name_en").limit(5000),
+        db.from("erp_product_venues").select("*"),
+      ]);
+      const byProduct = groupVenuePrices(emptyIfMissing(venues, [] as (ErpVenuePrice & { product_id: string })[]), "product_id");
+      return (check(products) as ErpProduct[]).map((product) => ({
+        ...product,
+        venue_prices: product.venue_prices ?? byProduct.get(product.id) ?? [],
+      }));
+    }
     case "packs":
       return check(await db.from("erp_packs").select("*").is("archived_at", null).limit(10000));
     case "productPacks":
@@ -95,10 +166,11 @@ async function loadPart(part: StatePart): Promise<unknown> {
       return (result.data ?? []) as ErpProductCostQuote[];
     }
     case "dishes": {
-      const [dishes, lines, prices] = await Promise.all([
+      const [dishes, lines, prices, venues] = await Promise.all([
         db.from("erp_dishes").select("*").order("name_en"),
         db.from("erp_dish_lines").select("*").order("line_no").limit(20000),
         db.from("erp_dish_channel_prices").select("*"),
+        db.from("erp_dish_venues").select("*"),
       ]);
       const linesByDish = new Map<string, ErpDish["lines"]>();
       for (const line of check(lines) as (ErpDish["lines"][number] & { dish_id: string })[]) {
@@ -112,10 +184,12 @@ async function loadPart(part: StatePart): Promise<unknown> {
         if (list) list.push(price);
         else pricesByDish.set(price.dish_id, [price]);
       }
-      return (check(dishes) as Omit<ErpDish, "lines" | "channel_prices">[]).map((dish) => ({
+      const venuesByDish = groupVenuePrices(emptyIfMissing(venues, [] as (ErpVenuePrice & { dish_id: string })[]), "dish_id");
+      return (check(dishes) as Omit<ErpDish, "lines" | "channel_prices" | "venue_prices">[]).map((dish) => ({
         ...dish,
         lines: linesByDish.get(dish.id) ?? [],
         channel_prices: pricesByDish.get(dish.id) ?? [],
+        venue_prices: venuesByDish.get(dish.id) ?? [],
       }));
     }
   }
@@ -139,9 +213,14 @@ export async function loadDocument(id: string): Promise<ErpDocument | null> {
 export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial<ErpState>> {
   const batched = await loadStateRpc(parts);
   if (batched) {
-    if (parts.includes("costSources") && batched.costSources === undefined) {
-      batched.costSources = (await loadPart("costSources")) as ErpProductCostQuote[];
-    }
+    const fill: StatePart[] = ["costSources", "workshops", "venues", "ingredientCategories"];
+    await Promise.all(
+      fill
+        .filter((part) => parts.includes(part) && batched[part] === undefined)
+        .map(async (part) => {
+          (batched as Record<string, unknown>)[part] = await loadPart(part);
+        }),
+    );
     return batched;
   }
   const values = await Promise.all(parts.map(loadPart));

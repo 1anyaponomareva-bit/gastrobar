@@ -7,21 +7,23 @@ import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
  * GASTROBAR-menu-logic/docs/erp-menu-api-contract.md
  *
  * Poster tab            → existing source
- * Товары                → erp_products.type = finished (resale; Agent 1 tovary.md). Sale price is not on products yet.
- * Тех. карты            → erp_dishes + erp_dish_lines (sellable menu item; price lives here)
- * Полуфабрикаты         → erp_products.type = semi_finished + erp_recipes
- * Ингредиенты           → erp_products.type = ingredient (packaging/consumable via type filter)
- * Контроль фудкоста     → dishCost / menuCostContext (`src/lib/erp/menu.ts`)
- * Категории (оба дерева)→ erp_categories (one table — do not invent a second)
- * Цехи                  → no table; not warehouses
- * Заведения             → not 1:1 with workshops; no API yet
+ * Товары                → erp_products.type = finished (resale). sale_price + venue_prices on the product.
+ * Тех. карты            → erp_dishes + erp_dish_lines + venue_prices (sellable menu item)
+ * Полуфабрикаты         → erp_products.type = semi_finished + erp_recipes (no workshop / venue / POS category)
+ * Ингредиенты           → erp_products.type = ingredient; category = ingredient_category_id
+ * Контроль фудкоста     → dishCost / goodsCost / menuCostContext (`src/lib/erp/menu.ts`)
+ * Категории товаров     → erp_categories (POS tree, parent_id)
+ * Категории ингредиентов→ erp_ingredient_categories (not POS)
+ * Цехи                  → state.workshops; card field workshop_id; null = «Без цеха»
+ * Заведения             → state.venues; card field venue_prices[]
  */
 export const MENU_CONTRACT = {
   dishCategoryField: "category_id" as const,
   productCategoryField: "category_id" as const,
-  workshopField: null,
-  venueField: null,
-  sharedCategories: true,
+  ingredientCategoryField: "ingredient_category_id" as const,
+  workshopField: "workshop_id" as const,
+  venuePricesField: "venue_prices" as const,
+  sharedCategories: false,
 };
 
 /** Poster list filter «Заведение» — radio, cannot clear. Selecting does not filter until availability exists. */
