@@ -1,12 +1,14 @@
 /**
- * Public ERP URLs on gastrofood.vn have no `/erp` prefix.
- * Internal Next routes stay under `app/erp/*`. `next.config` `beforeFiles` maps
- * the public path on the ERP hosts; middleware does not rewrite again.
+ * Public ERP URLs keep the `/erp` prefix on every host (gastrofood.vn and gastrotruck.org).
+ * Internal Next routes stay under `app/erp/*`. gastrofood.vn `/` is a public menu stub, not ERP.
  */
 
 export const CANONICAL_ERP_HOST = "gastrofood.vn";
 export const ERP_WWW_HOST = "www.gastrofood.vn";
 export const CANONICAL_ERP_ORIGIN = "https://gastrofood.vn";
+
+/** Internal path the gastrofood homepage rewrites to. Not linked from the public stub. */
+export const GASTROFOOD_STUB_PATH = "/coming-soon";
 
 /** First URL segment of every ERP page after stripping `/erp`. */
 export const ERP_PAGE_SEGMENTS = [
@@ -52,6 +54,11 @@ function joinHref(pathname: string, search: string, hash = ""): string {
   return `${pathname || "/"}${search}${hash}`;
 }
 
+function trimTrailingSlash(pathname: string): string {
+  if (pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
 export function firstSegment(pathname: string): string {
   return pathname.split("/").filter(Boolean)[0] ?? "";
 }
@@ -60,10 +67,21 @@ export function isErpPagePath(pathname: string): boolean {
   return pathname === "/erp" || pathname.startsWith("/erp/");
 }
 
-export function isErpPublicPagePath(pathname: string): boolean {
-  if (pathname === "/" || pathname === "") return true;
+/** gastrofood.vn `/` (and the internal rewrite target, including Next icon routes). Not ERP. */
+export function isGastrofoodStubPath(pathname: string): boolean {
+  const path = trimTrailingSlash(pathname || "/");
+  return path === "/" || path === GASTROFOOD_STUB_PATH || path.startsWith(`${GASTROFOOD_STUB_PATH}/`);
+}
+
+/** Old unprefixed ERP URLs (`/stock`, `/menu`, …) from the previous public-path scheme. */
+export function isUnprefixedErpPagePath(pathname: string): boolean {
   const seg = firstSegment(pathname);
   return (ERP_PAGE_SEGMENTS as readonly string[]).includes(seg);
+}
+
+/** Pages this host may serve as HTML: stub + `/erp`. Unprefixed ERP paths 307 to `/erp`. */
+export function isErpPublicPagePath(pathname: string): boolean {
+  return isGastrofoodStubPath(pathname) || isErpPagePath(pathname);
 }
 
 export function isMiniAppPath(pathname: string): boolean {
@@ -73,15 +91,16 @@ export function isMiniAppPath(pathname: string): boolean {
 
 export function toInternalErpPathname(pathname: string): string {
   const path = pathname || "/";
-  if (path === "/erp" || path.startsWith("/erp/")) return path.replace(/\/+$/, "") || "/erp";
+  if (path === "/erp" || path.startsWith("/erp/")) return trimTrailingSlash(path) || "/erp";
   if (path === "/" || path === "") return "/erp";
-  return `/erp${path.startsWith("/") ? path : `/${path}`}`.replace(/\/+$/, "") || "/erp";
+  return trimTrailingSlash(`/erp${path.startsWith("/") ? path : `/${path}`}`) || "/erp";
 }
 
+/** Canonical public ERP path: keep `/erp`. Unprefixed ERP segments get the prefix. `/` stays the stub. */
 export function toPublicErpPathname(pathname: string): string {
   const path = pathname || "/";
-  if (path === "/erp" || path === "/erp/") return "/";
-  if (path.startsWith("/erp/")) return path.slice(4) || "/";
+  if (isErpPagePath(path)) return trimTrailingSlash(path) || "/erp";
+  if (isUnprefixedErpPagePath(path)) return toInternalErpPathname(path);
   return path || "/";
 }
 

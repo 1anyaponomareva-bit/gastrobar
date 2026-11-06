@@ -1,22 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { isNamedErpHost, productionErpHostEnv, readErpHostGateConfig } from "@/lib/erp/hostGate";
 import { publicErpHref, toInternalErpPathname } from "@/lib/erp/publicPath";
 
 const StripCtx = createContext(false);
 
-function stripPrefixOnThisHost(): boolean {
-  return isNamedErpHost(window.location.hostname, readErpHostGateConfig(productionErpHostEnv({})));
-}
-
 export function ErpHrefProvider({ stripPrefix = false, children }: { stripPrefix?: boolean; children: ReactNode }) {
-  const [strip, setStrip] = useState(stripPrefix);
-  useEffect(() => {
-    setStrip(stripPrefixOnThisHost());
-  }, []);
-  return <StripCtx.Provider value={strip}>{children}</StripCtx.Provider>;
+  return <StripCtx.Provider value={stripPrefix}>{children}</StripCtx.Provider>;
 }
 
 export function useErpStripPrefix(): boolean {

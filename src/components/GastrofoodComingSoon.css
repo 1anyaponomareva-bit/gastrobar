@@ -1,0 +1,60 @@
+.gfSoon {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  color: #111;
+  text-align: center;
+}
+
+.gfSoonLogos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  width: min(720px, 92vw);
+}
+
+.gfSoonLogo {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(34vh, 280px);
+  object-fit: contain;
+}
+
+.gfSoonLead {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #111;
+}
+
+.gfSoonSub {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #555;
+}
+
+@media (min-width: 860px) {
+  .gfSoonLogos {
+    flex-direction: row;
+    width: min(1080px, 94vw);
+    gap: 3rem;
+  }
+
+  .gfSoonLogo {
+    width: 50%;
+    max-height: min(52vh, 420px);
+  }
+}

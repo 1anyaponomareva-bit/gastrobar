@@ -3,9 +3,12 @@ import type { NextRequest } from "next/server";
 import {
   decideErpHostGate,
   ERP_HOST_GATE_NO_STORE,
+  hostnameOf,
+  isNamedErpHost,
   productionErpHostEnv,
   readErpHostGateConfig,
 } from "@/lib/erp/hostGate";
+import { GASTROFOOD_STUB_PATH } from "@/lib/erp/publicPath";
 
 export const runtime = "edge";
 
@@ -36,6 +39,13 @@ export function middleware(request: NextRequest) {
   const period = getMenuPeriodFromHour(hour);
   const host = request.headers.get("host") ?? "";
   // Static process.env.* so Vercel Edge binds these flags at deploy (A vs B vs C stay split).
+  const config = readErpHostGateConfig(
+    productionErpHostEnv({
+      ERP_HOSTS: process.env.ERP_HOSTS,
+      ERP_REDIRECT_FROM_LEGACY: process.env.ERP_REDIRECT_FROM_LEGACY,
+      ERP_CLOSE_LEGACY_API: process.env.ERP_CLOSE_LEGACY_API,
+    }),
+  );
   const gate = decideErpHostGate(
     {
       hostHeader: host,
@@ -43,13 +53,7 @@ export function middleware(request: NextRequest) {
       search: request.nextUrl.search,
       method: request.method,
     },
-    readErpHostGateConfig(
-      productionErpHostEnv({
-        ERP_HOSTS: process.env.ERP_HOSTS,
-        ERP_REDIRECT_FROM_LEGACY: process.env.ERP_REDIRECT_FROM_LEGACY,
-        ERP_CLOSE_LEGACY_API: process.env.ERP_CLOSE_LEGACY_API,
-      }),
-    ),
+    config,
   );
 
   if (gate.action === "redirect") {
@@ -57,6 +61,15 @@ export function middleware(request: NextRequest) {
   }
   if (gate.action === "json") {
     return noStore(withMenuPeriod(NextResponse.json(gate.body, { status: gate.status }), period));
+  }
+
+  if (
+    isNamedErpHost(hostnameOf(host), config) &&
+    (request.nextUrl.pathname === "/" || request.nextUrl.pathname === "")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = GASTROFOOD_STUB_PATH;
+    return withMenuPeriod(NextResponse.rewrite(url), period);
   }
 
   if (isKitchenHost(host) && request.nextUrl.pathname === "/") {
@@ -73,6 +86,7 @@ export const config = {
   matcher: [
     /* Главная: паттерн ниже иногда не матчит «/» в path-to-regexp — явно. */
     "/",
+    "/coming-soon",
     "/bar",
     "/check",
     "/check/:path*",

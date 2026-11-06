@@ -57,7 +57,7 @@ function isDurakPath(path: string): boolean {
 }
 
 function isMenuChooserPath(path: string): boolean {
-  return path === "/" || path === "/start";
+  return path === "/" || path === "/start" || path === "/coming-soon";
 }
 
 function isStaffPath(path: string): boolean {

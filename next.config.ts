@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { CANONICAL_ERP_HOST, ERP_PAGE_SEGMENTS, ERP_WWW_HOST } from "./src/lib/erp/publicPath";
+import { CANONICAL_ERP_HOST, ERP_WWW_HOST } from "./src/lib/erp/publicPath";
 
 /** Доп. домены для dev (ngrok и т.д.), если пустая страница: ALLOWED_DEV_ORIGINS=мой-туннель.ngrok-free.dev */
 const extraDevOrigins =
@@ -14,21 +14,17 @@ const nextConfig: NextConfig = {
    * /staff, /kitchen and /food are left untouched.
    */
   async rewrites() {
-    // beforeFiles runs before the prerendered homepage, so gastrofood.vn/ is ERP
-    // instead of the cached «Еда / Бар» page. Host-keyed, so gastrotruck.org `/` stays static.
-    const erpHosts = [CANONICAL_ERP_HOST, ERP_WWW_HOST];
-    const erpHostRewrites = erpHosts.flatMap((host) => {
-      const hasHost = [{ type: "host" as const, value: host }];
-      return [
-        { source: "/", has: hasHost, destination: "/erp" },
-        ...ERP_PAGE_SEGMENTS.flatMap((seg) => [
-          { source: `/${seg}`, has: hasHost, destination: `/erp/${seg}` },
-          { source: `/${seg}/:path*`, has: hasHost, destination: `/erp/${seg}/:path*` },
-        ]),
-      ];
-    });
+    // beforeFiles runs before the prerendered homepage, so gastrofood.vn/ is the
+    // menu stub instead of the cached «Еда / Бар» page. Host-keyed: gastrotruck.org `/` stays static.
+    // Do not map `/` or `/stock` to `/erp` — ERP is only `/erp` and `/erp/*`.
+    const stubHosts = [CANONICAL_ERP_HOST, ERP_WWW_HOST];
+    const stubRewrites = stubHosts.map((host) => ({
+      source: "/",
+      has: [{ type: "host" as const, value: host }],
+      destination: "/coming-soon",
+    }));
     return {
-      beforeFiles: erpHostRewrites,
+      beforeFiles: stubRewrites,
       afterFiles: [{ source: "/food", destination: "/food/index.html" }],
       fallback: [
         { source: "/schedule", destination: "https://gastrofood-schedule.vercel.app/schedule" },

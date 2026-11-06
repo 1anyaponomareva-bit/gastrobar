@@ -1,10 +1,12 @@
 /** Read-only production timings. No cookies: ERP APIs should 401. */
 const URLS = [
   "https://gastrofood.vn/",
-  "https://gastrofood.vn/stock",
-  "https://gastrofood.vn/stock/receipts",
-  "https://gastrofood.vn/menu",
+  "https://gastrofood.vn/erp",
+  "https://gastrofood.vn/erp/stock",
+  "https://gastrofood.vn/erp/stock/receipts",
+  "https://gastrofood.vn/erp/menu",
   "https://www.gastrofood.vn/",
+  "https://www.gastrofood.vn/erp",
   "https://www.gastrotruck.org/erp",
   "https://www.gastrotruck.org/erp/stock",
   "https://www.gastrotruck.org/erp/stock/receipts",

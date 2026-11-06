@@ -8,14 +8,22 @@ import { toCheckAppLang } from "@/lib/shiftChecklistI18n";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { toStaffTestAppLang } from "@/lib/staffTestI18n";
 import { useTranslation } from "@/lib/useTranslation";
+import { isNamedErpHost, productionErpHostEnv, readErpHostGateConfig } from "@/lib/erp/hostGate";
 
 export function I18nDocumentTitle() {
   const { lang, t } = useTranslation();
   const pathname = usePathname() ?? "/";
 
   useEffect(() => {
+    if (pathname === "/coming-soon") {
+      document.title = "GASTROFOOD";
+      return;
+    }
     if (pathname === "/" || pathname === "/start") {
-      document.title = t("menu_chooser_meta_title");
+      const onGastrofood =
+        typeof window !== "undefined" &&
+        isNamedErpHost(window.location.hostname, readErpHostGateConfig(productionErpHostEnv({})));
+      document.title = onGastrofood ? "GASTROFOOD" : t("menu_chooser_meta_title");
       return;
     }
     if (pathname === "/staff" || pathname.startsWith("/staff/")) {

@@ -2,27 +2,28 @@
  * ERP domain-move host gate. Same Vercel project `gastrobar`, same Supabase DB.
  * Split flags: (A) new ERP hostname(s) vs (B) redirect-from-legacy. Independent.
  *
- * Canonical public site: https://gastrofood.vn (no www, no `/erp` prefix).
- * www.gastrofood.vn → 307 to gastrofood.vn, same path+query.
+ * gastrofood.vn and www.gastrofood.vn serve the same content (no www→apex force):
+ *   - `/` is a public menu stub (not ERP, not the GASTROBAR «Еда / Бар» screen)
+ *   - `/erp` and `/erp/*` are the ERP
  *
- * Exact allowlist on the NEW ERP host (session/permission checks stay in route
+ * Exact allowlist on the NEW host (session/permission checks stay in route
  * handlers; this gate does not weaken auth):
- *   - Public ERP pages: `/`, `/stock`, `/stock/*`, `/menu`, `/products`, `/preps`,
- *     `/documents`, `/catalog`, `/production`, `/review`, `/service`, `/settings`
- *     and the same paths under `/erp` (those GET/HEAD 307 to the clean URL)
- *   - Public ERP pages are allowed; `next.config` `beforeFiles` maps them to `/erp`
- *     (one rewrite layer, host-keyed so gastrotruck.org `/` stays the food homepage)
+ *   - Stub: `/` (rewritten to `/coming-soon`)
+ *   - ERP pages: `/erp`, `/erp/*`
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
  *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
  *       `/api/recipes-admin/login` | `logout` | `register` | `session`
  *   - `/_next/*` plus favicon/icon and image/font files Next serves for the ERP UI
+ *
+ * Old unprefixed ERP URLs (`/stock`, `/menu`, …) GET/HEAD 307 to `/erp/…` on the
+ * same host (URL bar updates; this is not a silent rewrite).
  *
  * Other PAGES on the new host: 307 to the same path on https://www.gastrotruck.org
  * Other APIs on the new host: JSON 404/403 — never an HTML redirect
  *
  * Legacy public hosts (www.gastrotruck.org, gastrotruck.org):
  *   - B OFF → old `/erp` and `/api/erp` stay as today (dual-run / rollback)
- *   - B ON  → GET/HEAD `/erp` 307 to https://gastrofood.vn/… without `/erp`
+ *   - B ON  → GET/HEAD `/erp` 307 to https://gastrofood.vn/erp/…
  *   - C (close old API) only applies while B is ON; B OFF keeps old API authorized
  *
  * Do not put gastrotruck.org (or its subdomains) in ERP_HOSTS.
@@ -35,8 +36,9 @@ import {
   ERP_WWW_HOST,
   isErpPagePath,
   isErpPublicPagePath,
+  isUnprefixedErpPagePath,
+  toInternalErpPathname,
   toPublicErpHref,
-  toPublicErpPathname,
 } from "./publicPath";
 
 export const LEGACY_PUBLIC_HOSTS = ["www.gastrotruck.org", "gastrotruck.org"] as const;
@@ -179,7 +181,6 @@ function isNextOrStaticPath(pathname: string): boolean {
 /** Paths the new ERP host may serve. Everything else is redirected or JSON-refused. */
 export function isErpHostAllowedPath(pathname: string): boolean {
   return (
-    isErpPagePath(pathname) ||
     isErpPublicPagePath(pathname) ||
     isErpApiPath(pathname) ||
     isRecipesAdminAuthPath(pathname) ||
@@ -218,22 +219,16 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
       return { action: "allow" };
     }
 
-    if (isWwwErpHost(host, config) && canonical && isGetLike(method)) {
-      const publicPath = toPublicErpPathname(pathname);
-      return { action: "redirect", status: 307, location: absoluteUrl(`https://${canonical}`, publicPath, search) };
+    if (isErpPublicPagePath(pathname)) {
+      return { action: "allow" };
     }
 
-    if (isErpPagePath(pathname) && isGetLike(method)) {
-      const destHost = canonical && host === canonical ? canonical : canonical || host;
+    if (isUnprefixedErpPagePath(pathname) && isGetLike(method)) {
       return {
         action: "redirect",
         status: 307,
-        location: absoluteUrl(`https://${destHost}`, toPublicErpPathname(pathname), search),
+        location: absoluteUrl(`https://${host}`, toInternalErpPathname(pathname), search),
       };
-    }
-
-    if (isErpPublicPagePath(pathname)) {
-      return { action: "allow" };
     }
 
     if (isApiOrProxyPath(pathname)) return { action: "json", status: 404, body: OTHER_API_BODY };
@@ -246,7 +241,7 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
       return {
         action: "redirect",
         status: 307,
-        location: absoluteUrl(`https://${canonical}`, toPublicErpPathname(pathname), search),
+        location: absoluteUrl(`https://${canonical}`, pathname, search),
       };
     }
     return { action: "allow" };
