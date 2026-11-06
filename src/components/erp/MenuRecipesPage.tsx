@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, dishSummary, dishTitle } from "./menuFields";
+import { categoryLabel, costContextOf, dishEconomics, dishTitle } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, T, vnd } from "./ui";
 import type { ErpDish } from "@/lib/erp/types";
@@ -31,7 +31,7 @@ export function MenuRecipesPage() {
     .map((d) => ({
       ...d,
       categoryName: categoryLabel(d.category_id ? catMap.get(d.category_id) : undefined),
-      cost: dishSummary(ctx, d).totalCost,
+      cost: dishEconomics(state, ctx, d).cost,
       lineCount: d.lines.length,
     }));
 
@@ -39,6 +39,7 @@ export function MenuRecipesPage() {
     {
       id: "name",
       label: T("Название", "Name", "Tên"),
+      locked: true,
       cell: (row) => (
         <NavLink href={`/erp/menu/${row.id}`} className="erpName">
           {dishTitle(row)}
@@ -75,13 +76,7 @@ export function MenuRecipesPage() {
       query={query}
       onQuery={setQuery}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
-      catalogEmpty={!state.dishes.length}
       emptyTitle={T("Тех. карт пока нет", "No recipes yet", "Chưa có công thức")}
-      emptyText={T(
-        "Тех. карта в ERP — состав блюда. Отдельная сущность Poster ждёт спецификацию; пока открывается карточка блюда.",
-        "A tech card here is the dish composition. Poster's separate entity waits on the spec; for now the dish card opens.",
-        "Thẻ kỹ thuật = thành phần món. Thực thể riêng của Poster chờ spec.",
-      )}
       addHref="/erp/menu/new"
       addLabel={T("Добавить", "Add", "Thêm")}
       rowHref={(row) => `/erp/menu/${row.id}`}

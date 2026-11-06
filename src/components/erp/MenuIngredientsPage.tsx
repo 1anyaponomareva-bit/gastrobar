@@ -44,6 +44,7 @@ export function MenuIngredientsPage() {
     {
       id: "name",
       label: T("Название", "Name", "Tên"),
+      locked: true,
       cell: (row) => (
         <NavLink href={`/erp/products/${row.id}`} className="erpName">
           {productTitle(row)}

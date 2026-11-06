@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
-import { POSTER_VENUES } from "./menuFields";
+import { POSTER_VENUES, POSTER_WORKSHOPS } from "./menuFields";
 import { MenuMobileNav } from "./menuNav";
 import { Pager, PAGE } from "./StockBalances";
 import { NavLink, PageHead, T, today } from "./ui";
@@ -34,7 +34,47 @@ export function StubFilter({ label }: { label: string }) {
 /** Poster: one venue, radio, cannot clear. No ERP field yet — choosing a name does not filter. */
 export function VenueStubFilter() {
   const { notify } = useErp();
+  const [venue, setVenue] = useState<string>(POSTER_VENUES[0].id);
   const label = T("Заведение", "Venue", "Cơ sở");
+  return (
+    <DropMenu
+      trigger={({ open, toggle }) => (
+        <button type="button" className="erpFilterBtn on" aria-expanded={open} onClick={toggle}>
+          <span>
+            {label}: {venue}
+          </span>
+          <Caret />
+        </button>
+      )}
+    >
+      {(close) => (
+        <div className="erpDropList" role="radiogroup" aria-label={label}>
+          {POSTER_VENUES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`erpDropAction ${item.id === venue ? "on" : ""}`}
+              role="radio"
+              aria-checked={item.id === venue}
+              onClick={() => {
+                setVenue(item.id);
+                close();
+                notify({ ok: false, text: notImplemented(label) });
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </DropMenu>
+  );
+}
+
+/** Poster workshop names. Not warehouses — choosing does not filter. */
+export function WorkshopStubFilter() {
+  const { notify } = useErp();
+  const label = T("Цех", "Workshop", "Phân xưởng");
   return (
     <DropMenu
       trigger={({ open, toggle }) => (
@@ -46,9 +86,9 @@ export function VenueStubFilter() {
     >
       {(close) => (
         <div className="erpDropList">
-          {POSTER_VENUES.map((venue) => (
+          {POSTER_WORKSHOPS.map((name) => (
             <button
-              key={venue.id}
+              key={name}
               type="button"
               className="erpDropAction"
               onClick={() => {
@@ -56,7 +96,7 @@ export function VenueStubFilter() {
                 notify({ ok: false, text: notImplemented(label) });
               }}
             >
-              {venue.label}
+              {name}
             </button>
           ))}
         </div>
@@ -70,6 +110,9 @@ export type CatalogColumn<Row> = {
   label: string;
   num?: boolean;
   sort?: boolean;
+  /** Poster: «Название» is always on screen and not in the columns menu. */
+  locked?: boolean;
+  defaultHidden?: boolean;
   cell: (row: Row) => ReactNode;
   text: (row: Row) => string;
 };
@@ -102,10 +145,13 @@ export function CatalogTable<Row extends { id: string }>({
   rowHref,
   rowMenu,
   onTrash,
-  catalogEmpty,
-  emptyTitle,
-  emptyText,
-  emptyAction,
+  trashHref,
+  hideTrash,
+  hideMore,
+  emptyMessage,
+  backHref,
+  backLabel,
+  banner,
   note,
   defaultSort = "name",
   defaultDesc = false,
@@ -128,6 +174,14 @@ export function CatalogTable<Row extends { id: string }>({
   rowHref?: (row: Row) => string;
   rowMenu?: (row: Row, close: () => void) => ReactNode;
   onTrash?: (ids: string[]) => void | Promise<void>;
+  /** Poster header trash opens the recycle bin, it does not bulk-delete. */
+  trashHref?: string;
+  hideTrash?: boolean;
+  hideMore?: boolean;
+  emptyMessage?: string;
+  backHref?: string;
+  backLabel?: string;
+  banner?: ReactNode;
   /** True when the catalog itself has no rows (before search/filters). */
   catalogEmpty?: boolean;
   emptyTitle: string;
@@ -140,7 +194,14 @@ export function CatalogTable<Row extends { id: string }>({
 }) {
   const { notify, busy } = useErp();
   const router = useRouter();
-  const initial = useMemo<Saved>(() => ({ hidden: [], sort: defaultSort, desc: defaultDesc }), [defaultSort, defaultDesc]);
+  const defaultHiddenKey = columns
+    .filter((c) => c.defaultHidden && !c.locked)
+    .map((c) => c.id)
+    .join(",");
+  const initial = useMemo<Saved>(
+    () => ({ hidden: defaultHiddenKey ? defaultHiddenKey.split(",") : [], sort: defaultSort, desc: defaultDesc }),
+    [defaultHiddenKey, defaultSort, defaultDesc],
+  );
   const [saved, setSaved] = useState<Saved | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -152,7 +213,8 @@ export function CatalogTable<Row extends { id: string }>({
 
   const filters = saved ?? initial;
   const set = (patch: Partial<Saved>) => setSaved((prev) => ({ ...(prev ?? initial), ...patch }));
-  const shown = columns.filter((c) => !filters.hidden.includes(c.id));
+  const shown = columns.filter((c) => c.locked || !filters.hidden.includes(c.id));
+  const resetHidden = () => set({ hidden: columns.filter((c) => c.defaultHidden && !c.locked).map((c) => c.id) });
   const sortCol = shown.find((c) => c.id === filters.sort) ?? columns.find((c) => c.id === filters.sort);
   const sorted = useMemo(() => {
     const dir = filters.desc ? -1 : 1;
@@ -198,6 +260,10 @@ export function CatalogTable<Row extends { id: string }>({
   };
 
   const trash = () => {
+    if (trashHref) {
+      router.push(trashHref);
+      return;
+    }
     if (!onTrash) {
       notify({ ok: false, text: notImplemented(T("Корзина", "Trash", "Thùng rác")) });
       return;
@@ -232,15 +298,26 @@ export function CatalogTable<Row extends { id: string }>({
     >
       {() => (
         <div className="erpDropList">
-          {columns.map((c) => (
-            <label key={c.id} className="erpDropItem">
-              <input type="checkbox" checked={!filters.hidden.includes(c.id)} onChange={() => set({ hidden: filters.hidden.includes(c.id) ? filters.hidden.filter((h) => h !== c.id) : [...filters.hidden, c.id] })} />
-              <span>{c.label}</span>
-            </label>
-          ))}
+          <div className="erpDropTitle">{T("Отображать столбцы:", "Show columns:", "Hiện cột:")}</div>
+          {columns
+            .filter((c) => !c.locked)
+            .map((c) => (
+              <label key={c.id} className="erpDropItem">
+                <input
+                  type="checkbox"
+                  checked={!filters.hidden.includes(c.id)}
+                  onChange={() =>
+                    set({
+                      hidden: filters.hidden.includes(c.id) ? filters.hidden.filter((h) => h !== c.id) : [...filters.hidden, c.id],
+                    })
+                  }
+                />
+                <span>{c.label}</span>
+              </label>
+            ))}
           <hr />
-          <button type="button" className="erpDropAction" onClick={() => set({ hidden: [] })}>
-            {T("Сбросить по умолчанию", "Reset to default", "Mặc định")}
+          <button type="button" className="erpDropAction" onClick={resetHidden}>
+            {T("Вернуть по умолчанию", "Reset to default", "Về mặc định")}
           </button>
         </div>
       )}
@@ -274,20 +351,28 @@ export function CatalogTable<Row extends { id: string }>({
     </DropMenu>
   );
 
+  const trashButton = hideTrash ? null : trashHref ? (
+    <NavLink href={trashHref} className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} title={T("Корзина", "Trash", "Thùng rác")}>
+      <TrashIcon />
+    </NavLink>
+  ) : (
+    <button type="button" className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} disabled={busy} onClick={trash} title={T("Корзина", "Trash", "Thùng rác")}>
+      <TrashIcon />
+    </button>
+  );
+
   const actions = (
     <div className="erpHeadActions">
       <div className="erpHeadGroup">
-        <button type="button" className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} disabled={busy} onClick={trash} title={T("Корзина", "Trash", "Thùng rác")}>
-          <TrashIcon />
-        </button>
+        {trashButton}
         {columnsMenu}
         <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={exportList}>
           {T("Экспорт", "Export", "Xuất")}
         </button>
-        <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={() => window.print()}>
+        <button type="button" className="erpHeadBtn" onClick={() => window.print()}>
           {T("Печать", "Print", "In")}
         </button>
-        {moreMenu}
+        {hideMore ? null : moreMenu}
       </div>
       {extraActions}
       {addButton}
@@ -299,6 +384,11 @@ export function CatalogTable<Row extends { id: string }>({
       <PageHead
         title={
           <>
+            {backHref ? (
+              <NavLink href={backHref} className="erpMenuBack" aria-label={backLabel ?? T("Назад", "Back", "Quay lại")}>
+                ‹
+              </NavLink>
+            ) : null}
             {title} <span className="erpHeadCount">{sorted.length}</span>
           </>
         }
@@ -307,6 +397,7 @@ export function CatalogTable<Row extends { id: string }>({
       <MenuMobileNav active={activeHref} />
 
       <section className="erpMenuPanel">
+        {banner ? <div className="erpMenuBanner erpNoPrint">{banner}</div> : null}
         <div className="erpFilters erpNoPrint">
           <input type="search" className="erpSearch" placeholder={searchPlaceholder} value={query} onChange={(e) => onQuery(e.target.value)} />
           {filterBar}
@@ -339,7 +430,8 @@ export function CatalogTable<Row extends { id: string }>({
               {!pageRows.length ? (
                 <tr>
                   <td colSpan={shown.length + 2} className="erpMenuEmpty">
-                    {T("Нет данных, соответствующих выбранным фильтрам", "No data matches the selected filters", "Không có dữ liệu khớp bộ lọc")}
+                    {emptyMessage ??
+                      T("Нет данных, соответствующих выбранным фильтрам", "No data matches the selected filters", "Không có dữ liệu khớp bộ lọc")}
                   </td>
                 </tr>
               ) : (

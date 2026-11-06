@@ -6,6 +6,7 @@ import { NavLink, T } from "./ui";
 /** Poster → Меню. Paths stay under /erp/menu; old /erp/products and /erp/preps lists redirect here. */
 export const MENU_HREFS = {
   goods: "/erp/menu",
+  trash: "/erp/menu/trash",
   recipes: "/erp/menu/recipes",
   preps: "/erp/menu/preps",
   ingredients: "/erp/menu/ingredients",
@@ -17,7 +18,7 @@ export const MENU_HREFS = {
 
 export function menuNavItems() {
   return [
-    { href: MENU_HREFS.goods, label: T("Товары", "Products", "Món") },
+    { href: MENU_HREFS.goods, label: T("Товары", "Products", "Hàng hóa") },
     { href: MENU_HREFS.recipes, label: T("Тех. карты", "Recipes", "Công thức") },
     { href: MENU_HREFS.preps, label: T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm") },
     { href: MENU_HREFS.ingredients, label: T("Ингредиенты", "Ingredients", "Nguyên liệu") },
@@ -32,6 +33,7 @@ export function activeMenuHref(pathname: string | null): string | null {
   const path = pathname ?? "";
   const listed = menuNavItems().find((item) => path === item.href || (item.href !== MENU_HREFS.goods && path.startsWith(`${item.href}/`)));
   if (listed) return listed.href;
+  if (path === MENU_HREFS.trash || path.startsWith(`${MENU_HREFS.trash}/`)) return MENU_HREFS.goods;
   if (path === "/erp/menu" || path === "/erp/menu/" || path.startsWith("/erp/menu/new") || /^\/erp\/menu\/[^/]+$/.test(path)) return MENU_HREFS.goods;
   if (path.startsWith("/erp/products/categories")) return MENU_HREFS.ingredientCategories;
   if (path.startsWith("/erp/products")) return MENU_HREFS.ingredients;

@@ -124,6 +124,44 @@
 
 .erpMenuTrash {
   color: var(--erp-accent);
+  text-decoration: none;
+}
+
+.erpMenu a.erpHeadBtn {
+  text-decoration: none;
+}
+
+.erpMenu .erpPageHead h1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.erpMenuBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  font-size: 28px;
+  line-height: 1;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.erpMenuBack:hover {
+  background: var(--erp-soft);
+}
+
+.erpMenuBanner {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: var(--erp-accent-soft);
+  border-bottom: 1px solid var(--erp-line);
 }
 
 .erpSideNav .erpSideSub a {

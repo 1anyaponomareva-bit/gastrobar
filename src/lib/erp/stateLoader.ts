@@ -1,10 +1,10 @@
-import type { ErpDish, ErpDocument, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
+import type { ErpDish, ErpDocument, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
 import { check, erpDb } from "./server";
 
 /** Parts of the ERP screen data that can be loaded on their own. */
 export type StatePart = keyof ErpState;
 
-export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons"];
+export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons", "costSources"];
 
 /** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
 export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
@@ -84,6 +84,16 @@ async function loadPart(part: StatePart): Promise<unknown> {
       }
       return (check(recipes) as Omit<ErpRecipe, "lines">[]).map((recipe) => ({ ...recipe, lines: byRecipe.get(recipe.id) ?? [] }));
     }
+    case "costSources": {
+      const result = await db.from("erp_product_cost_quotes_view").select("*").limit(5000);
+      if (result.error) {
+        const code = result.error.code ?? "";
+        const message = result.error.message ?? "";
+        if (["PGRST205", "PGRST202", "42P01", "42883"].includes(code) || /does not exist|could not find/i.test(message)) return [] as ErpProductCostQuote[];
+        check(result);
+      }
+      return (result.data ?? []) as ErpProductCostQuote[];
+    }
     case "dishes": {
       const [dishes, lines, prices] = await Promise.all([
         db.from("erp_dishes").select("*").order("name_en"),
@@ -128,7 +138,12 @@ export async function loadDocument(id: string): Promise<ErpDocument | null> {
  */
 export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial<ErpState>> {
   const batched = await loadStateRpc(parts);
-  if (batched) return batched;
+  if (batched) {
+    if (parts.includes("costSources") && batched.costSources === undefined) {
+      batched.costSources = (await loadPart("costSources")) as ErpProductCostQuote[];
+    }
+    return batched;
+  }
   const values = await Promise.all(parts.map(loadPart));
   return Object.fromEntries(parts.map((part, index) => [part, values[index]])) as Partial<ErpState>;
 }

@@ -20,7 +20,7 @@ export function MenuPrepsList() {
   if (!state || !ctx) return null;
 
   const q = query.trim().toLowerCase();
-  const pool = state.products.filter((p) => (p.type === "semi_finished" || p.type === "finished") && Boolean(p.archived_at) === archived);
+  const pool = state.products.filter((p) => p.type === "semi_finished" && Boolean(p.archived_at) === archived);
   const rows: Row[] = pool
     .filter((p) => !q || `${p.name_en} ${p.name_vn}`.toLowerCase().includes(q))
     .map((p) => {
@@ -44,6 +44,7 @@ export function MenuPrepsList() {
     {
       id: "name",
       label: T("Название", "Name", "Tên"),
+      locked: true,
       cell: (row) => (
         <>
           <NavLink href={`/erp/preps/recipe/${row.id}`} className="erpName">
@@ -82,7 +83,7 @@ export function MenuPrepsList() {
       query={query}
       onQuery={setQuery}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
-      catalogEmpty={!state.products.some((p) => p.type === "semi_finished" || p.type === "finished")}
+      catalogEmpty={!state.products.some((p) => p.type === "semi_finished")}
       emptyTitle={T("Пока нет полуфабрикатов", "No semi-finished products yet", "Chưa có bán thành phẩm")}
       emptyText={T("Создайте полуфабрикат с рецептурой. Изготовление партии — отдельный складской документ, остатки сами не меняются от карточки.", "Create a semi-finished product with a recipe. Making a batch is a stock document; editing the card does not move stock.", "Tạo bán thành phẩm với công thức. Sản xuất mẻ là chứng từ kho.")}
       addHref="/erp/preps/recipe/new"
