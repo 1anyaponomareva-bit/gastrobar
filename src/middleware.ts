@@ -58,11 +58,6 @@ export function middleware(request: NextRequest) {
   if (gate.action === "json") {
     return noStore(withMenuPeriod(NextResponse.json(gate.body, { status: gate.status }), period));
   }
-  if (gate.action === "rewrite") {
-    const url = request.nextUrl.clone();
-    url.pathname = gate.pathname;
-    return noStore(withMenuPeriod(NextResponse.rewrite(url), period));
-  }
 
   if (isKitchenHost(host) && request.nextUrl.pathname === "/") {
     const url = request.nextUrl.clone();

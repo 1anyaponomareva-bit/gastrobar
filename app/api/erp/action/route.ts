@@ -9,6 +9,7 @@ import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalog
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 const REF_ENTITIES = new Set(["category", "supplier", "warehouse", "channel"]);
 const CATALOG_ENTITIES = new Set(["product", "category", "supplier"]);

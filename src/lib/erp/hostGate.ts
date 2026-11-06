@@ -10,7 +10,8 @@
  *   - Public ERP pages: `/`, `/stock`, `/stock/*`, `/menu`, `/products`, `/preps`,
  *     `/documents`, `/catalog`, `/production`, `/review`, `/service`, `/settings`
  *     and the same paths under `/erp` (those GET/HEAD 307 to the clean URL)
- *   - Internal rewrite: those public pages → `/erp` + path
+ *   - Public ERP pages are allowed; `next.config` `beforeFiles` maps them to `/erp`
+ *     (one rewrite layer, host-keyed so gastrotruck.org `/` stays the food homepage)
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
  *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
  *       `/api/recipes-admin/login` | `logout` | `register` | `session`
@@ -34,7 +35,6 @@ import {
   ERP_WWW_HOST,
   isErpPagePath,
   isErpPublicPagePath,
-  toInternalErpPathname,
   toPublicErpHref,
   toPublicErpPathname,
 } from "./publicPath";
@@ -68,7 +68,6 @@ export type ErpHostGateInput = {
 
 export type ErpHostGateResult =
   | { action: "allow" }
-  | { action: "rewrite"; pathname: string }
   | { action: "redirect"; status: 307; location: string }
   | { action: "json"; status: number; body: Record<string, unknown> };
 
@@ -234,7 +233,7 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
     }
 
     if (isErpPublicPagePath(pathname)) {
-      return { action: "rewrite", pathname: toInternalErpPathname(pathname) };
+      return { action: "allow" };
     }
 
     if (isApiOrProxyPath(pathname)) return { action: "json", status: 404, body: OTHER_API_BODY };

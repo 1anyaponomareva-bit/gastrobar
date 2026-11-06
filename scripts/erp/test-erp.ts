@@ -146,11 +146,9 @@ async function main() {
   await test("dual-run: named host serves ERP while old /erp still works", async () => {
     const cfg = gateCfg({ redirectFromLegacy: false });
     const home = gate("erp.example.test", "/", "GET", cfg);
-    assert.equal(home.action, "rewrite");
-    if (home.action === "rewrite") assert.equal(home.pathname, "/erp");
+    assert.equal(home.action, "allow");
     const stock = gate("erp.example.test", "/stock/receipts", "GET", cfg);
-    assert.equal(stock.action, "rewrite");
-    if (stock.action === "rewrite") assert.equal(stock.pathname, "/erp/stock/receipts");
+    assert.equal(stock.action, "allow");
     const invite = gate("erp.example.test", "/erp?invite=abc", "GET", cfg);
     assert.equal(invite.action, "redirect");
     if (invite.action === "redirect") {

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { CANONICAL_ERP_HOST, ERP_PAGE_SEGMENTS, ERP_WWW_HOST } from "./src/lib/erp/publicPath";
 
 /** Доп. домены для dev (ngrok и т.д.), если пустая страница: ALLOWED_DEV_ORIGINS=мой-туннель.ngrok-free.dev */
 const extraDevOrigins =
@@ -14,25 +15,13 @@ const nextConfig: NextConfig = {
    */
   async rewrites() {
     // beforeFiles runs before the prerendered homepage, so gastrofood.vn/ is ERP
-    // instead of the cached «Еда / Бар» page. Keep in sync with ERP_PAGE_SEGMENTS.
-    const erpHosts = ["gastrofood.vn", "www.gastrofood.vn"];
-    const erpSegments = [
-      "stock",
-      "menu",
-      "products",
-      "preps",
-      "documents",
-      "catalog",
-      "production",
-      "review",
-      "service",
-      "settings",
-    ];
+    // instead of the cached «Еда / Бар» page. Host-keyed, so gastrotruck.org `/` stays static.
+    const erpHosts = [CANONICAL_ERP_HOST, ERP_WWW_HOST];
     const erpHostRewrites = erpHosts.flatMap((host) => {
       const hasHost = [{ type: "host" as const, value: host }];
       return [
         { source: "/", has: hasHost, destination: "/erp" },
-        ...erpSegments.flatMap((seg) => [
+        ...ERP_PAGE_SEGMENTS.flatMap((seg) => [
           { source: `/${seg}`, has: hasHost, destination: `/erp/${seg}` },
           { source: `/${seg}/:path*`, has: hasHost, destination: `/erp/${seg}/:path*` },
         ]),

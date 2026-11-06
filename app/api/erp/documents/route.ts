@@ -2,6 +2,7 @@ import { check, erpDb, readAsAdmin, ServerTiming } from "@/lib/erp/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 const TYPES = new Set(["opening", "receipt", "transfer", "writeoff", "count", "production"]);
 const PAGE = 50;

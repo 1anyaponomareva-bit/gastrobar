@@ -3,6 +3,7 @@ import { ALL_PARTS, loadState, type StatePart } from "@/lib/erp/stateLoader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 /**
  * Everything the ERP screens need except documents (reference data is small), plus the signed-in

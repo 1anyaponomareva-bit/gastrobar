@@ -1,6 +1,7 @@
 /**
  * Public ERP URLs on gastrofood.vn have no `/erp` prefix.
- * Internal Next routes stay under `app/erp/*`. Middleware rewrites the public path.
+ * Internal Next routes stay under `app/erp/*`. `next.config` `beforeFiles` maps
+ * the public path on the ERP hosts; middleware does not rewrite again.
  */
 
 export const CANONICAL_ERP_HOST = "gastrofood.vn";

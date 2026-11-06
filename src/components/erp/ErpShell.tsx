@@ -104,7 +104,7 @@ function LangSwitch({ lang, onChange }: { lang: ErpLang; onChange: (lang: ErpLan
   );
 }
 
-export function ErpShell({ children, stripPrefix = false }: { children: ReactNode; stripPrefix?: boolean }) {
+export function ErpShell({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<ErpLang>("ru");
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -193,7 +193,7 @@ export function ErpShell({ children, stripPrefix = false }: { children: ReactNod
       </ErpData>
     );
 
-  return <ErpHrefProvider stripPrefix={stripPrefix}>{body}</ErpHrefProvider>;
+  return <ErpHrefProvider>{body}</ErpHrefProvider>;
 }
 
 function ErpData({

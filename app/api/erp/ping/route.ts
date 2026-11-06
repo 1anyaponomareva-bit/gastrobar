@@ -2,6 +2,7 @@ import { check, erpDb, requireAdmin, ServerTiming } from "@/lib/erp/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 /** Speed check: where the server runs and how long the session check and one database query take. */
 export async function GET() {
