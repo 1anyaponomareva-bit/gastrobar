@@ -8,13 +8,15 @@
 
 | Вкладка Poster | Спека | Наш чек-лист | Статус спеки |
 |----------------|-------|--------------|--------------|
-| Товары | `tovary.md` | [tovary.md](tovary.md) | **есть файл, нет коммита** |
-| Тех. карты | `tech-karty.md` | [tech-cards.md](tech-cards.md) | **есть файл, нет коммита** |
-| Полуфабрикаты | `polufabrikaty.md` | [preps.md](preps.md) | нет файла (Agent 1 смотрит экран) |
-| Ингредиенты | | [ingredients.md](ingredients.md) | нет файла |
-| Контроль фудкоста | | [foodcost.md](foodcost.md) | нет файла |
-| Категории товаров и тех. карт | | [categories-goods.md](categories-goods.md) | нет файла |
-| Категории ингредиентов | | [categories-ingredients.md](categories-ingredients.md) | нет файла |
-| Цехи | | [workshops.md](workshops.md) | нет файла |
+| Товары | `tovary.md` | [tovary.md](tovary.md) | файл есть, **коммита нет** |
+| Тех. карты | `tech-karty.md` | [tech-cards.md](tech-cards.md) | файл есть, **коммита нет** |
+| Полуфабрикаты | `polufabrikaty.md` | [preps.md](preps.md) | файл есть (черновик Agent 1), **коммита нет** |
+| Ингредиенты | `ingredienty.md` | [ingredients.md](ingredients.md) | файл есть (docs+сайдбар; список в спеке не открыт), **коммита нет** |
+| Контроль фудкоста | `foodcost.md` | [foodcost.md](foodcost.md) | файл есть (отчёт Postie не открывали), **коммита нет** |
+| Категории товаров и тех. карт | `kategorii-tovarov.md` | [categories-goods.md](categories-goods.md) | файл есть (вкладку не открывали), **коммита нет** |
+| Категории ингредиентов | `kategorii-ingredientov.md` | [categories-ingredients.md](categories-ingredients.md) | файл есть (вкладку не открывали), **коммита нет** |
+| Цехи | `tsekhi.md` | [workshops.md](workshops.md) | файл есть (вкладку не открывали), **коммита нет** |
 
-Индекс спеки: `docs/erp-menu-poster/README.md` (есть). Цех ≠ заведение — имена в индексе.
+Индекс спеки: `docs/erp-menu-poster/README.md`. Цех ≠ заведение — имена разные.
+
+Спеку в `origin/main` не мержили: Agent 1 ещё не закоммитил `docs/erp-menu-poster/`.

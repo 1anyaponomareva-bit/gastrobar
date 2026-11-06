@@ -73,3 +73,12 @@
 ## Уточнения
 
 - Средняя цена в «Остатках» только для показа. Списание — FIFO по партиям (`erp_consume`). Тест: «average cost shown in stock does not change FIFO».
+
+## 8. ERP «Меню» (Poster-вкладки)
+
+- **Код реализован?** Частично: оболочка вкладок, Товары = `finished`, техкарты = `erp_dishes`, п/ф/ингредиенты на том же каталоге, фудкост-список, stub цехов. Не клон Poster (нет Postie, модификаторов, дерева кассы, печати всех filtered).
+- **В main?** Да, `490d1dd` (логика `8d2af42`, UI `cc6d30d`). Новых коммитов UI/logic после этого нет.
+- **Миграция применена?** Да: `20261106143000` на production (подтверждение 2026-11-06: `erp_product_cost_quotes_view`, `erp_card_revisions`, `erp_card_history`). Повторно не накатывали.
+- **Включено на сайте?** Да, после деплоя `dpl_AzBCTXdhzVw4aGniP9Xuq2HUmng8` (15:49 +07, Ready, алиас https://www.gastrotruck.org). `/erp/menu` — Товары; `/erp/products` — полный каталог.
+- **Проверено на сайте?** Да, в `5cc4740`: live `/erp/menu` отдаёт RSC `MenuGoodsPage`, `/erp/products` — `ProductsPage` и 127 продуктов. Повторный залогиненный клик по вкладкам в 16:40 **не** снимали (Chrome владельца в Poster). Склад не проводили. Staff↔ERP не включали.
+

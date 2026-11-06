@@ -1,16 +1,76 @@
 # Журнал публикации ERP «Меню»
 
-## Состояние на 2026-11-06 16:26 +07
+## Состояние на 2026-11-06 16:40 +07
 
-Publish worktree: `GASTROBAR-inventory` `main` = `490d1dd` = `origin/main`. `erp-menu-ui` не пушили.
+Publish worktree: `GASTROBAR-inventory` `main` = `5cc4740` = `origin/main`. Нового среза UI/логики **нет** (спека и CardHistory без коммита).
 
-### Порядок merge (факт)
+### Живой прод
 
-1. **Логика** `8d2af42`
-2. **UI** `cc6d30d` через merge `d6c5269` (после логики)
-3. **Документы приёмки** `e85a003` / `490d1dd`
+| | |
+|--|--|
+| Код Меню | `490d1dd` / merge UI `d6c5269` + логика `8d2af42` |
+| Журнал SQL | `5cc4740` (16:28): additive SQL на production, каталог 127 |
+| Vercel | `dpl_AzBCTXdhzVw4aGniP9Xuq2HUmng8` **Ready** production, created 15:49 +07 |
+| Алиасы | https://www.gastrotruck.org |
 
-### Проверки
+`/erp/menu` → `MenuGoodsPage`; `/erp/products` → полный `ProductsPage`.
+
+### Merge в этой сессии Agent 4
+
+| Ветка | HEAD | Действие |
+|-------|------|----------|
+| `erp-menu-logic` | `8d2af42` уже в main | не мержить |
+| `erp-menu-ui` | `cc6d30d` уже в main | не мержить |
+| UI untracked | `CardHistory.tsx` | нет коммита — не срез |
+| `erp-menu-spec` | untracked `docs/erp-menu-poster/` (все 8 вкладок) | нет коммита — не мержить; сценарии обновлены по файлам на диске |
+
+### Проверки этой сессии
+
+| Проверка | Результат |
+|----------|-----------|
+| Probe из inventory `.env.local` | нет `SUPABASE_SERVICE_ROLE_KEY` — скрипт не ходил в PostgREST |
+| SQL Editor | вкладка PRODUCTION открыта; новый SQL **не** вставляли |
+| GET `/erp/menu` | оболочка ERP, не 404 |
+| Залогиненный UI | Cursor-браузер — вход; Chrome владельца занят Poster |
+| Тесты/tsc/next build | не гоняли: нет нового кода продукта |
+
+### Бэкапы
+
+Free-план без PITR.
+
+| Где | Статус |
+|-----|--------|
+| `.erp-menu-backup/` в inventory | **каталога нет** (gitignore) |
+| `.erp-pack-merge-backup/` | есть, это фасовки |
+| Живой каталог | **127** продуктов по `5cc4740` (`erp_load_state(products)`) |
+
+Перед следующим live SQL: заново `backup-menu.ts` и убедиться, что JSON на диске.
+
+### Пробелы vs Poster (спека всех 8 вкладок на диске)
+
+- Печать — pager, не все filtered (**E2**).
+- Цех/заведение stub; на п/ф фильтр Цех лишний.
+- Тех. карты: нет Выход/Цена/Наценка по умолчанию; нет панели Состав/история (API history в main, CardHistory не закоммичен).
+- Два дерева категорий Poster → один `erp_categories`.
+- Цехи stub. Postie не клонируем. Модификаторы/импорт/авто-30 дней — нет.
+- unknown = `null`, не Poster 0. «Food cost / цена» = формула Poster.
+- G1 тайминги не сняты. Staff↔ERP выключен.
+
+### Живые URL
+
+- https://www.gastrotruck.org/erp/menu
+- https://www.gastrotruck.org/erp/products — каталог 127
+- https://www.gastrotruck.org/erp/stock
+- https://www.gastrotruck.org/erp/menu/recipes
+- https://www.gastrotruck.org/erp/menu/preps
+
+---
+
+## Состояние на 2026-11-06 16:26 +07 (`5cc4740`)
+
+`erp-menu-ui` не пушили.
+
+Порядок merge: логика `8d2af42` → UI `cc6d30d` через `d6c5269` → документы `e85a003` / `490d1dd`.
 
 | Проверка | Результат |
 |----------|-----------|
@@ -18,7 +78,7 @@ Publish worktree: `GASTROBAR-inventory` `main` = `490d1dd` = `origin/main`. `erp
 | `npx tsx scripts/erp/test-erp.ts` | **77/77** |
 | `npx next build` | ok, `/erp/products` и `/erp/menu` раздельно |
 | `git push origin main` | already up to date, без force |
-| Prod SQL `20261106143000_erp_menu_cost_history.sql` | **applied** в SQL Editor, `main (PRODUCTION)`. Start `-- Menu / tech-card: planned cost quotes…`, end `grant execute on function %s to service_role`. Success. No rows returned. Без truncate. |
+| Prod SQL `20261106143000` | **applied** в SQL Editor, `main (PRODUCTION)`. Start `-- Menu / tech-card: planned cost quotes…`, end `grant execute on function %s to service_role`. Success. Без truncate. |
 | PostgREST probe | view ok; `erp_card_revisions` ok; `erp_card_history` ok; `erp_load_state(products)` = **127** |
 | Live `/erp/products` | RSC `ProductsPage`, каталог 127/127 live |
 | Live `/erp/menu` | RSC `MenuGoodsPage` |
@@ -26,65 +86,8 @@ Publish worktree: `GASTROBAR-inventory` `main` = `490d1dd` = `origin/main`. `erp
 
 Pooler ENOTFOUND не повторяли. Cursor-browser для Supabase не использовали.
 
-### Живые URL
-
-- https://www.gastrotruck.org/erp/menu
-- https://www.gastrotruck.org/erp/products — полный каталог, 127
-- https://www.gastrotruck.org/erp/stock
-
-Staff↔ERP выключен намеренно.
+---
 
 ## Состояние на 2026-11-06 15:50 +07
 
-Publish worktree: `GASTROBAR-inventory` `main` = `d6c5269`, **на 7 коммитов впереди** `origin/main` (`dd665dc`). Не запушено.
-
-### Порядок merge (факт)
-
-1. **Логика** `8d2af42` — котировки, история, `erp_load_state` + `costSources`, тесты 77/77.
-2. **Документы приёмки** `e85a003` + typefix `237b725`.
-3. **UI** `5a341a0` → `a5f52a1` → `cc6d30d`, merge `d6c5269`.
-4. **Спека** — файлы на диске (`tovary.md`, `tech-karty.md`), **коммита нет**, в `origin/main` не мержили.
-
-Спеку рано не мержили, потому что Agent 1 ещё не закоммитил. Логику раньше UI. UI после `cc6d30d`: Товары = `type=finished`. Конфликт `/erp/products` разрешён **в пользу полного каталога** (не редирект в ингредиенты).
-
-`erp-menu-accept` в `GASTROBAR-menu-publish` содержит более ранний merge UI без `cc6d30d` — **не пушить**.
-
-### Проверки перед push
-
-| Проверка | Результат |
-|----------|-----------|
-| `npx tsx scripts/erp/test-erp.ts` | **77/77** (FIFO, dish save без склада, quotes, history, циклы) |
-| `npx tsc --noEmit -p .` | ok на `d6c5269` |
-| `npx next build` | ok (маршруты `/erp/menu/*`, `/erp/products`, `/erp/stock`) |
-| Prod SQL `20261106143000_erp_menu_cost_history.sql` | **ещё не applied**. Additive: новые table/view/functions, без truncate каталога. `stateLoader` при отсутствии view отдаёт `[]`, склад не падает. |
-| Postgres apply script | верный pooler `aws-1-ap-southeast-1`; пароль из `.env.supabase.local` отвергнут. SQL Editor Chrome перебит сессией Poster Agent 1. |
-
-### Бэкапы
-
-JSON в `.erp-menu-backup/` (gitignore). Free-план без PITR.
-
-| Когда | Файл | Сводка | Миграция Меню? |
-|-------|------|--------|----------------|
-| 2026-11-06 14:56 +07 | `before-2026-11-06T07-56-49-960Z.json` | products 127/127 live; packs 120 (56 live); product_packs 119; suppliers 14; categories 9; warehouses 4; recipes 5 / 57 lines; dishes 0; lots 1; documents 1 posted; stock_qty 1; stock_value 10000 | нет, снимок до среза |
-
-### Живые URL
-
-- https://www.gastrotruck.org/erp/menu
-- https://www.gastrotruck.org/erp/products — полный каталог, не только ингредиенты
-- https://www.gastrotruck.org/erp/stock
-- https://www.gastrotruck.org/erp/menu/recipes
-- https://www.gastrotruck.org/erp/preps → `/erp/menu/preps`
-
-### Почему UI больше не блокер
-
-Раньше `5a341a0` клал в Товары `erp_dishes` и редиректил `/erp/products` в ингредиенты. Сейчас: Товары = finished; `/erp/products` жив; stubs цех/заведение `ok: false`.
-
-### Пробелы после среза
-
-- Prod-SQL котировок/истории не applied (пароль pooler не подошёл; Chrome SQL занят Poster).
-- Печать списков — текущая страница pager, не все filtered.
-- Цех/заведение не фильтруют (честный stub).
-- Спека полуфабрикатов и остальных вкладок ещё без файлов.
-- Модификаторы Poster, импорт, 30 дней корзины — нет.
-- Staff↔ERP выключен **намеренно**.
-- Формулы: unknown = `null` (не Poster 0); фудкост от netRevenue, не от итоговой цены.
+Тогда `d6c5269` ещё не был запушен; SQL помечался как не applied. Историческая запись, не текущий статус.

@@ -78,16 +78,16 @@ Shopee без комиссии: `complete=false`, `grossProfit=null`, issues = `
 
 Проведение партии котлет в том же тесте: actual beef 2,1 кг + salt 0,02 → `total_cost` **420 200**, `output_unit_cost` **32 323,076923** на 13 шт. Карточка рецепта после этого числа не меняет.
 
-## Логика в локальном `main` (`8d2af42`)
+## Логика в `origin/main` (`8d2af42` внутри `490d1dd`)
 
-Default источника техкарты = `reference` (= текущий `est_unit_cost`). C1–C6 остаются верны. Prod-SQL ещё не applied.
+Default источника техкарты = `reference` (= текущий `est_unit_cost`). C1–C6 остаются верны. Prod-SQL `20261106143000` **на production** (подтверждение родителя: view/revisions/history без ошибки). Не применять повторно.
 
 Дополнительно в `channelResult`:
 
 - `markupPct = (netRevenue − totalCost) / totalCost × 100` (null если cost 0 или null)
 - источники `last_lot` / `fifo_remaining` — только плановая себес, **не** `erp_consume`
 
-Миграция черновика `20261106143000_erp_menu_cost_history.sql`: новая таблица `erp_card_revisions`, функция котировок, `erp_load_state` + часть `costSources`. Похоже additive (нет DROP каталога/партий). Не применять, пока нет коммита и повторной проверки.
+Миграция `20261106143000_erp_menu_cost_history.sql` уже на рабочей базе (additive). Повторно не накатывать.
 
 ## Что сверить на UI после среза
 
