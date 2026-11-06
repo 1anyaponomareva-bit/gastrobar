@@ -52,7 +52,7 @@ async function allRows(db: SupabaseClient, table: string, columns = "*") {
   for (let from = 0; ; from += page) {
     const res = await timed(db.from(table).select(columns).range(from, from + page - 1));
     if (res.error) throw new Error(`${table}: ${res.error.message}`);
-    const chunk = (res.data ?? []) as Record<string, unknown>[];
+    const chunk = (res.data ?? []) as unknown as Record<string, unknown>[];
     rows.push(...chunk);
     if (chunk.length < page) return rows;
   }
