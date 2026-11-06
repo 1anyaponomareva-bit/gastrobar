@@ -22,6 +22,7 @@ export const ERP_PAGE_SEGMENTS = [
   "review",
   "service",
   "settings",
+  "purchasing",
 ] as const;
 
 export const MINI_APP_SEGMENTS = [

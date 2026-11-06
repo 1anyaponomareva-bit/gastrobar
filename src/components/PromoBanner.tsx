@@ -61,7 +61,7 @@ function isMenuChooserPath(path: string): boolean {
 }
 
 function isStaffPath(path: string): boolean {
-  return path === "/staff" || path.startsWith("/staff/");
+  return path === "/staff" || path.startsWith("/staff/") || path === "/orders" || path.startsWith("/orders/");
 }
 
 function isCheckPath(path: string): boolean {

@@ -98,6 +98,8 @@ export const config = {
     "/test/:path*",
     "/staff",
     "/staff/:path*",
+    "/orders",
+    "/orders/:path*",
     "/erp",
     "/erp/:path*",
     "/stock",

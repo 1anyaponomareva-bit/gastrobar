@@ -10,7 +10,9 @@
  * handlers; this gate does not weaken auth):
  *   - Stub: `/` (rewritten to `/coming-soon`)
  *   - ERP pages: `/erp`, `/erp/*`
+ *   - Employee orders: `/orders`, `/orders/*` (not `/erp`, not a redirect to Staff)
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
+ *   - Orders APIs: `/api/orders`, `/api/orders/*`
  *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
  *       `/api/recipes-admin/login` | `logout` | `register` | `session`
  *   - `/_next/*` plus favicon/icon and image/font files Next serves for the ERP UI
@@ -159,6 +161,14 @@ export function isErpApiPath(pathname: string): boolean {
   return pathUnder(pathname, "/api/erp");
 }
 
+export function isOrdersPagePath(pathname: string): boolean {
+  return pathUnder(pathname, "/orders");
+}
+
+export function isOrdersApiPath(pathname: string): boolean {
+  return pathUnder(pathname, "/api/orders");
+}
+
 function isRecipesAdminAuthPath(pathname: string): boolean {
   return RECIPES_ADMIN_AUTH_PATHS.some((path) => pathExact(pathname, path));
 }
@@ -183,6 +193,8 @@ export function isErpHostAllowedPath(pathname: string): boolean {
   return (
     isErpPublicPagePath(pathname) ||
     isErpApiPath(pathname) ||
+    isOrdersPagePath(pathname) ||
+    isOrdersApiPath(pathname) ||
     isRecipesAdminAuthPath(pathname) ||
     isNextOrStaticPath(pathname)
   );
@@ -215,11 +227,16 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
   const canonical = canonicalErpHost(config);
 
   if (isNamedErpHost(host, config)) {
-    if (isNextOrStaticPath(pathname) || isErpApiPath(pathname) || isRecipesAdminAuthPath(pathname)) {
+    if (
+      isNextOrStaticPath(pathname) ||
+      isErpApiPath(pathname) ||
+      isOrdersApiPath(pathname) ||
+      isRecipesAdminAuthPath(pathname)
+    ) {
       return { action: "allow" };
     }
 
-    if (isErpPublicPagePath(pathname)) {
+    if (isErpPublicPagePath(pathname) || isOrdersPagePath(pathname)) {
       return { action: "allow" };
     }
 

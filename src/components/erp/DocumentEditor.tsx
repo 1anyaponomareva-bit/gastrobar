@@ -8,6 +8,7 @@ import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupp
 import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
+import { PurchasingReceiptPanel } from "./PurchasingReceiptPanel";
 import { useErp } from "./ErpShell";
 import { stockKindOf } from "./StockPage";
 import {
@@ -282,6 +283,7 @@ export function DocumentEditor({ id }: { id: string }) {
         }
         sub={doc.status ? dateText(doc.doc_date) : undefined}
       />
+      {type === "receipt" && doc.id ? <PurchasingReceiptPanel documentId={doc.id} /> : null}
       {doc.status === "cancelled" ? (
         <div className="erpNotice bad">
           {T("Документ отменён", "Cancelled", "Đã hủy")}: {doc.cancel_reason} · {doc.cancelled_by} · {dateTimeText(doc.cancelled_at)}

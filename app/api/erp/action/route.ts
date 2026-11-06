@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { mergeRecipes } from "@/data/recipes";
 import { erpLocalMode } from "@/lib/erp/localDb";
-import { ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
+import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
 import type { ErpAction } from "@/lib/erp/types";
 import { readStoredRecipes } from "@/lib/recipes-admin/storage";
@@ -126,7 +126,12 @@ export async function POST(request: Request) {
           : uuid(a.id);
         let result: unknown;
         try {
-          result = await rpc("erp_post_document", { p_id: id, p_actor: actor });
+          const linked = check(
+            await erpDb().from("erp_documents").select("source_order_id").eq("id", id).maybeSingle(),
+          ) as { source_order_id?: string | null } | null;
+          result = linked?.source_order_id
+            ? await rpc("erp_order_admin_post", { p_id: id, p_actor: actor, p_admin: true })
+            : await rpc("erp_post_document", { p_id: id, p_actor: actor });
         } catch (error) {
           if (a.document && error instanceof ErpHttpError) {
             error.extra = { id, document: await freshDocument(id).catch(() => null) };

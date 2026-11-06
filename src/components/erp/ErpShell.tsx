@@ -66,7 +66,7 @@ type Section = "home" | "stock" | "menu" | "service";
 export function sectionOf(pathname: string | null): Section {
   const path = pathname ?? "/erp";
   if (path.startsWith("/erp/products") || path.startsWith("/erp/preps") || path.startsWith("/erp/menu")) return "menu";
-  if (path.startsWith("/erp/stock") || path.startsWith("/erp/documents")) return "stock";
+  if (path.startsWith("/erp/stock") || path.startsWith("/erp/documents") || path.startsWith("/erp/purchasing")) return "stock";
   if (path.startsWith("/erp/service")) return "service";
   return "home";
 }

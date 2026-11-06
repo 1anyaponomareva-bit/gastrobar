@@ -44,4 +44,5 @@ coverage
 .erp-stock-ui-accept-db/
 .erp-pack-merge-backup/
 .erp-menu-backup/
+supabase/.temp/
 .erp-menu-accept-db/

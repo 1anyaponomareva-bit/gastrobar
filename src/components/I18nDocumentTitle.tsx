@@ -30,6 +30,10 @@ export function I18nDocumentTitle() {
       document.title = translate(toStaffAppLang(lang), "staff_meta_title");
       return;
     }
+    if (pathname === "/orders" || pathname.startsWith("/orders/")) {
+      document.title = "Order List — GASTROFOOD";
+      return;
+    }
     if (pathname === "/check" || pathname.startsWith("/check/")) {
       document.title = translate(toCheckAppLang(lang), "check_meta_title");
       return;

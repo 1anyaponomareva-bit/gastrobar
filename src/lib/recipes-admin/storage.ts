@@ -9,6 +9,7 @@ const ADMINS_FILE = "admins.json";
 const OVERRIDES_FILE = "overrides.json";
 const RECIPES_FILE = "recipes.json";
 const STAFF_CATALOG_FILE = "staff-catalog.json";
+const ORDERS_STAFF_FILE = "orders-staff.json";
 export type RecipesAdminAccount = {
   email: string;
   salt: string;
@@ -115,6 +116,14 @@ export function writeStoredRecipes(stored: StoredRecipes) {
 
 export function readStaffCatalog() {
   return readJson<StaffCatalog | null>(STAFF_CATALOG_FILE, null);
+}
+
+export function readOrderStaff() {
+  return readJson<RecipesAdminAccount[]>(ORDERS_STAFF_FILE, []);
+}
+
+export function writeOrderStaff(accounts: RecipesAdminAccount[]) {
+  return writeJson(ORDERS_STAFF_FILE, accounts);
 }
 
 export function writeStaffCatalog(catalog: StaffCatalog) {

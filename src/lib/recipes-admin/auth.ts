@@ -27,6 +27,15 @@ export function isValidInvite(invite: unknown): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Employee /orders registration. Does not grant ERP admin. */
+export function isValidOrdersInvite(invite: unknown): boolean {
+  const expected = process.env.ORDERS_STAFF_INVITE?.trim() || process.env.RECIPES_ADMIN_INVITE?.trim();
+  if (!expected || typeof invite !== "string") return false;
+  const a = Buffer.from(invite);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export function hashPassword(password: string): { salt: string; hash: string } {
   const salt = randomBytes(16).toString("hex");
   return { salt, hash: scryptSync(password, salt, 64).toString("hex") };

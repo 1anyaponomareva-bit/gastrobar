@@ -193,6 +193,10 @@ async function main() {
     assert.equal(isErpHostAllowedPath("/coming-soon/icon"), true);
     assert.equal(isErpHostAllowedPath("/erp"), true);
     assert.equal(isErpHostAllowedPath("/erp/stock/receipts"), true);
+    assert.equal(isErpHostAllowedPath("/orders"), true);
+    assert.equal(isErpHostAllowedPath("/orders/history"), true);
+    assert.equal(gate("erp.example.test", "/orders", "GET").action, "allow");
+    assert.equal(gate("erp.example.test", "/api/orders/session", "POST").action, "allow");
     assert.equal(isErpHostAllowedPath("/stock/receipts"), false);
     assert.equal(isErpHostAllowedPath("/menu"), false);
   });
