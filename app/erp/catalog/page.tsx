@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function ErpCatalogRedirect() {
-  redirect("/erp/products");
+  redirect("/erp/menu/ingredients");
 }

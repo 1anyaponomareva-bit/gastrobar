@@ -281,8 +281,8 @@ export function ProductCard({ id }: { id: string }) {
         title={T("Продукт не найден", "Product not found", "Không tìm thấy sản phẩm")}
         text={T("Возможно, его удалили или ссылка устарела.", "It may have been removed or the link is outdated.", "Có thể đã bị xóa hoặc liên kết cũ.")}
         action={
-          <NavLink href="/erp/products" className="erpBtn">
-            {T("К списку продуктов", "Back to products", "Về danh sách")}
+          <NavLink href="/erp/menu/ingredients" className="erpBtn">
+            {T("К списку ингредиентов", "Back to ingredients", "Về danh sách")}
           </NavLink>
         }
       />
@@ -655,8 +655,8 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
 
   return (
     <>
-      <NavLink href="/erp/products" className="erpBack">
-        ← {T("Продукты", "Products", "Sản phẩm")}
+      <NavLink href="/erp/menu/ingredients" className="erpBack">
+        ← {T("Ингредиенты", "Ingredients", "Nguyên liệu")}
       </NavLink>
       <PageHead
         title={

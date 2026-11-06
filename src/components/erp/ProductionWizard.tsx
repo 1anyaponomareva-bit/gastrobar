@@ -379,7 +379,7 @@ function StepWhat({
         }
         action={
           <>
-            <NavLink href={drafts ? "/erp/preps" : "/erp/preps/recipe/new"} className="erpBtn primary">
+            <NavLink href={drafts ? "/erp/menu/preps" : "/erp/preps/recipe/new"} className="erpBtn primary">
               {drafts ? T("Открыть рецептуры", "Open recipes", "Mở công thức") : T("Создать рецептуру", "Create a recipe", "Tạo công thức")}
             </NavLink>
             <NavLink href="/erp/service/import" className="erpBtn">

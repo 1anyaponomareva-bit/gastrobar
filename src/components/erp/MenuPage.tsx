@@ -265,7 +265,7 @@ export function DishPage({ id }: { id: string }) {
         title={T("Блюдо не найдено", "Dish not found", "Không tìm thấy món")}
         action={
           <NavLink href="/erp/menu" className="erpBtn">
-            {T("К меню", "Back to menu", "Về thực đơn")}
+            {T("К товарам", "Back to products", "Về danh sách món")}
           </NavLink>
         }
       />
@@ -338,7 +338,7 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
   return (
     <>
       <NavLink href="/erp/menu" className="erpBack">
-        ← {T("Меню", "Menu", "Thực đơn")}
+        ← {T("Товары", "Products", "Món")}
       </NavLink>
       <PageHead
         title={

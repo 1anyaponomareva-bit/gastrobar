@@ -6,9 +6,11 @@ import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
 import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
+import { activeMenuHref, menuNavItems } from "./menuNav";
 import { activeStockHref, stockNavItems } from "./stockNav";
 import { Empty, errorText, loadingText, NavLink, T } from "./ui";
 import "./erp.css";
+import "./menu.css";
 
 type Notice = { ok: boolean; text: string } | null;
 
@@ -58,23 +60,19 @@ export function useErp(): ErpContextValue {
   return value;
 }
 
-type Section = "home" | "products" | "stock" | "preps" | "menu" | "service";
+type Section = "home" | "stock" | "menu" | "service";
 
 export function sectionOf(pathname: string | null): Section {
   const path = pathname ?? "/erp";
-  if (path.startsWith("/erp/products")) return "products";
+  if (path.startsWith("/erp/products") || path.startsWith("/erp/preps") || path.startsWith("/erp/menu")) return "menu";
   if (path.startsWith("/erp/stock") || path.startsWith("/erp/documents")) return "stock";
-  if (path.startsWith("/erp/preps")) return "preps";
-  if (path.startsWith("/erp/menu")) return "menu";
   if (path.startsWith("/erp/service")) return "service";
   return "home";
 }
 
 const ICONS: Record<Section, ReactNode> = {
   home: <path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
-  products: <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM4 7.5l8 4.5 8-4.5M12 12v9" />,
   stock: <path d="M3 9.5 12 4l9 5.5V20H3zM7 20v-6h10v6M7 17h10" />,
-  preps: <path d="M5 11h14v3a7 7 0 0 1-14 0zM3 11h18M9 4c0 2 2 2 2 4M14 4c0 2 2 2 2 4" />,
   menu: <path d="M6 3v8a2 2 0 0 0 2 2v8M10 3v8a2 2 0 0 1-2 2M8 3v6M17 21V3c-2 1-3 4-3 8h3" />,
   service: (
     <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2.2-1.3L14.4 3h-4l-.4 2.4a7.5 7.5 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.5 7.5 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3z" />
@@ -89,9 +87,7 @@ const Icon = ({ section }: { section: Section }) => (
 
 const navItems = (): { section: Section; href: string; label: string; short: string }[] => [
   { section: "home", href: "/erp", label: T("Главная", "Home", "Trang chủ"), short: T("Главная", "Home", "Trang chủ") },
-  { section: "products", href: "/erp/products", label: T("Продукты", "Products", "Sản phẩm"), short: T("Продукты", "Products", "Sản phẩm") },
   { section: "stock", href: "/erp/stock", label: T("Склад", "Stock", "Kho"), short: T("Склад", "Stock", "Kho") },
-  { section: "preps", href: "/erp/preps", label: T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm"), short: T("Полуфабр.", "Preps", "BTP") },
   { section: "menu", href: "/erp/menu", label: T("Меню", "Menu", "Thực đơn"), short: T("Меню", "Menu", "Thực đơn") },
 ];
 
@@ -224,7 +220,9 @@ function ErpData({
   const pathname = usePathname();
   const section = sectionOf(pathname);
   const stockActive = activeStockHref(pathname);
+  const menuActive = activeMenuHref(pathname);
   const [stockOpen, setStockOpen] = useState(section === "stock");
+  const [menuOpen, setMenuOpen] = useState(section === "menu");
   const [state, setState] = useState<ErpState | null>(initial);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -275,6 +273,7 @@ function ErpData({
 
   useEffect(() => {
     setStockOpen(section === "stock");
+    setMenuOpen(section === "menu");
   }, [section]);
 
   const act = useCallback(
@@ -324,46 +323,54 @@ function ErpData({
             <small>ERP</small>
           </div>
           <nav className="erpSideNav">
-            {items.map((item) =>
-              item.section === "stock" ? (
-                <div key={item.href} className={`erpSideGroup ${stockOpen ? "open" : ""}`}>
-                  <NavLink
-                    href={item.href}
-                    className={section === "stock" ? "active" : ""}
-                    aria-expanded={stockOpen}
-                    aria-controls="erp-stock-sub"
-                    onClick={(event) => {
-                      if (section !== "stock") {
-                        setStockOpen(true);
-                        return;
-                      }
-                      event.preventDefault();
-                      setStockOpen((open) => !open);
-                    }}
-                  >
-                    <Icon section={item.section} />
-                    {item.label}
-                    <svg className="erpSideChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </NavLink>
-                  <div className="erpSideSub" id="erp-stock-sub">
-                    <div>
-                      {stockNavItems().map((sub) => (
-                        <NavLink key={sub.href} href={sub.href} className={stockActive === sub.href ? "active" : ""}>
-                          {sub.label}
-                        </NavLink>
-                      ))}
+            {items.map((item) => {
+              if (item.section === "stock" || item.section === "menu") {
+                const open = item.section === "stock" ? stockOpen : menuOpen;
+                const setOpen = item.section === "stock" ? setStockOpen : setMenuOpen;
+                const subId = item.section === "stock" ? "erp-stock-sub" : "erp-menu-sub";
+                const subs = item.section === "stock" ? stockNavItems() : menuNavItems();
+                const activeSub = item.section === "stock" ? stockActive : menuActive;
+                return (
+                  <div key={item.href} className={`erpSideGroup ${open ? "open" : ""}`}>
+                    <NavLink
+                      href={item.href}
+                      className={section === item.section ? "active" : ""}
+                      aria-expanded={open}
+                      aria-controls={subId}
+                      onClick={(event) => {
+                        if (section !== item.section) {
+                          setOpen(true);
+                          return;
+                        }
+                        event.preventDefault();
+                        setOpen((value) => !value);
+                      }}
+                    >
+                      <Icon section={item.section} />
+                      {item.label}
+                      <svg className="erpSideChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </NavLink>
+                    <div className="erpSideSub" id={subId}>
+                      <div>
+                        {subs.map((sub) => (
+                          <NavLink key={sub.href} href={sub.href} className={activeSub === sub.href ? "active" : ""}>
+                            {sub.label}
+                          </NavLink>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
+                );
+              }
+              return (
                 <NavLink key={item.href} href={item.href} className={section === item.section ? "active" : ""}>
                   <Icon section={item.section} />
                   {item.label}
                 </NavLink>
-              ),
-            )}
+              );
+            })}
           </nav>
           <div className="erpSideFoot">
             <NavLink href="/erp/service" className={`erpSideService ${section === "service" ? "active" : ""}`}>

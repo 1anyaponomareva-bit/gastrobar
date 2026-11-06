@@ -1,5 +1,5 @@
-import { ProductsPage } from "@/components/erp/ProductsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpProductsPage() {
-  return <ProductsPage />;
+export default function ErpProductsRedirect() {
+  redirect("/erp/menu/ingredients");
 }

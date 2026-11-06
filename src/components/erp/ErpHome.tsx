@@ -59,7 +59,7 @@ export function ErpHome() {
           icon={svg(<path d="M5 11h14v3a7 7 0 01-14 0v-3zM8 7c0-1 1-1.5 1-3M12 7c0-1 1-1.5 1-3M16 7c0-1 1-1.5 1-3" />)}
         />
         <QuickTile
-          href="/erp/menu"
+          href="/erp/menu/foodcost"
           title={T("Себестоимость блюда", "Dish cost", "Giá vốn món")}
           text={T("Food Cost, упаковка и маржа по каналам", "Food cost, packaging and margin per channel", "Food cost, bao bì, biên LN")}
           icon={svg(<path d="M7 3v8M5 3v4a2 2 0 004 0V3M7 11v10M17 3c-2 0-3 3-3 6s1 3 3 3v9" />)}

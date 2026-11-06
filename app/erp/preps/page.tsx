@@ -1,5 +1,5 @@
-import { PrepsPage } from "@/components/erp/PrepsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpPrepsPage() {
-  return <PrepsPage />;
+export default function ErpPrepsRedirect() {
+  redirect("/erp/menu/preps");
 }
