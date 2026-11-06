@@ -30,6 +30,8 @@ import {
 import { basePrice, formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
 import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
+import { supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
+import { ingredientCategoryStats, withInputVat } from "../../src/lib/erp/ingredientCategoryStats";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import { countFromDocument } from "../../src/lib/erp/inventoryUi";
 import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
@@ -141,6 +143,7 @@ async function main() {
       "categories",
       "suppliers",
       "warehouses",
+      "locations",
       "channels",
       "products",
       "packs",
@@ -150,6 +153,7 @@ async function main() {
       "dishes",
       "writeoffReasons",
       "costSources",
+      "locations",
     ]) {
       assert.ok(key in full, key);
     }
@@ -2605,6 +2609,142 @@ async function main() {
     ]);
     assert.ok(priced.main);
     assert.ok(Math.abs(priced.summary.foodCost! - 1351) < 1e-9);
+  });
+
+  await test("sales locations: two seeds, no Gastrobar or Prep Kitchen; CRUD and unused delete", async () => {
+    const rows = await q<{ code: string; name: string; is_active: boolean; default_warehouse_id: string | null }>(
+      "select code, name, is_active, default_warehouse_id from public.erp_locations order by name",
+    );
+    assert.deepEqual(
+      rows.map((r) => r.name),
+      ["Food Truck", "Online Kitchen"],
+    );
+    assert.equal(rows.length, 2);
+    assert.ok(rows.every((r) => r.is_active));
+    assert.ok(rows.every((r) => r.default_warehouse_id == null));
+    assert.equal(
+      n(await value("select count(*) from public.erp_locations where name ilike '%gastrobar%' or name ilike '%prep%'")),
+      0,
+    );
+    assert.equal(
+      await value("select exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'erp_ingredient_categories')"),
+      false,
+    );
+    assert.equal(
+      await value("select exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'erp_workshops')"),
+      false,
+    );
+
+    const id = await value<string>("select public.erp_save_location($1::jsonb, $2)", [
+      JSON.stringify({ name: "Beach stand", code: "beach-stand", address: "Sand 1", is_active: true, default_warehouse_id: warehouse }),
+      ACTOR,
+    ]);
+    const saved = await one<{ name: string; address: string; is_active: boolean }>(
+      "select name, address, is_active from public.erp_locations where id = $1",
+      [id],
+    );
+    assert.deepEqual(saved, { name: "Beach stand", address: "Sand 1", is_active: true });
+    await value("select public.erp_save_location($1::jsonb, $2)", [
+      JSON.stringify({ id, name: "Beach stand", is_active: false }),
+      ACTOR,
+    ]);
+    assert.equal(await value("select is_active from public.erp_locations where id = $1", [id]), false);
+
+    const product = await saveProduct({ type: "ingredient", name_en: "Location kebab", base_unit: "kg" });
+    await q("insert into public.erp_location_products (location_id, product_id, visible) values ($1, $2, true)", [id, product]);
+    await expectError(q("select public.erp_delete_location($1, $2)", [id, ACTOR]), "ERP_LOCATION_IN_USE");
+    await q("delete from public.erp_location_products where location_id = $1", [id]);
+    await value("select public.erp_delete_location($1, $2)", [id, ACTOR]);
+    assert.equal(n(await value("select count(*) from public.erp_locations where id = $1", [id])), 0);
+    assert.equal(n(await value("select count(*) from public.erp_locations")), 2);
+  });
+
+  await test("ingredient categories reuse erp_categories; delete only with zero stock; 14-day trash", async () => {
+    const meat = await value<string>("select public.erp_save_ref('category', $1::jsonb, $2)", [
+      JSON.stringify({ name: "LOC MEAT" }),
+      ACTOR,
+    ]);
+    const drinks = await value<string>("select public.erp_save_ref('category', $1::jsonb, $2)", [
+      JSON.stringify({ name: "LOC SOFT DRINKS" }),
+      ACTOR,
+    ]);
+    const steak = await saveProduct({ type: "ingredient", name_en: "LOC steak", base_unit: "kg", category_id: meat });
+    const cola = await saveProduct({ type: "ingredient", name_en: "LOC cola", base_unit: "l", category_id: drinks });
+    await post(
+      await saveDoc({
+        doc_type: "opening",
+        warehouse_id: warehouse,
+        lines: [{ product_id: steak, qty: 1, unit_price: 48000 }],
+      }),
+    );
+    await expectError(q("select public.erp_delete_category($1, $2)", [meat, ACTOR]), "ERP_CATEGORY_HAS_STOCK");
+    assert.equal(await value("select deleted_at from public.erp_categories where id = $1", [meat]), null);
+    assert.equal(await stock(steak, warehouse), 1);
+
+    await post(await saveDoc({ doc_type: "writeoff", warehouse_id: warehouse, lines: [{ product_id: steak, qty: 1 }] }));
+    assert.equal(await stock(steak, warehouse), 0);
+    await value("select public.erp_delete_category($1, $2)", [meat, ACTOR]);
+    assert.ok(await value("select deleted_at from public.erp_categories where id = $1", [meat]));
+    assert.equal(await value("select category_id from public.erp_products where id = $1", [steak]), meat, "trash keeps the link for restore");
+
+    await value("select public.erp_restore_category($1, $2)", [meat, ACTOR]);
+    assert.equal(await value("select deleted_at from public.erp_categories where id = $1", [meat]), null);
+
+    await value("select public.erp_delete_category($1, $2)", [drinks, ACTOR]);
+    await q("update public.erp_categories set deleted_at = clock_timestamp() - interval '15 days' where id = $1", [drinks]);
+    await expectError(q("select public.erp_restore_category($1, $2)", [drinks, ACTOR]), "ERP_TRASH_EXPIRED");
+    assert.equal(n(await value("select public.erp_purge_deleted_categories($1)", [ACTOR])), 1);
+    assert.equal(n(await value("select count(*) from public.erp_categories where id = $1", [drinks])), 0);
+    assert.equal(await value("select category_id from public.erp_products where id = $1", [cola]), null);
+
+    const unknown = await saveProduct({ type: "ingredient", name_en: "LOC mystery meat", base_unit: "kg", category_id: meat });
+    await post(await saveDoc({ doc_type: "opening", warehouse_id: warehouse, lines: [{ product_id: unknown, qty: 2 }] }));
+    const stockRows = await q<ErpStockRow>("select product_id, warehouse_id, qty, known_value, cost_known, nearest_expiry from public.erp_stock where product_id = $1", [unknown]);
+    assert.equal(stockValue(stockOf(stockByProduct(stockRows, null), unknown)), null, "unknown remaining value is null, not 0");
+  });
+
+  await test("supplier categories come from product.category_id; VAT follows settings", async () => {
+    const cat = await value<string>("select public.erp_save_ref('category', $1::jsonb, $2)", [JSON.stringify({ name: "LOC PANTRY" }), ACTOR]);
+    const supplier = await value<string>("select public.erp_save_ref('supplier', $1::jsonb, $2)", [JSON.stringify({ name: "LOC Farm" }), ACTOR]);
+    const rice = await saveProduct({
+      type: "ingredient",
+      name_en: "LOC rice",
+      base_unit: "kg",
+      category_id: cat,
+      staff: { listed: false, supplier_id: supplier, unit: "kg" },
+    });
+    await saveProduct({
+      id: rice,
+      type: "ingredient",
+      name_en: "LOC rice",
+      base_unit: "kg",
+      category_id: cat,
+      staff: { listed: false, supplier_id: supplier, unit: "kg" },
+    });
+    const ids = supplierCategoryIds(
+      supplier,
+      [{ id: rice, category_id: cat, staff_supplier_id: supplier, archived_at: null }],
+      [],
+    );
+    assert.deepEqual(ids, [cat]);
+
+    assert.equal(withInputVat(null, { input_vat_enabled: true, default_input_vat_rate: 10 }), null);
+    assert.equal(withInputVat(1000, { input_vat_enabled: false, default_input_vat_rate: 10 }), 1000);
+    assert.equal(withInputVat(1000, { input_vat_enabled: true, default_input_vat_rate: 10 }), 1100);
+
+    const stats = ingredientCategoryStats(
+      [
+        { id: cat, code: "loc-pantry", name_en: "LOC PANTRY", name_vn: "", sort: 0, archived_at: null },
+        { id: "pos", code: "burgers", name_en: "BURGERS", name_vn: "", sort: 1, archived_at: null },
+      ],
+      [
+        { id: rice, code: "rice", type: "ingredient", name_en: "LOC rice", name_vn: "", category_id: cat, base_unit: "kg", archived_at: null } as never,
+      ],
+      [{ id: "dish", code: "burger", name_en: "Burger", name_vn: "", category_id: "pos", archived_at: null, sale_price: null, vat_rate: null, note: null, lines: [], channel_prices: [] }],
+      [],
+    );
+    assert.ok(stats.some((row) => row.id === cat));
+    assert.ok(!stats.some((row) => row.id === "pos"), "POS-only categories stay off the ingredient list");
   });
 
   console.log(`\n${passed} checks passed`);

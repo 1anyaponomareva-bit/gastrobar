@@ -148,11 +148,14 @@ export function CatalogTable<Row extends { id: string }>({
   trashHref,
   hideTrash,
   hideMore,
+  hideCheck,
   emptyMessage,
   backHref,
   backLabel,
   banner,
   note,
+  footer,
+  rowEnd,
   defaultSort = "name",
   defaultDesc = false,
   sheetName,
@@ -178,6 +181,7 @@ export function CatalogTable<Row extends { id: string }>({
   trashHref?: string;
   hideTrash?: boolean;
   hideMore?: boolean;
+  hideCheck?: boolean;
   emptyMessage?: string;
   backHref?: string;
   backLabel?: string;
@@ -188,6 +192,8 @@ export function CatalogTable<Row extends { id: string }>({
   emptyText?: ReactNode;
   emptyAction?: ReactNode;
   note?: ReactNode;
+  footer?: (shown: CatalogColumn<Row>[]) => ReactNode;
+  rowEnd?: (row: Row) => ReactNode;
   defaultSort?: string;
   defaultDesc?: boolean;
   sheetName: string;
@@ -408,9 +414,11 @@ export function CatalogTable<Row extends { id: string }>({
           <table className="erpTable erpMenuTable">
             <thead>
               <tr>
-                <th className="erpMenuCheck erpNoPrint">
-                  <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label={T("Выбрать все", "Select all", "Chọn tất cả")} />
-                </th>
+                {hideCheck ? null : (
+                  <th className="erpMenuCheck erpNoPrint">
+                    <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label={T("Выбрать все", "Select all", "Chọn tất cả")} />
+                  </th>
+                )}
                 {shown.map((c) => (
                   <th key={c.id} className={c.num ? "num" : ""} aria-sort={filters.sort === c.id ? (filters.desc ? "descending" : "ascending") : undefined}>
                     {c.sort !== false ? (
@@ -429,7 +437,7 @@ export function CatalogTable<Row extends { id: string }>({
             <tbody>
               {!pageRows.length ? (
                 <tr>
-                  <td colSpan={shown.length + 2} className="erpMenuEmpty">
+                  <td colSpan={shown.length + (hideCheck ? 1 : 2)} className="erpMenuEmpty">
                     {emptyMessage ??
                       T("Нет данных, соответствующих выбранным фильтрам", "No data matches the selected filters", "Không có dữ liệu khớp bộ lọc")}
                   </td>
@@ -447,34 +455,40 @@ export function CatalogTable<Row extends { id: string }>({
                         router.push(href);
                       }}
                     >
-                      <td className="erpMenuCheck erpNoPrint">
-                        <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleOne(row.id)} aria-label={T("Выбрать", "Select", "Chọn")} />
-                      </td>
+                      {hideCheck ? null : (
+                        <td className="erpMenuCheck erpNoPrint">
+                          <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleOne(row.id)} aria-label={T("Выбрать", "Select", "Chọn")} />
+                        </td>
+                      )}
                       {shown.map((c) => (
                         <td key={c.id} className={c.num ? "num" : ""}>
                           {c.cell(row)}
                         </td>
                       ))}
                       <td className="erpMenuRowActions erpNoPrint">
-                        {rowMenu ? (
-                          <DropMenu
-                            align="right"
-                            fixed
-                            trigger={({ open, toggle }) => (
-                              <button type="button" className="erpRcDots" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
-                                ⋯
-                              </button>
-                            )}
-                          >
-                            {(close) => <div className="erpDropList">{rowMenu(row, close)}</div>}
-                          </DropMenu>
-                        ) : null}
+                        <div className="erpMenuLinks">
+                          {rowEnd?.(row)}
+                          {rowMenu ? (
+                            <DropMenu
+                              align="right"
+                              fixed
+                              trigger={({ open, toggle }) => (
+                                <button type="button" className="erpRcDots" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
+                                  ⋯
+                                </button>
+                              )}
+                            >
+                              {(close) => <div className="erpDropList">{rowMenu(row, close)}</div>}
+                            </DropMenu>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );
                 })
               )}
             </tbody>
+            {footer && sorted.length ? <tfoot>{footer(shown)}</tfoot> : null}
           </table>
         </div>
         {pages > 1 ? (

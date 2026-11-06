@@ -12,8 +12,24 @@ export type ErpSettings = {
 
 type Archivable = { archived_at: string | null };
 
-export type ErpCategory = Archivable & { id: string; code: string; name_en: string; name_vn: string; sort: number };
+export type ErpCategory = Archivable & {
+  id: string;
+  code: string;
+  name_en: string;
+  name_vn: string;
+  sort: number;
+  deleted_at?: string | null;
+};
 export type ErpSupplier = Archivable & { id: string; code: string; name: string; zalo_url: string | null; sort: number };
+export type ErpLocation = {
+  id: string;
+  name: string;
+  code: string;
+  address: string | null;
+  is_active: boolean;
+  default_warehouse_id: string | null;
+  created_at: string;
+};
 export type ErpWarehouseKind = "warehouse" | "prep_kitchen" | "online_kitchen" | "food_truck" | "other";
 export type ErpWarehouse = Archivable & { id: string; code: string; name: string; kind: ErpWarehouseKind; sort: number };
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
@@ -181,6 +197,7 @@ export type ErpState = {
   categories: ErpCategory[];
   suppliers: ErpSupplier[];
   warehouses: ErpWarehouse[];
+  locations?: ErpLocation[];
   channels: ErpChannel[];
   products: ErpProduct[];
   packs: ErpPack[];
@@ -334,6 +351,11 @@ export type ErpAction =
   | { action: "savePack"; pack: Record<string, unknown> }
   | { action: "setArchived"; entity: string; id: string; archived: boolean }
   | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }
+  | { action: "saveLocation"; value: Record<string, unknown> }
+  | { action: "deleteLocation"; id: string }
+  | { action: "deleteCategory"; id: string }
+  | { action: "restoreCategory"; id: string }
+  | { action: "purgeCategoryTrash" }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
   | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
   | { action: "saveDocument"; document: Record<string, unknown> }

@@ -142,7 +142,7 @@ export function ProductsPage() {
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">{T("Все категории", "All categories", "Tất cả nhóm")}</option>
               {state.categories
-                .filter((c) => !c.archived_at)
+                .filter((c) => !c.archived_at && !c.deleted_at)
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {categoryName(c)}
@@ -415,7 +415,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
         <select value={form.category_id} onChange={(e) => set("category_id", e.target.value)}>
           <option value="">{T("— без категории —", "— none —", "— không —")}</option>
           {state.categories
-            .filter((c) => !c.archived_at || c.id === form.category_id)
+            .filter((c) => (!c.archived_at && !c.deleted_at) || c.id === form.category_id)
             .map((c) => (
               <option key={c.id} value={c.id}>
                 {categoryName(c)}

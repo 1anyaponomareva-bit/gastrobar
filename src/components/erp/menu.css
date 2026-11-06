@@ -88,6 +88,7 @@
   padding-right: 8px;
 }
 
+.erpSortBtn,
 .erpMenuTable th .erpSortBtn {
   font: inherit;
   font-weight: 600;
@@ -99,6 +100,51 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.erpLink.erpDanger {
+  color: var(--erp-bad);
+}
+
+.erpMenuLinks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.erpMenuTable .erpMenuRowActions {
+  width: auto;
+  min-width: 120px;
+  padding-right: 10px;
+}
+
+.erpMenuTable tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--erp-line);
+}
+
+.erpMenuFormBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.erpMenuSave {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px -4px 0;
+  padding: 10px 12px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
 }
 
 .erpMenuTable tbody tr:hover > td {
@@ -170,6 +216,14 @@
 }
 
 @media screen and (max-width: 900px) {
+  .erpMenuSave {
+    bottom: 58px;
+  }
+
+  .erpMenuLinks {
+    gap: 8px;
+  }
+
   .erpMenu .erpHeadActions,
   .erpMenu .erpHeadGroup {
     width: 100%;
@@ -186,6 +240,11 @@
 }
 
 @media screen and (max-width: 430px) {
+  .erpMenuLinks {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .erpMenuTable {
     min-width: 560px;
     font-size: 12px;

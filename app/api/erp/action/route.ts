@@ -21,6 +21,7 @@ const ENTITY_PART: Record<string, StatePart> = {
   category: "categories",
   supplier: "suppliers",
   warehouse: "warehouses",
+  location: "locations",
   channel: "channels",
   dish: "dishes",
   pack: "packs",
@@ -85,6 +86,26 @@ export async function POST(request: Request) {
           if (CATALOG_ENTITIES.has(a.entity)) mirrorStaffLater();
           return timing.json({ id, patch: await fresh([ENTITY_PART[a.entity]]) });
         }
+      case "saveLocation": {
+        const id = await rpc("erp_save_location", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["locations"]) });
+      }
+      case "deleteLocation":
+        await rpc("erp_delete_location", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(["locations"]) });
+      case "deleteCategory":
+        await rpc("erp_purge_deleted_categories", { p_actor: actor });
+        await rpc("erp_delete_category", { p_id: uuid(a.id), p_actor: actor });
+        if (CATALOG_ENTITIES.has("category")) mirrorStaffLater();
+        return timing.json({ ok: true, patch: await fresh(["categories"]) });
+      case "restoreCategory":
+        await rpc("erp_purge_deleted_categories", { p_actor: actor });
+        await rpc("erp_restore_category", { p_id: uuid(a.id), p_actor: actor });
+        if (CATALOG_ENTITIES.has("category")) mirrorStaffLater();
+        return timing.json({ ok: true, patch: await fresh(["categories"]) });
+      case "purgeCategoryTrash":
+        await rpc("erp_purge_deleted_categories", { p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(["categories", "products"]) });
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
         return timing.json({ ok: true, patch: await fresh(["settings"]) });

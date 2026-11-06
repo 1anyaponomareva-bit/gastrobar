@@ -13,14 +13,14 @@ import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
  * Ингредиенты           → erp_products.type = ingredient (packaging/consumable via type filter)
  * Контроль фудкоста     → dishCost / menuCostContext (`src/lib/erp/menu.ts`)
  * Категории (оба дерева)→ erp_categories (one table — do not invent a second)
- * Цехи                  → no table; not warehouses
- * Заведения             → not 1:1 with workshops; no API yet
+ * Точки продаж          → erp_locations (Online Kitchen, Food Truck). Not workshops.
+ * Цехи / Prep Kitchen   → future Production module; not this Menu tab
  */
 export const MENU_CONTRACT = {
   dishCategoryField: "category_id" as const,
   productCategoryField: "category_id" as const,
   workshopField: null,
-  venueField: null,
+  locationField: "location_id" as const,
   sharedCategories: true,
 };
 
@@ -44,6 +44,10 @@ export function dishTitle(dish: Pick<ErpDish, "name_en" | "name_vn">) {
 export function categoryLabel(category: ErpCategory | undefined) {
   if (!category) return "—";
   return category.name_vn && category.name_vn !== category.name_en ? `${category.name_en} / ${category.name_vn}` : category.name_en;
+}
+
+export function visibleCategories(categories: ErpCategory[]) {
+  return categories.filter((category) => !category.archived_at && !category.deleted_at);
 }
 
 export function defaultDishCategoryId(categories: ErpCategory[]): string {

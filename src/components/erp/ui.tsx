@@ -100,6 +100,21 @@ export function errorText(code: string, detail?: string): string {
       "There is stock left — move or write it off first",
       "Vẫn còn tồn kho",
     ),
+    ERP_CATEGORY_HAS_STOCK: T(
+      "Нельзя удалить категорию: на складах ещё есть остаток. Сначала спишите или переместите его.",
+      "Cannot delete this category: stock remains on warehouses. Write it off or move it first.",
+      "Không thể xóa nhóm: vẫn còn tồn kho. Hãy xuất hoặc chuyển trước.",
+    ),
+    ERP_LOCATION_IN_USE: T(
+      "Нельзя удалить точку продаж: к ней привязан ассортимент или документы.",
+      "Cannot delete this sales location: assortment or documents are still tied to it.",
+      "Không thể xóa điểm bán: còn gắn hàng hoặc chứng từ.",
+    ),
+    ERP_TRASH_EXPIRED: T(
+      "Срок хранения в «Удалённые» истёк (14 дней).",
+      "The 14-day trash period has expired.",
+      "Hết hạn 14 ngày trong thùng rác.",
+    ),
     ERP_UNIT_LOCKED: T(
       "Единицу учёта нельзя изменить после первого использования",
       "The unit cannot change once the product is used",

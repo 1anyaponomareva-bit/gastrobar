@@ -6,7 +6,7 @@ import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
-import { categoryLabel, costContextOf } from "./menuFields";
+import { categoryLabel, costContextOf, visibleCategories } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, T, typeLabel, unitLabel, vnd } from "./ui";
 
@@ -102,7 +102,7 @@ export function MenuGoodsPage() {
   ];
 
   const categoryOptions = [
-    ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: categoryLabel(c) })),
+    ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
     { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
   ];
   const editHref = (row: Row) => `/erp/products/${row.id}`;

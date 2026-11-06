@@ -6,7 +6,7 @@ import type { ErpDish } from "@/lib/erp/types";
 import { CatalogTable, StubFilter, VenueStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, dishEconomics, dishTitle } from "./menuFields";
+import { categoryLabel, costContextOf, dishEconomics, dishTitle, visibleCategories } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, pct, T, vnd } from "./ui";
 
@@ -115,7 +115,7 @@ export function MenuFoodcostPage() {
           <MultiSelect
             label={T("Категория", "Category", "Nhóm")}
             options={[
-              ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: categoryLabel(c) })),
+              ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
               { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
             ]}
             value={categories}

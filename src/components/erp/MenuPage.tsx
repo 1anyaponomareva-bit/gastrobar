@@ -389,7 +389,7 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
             <select value={form.category_id} onChange={(e) => set("category_id", e.target.value)}>
               <option value="">{T("— без категории —", "— none —", "— không —")}</option>
               {state.categories
-                .filter((c) => !c.archived_at || c.id === form.category_id)
+                .filter((c) => (!c.archived_at && !c.deleted_at) || c.id === form.category_id)
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name_en}

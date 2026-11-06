@@ -13,7 +13,8 @@ export const MENU_HREFS = {
   foodcost: "/erp/menu/foodcost",
   productCategories: "/erp/menu/categories",
   ingredientCategories: "/erp/menu/ingredient-categories",
-  workshops: "/erp/menu/workshops",
+  ingredientCategoriesTrash: "/erp/menu/ingredient-categories/trash",
+  locations: "/erp/menu/locations",
 } as const;
 
 export function menuNavItems() {
@@ -25,7 +26,7 @@ export function menuNavItems() {
     { href: MENU_HREFS.foodcost, label: T("Контроль фудкоста", "Food cost", "Kiểm soát food cost") },
     { href: MENU_HREFS.productCategories, label: T("Категории товаров и тех. карт", "Product & recipe categories", "Nhóm món và công thức") },
     { href: MENU_HREFS.ingredientCategories, label: T("Категории ингредиентов", "Ingredient categories", "Nhóm nguyên liệu") },
-    { href: MENU_HREFS.workshops, label: T("Цехи", "Workshops", "Phân xưởng") },
+    { href: MENU_HREFS.locations, label: T("Точки продаж", "Sales locations", "Điểm bán") },
   ];
 }
 
@@ -35,6 +36,7 @@ export function activeMenuHref(pathname: string | null): string | null {
   if (listed) return listed.href;
   if (path === MENU_HREFS.trash || path.startsWith(`${MENU_HREFS.trash}/`)) return MENU_HREFS.goods;
   if (path === "/erp/menu" || path === "/erp/menu/" || path.startsWith("/erp/menu/new") || /^\/erp\/menu\/[^/]+$/.test(path)) return MENU_HREFS.goods;
+  if (path.startsWith("/erp/menu/workshops")) return MENU_HREFS.locations;
   if (path.startsWith("/erp/products/categories")) return MENU_HREFS.ingredientCategories;
   if (path.startsWith("/erp/products")) return MENU_HREFS.ingredients;
   if (path.startsWith("/erp/preps")) return MENU_HREFS.preps;

@@ -1,10 +1,10 @@
-import type { ErpDish, ErpDocument, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
+import type { ErpDish, ErpDocument, ErpLocation, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
 import { check, erpDb } from "./server";
 
 /** Parts of the ERP screen data that can be loaded on their own. */
 export type StatePart = keyof ErpState;
 
-export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons", "costSources"];
+export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "locations", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons", "costSources"];
 
 /** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
 export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
@@ -59,6 +59,18 @@ async function loadPart(part: StatePart): Promise<unknown> {
       return check(await db.from("erp_suppliers").select("*").order("sort"));
     case "warehouses":
       return check(await db.from("erp_warehouses").select("*").order("sort"));
+    case "locations": {
+      const result = await db.from("erp_locations").select("*").order("name");
+      if (result.error) {
+        const code = result.error.code ?? "";
+        const message = result.error.message ?? "";
+        if (["PGRST205", "PGRST202", "42P01", "42883"].includes(code) || /does not exist|could not find/i.test(message)) {
+          return [] as ErpLocation[];
+        }
+        check(result);
+      }
+      return (result.data ?? []) as ErpLocation[];
+    }
     case "channels":
       return check(await db.from("erp_sales_channels").select("*").order("sort"));
     case "products":
@@ -141,6 +153,9 @@ export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial
   if (batched) {
     if (parts.includes("costSources") && batched.costSources === undefined) {
       batched.costSources = (await loadPart("costSources")) as ErpProductCostQuote[];
+    }
+    if (parts.includes("locations") && batched.locations === undefined) {
+      batched.locations = (await loadPart("locations")) as ErpLocation[];
     }
     return batched;
   }

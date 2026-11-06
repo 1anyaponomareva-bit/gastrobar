@@ -16,9 +16,9 @@
 | Категория | `erp_categories` | Общая для товаров **и** блюд (`category_id`) | Второй список категорий меню |
 | Фасовка | `erp_packs` + `erp_product_packs` | Общий каталог фасовок, связи товар↔фасовка↔поставщик | Новые pack id при «меню» |
 | Поставщик | `erp_suppliers` | Как в поставках | Дубль поставщиков |
-| Заведение Poster | **не 1:1 с цехом** | Фильтр: GASTROBAR, FOODTRUCK, PREP KITCHEN, ONLINE KITCHEN (радио, одно заведение) | Не склеивать с цехами |
-| Склад / точка ERP | `erp_warehouses` | `food_truck`, `prep_kitchen`, `online_kitchen`; `warehouse` ≠ «GASTROBAR» как имя | Не переименовывать склады под Poster |
-| Цех | **нет таблицы** | Poster: «Без цеха», GASTROBAR, GASTROFOOD, GASTROTRUCK WORKSHOP — станции кухни/печати, не остатки | Не мапить цех на `erp_warehouses`. Таблица после `tsekhi.md` |
+| Заведение / точка продаж | `erp_locations` | Универсальная сущность. Сиды: Online Kitchen, Food Truck. Gastrobar исключён. Prep Kitchen — не sales location | Не плодить отдельные Online/Food Truck модули; не мапить на склад |
+| Склад | `erp_warehouses` | Документы пишут `warehouse_id`. `erp_locations.default_warehouse_id` — склад списания по умолчанию (nullable). Следующее решение: Location → Warehouse → списание (общий остаток vs свой) | Не сливать остатки двух точек автоматически |
+| Цех / Prep Kitchen | **не вкладка Меню** | Производственный цех на будущее (`erp_workshops` не создаём здесь) | Не показывать Poster «Цехи» в Меню |
 | Партия заготовки | `erp_documents` `doc_type='production'` + `erp_lots` | Выход на `target_warehouse_id` | Пересчёт партий при правке карточки |
 | Канал продаж | `erp_sales_channels` + `erp_dish_channel_prices` | Комиссия канала, цена канала | Новый прайс-модуль |
 | НДС | `erp_settings` + ставка на блюде/строке поставки | `input_vat_*`, `output_vat_*`, `erp_dishes.vat_rate` | Отдельный налоговый модуль |
@@ -85,7 +85,7 @@ Poster считает себестоимость ингредиента **сре
 
 База без изменений:
 
-- `GET /api/erp/state` — каталог. Новая часть: `costSources` (в полном стейте). Можно `?parts=dishes,products,recipes,categories,channels,settings,costSources`.
+- `GET /api/erp/state` — каталог. Новые части: `costSources`, `locations`. Можно `?parts=dishes,products,recipes,categories,channels,settings,costSources,locations`.
 - `POST /api/erp/action` — те же действия:
 
 | action | тело | patch |
@@ -96,6 +96,11 @@ Poster считает себестоимость ингредиента **сре
 | `saveProduct` | существующая карточка товара (тип, единица, потери, `est_unit_cost`, фасовки) | `products`, `packs`, `productPacks` |
 | `saveRef` | `entity: "category"` | `categories` |
 | `setArchived` | `entity: "dish" \| "product" \| "category"` | соответствующая часть |
+| `saveLocation` | `{ value: { id?, name, code?, address?, is_active?, default_warehouse_id? } }` | `locations` |
+| `deleteLocation` | `{ id }` — только если нет `erp_location_products` | `locations` |
+| `deleteCategory` | `{ id }` — только если остаток категории на всех складах = 0; в «Удалённые» на 14 дней | `categories` |
+| `restoreCategory` | `{ id }` — пока не истекли 14 дней | `categories` |
+| `purgeCategoryTrash` | истекшие «Удалённые» (14 дней) | `categories`, `products` |
 
 `qty` в строках — в **базовой единице продукта** (`kg` / `l` / `pcs`). UI не угадывает коэффициент из названия фасовки.
 
@@ -124,7 +129,7 @@ const { summary, channels, main } = dishCost(ctx, dish, state.settings, state.ch
 - `products[]` — ингредиенты, заготовки, готовые, упаковка. Поля потерь `loss_clean_pct` …
 - `recipes[]` + `lines[]` (включая неразрешённые импорты: `product_id` null, `raw_name`)
 - `dishes[]` + `lines[]` + `channel_prices[]`
-- `categories[]`, `warehouses[]`, `channels[]`, `settings`
+- `categories[]` (`deleted_at` = корзина категорий ингредиентов, не архив товаров), `warehouses[]`, `locations[]` (Online Kitchen, Food Truck), `channels[]`, `settings`
 - `packs[]`, `productPacks[]`, `suppliers[]` — для карточки товара, не для второго меню
 - `stock[]` — остатки; для техкарты не подмешивать к раскрытому рецепту
 

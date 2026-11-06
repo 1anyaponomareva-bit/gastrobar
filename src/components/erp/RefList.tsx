@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useErp } from "./ErpShell";
 import { Empty, NumberInput, T, useDirtyGuard } from "./ui";
 
-type RefRow = { id: string; archived_at: string | null };
+type RefRow = { id: string; archived_at: string | null; deleted_at?: string | null };
 
 export type RefColumn<Row> = {
   key: keyof Row & string;
@@ -12,6 +12,7 @@ export type RefColumn<Row> = {
   kind?: "number" | "select";
   options?: [string, string][];
   placeholder?: string;
+  readOnly?: boolean;
 };
 
 /** Inline-editable list for categories, suppliers, warehouses and sales channels. */
@@ -22,6 +23,7 @@ export function RefList<Row extends RefRow>({
   emptyTitle,
   emptyText,
   addLabel,
+  onHeaderClick,
 }: {
   entity: "category" | "supplier" | "warehouse" | "channel";
   rows: Row[];
@@ -29,6 +31,7 @@ export function RefList<Row extends RefRow>({
   emptyTitle: string;
   emptyText: ReactNode;
   addLabel: string;
+  onHeaderClick?: (key: string) => void;
 }) {
   const { act, busy } = useErp();
   const [drafts, setDrafts] = useState<Record<string, Record<string, unknown>>>({});
@@ -56,6 +59,7 @@ export function RefList<Row extends RefRow>({
     });
   const toPayload = (values: Record<string, unknown>) => {
     const payload: Record<string, unknown> = { ...values };
+    for (const column of columns) if (column.readOnly) delete payload[column.key];
     if ("name_en" in payload) payload.name = payload.name_en;
     return payload;
   };
@@ -76,8 +80,8 @@ export function RefList<Row extends RefRow>({
       <input value={String(value)} placeholder={column.placeholder} onChange={(event) => onChange(event.target.value)} />
     );
 
-  const archivedCount = rows.filter((row) => row.archived_at).length;
-  const visible = rows.filter((row) => showArchived || !row.archived_at);
+  const archivedCount = rows.filter((row) => row.archived_at && !row.deleted_at).length;
+  const visible = rows.filter((row) => !row.deleted_at && (showArchived || !row.archived_at));
 
   return (
     <>
@@ -97,7 +101,15 @@ export function RefList<Row extends RefRow>({
             <thead>
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key}>{column.label}</th>
+                  <th key={column.key}>
+                    {onHeaderClick ? (
+                      <button type="button" className="erpSortBtn" onClick={() => onHeaderClick(column.key)}>
+                        {column.label}
+                      </button>
+                    ) : (
+                      column.label
+                    )}
+                  </th>
                 ))}
                 <th />
               </tr>
@@ -106,8 +118,12 @@ export function RefList<Row extends RefRow>({
               {visible.map((row) => (
                 <tr key={row.id} className={row.archived_at ? "muted" : ""}>
                   {columns.map((column, index) => (
-                    <td key={column.key} className={index === 0 ? "main" : "edit"} data-label={index === 0 ? undefined : column.label}>
-                      {input(valueOf(row, column.key), (v) => edit(row.id, column.key, v), column)}
+                    <td key={column.key} className={index === 0 ? "main" : column.readOnly ? "" : "edit"} data-label={index === 0 ? undefined : column.label}>
+                      {column.readOnly ? (
+                        String(valueOf(row, column.key) || "—")
+                      ) : (
+                        input(valueOf(row, column.key), (v) => edit(row.id, column.key, v), column)
+                      )}
                     </td>
                   ))}
                   <td className="num">
@@ -150,8 +166,12 @@ export function RefList<Row extends RefRow>({
               {adding ? (
                 <tr>
                   {columns.map((column, index) => (
-                    <td key={column.key} className={index === 0 ? "main" : "edit"} data-label={index === 0 ? undefined : column.label}>
-                      {input((adding[column.key] as string | number) ?? "", (v) => setAdding((prev) => ({ ...prev, [column.key]: v })), column)}
+                    <td key={column.key} className={index === 0 ? "main" : column.readOnly ? "" : "edit"} data-label={index === 0 ? undefined : column.label}>
+                      {column.readOnly ? (
+                        "—"
+                      ) : (
+                        input((adding[column.key] as string | number) ?? "", (v) => setAdding((prev) => ({ ...prev, [column.key]: v })), column)
+                      )}
                     </td>
                   ))}
                   <td className="num">

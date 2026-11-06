@@ -9,7 +9,7 @@
 
 Не мапить `erp_warehouses` в цехи.
 
-ERP: `/erp/menu/workshops` = пустой stub, Добавить → «Не реализовано». Честно; не публиковать как рабочий справочник.
+ERP: вкладка Меню больше не «Цехи». `/erp/menu/workshops` редирект на `/erp/menu/locations` (Точки продаж: Online Kitchen, Food Truck). Prep Kitchen остаётся производственным цехом на будущее; `erp_workshops` в этой ветке не создаём.
 
 ## Чек-лист ↔ спека
 

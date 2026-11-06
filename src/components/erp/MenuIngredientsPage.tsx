@@ -6,7 +6,7 @@ import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, INGREDIENT_TYPES } from "./menuFields";
+import { categoryLabel, costContextOf, INGREDIENT_TYPES, visibleCategories } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { costSourceLabel, NavLink, PRODUCT_TYPES, T, typeLabel, unitLabel, vnd } from "./ui";
 
@@ -104,7 +104,7 @@ export function MenuIngredientsPage() {
           <MultiSelect
             label={T("Категория", "Category", "Nhóm")}
             options={[
-              ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: categoryLabel(c) })),
+              ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
               { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
             ]}
             value={categories}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ErpDocType, ErpDocument, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
+import { useEffect, useMemo, useState } from "react";
+import { supplierCategoryIds } from "@/lib/erp/supplierCategories";
+import type { ErpCategory, ErpDocType, ErpDocument, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
 import { describeText, DocTable, documentListCells, documentListColumns, downloadDocumentExport, fetchAllDocuments, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
@@ -234,23 +235,94 @@ function StockDocsList({ kind }: { kind: string }) {
 
 export function SuppliersPage() {
   const { state } = useErp();
+  const [categoryId, setCategoryId] = useState("");
+  const [nameDesc, setNameDesc] = useState(false);
+  const bySupplier = useMemo(() => {
+    if (!state) return new Map<string, string[]>();
+    const map = new Map<string, string[]>();
+    for (const supplier of state.suppliers) {
+      const ids = supplierCategoryIds(supplier.id, state.products, state.productPacks);
+      map.set(
+        supplier.id,
+        ids
+          .map((id) => state.categories.find((c) => c.id === id))
+          .filter((c): c is ErpCategory => c != null && !c.archived_at && !c.deleted_at)
+          .map((c) => c.name_en)
+          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+      );
+    }
+    return map;
+  }, [state]);
+  const categoryOptions = useMemo(() => {
+    if (!state) return [];
+    const used = new Set<string>();
+    for (const supplier of state.suppliers) {
+      for (const id of supplierCategoryIds(supplier.id, state.products, state.productPacks)) used.add(id);
+    }
+    return state.categories
+      .filter((c) => used.has(c.id) && !c.archived_at && !c.deleted_at)
+      .slice()
+      .sort((a, b) => a.name_en.localeCompare(b.name_en, undefined, { sensitivity: "base" }));
+  }, [state]);
   if (!state) return null;
+
+  const rows = state.suppliers
+    .filter((supplier) => {
+      if (!categoryId) return true;
+      return supplierCategoryIds(supplier.id, state.products, state.productPacks).includes(categoryId);
+    })
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * (nameDesc ? -1 : 1));
+
   return (
     <>
       <PageHead title={T("Поставщики", "Suppliers", "Nhà cung cấp")} sub={T("У кого вы закупаете продукты.", "Who you buy products from.", "Nơi bạn mua hàng.")} />
       <StockMobileNav active="/erp/stock/suppliers" />
-      <RefList<ErpSupplier>
-        entity="supplier"
-        rows={state.suppliers}
-        columns={[
-          { key: "name", label: T("Название", "Name", "Tên") },
-          { key: "zalo_url", label: T("Ссылка Zalo", "Zalo link", "Liên kết Zalo"), placeholder: "https://zalo.me/…" },
-        ]}
-        addLabel={T("Добавить поставщика", "Add supplier", "Thêm nhà cung cấp")}
-        emptyTitle={T("Поставщиков пока нет", "No suppliers yet", "Chưa có nhà cung cấp")}
-        emptyText={T("Добавьте поставщиков, чтобы указывать их в поставках.", "Add suppliers to use them in deliveries.", "Thêm nhà cung cấp để dùng khi nhập hàng.")}
-      />
+      <div className="erpFilters">
+        <label className="erpField">
+          <span>{T("Категория", "Category", "Nhóm")}</span>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">{T("Все категории", "All categories", "Tất cả nhóm")}</option>
+            {categoryOptions.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name_en}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <SupplierTable rows={rows} categories={bySupplier} nameDesc={nameDesc} onToggleName={() => setNameDesc((v) => !v)} />
     </>
+  );
+}
+
+function SupplierTable({
+  rows,
+  categories,
+  nameDesc,
+  onToggleName,
+}: {
+  rows: ErpSupplier[];
+  categories: Map<string, string[]>;
+  nameDesc: boolean;
+  onToggleName: () => void;
+}) {
+  return (
+    <RefList<ErpSupplier & { category_names: string }>
+      entity="supplier"
+      rows={rows.map((row) => ({ ...row, category_names: (categories.get(row.id) ?? []).join(", ") }))}
+      columns={[
+        { key: "name", label: `${T("Название", "Name", "Tên")} ${nameDesc ? "↓" : "↑"}` },
+        { key: "category_names", label: T("Категория", "Category", "Nhóm"), readOnly: true },
+        { key: "zalo_url", label: T("Ссылка Zalo", "Zalo link", "Liên kết Zalo"), placeholder: "https://zalo.me/…" },
+      ]}
+      addLabel={T("Добавить поставщика", "Add supplier", "Thêm nhà cung cấp")}
+      emptyTitle={T("Поставщиков пока нет", "No suppliers yet", "Chưa có nhà cung cấp")}
+      emptyText={T("Добавьте поставщиков, чтобы указывать их в поставках.", "Add suppliers to use them in deliveries.", "Thêm nhà cung cấp để dùng khi nhập hàng.")}
+      onHeaderClick={(key) => {
+        if (key === "name") onToggleName();
+      }}
+    />
   );
 }
 

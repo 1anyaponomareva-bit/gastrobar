@@ -1,5 +1,5 @@
-import { MenuWorkshopsPage } from "@/components/erp/MenuWorkshopsPage";
+import { redirect } from "next/navigation";
 
-export default function ErpMenuWorkshopsPage() {
-  return <MenuWorkshopsPage />;
+export default function ErpMenuWorkshopsRedirect() {
+  redirect("/erp/menu/locations");
 }

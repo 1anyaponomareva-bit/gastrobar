@@ -50,8 +50,8 @@
 | Ингредиенты | те же `erp_products` (ingredient + фильтр типов) | `/erp/menu/ingredients` |
 | Контроль фудкоста | список блюд + формулы Poster/ERP | `/erp/menu/foodcost` |
 | Категории товаров и тех. карт | один `erp_categories` | `/erp/menu/categories` |
-| Категории ингредиентов | тот же справочник | `/erp/menu/ingredient-categories` |
-| Цехи | нет сущности; stub | `/erp/menu/workshops` |
+| Категории ингредиентов | тот же `erp_categories` (метрики по ингредиентам, удаление в «Удалённые» 14 дней) | `/erp/menu/ingredient-categories` |
+| Точки продаж (не Цехи) | `erp_locations` (Online Kitchen, Food Truck; без Gastrobar и Prep Kitchen) | `/erp/menu/locations` |
 | Полный каталог (не вкладка Poster) | все типы продуктов | `/erp/products` |
 
 Склад: `/erp/stock`. Сохранение блюда не двигает `erp_movements` (тест `dish save is pure calculation data`).
