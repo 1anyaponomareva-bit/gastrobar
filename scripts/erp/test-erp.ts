@@ -47,6 +47,13 @@ import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
 import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
 import { supplierOrderRows } from "../../src/lib/staffOrderRows";
 import { applyMigration, createTestDb } from "./testDb";
+import {
+  decideErpHostGate,
+  isErpHostAllowedPath,
+  parseHostList,
+  readErpHostGateConfig,
+  type ErpHostGateConfig,
+} from "../../src/lib/erp/hostGate";
 
 const ACTOR = "test@gastrofood";
 let db: PGlite;
@@ -108,7 +115,116 @@ async function wh(code: string) {
   return value<string>("select id from public.erp_warehouses where code = $1", [code]);
 }
 
+function gateCfg(over: Partial<ErpHostGateConfig> = {}): ErpHostGateConfig {
+  return { erpHosts: ["erp.example.test"], redirectFromLegacy: false, closeLegacyApi: false, ...over };
+}
+
+function gate(host: string, path: string, method = "GET", cfg?: ErpHostGateConfig) {
+  const url = new URL(path, "https://example.invalid");
+  return decideErpHostGate(
+    { hostHeader: host, pathname: url.pathname, search: url.search, method },
+    cfg ?? gateCfg(),
+  );
+}
+
 async function main() {
+  await test("host gate flags split: empty A and B off leave legacy ERP in place", async () => {
+    const cfg = readErpHostGateConfig({});
+    assert.deepEqual(cfg, { erpHosts: [], redirectFromLegacy: false, closeLegacyApi: false });
+    assert.equal(gate("www.gastrotruck.org", "/erp", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/action", "POST", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/staff", "GET", cfg).action, "allow");
+  });
+
+  await test("host gate does not invent gastrotruck.org as the new ERP host", async () => {
+    assert.deepEqual(parseHostList("https://www.gastrotruck.org, kitchen.gastrotruck.org, erp.example.test"), [
+      "erp.example.test",
+    ]);
+  });
+
+  await test("dual-run: named host serves ERP while old /erp still works", async () => {
+    const cfg = gateCfg({ redirectFromLegacy: false });
+    assert.equal(gate("erp.example.test", "/erp?invite=abc", "GET", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/erp/state", "GET", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/login", "POST", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/logout", "POST", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/register", "POST", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/session", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/erp/stock", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+  });
+
+  await test("new host allowlist: other pages 307, other APIs JSON, writes not redirected", async () => {
+    const page = gate("erp.example.test", "/staff?x=1", "GET");
+    assert.equal(page.action, "redirect");
+    if (page.action === "redirect") {
+      assert.equal(page.status, 307);
+      assert.equal(page.location, "https://www.gastrotruck.org/staff?x=1");
+    }
+    const api = gate("erp.example.test", "/api/staff-catalog", "GET");
+    assert.equal(api.action, "json");
+    if (api.action === "json") {
+      assert.equal(api.status, 404);
+      assert.equal(api.body.error, "not_found");
+    }
+    const recipesApi = gate("erp.example.test", "/api/recipes-admin/recipes", "POST");
+    assert.equal(recipesApi.action, "json");
+    const writePage = gate("erp.example.test", "/staff", "POST");
+    assert.equal(writePage.action, "json");
+    if (writePage.action === "json") assert.equal(writePage.status, 403);
+    const proxy = gate("erp.example.test", "/supabase-proxy/rest/v1/x", "GET");
+    assert.equal(proxy.action, "json");
+    assert.equal(isErpHostAllowedPath("/_next/static/chunks/app.js"), true);
+    assert.equal(isErpHostAllowedPath("/favicon.ico"), true);
+  });
+
+  await test("legacy 307 is GET/HEAD only, preserves path+query, never 308", async () => {
+    const cfg = gateCfg({ redirectFromLegacy: true, closeLegacyApi: false });
+    const get = gate("www.gastrotruck.org", "/erp/menu/ingredients?from=packaging", "GET", cfg);
+    assert.equal(get.action, "redirect");
+    if (get.action === "redirect") {
+      assert.equal(get.status, 307);
+      assert.equal(get.location, "https://erp.example.test/erp/menu/ingredients?from=packaging");
+    }
+    const head = gate("gastrotruck.org", "/erp", "HEAD", cfg);
+    assert.equal(head.action, "redirect");
+    if (head.action === "redirect") assert.equal(head.status, 307);
+    assert.equal(gate("www.gastrotruck.org", "/erp", "POST", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/action", "POST", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/staff", "GET", cfg).action, "allow");
+  });
+
+  await test("redirect OFF restores old ERP even if close-API flag is on", async () => {
+    const cfg = gateCfg({ redirectFromLegacy: false, closeLegacyApi: true });
+    assert.equal(gate("www.gastrotruck.org", "/erp", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/action", "POST", cfg).action, "allow");
+  });
+
+  await test("after cutover, old ERP API closes with JSON about the move", async () => {
+    const cfg = gateCfg({ redirectFromLegacy: true, closeLegacyApi: true });
+    const closed = gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg);
+    assert.equal(closed.action, "json");
+    if (closed.action === "json") {
+      assert.equal(closed.status, 410);
+      assert.equal(closed.body.error, "erp_moved");
+      assert.equal(closed.body.newOrigin, "https://erp.example.test");
+    }
+    const post = gate("www.gastrotruck.org", "/api/erp/action", "POST", cfg);
+    assert.equal(post.action, "json");
+    if (post.action === "json") assert.equal(post.status, 410);
+    assert.equal(gate("www.gastrotruck.org", "/api/recipes-admin/login", "POST", cfg).action, "allow");
+  });
+
+  await test("redirect ON without a named host does not yank old ERP", async () => {
+    const cfg = readErpHostGateConfig({ ERP_REDIRECT_FROM_LEGACY: "1", ERP_CLOSE_LEGACY_API: "1" });
+    assert.equal(cfg.erpHosts.length, 0);
+    assert.equal(gate("www.gastrotruck.org", "/erp", "GET", cfg).action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+  });
+
   db = await createTestDb();
 
   await test("migration can be applied twice", async () => {

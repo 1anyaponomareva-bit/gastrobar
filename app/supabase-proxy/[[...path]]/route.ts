@@ -1,5 +1,6 @@
 import dns from "node:dns";
 import { NextRequest, NextResponse } from "next/server";
+import { decideErpHostGate, readErpHostGateConfig } from "@/lib/erp/hostGate";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 import {
   assertBodySizeAllowed,
@@ -76,6 +77,19 @@ function forwardResponseHeaders(upstream: Headers): Headers {
 }
 
 async function proxy(req: NextRequest, pathSegments: string[] | undefined) {
+  const hostGate = decideErpHostGate(
+    {
+      hostHeader: req.headers.get("host") ?? "",
+      pathname: req.nextUrl.pathname,
+      search: req.nextUrl.search,
+      method: req.method,
+    },
+    readErpHostGateConfig(process.env),
+  );
+  if (hostGate.action === "json") {
+    return NextResponse.json(hostGate.body, { status: hostGate.status, headers: { "Cache-Control": "no-store" } });
+  }
+
   const pubUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const backend = getSupabaseBackendUrl();
   if (!pubUrl?.trim()) {

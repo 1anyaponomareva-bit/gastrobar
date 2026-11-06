@@ -55,6 +55,7 @@ export const sessionCookieOptions = {
   sameSite: "lax" as const,
   path: "/",
   maxAge: SESSION_DAYS * 86_400,
+  // Host-only: do not set Domain=. A gastrotruck.org cookie must not cover a new ERP host.
 };
 
 /** Email of the signed-in admin, or null. Also rejects sessions of deleted accounts. */
