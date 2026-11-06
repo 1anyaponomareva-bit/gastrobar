@@ -10,7 +10,7 @@ import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
  * Товары                → erp_products.type = finished (resale; Agent 1 tovary.md). Sale price is not on products yet.
  * Тех. карты            → erp_dishes + erp_dish_lines (sellable menu item; price lives here)
  * Полуфабрикаты         → erp_products.type = semi_finished + erp_recipes
- * Ингредиенты           → erp_products.type = ingredient (packaging/consumable via type filter)
+ * Ингредиенты           → erp_products (ingredient/packaging/consumable); classify by category + pack supplier, not type
  * Контроль фудкоста     → dishCost / menuCostContext (`src/lib/erp/menu.ts`)
  * Категории (оба дерева)→ erp_categories (one table — do not invent a second)
  * Точки продаж          → erp_locations (Online Kitchen, Food Truck). Not workshops.

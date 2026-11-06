@@ -324,6 +324,20 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
   const set = <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
   const unit = form.base_unit || null;
   const isNew = !product;
+  const goodsMode = form.type === "finished";
+  const ingredientCard = !goodsMode;
+  const defaultPackSupplier = () => {
+    const preferred = packs.find((pack) => pack.is_default) ?? packs[0];
+    return preferred?.supplier_id ?? "";
+  };
+  const setPackSupplier = (supplierId: string | null) => {
+    setPacks((prev) => {
+      if (!prev.length) return prev;
+      const idx = prev.findIndex((pack) => pack.is_default);
+      const at = idx >= 0 ? idx : 0;
+      return prev.map((pack, i) => (i === at ? { ...pack, supplier_id: supplierId } : pack));
+    });
+  };
   const recipe = product ? state.recipes.find((r) => r.product_id === product.id && r.status !== "archived") : undefined;
   const stock = product ? state.stock.filter((row) => row.product_id === product.id && row.qty !== 0) : [];
   const validPacks = packs.every((pack) => pack.label.trim() && pack.qty_base > 0);
@@ -389,15 +403,40 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
       <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
         <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} />
       </Field>
-      <Field label={T("Тип *", "Type *", "Loại *")}>
-        <select value={form.type} onChange={(e) => set("type", e.target.value as ErpProductType)}>
-          {PRODUCT_TYPES.map((key) => (
-            <option key={key} value={key}>
-              {typeLabel(key)}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {ingredientCard ? (
+        <Field
+          label={T("Поставщик", "Supplier", "Nhà cung cấp")}
+          hint={T("Из фасовки продукта (erp_product_packs.supplier_id). Не отдельный справочник.", "From the product pack (erp_product_packs.supplier_id). Not a second catalog.", "Từ quy cách sản phẩm, không phải danh mục riêng.")}
+        >
+          <select
+            value={defaultPackSupplier()}
+            onChange={(e) => setPackSupplier(e.target.value || null)}
+            disabled={!packs.length}
+          >
+            <option value="">{T("— нет —", "— none —", "— không —")}</option>
+            {state.suppliers
+              .filter((s) => !s.archived_at || s.id === defaultPackSupplier())
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+          </select>
+          {!packs.length ? (
+            <p className="erpHint">{T("Сначала добавьте фасовку — поставщик хранится на ней.", "Add a pack first — the supplier is stored on the pack.", "Hãy thêm quy cách — nhà cung cấp lưu trên quy cách.")}</p>
+          ) : null}
+        </Field>
+      ) : (
+        <Field label={T("Тип *", "Type *", "Loại *")}>
+          <select value={form.type} onChange={(e) => set("type", e.target.value as ErpProductType)}>
+            {PRODUCT_TYPES.map((key) => (
+              <option key={key} value={key}>
+                {typeLabel(key)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <Field
         label={T("Единица учёта *", "Stock unit *", "Đơn vị *")}
         hint={T("В ней хранятся остатки и считается цена. Граммы и миллилитры можно вводить в документах.", "Stock and cost are kept in it. Grams and millilitres can be typed in documents.", "Tồn kho và giá tính theo đơn vị này.")}
@@ -667,7 +706,6 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
     </>
   );
 
-  const goodsMode = form.type === "finished";
   const stub = (label: string) => notify({ ok: false, text: notImplemented(label) });
 
   return (
@@ -682,7 +720,15 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
             {product?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
           </>
         }
-        sub={product ? typeLabel(product.type) : T("Достаточно названия, типа и единицы — остальное можно заполнить позже.", "Name, type and unit are enough — the rest can be filled in later.", "Chỉ cần tên, loại và đơn vị — phần còn lại điền sau.")}
+        sub={
+          goodsMode
+            ? product
+              ? typeLabel(product.type)
+              : T("Достаточно названия, типа и единицы — остальное можно заполнить позже.", "Name, type and unit are enough — the rest can be filled in later.", "Chỉ cần tên, loại và đơn vị — phần còn lại điền sau.")
+            : product
+              ? categoryName(product.category_id ? state.categories.find((c) => c.id === product.category_id) : undefined)
+              : T("Достаточно названия, категории и единицы — остальное можно заполнить позже.", "Name, category and unit are enough — the rest can be filled in later.", "Chỉ cần tên, nhóm và đơn vị — phần còn lại điền sau.")
+        }
         actions={
           recipe ? (
             <NavLink href={`/erp/preps/recipe/${product!.id}`} className="erpBtn">

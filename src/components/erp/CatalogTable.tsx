@@ -221,7 +221,8 @@ export function CatalogTable<Row extends { id: string }>({
   const set = (patch: Partial<Saved>) => setSaved((prev) => ({ ...(prev ?? initial), ...patch }));
   const shown = columns.filter((c) => c.locked || !filters.hidden.includes(c.id));
   const resetHidden = () => set({ hidden: columns.filter((c) => c.defaultHidden && !c.locked).map((c) => c.id) });
-  const sortCol = shown.find((c) => c.id === filters.sort) ?? columns.find((c) => c.id === filters.sort);
+  const sortCol =
+    shown.find((c) => c.id === filters.sort) ?? shown.find((c) => c.id === defaultSort) ?? columns.find((c) => c.id === filters.sort);
   const sorted = useMemo(() => {
     const dir = filters.desc ? -1 : 1;
     const list = [...rows];

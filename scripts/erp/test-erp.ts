@@ -30,7 +30,7 @@ import {
 import { basePrice, formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
 import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
-import { supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
+import { packSupplierIds, packSupplierLabel, supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
 import { ingredientCategoryStats, withInputVat } from "../../src/lib/erp/ingredientCategoryStats";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import { countFromDocument } from "../../src/lib/erp/inventoryUi";
@@ -2745,6 +2745,11 @@ async function main() {
     );
     assert.ok(stats.some((row) => row.id === cat));
     assert.ok(!stats.some((row) => row.id === "pos"), "POS-only categories stay off the ingredient list");
+
+    const packLinks = [{ product_id: rice, supplier_id: supplier, archived_at: null }];
+    assert.deepEqual(packSupplierIds(rice, packLinks), [supplier]);
+    assert.equal(packSupplierLabel(rice, packLinks, [{ id: supplier, name: "LOC Farm" }]), "LOC Farm");
+    assert.deepEqual(packSupplierIds(rice, []), [], "no invented supplier when packs are empty");
   });
 
   console.log(`\n${passed} checks passed`);
