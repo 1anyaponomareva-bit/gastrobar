@@ -53,7 +53,6 @@ export function MenuLocationsPage() {
             <table className="erpTable erpMenuTable">
               <thead>
                 <tr>
-                  <th>{T("Код", "Code", "Mã")}</th>
                   <th>{T("Название", "Name", "Tên")}</th>
                   <th>{T("Статус", "Status", "Trạng thái")}</th>
                   <th>{T("Адрес", "Address", "Địa chỉ")}</th>
@@ -63,7 +62,6 @@ export function MenuLocationsPage() {
               <tbody>
                 {locations.map((row) => (
                   <tr key={row.id} className={row.is_active ? "" : "muted"}>
-                    <td>{row.code}</td>
                     <td className="main">{row.name}</td>
                     <td>{statusLabel(row.is_active)}</td>
                     <td>{row.address || "—"}</td>
@@ -78,7 +76,7 @@ export function MenuLocationsPage() {
                           disabled={busy}
                           onClick={() =>
                             void act(
-                              { action: "saveLocation", value: { id: row.id, name: row.name, code: row.code, is_active: !row.is_active } },
+                              { action: "saveLocation", value: { id: row.id, name: row.name, is_active: !row.is_active } },
                               row.is_active
                                 ? T("Точка деактивирована", "Location deactivated", "Đã ngưng điểm bán")
                                 : T("Точка активирована", "Location activated", "Đã bật điểm bán"),
@@ -135,7 +133,6 @@ export function MenuLocationForm({ location }: { location?: ErpLocation }) {
   const router = useRouter();
   const warehouses = useMemo(() => (state?.warehouses ?? []).filter((w) => !w.archived_at), [state?.warehouses]);
   const [name, setName] = useState(location?.name ?? "");
-  const [code, setCode] = useState(location?.code ?? "");
   const [address, setAddress] = useState(location?.address ?? "");
   const [active, setActive] = useState(location?.is_active ?? true);
   const [warehouseId, setWarehouseId] = useState(location?.default_warehouse_id ?? "");
@@ -163,7 +160,6 @@ export function MenuLocationForm({ location }: { location?: ErpLocation }) {
                 value: {
                   id: location?.id,
                   name: name.trim(),
-                  code: code.trim(),
                   address,
                   is_active: active,
                   default_warehouse_id: warehouseId,
@@ -181,9 +177,6 @@ export function MenuLocationForm({ location }: { location?: ErpLocation }) {
       <section className="erpCard">
         <Field label={T("Название", "Name", "Tên")}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder={T("Online Kitchen, Food Truck…", "Online Kitchen, Food Truck…", "Online Kitchen, Food Truck…")} />
-        </Field>
-        <Field label={T("Код", "Code", "Mã")} hint={T("Латиница и дефис. Пусто — из названия.", "Latin letters and hyphens. Empty = from the name.", "Chữ latin và gạch. Trống = theo tên.")}>
-          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="online-kitchen" />
         </Field>
         <Field label={T("Адрес", "Address", "Địa chỉ")}>
           <input value={address} onChange={(e) => setAddress(e.target.value)} />
