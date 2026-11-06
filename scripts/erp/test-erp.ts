@@ -2126,6 +2126,7 @@ async function main() {
     const mix = await saveProduct({ type: "ingredient", name_en: "Guard mix", base_unit: "kg" });
     const dough = await saveProduct({ type: "semi_finished", name_en: "Guard dough", base_unit: "kg" });
     await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: mix, qty: 4, unit_price: 8000 }] }));
+    const movesAfterReceipt = n(await value("select count(*) from public.erp_movements"));
     const noYield = await saveDoc({
       doc_type: "production",
       warehouse_id: prep,
@@ -2148,6 +2149,8 @@ async function main() {
     await expectError(post(empty), "ERP_EMPTY_DOCUMENT");
     assert.equal(await stock(mix, prep), 4);
     assert.equal(await stock(dough, online), 0);
+    assert.equal(n(await value("select count(*) from public.erp_movements")), movesAfterReceipt, "failed production post leaves no partial movements");
+    assert.equal(n(await value("select count(*) from public.erp_movements where document_id in ($1, $2)", [noYield, empty])), 0);
   });
 
   await test("movement report: production ingredients out, output in, leftover after transfer", async () => {
@@ -2252,25 +2255,38 @@ async function main() {
         doc_type: "receipt",
         warehouse_id: prep,
         lines: [
-          { product_id: spice, qty: 6, unit_price: 100 },
-          { product_id: spice, qty: 4, unit_price: 250 },
+          { product_id: spice, qty: 6, unit_price: 250 },
+          { product_id: spice, qty: 4, unit_price: 100 },
         ],
+      }),
+    );
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        warehouse_id: prep,
+        lines: [{ product_id: spice, qty: 5, unit_price: 50 }],
       }),
     );
     const wo = await saveDoc({
       doc_type: "writeoff",
       warehouse_id: prep,
       reason: "same-time fifo",
-      lines: [{ product_id: spice, qty: 6 }],
+      lines: [{ product_id: spice, qty: 8 }],
     });
     const res = await post(wo);
-    assert.equal(n(res.total_cost), 600, "first receipt line is consumed before the later line of the same document");
-    assert.equal(await stock(spice, prep), 4);
-    const left = await one<{ unit_cost: string; qty_left: string }>(
-      "select unit_cost, qty_left from public.erp_lots where product_id = $1 and qty_left > 0",
+    assert.equal(n(res.total_cost), 1700, "expensive first line is consumed before the later cheaper line, not cheapest-first");
+    assert.equal(await stock(spice, prep), 7);
+    const left = await q<{ unit_cost: string; qty_left: string }>(
+      "select unit_cost, qty_left from public.erp_lots where product_id = $1 and qty_left > 0 order by unit_cost desc",
       [spice],
     );
-    assert.deepEqual([n(left.unit_cost), n(left.qty_left)], [250, 4]);
+    assert.deepEqual(
+      left.map((row) => [n(row.unit_cost), n(row.qty_left)]),
+      [
+        [100, 2],
+        [50, 5],
+      ],
+    );
   });
 
   await test("count_moves related docs match ledger document_ids for transfer, write-off and production", async () => {

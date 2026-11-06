@@ -40,4 +40,5 @@ coverage
 .erp-ui-scenario-db/
 .erp-receipt-ui-db/
 .erp-stock-ui-db/
+.erp-logic-accept-db/
 .erp-pack-merge-backup/
