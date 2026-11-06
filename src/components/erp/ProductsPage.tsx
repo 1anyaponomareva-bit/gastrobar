@@ -18,7 +18,7 @@ import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
-import { POSTER_WORKSHOPS } from "./menuFields";
+import { POSTER_WORKSHOPS, productBrandFieldLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
@@ -447,7 +447,7 @@ function ProductEditor({
             ))}
         </select>
       </Field>
-      <Field label={T("Бренд", "Brand", "Thương hiệu")}>
+      <Field label={productBrandFieldLabel(form.type)}>
         <input value={form.brand} onChange={(e) => set("brand", e.target.value)} />
       </Field>
       {unit === "pcs" ? (

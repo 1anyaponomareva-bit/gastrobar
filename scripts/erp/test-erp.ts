@@ -27,7 +27,7 @@ import {
   safeMenuListReturn,
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
-import { lossPercentsText, posterStockQty } from "../../src/components/erp/menuFields";
+import { lossPercentsText, posterStockQty, productBrandFieldLabel } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -2812,6 +2812,14 @@ async function main() {
     assert.equal(safeMenuListReturn("//evil.example/erp/menu"), null);
     assert.equal(safeMenuListReturn("/erp/menu/ingredients/../../service"), null);
     assert.equal(withMenuListReturn("/erp/products/x", "/erp/products"), "/erp/products/x");
+  });
+
+  await test("ingredient card label is Характеристики; brand field name is unchanged", async () => {
+    assert.equal(productBrandFieldLabel("ingredient"), "Характеристики");
+    assert.equal(productBrandFieldLabel("packaging"), "Характеристики");
+    assert.equal(productBrandFieldLabel("consumable"), "Характеристики");
+    assert.equal(productBrandFieldLabel("finished"), "Бренд");
+    assert.equal(productBrandFieldLabel("semi_finished"), "Бренд");
   });
 
   console.log(`\n${passed} checks passed`);

@@ -38,6 +38,19 @@ export const POSTER_WORKSHOPS = ["Без цеха", "GASTROBAR", "GASTROFOOD", "
 
 export const INGREDIENT_TYPES = ["ingredient", "packaging", "consumable"] as const;
 
+export type IngredientType = (typeof INGREDIENT_TYPES)[number];
+
+export function isIngredientType(type: string | null | undefined): type is IngredientType {
+  return Boolean(type && (INGREDIENT_TYPES as readonly string[]).includes(type));
+}
+
+/** Visible label for erp_products.brand on Menu ingredients. Internal field stays `brand`. */
+export function productBrandFieldLabel(type: string | null | undefined) {
+  return isIngredientType(type)
+    ? T("Характеристики", "Characteristics", "Đặc tính")
+    : T("Бренд", "Brand", "Thương hiệu");
+}
+
 export function dishTitle(dish: Pick<ErpDish, "name_en" | "name_vn">) {
   return dish.name_vn && dish.name_vn !== dish.name_en ? `${dish.name_en} / ${dish.name_vn}` : dish.name_en;
 }
