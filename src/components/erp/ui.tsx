@@ -441,11 +441,10 @@ export function NavLink({
       className={className}
       {...rest}
       onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
         if (!confirmLeave()) event.preventDefault();
-        else {
-          onClick?.(event);
-          onNavigate?.();
-        }
+        else onNavigate?.();
       }}
     >
       {children}

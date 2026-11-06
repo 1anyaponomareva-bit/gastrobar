@@ -224,6 +224,7 @@ function ErpData({
   const pathname = usePathname();
   const section = sectionOf(pathname);
   const stockActive = activeStockHref(pathname);
+  const [stockOpen, setStockOpen] = useState(section === "stock");
   const [state, setState] = useState<ErpState | null>(initial);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -271,6 +272,10 @@ function ErpData({
     const timer = window.setTimeout(() => setNotice(null), 3500);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    setStockOpen(section === "stock");
+  }, [section]);
 
   const act = useCallback(
     async <T,>(action: ErpAction, successText?: string | false, options?: ActOptions): Promise<T | null> => {
@@ -321,15 +326,28 @@ function ErpData({
           <nav className="erpSideNav">
             {items.map((item) =>
               item.section === "stock" ? (
-                <div key={item.href} className={`erpSideGroup ${section === "stock" ? "open" : ""}`}>
-                  <NavLink href={item.href} className={section === "stock" ? "active" : ""}>
+                <div key={item.href} className={`erpSideGroup ${stockOpen ? "open" : ""}`}>
+                  <NavLink
+                    href={item.href}
+                    className={section === "stock" ? "active" : ""}
+                    aria-expanded={stockOpen}
+                    aria-controls="erp-stock-sub"
+                    onClick={(event) => {
+                      if (section !== "stock") {
+                        setStockOpen(true);
+                        return;
+                      }
+                      event.preventDefault();
+                      setStockOpen((open) => !open);
+                    }}
+                  >
                     <Icon section={item.section} />
                     {item.label}
                     <svg className="erpSideChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="m6 9 6 6 6-6" />
                     </svg>
                   </NavLink>
-                  <div className="erpSideSub">
+                  <div className="erpSideSub" id="erp-stock-sub">
                     <div>
                       {stockNavItems().map((sub) => (
                         <NavLink key={sub.href} href={sub.href} className={stockActive === sub.href ? "active" : ""}>
