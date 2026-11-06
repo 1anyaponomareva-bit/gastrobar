@@ -794,7 +794,7 @@ function WriteoffList({
             {T("Показаны 1000 последних списаний периода — выберите период короче.", "Showing the latest 1000 write-offs of the period — choose a shorter period.", "Chỉ hiện 1000 phiếu mới nhất — hãy chọn kỳ ngắn hơn.")}
           </p>
         ) : null}
-        <div className="erpWoTableWrap">
+        <div className="erpWoTableWrap" data-testid="wo-table-wrap">
           <table className="erpWoTable" data-testid="wo-table">
             <thead>
               <tr>
@@ -862,8 +862,8 @@ function WriteoffList({
             </tbody>
             <tfoot>
               <tr data-testid="wo-total">
-                <td />
-                <td className="erpWoTotalLabel">{T("Всего", "Total", "Tổng")}</td>
+                <td className="erpWoExpandCol" />
+                <td className="erpWoTotalLabel erpWoDateCol">{T("Всего", "Total", "Tổng")}</td>
                 {shown.map((c) => (
                   <td key={c.id} className={c.num ? "num erpWoAmount" : ""}>
                     {c.id === "amount" ? (
@@ -874,7 +874,7 @@ function WriteoffList({
                     ) : null}
                   </td>
                 ))}
-                <td />
+                <td className="erpWoMenuCol" />
               </tr>
             </tfoot>
           </table>

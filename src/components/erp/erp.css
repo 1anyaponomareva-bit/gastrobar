@@ -2503,6 +2503,7 @@
 @media print {
   .erpSide,
   .erpTop,
+  .erpBottomNav,
   .erpPageHead,
   .erpNoPrint,
   .erpToast,
@@ -2523,6 +2524,21 @@
     display: block;
     font-size: 16px;
     margin: 0 0 8px;
+  }
+
+  .erpDocsPrinting .erpDocsScreen {
+    display: none !important;
+  }
+
+  .erpPrintArea .erpTable {
+    width: 100%;
+    table-layout: auto;
+  }
+
+  .erpPrintArea .erpTable th,
+  .erpPrintArea .erpTable td {
+    white-space: normal;
+    overflow: visible;
   }
 
   .erpPanel,

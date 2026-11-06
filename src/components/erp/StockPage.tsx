@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import type { ErpDocType, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
-import { DocTable, useDocuments } from "./docs";
+import { useEffect, useState } from "react";
+import type { ErpDocType, ErpDocument, ErpSupplier, ErpWarehouse } from "@/lib/erp/types";
+import { describeText, DocTable, documentListCells, documentListColumns, downloadDocumentExport, fetchAllDocuments, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { MovementReport } from "./MovementReport";
 import { InventoryPage } from "./InventoryPage";
 import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
-import { Empty, NavLink, PageHead, productName, T, warehouseName } from "./ui";
+import { Empty, NavLink, PageHead, T, today } from "./ui";
 import { WriteoffsPage } from "./WriteoffsPage";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
@@ -86,6 +86,20 @@ function StockDocsList({ kind }: { kind: string }) {
   const config = STOCK_KINDS[kind];
   const docs = useDocuments(config ? config.types : []);
   const [query, setQuery] = useState("");
+  const [busyOut, setBusyOut] = useState(false);
+  const [printRows, setPrintRows] = useState<ErpDocument[] | null>(null);
+
+  useEffect(() => {
+    if (!printRows) return;
+    const done = () => setPrintRows(null);
+    window.addEventListener("afterprint", done);
+    const timer = window.setTimeout(() => window.print(), 50);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("afterprint", done);
+    };
+  }, [printRows]);
+
   if (!state) return null;
   if (!config) {
     return (
@@ -102,29 +116,69 @@ function StockDocsList({ kind }: { kind: string }) {
   }
   const texts = kindTexts()[kind];
   const add = (
-    <NavLink href={config.newHref} className="erpBtn primary">
+    <NavLink href={config.newHref} className="erpBtn primary erpNoPrint">
       {addText()}
     </NavLink>
   );
   const q = query.trim().toLowerCase();
-  const filtered = docs.documents?.filter((doc) => {
-    if (!q) return true;
-    const hay = [doc.doc_no, doc.batch_no, doc.comment, warehouseName(state, doc.warehouse_id), warehouseName(state, doc.target_warehouse_id), productName(state, doc.output_product_id)]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return hay.includes(q);
-  });
+  const matches = (doc: ErpDocument) =>
+    !q || `${doc.doc_no ?? ""} ${doc.batch_no ?? ""} ${doc.comment ?? ""} ${describeText(state, doc)}`.toLowerCase().includes(q);
+  const filtered = docs.documents?.filter(matches);
+  const fileStem = kind === "processing" ? "processing" : "transfers";
+  const loadMatching = async () => (await fetchAllDocuments(config.types)).filter(matches);
+  const exportList = async () => {
+    if (busyOut || !docs.documents) return;
+    setBusyOut(true);
+    try {
+      const header = documentListColumns();
+      const rows = (await loadMatching()).map((doc) => documentListCells(state, doc));
+      downloadDocumentExport(`${fileStem}_${today()}`, texts.title, header, rows);
+    } catch {
+      /* button re-enables; nothing to download */
+    } finally {
+      setBusyOut(false);
+    }
+  };
+  const printList = async () => {
+    if (busyOut || !docs.documents) return;
+    setBusyOut(true);
+    try {
+      setPrintRows(await loadMatching());
+    } catch {
+      /* button re-enables */
+    } finally {
+      setBusyOut(false);
+    }
+  };
   const empty = q ? (
     <Empty title={T("Ничего не найдено", "No matches", "Không tìm thấy")} text={T("Попробуйте изменить поиск.", "Try changing the search.", "Hãy đổi từ khóa.")} />
   ) : (
     <Empty title={texts.empty} text={texts.text} action={add} />
   );
+
   return (
     <>
-      <PageHead title={texts.title} sub={texts.sub} actions={add} />
-      <StockMobileNav active={`/erp/stock/${kind}`} />
-      <div className="erpToolbar erpFilters">
+      <PageHead
+        title={texts.title}
+        sub={texts.sub}
+        actions={
+          <>
+            <div className="erpHeadGroup erpNoPrint">
+              <button type="button" className="erpHeadBtn" onClick={() => void exportList()} disabled={busyOut || !docs.documents} data-testid="docs-export">
+                {T("Экспорт", "Export", "Xuất")}
+              </button>
+              <button type="button" className="erpHeadBtn" onClick={() => void printList()} disabled={busyOut || !docs.documents} data-testid="docs-print">
+                {T("Печать", "Print", "In")}
+              </button>
+            </div>
+            {add}
+          </>
+        }
+      />
+      <div className="erpNoPrint">
+        <StockMobileNav active={`/erp/stock/${kind}`} />
+      </div>
+      <div className="erpToolbar erpFilters erpNoPrint">
         <input
           className="erpSearch"
           type="search"
@@ -132,9 +186,48 @@ function StockDocsList({ kind }: { kind: string }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label={T("Поиск", "Search", "Tìm")}
+          data-testid="docs-search"
         />
       </div>
-      <DocTable state={state} {...docs} documents={filtered ?? null} showType={kind === "receipts"} empty={empty} />
+      <div className={printRows ? "erpDocsPrinting" : undefined}>
+        <div className="erpDocsScreen">
+          <DocTable state={state} {...docs} documents={filtered ?? null} showType={kind === "receipts"} empty={empty} />
+        </div>
+        {printRows ? (
+          <div className="erpPrintOnly erpPrintArea" data-testid="docs-print-area">
+            <h2>
+              {texts.title}
+              {q ? ` · ${query.trim()}` : ""}
+            </h2>
+            <table className="erpTable" data-testid="docs-print-table">
+              <thead>
+                <tr>
+                  {documentListColumns().map((label) => (
+                    <th key={label}>{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {printRows.length ? (
+                  printRows.map((doc) => (
+                    <tr key={doc.id}>
+                      {documentListCells(state, doc).map((cell, i) => (
+                        <td key={i} className={i === 4 ? "num" : undefined}>
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5}>{T("Нет строк для печати", "Nothing to print", "Không có dòng để in")}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
     </>
   );
 }

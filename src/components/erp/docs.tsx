@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { documentSupplierLabel } from "@/lib/erp/docSupplier";
+import { downloadXlsx } from "@/lib/erp/xlsx";
 import { useErp } from "./ErpShell";
 import type { ErpDocType, ErpDocument, ErpState } from "@/lib/erp/types";
 import { dateText, docLabel, Empty, errorText, loadingText, productName, qtyText, statusLabel, T, unitOf, vnd, warehouseName } from "./ui";
@@ -25,6 +26,82 @@ async function fetchDocPage(types: string, limit: number | undefined, before?: s
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error ?? "server");
   return data as DocPage;
+}
+
+/** Full current type list for export/print (same documents route, page size 300). */
+export async function fetchAllDocuments(types: ErpDocType[]): Promise<ErpDocument[]> {
+  const typeList = types.join(",");
+  const out: ErpDocument[] = [];
+  const seen = new Set<string>();
+  let before: string | undefined;
+  let more = true;
+  let hops = 0;
+  while (more && hops++ < 40) {
+    const page = await fetchDocPage(typeList, 300, before);
+    const fresh = page.documents.filter((doc) => doc.id && !seen.has(doc.id));
+    for (const doc of fresh) {
+      seen.add(doc.id!);
+      out.push(doc);
+    }
+    more = Boolean(page.more) && fresh.length > 0;
+    before = out.at(-1)?.created_at;
+    if (!fresh.length) break;
+  }
+  return out;
+}
+
+export function describeText(state: ErpState, doc: ErpDocument): string {
+  const supplier = documentSupplierLabel(state, doc);
+  switch (doc.doc_type) {
+    case "transfer":
+      return `${warehouseName(state, doc.warehouse_id)} → ${warehouseName(state, doc.target_warehouse_id)}`;
+    case "production": {
+      const extra =
+        doc.target_warehouse_id && doc.target_warehouse_id !== doc.warehouse_id ? ` → ${warehouseName(state, doc.target_warehouse_id)}` : "";
+      return `${productName(state, doc.output_product_id)} · ${qtyText(doc.output_qty, unitOf(state, doc.output_product_id))} · ${warehouseName(state, doc.warehouse_id)}${extra}`;
+    }
+    case "receipt":
+      return `${warehouseName(state, doc.warehouse_id)}${supplier ? ` · ${supplier}` : ""}`;
+    case "writeoff": {
+      const reason = (doc.reason_id && state.writeoffReasons?.find((r) => r.id === doc.reason_id)?.name) || doc.reason;
+      return `${warehouseName(state, doc.warehouse_id)}${reason ? ` · ${reason}` : ""}`;
+    }
+    default:
+      return warehouseName(state, doc.warehouse_id);
+  }
+}
+
+export function documentListColumns(): string[] {
+  return [
+    T("Документ", "Document", "Chứng từ"),
+    T("Дата", "Date", "Ngày"),
+    T("Что и где", "What and where", "Nơi / hàng"),
+    T("Статус", "Status", "Trạng thái"),
+    T("Сумма", "Amount", "Tiền"),
+  ];
+}
+
+export function documentListCells(state: ErpState, doc: ErpDocument): string[] {
+  const name = doc.doc_type === "production" && doc.batch_no ? doc.batch_no : (doc.doc_no ?? "");
+  const amount = doc.status !== "posted" ? "—" : doc.cost_known ? vnd(doc.total_cost) : T("неполная", "incomplete", "chưa đủ");
+  return [name, dateText(doc.doc_date), describeText(state, doc), statusLabel(doc.status ?? "draft"), amount];
+}
+
+export function downloadCsv(filename: string, header: string[], rows: string[][]) {
+  const cell = (v: string) => (/[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const lines = [header.map(cell).join(","), ...rows.map((row) => row.map(cell).join(","))];
+  const blob = new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+/** CSV (Excel-friendly BOM) plus .xlsx, same columns as the print list. */
+export function downloadDocumentExport(filename: string, sheetName: string, header: string[], rows: string[][]) {
+  downloadCsv(filename, header, rows);
+  downloadXlsx(filename, sheetName, header, rows);
 }
 
 const loadErrorText = (e: unknown) => errorText(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "network");
@@ -202,7 +279,7 @@ export function DocTable({
         </tbody>
       </table>
       {more && loadMore ? (
-        <div className="erpDocMore">
+        <div className="erpDocMore erpNoPrint">
           <button type="button" className="erpBtn" disabled={loadingMore} onClick={loadMore}>
             {loadingMore ? loadingText() : T("Показать ещё", "Show more", "Xem thêm")}
           </button>
