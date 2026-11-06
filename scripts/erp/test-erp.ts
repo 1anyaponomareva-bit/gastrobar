@@ -27,7 +27,7 @@ import {
   safeMenuListReturn,
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
-import { lossPercentsText, posterStockQty, productBrandFieldLabel } from "../../src/components/erp/menuFields";
+import { lossPercentsText, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -2542,7 +2542,7 @@ async function main() {
         [batch, prep],
       );
     const before = await snap();
-    await saveProduct({ id: item, type: "ingredient", name_en: "Card stock item renamed", base_unit: "kg" });
+    await saveProduct({ id: item, type: "ingredient", name_en: "Card stock item renamed", base_unit: "kg", product_code: "CS-1" });
     const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
       JSON.stringify({ id: recipe, yield_qty: 2, lines: [{ product_id: item, qty: 3 }] }),
       ACTOR,
@@ -2820,6 +2820,26 @@ async function main() {
     assert.equal(productBrandFieldLabel("consumable"), "Характеристики");
     assert.equal(productBrandFieldLabel("finished"), "Бренд");
     assert.equal(productBrandFieldLabel("semi_finished"), "Бренд");
+  });
+
+  await test("product code is optional, trimmed, and not unique", async () => {
+    assert.equal(productCodeFieldLabel(), "Код товара");
+    const a = await saveProduct({ type: "ingredient", name_en: "Article A", base_unit: "kg", product_code: "  ART-1  " });
+    const b = await saveProduct({ type: "ingredient", name_en: "Article B", base_unit: "kg", product_code: "ART-1" });
+    const empty = await saveProduct({ type: "ingredient", name_en: "Article empty", base_unit: "kg", product_code: "" });
+    const rows = await q<{ name_en: string; product_code: string | null }>(
+      "select name_en, product_code from public.erp_products where id = any($1) order by name_en",
+      [[a, b, empty]],
+    );
+    assert.deepEqual(rows, [
+      { name_en: "Article A", product_code: "ART-1" },
+      { name_en: "Article B", product_code: "ART-1" },
+      { name_en: "Article empty", product_code: null },
+    ]);
+    await saveProduct({ id: a, type: "ingredient", name_en: "Article A", base_unit: "kg" });
+    assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [a])).product_code, "ART-1");
+    await saveProduct({ id: a, type: "ingredient", name_en: "Article A", base_unit: "kg", product_code: "   " });
+    assert.equal((await one<{ product_code: string | null }>("select product_code from public.erp_products where id = $1", [a])).product_code, null);
   });
 
   console.log(`\n${passed} checks passed`);

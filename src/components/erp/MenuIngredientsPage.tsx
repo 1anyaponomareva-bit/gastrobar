@@ -17,6 +17,7 @@ import {
   lossPercentsText,
   posterStockQty,
   prepsUsingProduct,
+  productCodeFieldLabel,
   visibleCategories,
 } from "./menuFields";
 import { useMenuListQuery } from "./menuListState";
@@ -160,7 +161,7 @@ function MenuIngredientsList() {
         if (!ids.length) return supplierSet.has("none");
         if (!ids.some((id) => supplierSet.has(id))) return false;
       }
-      return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q);
+      return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code} ${p.product_code ?? ""}`.toLowerCase().includes(q);
     })
     .map((p) => {
       const stock = stockOf(stockMap, p.id);
@@ -206,6 +207,14 @@ function MenuIngredientsList() {
       label: T("Поставщик", "Supplier", "Nhà cung cấp"),
       cell: (row) => row.supplierName || "—",
       text: (row) => row.supplierName,
+    },
+    {
+      id: "productCode",
+      label: productCodeFieldLabel(),
+      defaultHidden: true,
+      sort: false,
+      cell: (row) => row.product_code?.trim() || "—",
+      text: (row) => row.product_code ?? "",
     },
     {
       id: "unit",

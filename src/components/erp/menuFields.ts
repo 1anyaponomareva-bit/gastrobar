@@ -51,6 +51,11 @@ export function productBrandFieldLabel(type: string | null | undefined) {
     : T("Бренд", "Brand", "Thương hiệu");
 }
 
+/** Kitchen article on the ingredient card. Stored as erp_products.product_code, not the slug `code`. */
+export function productCodeFieldLabel() {
+  return T("Код товара", "Product code", "Mã hàng");
+}
+
 export function dishTitle(dish: Pick<ErpDish, "name_en" | "name_vn">) {
   return dish.name_vn && dish.name_vn !== dish.name_en ? `${dish.name_en} / ${dish.name_vn}` : dish.name_en;
 }

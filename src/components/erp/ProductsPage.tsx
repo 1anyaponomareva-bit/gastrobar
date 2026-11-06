@@ -18,7 +18,7 @@ import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
-import { POSTER_WORKSHOPS, productBrandFieldLabel } from "./menuFields";
+import { POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
@@ -242,6 +242,7 @@ type ProductForm = {
   base_unit: ErpUnit | "";
   unit_weight_kg: number | null;
   brand: string;
+  product_code: string;
   est_unit_cost: number | null;
   shelf_life_days: number | null;
   storage_conditions: string;
@@ -255,6 +256,7 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   base_unit: product?.base_unit ?? "",
   unit_weight_kg: product?.unit_weight_kg ?? null,
   brand: product?.brand ?? "",
+  product_code: product?.product_code ?? "",
   est_unit_cost: product?.est_unit_cost ?? null,
   shelf_life_days: product?.shelf_life_days ?? null,
   storage_conditions: product?.storage_conditions ?? "",
@@ -471,6 +473,11 @@ function ProductEditor({
         >
           {unit ? <NumberInput value={form.est_unit_cost} onChange={(v) => set("est_unit_cost", v)} /> : <span className="erpNoUnit">{T("Сначала выберите единицу", "Choose a unit first", "Chọn đơn vị trước")}</span>}
         </Field>
+        {!packs.length ? (
+          <Field label={productCodeFieldLabel()}>
+            <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} />
+          </Field>
+        ) : null}
       </div>
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
       <p className="erpHint">
@@ -488,6 +495,7 @@ function ProductEditor({
                 <th>{T("Фасовка", "Pack", "Quy cách")}</th>
                 <th>{T("Количество", "Quantity", "Số lượng")}</th>
                 <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
+                <th>{productCodeFieldLabel()}</th>
                 <th>{T("Основная", "Default", "Mặc định")}</th>
                 <th />
               </tr>
@@ -536,6 +544,9 @@ function ProductEditor({
                             </option>
                           ))}
                       </select>
+                    </td>
+                    <td className="edit" data-label={productCodeFieldLabel()}>
+                      <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} />
                     </td>
                     <td data-label={T("Основная", "Default", "Mặc định")}>
                       <input

@@ -66,6 +66,7 @@ export type ErpProduct = Archivable & LossPcts & {
   base_unit: ErpUnit | null;
   unit_weight_kg: number | null;
   brand: string | null;
+  product_code?: string | null;
   est_unit_cost: number | null;
   est_cost_source: "receipt" | "manual" | null;
   est_cost_at: string | null;
