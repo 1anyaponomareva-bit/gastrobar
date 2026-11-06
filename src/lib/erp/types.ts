@@ -1,4 +1,5 @@
 import type { ErpProductType, ErpUnit, LossMethod, LossPcts } from "./costing";
+export type { MenuPriceSource, ProductCostQuote } from "./costing";
 export type { StaffMergeResult } from "./staffMerge";
 
 export type ErpSettings = {
@@ -155,6 +156,26 @@ export type ErpDish = Archivable & {
   channel_prices: { channel_id: string; sale_price: number }[];
 };
 
+/** Planned unit prices for a tech-card. Unknown stays null, never 0. */
+export type ErpProductCostQuote = {
+  product_id: string;
+  last_lot: number | null;
+  fifo_remaining: number | null;
+  reference: number | null;
+};
+
+export type ErpCardEntity = "product" | "recipe" | "dish";
+
+export type ErpCardRevision = {
+  id: number;
+  entity: ErpCardEntity;
+  entity_id: string;
+  saved_at: string;
+  saved_by: string | null;
+  action: string;
+  snapshot: Record<string, unknown>;
+};
+
 export type ErpState = {
   settings: ErpSettings;
   categories: ErpCategory[];
@@ -168,6 +189,8 @@ export type ErpState = {
   recipes: ErpRecipe[];
   dishes: ErpDish[];
   writeoffReasons: ErpWriteoffReason[];
+  /** Optional: loaded with `?parts=costSources` or the full state after the menu migration. */
+  costSources?: ErpProductCostQuote[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";

@@ -13,11 +13,13 @@ import {
   buildCostContext,
   channelResult,
   costLine,
+  DEFAULT_MENU_PRICE_SOURCE,
   productTitle,
   summarize,
   type CostProduct,
   type CostRecipe,
 } from "../../src/lib/erp/costing";
+import { dishCost, menuCostContext } from "../../src/lib/erp/menu";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -147,6 +149,7 @@ async function main() {
       "recipes",
       "dishes",
       "writeoffReasons",
+      "costSources",
     ]) {
       assert.ok(key in full, key);
     }
@@ -632,7 +635,14 @@ async function main() {
     assert.ok(Math.abs(direct.netRevenue! - net) < 1e-6);
     assert.ok(Math.abs(direct.grossProfit! - (net - food - 2000)) < 1e-6);
     assert.ok(Math.abs(direct.foodCostPct! - (food / net) * 100) < 1e-9);
+    // Poster KB: food cost % = cost / sale price × 100 (price as printed, not net of VAT)
+    assert.ok(Math.abs(direct.foodCostOnPricePct! - (food / 120000) * 100) < 1e-9);
     assert.ok(Math.abs(direct.totalCostPct! - ((food + 2000) / net) * 100) < 1e-9);
+    const total = food + 2000;
+    // markupPct = (netRevenue − totalCost) / totalCost × 100
+    assert.ok(Math.abs(direct.markupPct! - ((net - total) / total) * 100) < 1e-9);
+    // foodMarkupPct = (netRevenue − foodCost) / foodCost × 100
+    assert.ok(Math.abs(direct.foodMarkupPct! - ((net - food) / food) * 100) < 1e-9);
 
     const grab = channelResult(summary, { id: "g", name: "Grab Food", commission_pct: 25, price: 150000 }, settings, null);
     assert.ok(Math.abs(grab.grossProfit! - (150000 / 1.08 - 37500 - food - 2000)) < 1e-6);
@@ -2344,6 +2354,257 @@ async function main() {
     );
     assert.equal(viaGet.lines[0].writeoff_qty, 3);
     assert.equal(viaGet.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
+  });
+
+  await test("no second ingredients catalog besides erp_products", async () => {
+    assert.equal(await value("select to_regclass('public.erp_ingredients')"), null);
+    assert.equal(await value("select to_regclass('public.erp_menu_items')"), null);
+    const allowed = (await q<{ type: string }>("select distinct type from public.erp_products")).map((row) => row.type);
+    for (const type of allowed) {
+      assert.ok(["ingredient", "semi_finished", "finished", "packaging", "consumable"].includes(type), type);
+    }
+  });
+
+  await test("tech-card quotes: last_lot, fifo_remaining, reference; unknown stays null", async () => {
+    const kitchen = await wh("prep-kitchen");
+    const flour = await saveProduct({ type: "ingredient", name_en: "Quote flour", base_unit: "kg" });
+    const quote = async () =>
+      one<{ last_lot: string | null; fifo_remaining: string | null; reference: string | null }>(
+        "select last_lot, fifo_remaining, reference from public.erp_product_cost_quotes(null) where product_id = $1",
+        [flour],
+      );
+    let row = await quote();
+    assert.equal(n(row.last_lot), null);
+    assert.equal(n(row.fifo_remaining), null);
+    assert.equal(n(row.reference), null);
+
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: flour, qty: 10, unit_price: 1000 }] }));
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: flour, qty: 5, unit_price: 4000 }] }));
+    row = await quote();
+    assert.equal(n(row.last_lot), 4000);
+    assert.equal(n(row.reference), 4000);
+    assert.ok(Math.abs(n(row.fifo_remaining)! - (10 * 1000 + 5 * 4000) / 15) < 1e-9);
+
+    const mystery = await saveProduct({ type: "ingredient", name_en: "Quote mystery", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "opening", warehouse_id: kitchen, lines: [{ product_id: mystery, qty: 2 }] }));
+    const unknown = await one<{ last_lot: string | null; fifo_remaining: string | null; reference: string | null }>(
+      "select last_lot, fifo_remaining, reference from public.erp_product_cost_quotes(null) where product_id = $1",
+      [mystery],
+    );
+    assert.equal(n(unknown.last_lot), null);
+    assert.equal(n(unknown.fifo_remaining), null);
+    assert.equal(n(unknown.reference), null);
+    assert.notEqual(n(unknown.last_lot), 0);
+    assert.notEqual(n(unknown.fifo_remaining), 0);
+
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: mystery, qty: 3, unit_price: 500 }] }));
+    const mixed = await one<{ last_lot: string | null; fifo_remaining: string | null; reference: string | null }>(
+      "select last_lot, fifo_remaining, reference from public.erp_product_cost_quotes(null) where product_id = $1",
+      [mystery],
+    );
+    assert.equal(n(mixed.last_lot), 500);
+    assert.equal(n(mixed.reference), 500);
+    assert.equal(n(mixed.fifo_remaining), null, "any remaining unknown lot makes FIFO remaining null");
+  });
+
+  await test("preps explode for tech-card and do not add produced lots on top", async () => {
+    const kitchen = await wh("prep-kitchen");
+    const beef = await saveProduct({ type: "ingredient", name_en: "Quote beef", base_unit: "kg", est_unit_cost: 100 });
+    const dough = await saveProduct({ type: "semi_finished", name_en: "Quote dough", base_unit: "kg" });
+    const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: dough, yield_qty: 1, lines: [{ product_id: beef, qty: 2 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [recipe, ACTOR]);
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: beef, qty: 10, unit_price: 1000 }] }));
+    await post(
+      await saveDoc({
+        doc_type: "production",
+        warehouse_id: kitchen,
+        target_warehouse_id: kitchen,
+        recipe_id: recipe,
+        output_product_id: dough,
+        output_qty: 1,
+        lines: [{ product_id: beef, qty: 2 }],
+      }),
+    );
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: beef, qty: 5, unit_price: 4000 }] }));
+
+    const quotes = await q<{ product_id: string; last_lot: string | null; fifo_remaining: string | null; reference: string | null }>(
+      "select product_id, last_lot, fifo_remaining, reference from public.erp_product_cost_quotes(null) where product_id = any($1)",
+      [[beef, dough]],
+    );
+    const products = (await q<Record<string, unknown>>("select * from public.erp_products where id = any($1)", [[beef, dough]])).map((p) => ({
+      id: p.id as string,
+      type: p.type as CostProduct["type"],
+      name_en: p.name_en as string,
+      name_vn: p.name_vn as string,
+      base_unit: p.base_unit as CostProduct["base_unit"],
+      est_unit_cost: n(p.est_unit_cost),
+      est_cost_source: p.est_cost_source as CostProduct["est_cost_source"],
+    }));
+    const recipes = [
+      {
+        id: recipe,
+        product_id: dough,
+        status: "active" as const,
+        yield_qty: 1,
+        lines: [{ product_id: beef, qty: 2 }],
+      },
+    ];
+    const exploded = buildCostContext(products, recipes, { quotes, priceSource: "fifo_remaining" });
+    const asSku = buildCostContext(products, recipes, { quotes, priceSource: "fifo_remaining", explodeRecipes: false });
+    const recipeCost = costLine(exploded, dough, 1);
+    const skuCost = costLine(asSku, dough, 1);
+    assert.equal(recipeCost.source, "recipe");
+    assert.equal(recipeCost.children?.length, 1);
+    assert.ok(Math.abs(recipeCost.cost! - 2 * n(quotes.find((q) => q.product_id === beef)!.fifo_remaining)!) < 1e-6);
+    assert.equal(skuCost.source, "fifo_remaining");
+    assert.equal(skuCost.children, undefined);
+    assert.equal(skuCost.cost, n(quotes.find((q) => q.product_id === dough)!.fifo_remaining));
+    assert.notEqual(recipeCost.cost, (recipeCost.cost ?? 0) + (skuCost.cost ?? 0), "engine must not add both");
+    assert.ok(recipeCost.cost !== skuCost.cost);
+
+    const nested = await saveProduct({ type: "semi_finished", name_en: "Quote sauce nested", base_unit: "kg" });
+    const nestedRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: nested, yield_qty: 1, lines: [{ product_id: dough, qty: 0.5 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [nestedRecipe, ACTOR]);
+    const deep = buildCostContext(
+      [
+        ...products,
+        {
+          id: nested,
+          type: "semi_finished",
+          name_en: "Quote sauce nested",
+          name_vn: "",
+          base_unit: "kg",
+          est_unit_cost: null,
+          est_cost_source: null,
+        },
+      ],
+      [...recipes, { id: nestedRecipe, product_id: nested, status: "active", yield_qty: 1, lines: [{ product_id: dough, qty: 0.5 }] }],
+      { quotes, priceSource: "reference" },
+    );
+    const nestedLine = costLine(deep, nested, 1);
+    assert.equal(nestedLine.source, "recipe");
+    assert.equal(nestedLine.children?.[0].source, "recipe");
+    assert.ok(Math.abs(nestedLine.cost! - 0.5 * 2 * 4000) < 1e-6);
+
+    const cycleCtx = buildCostContext(products, [
+      { id: "a", product_id: dough, status: "active", yield_qty: 1, lines: [{ product_id: dough, qty: 1 }] },
+    ]);
+    assert.equal(costLine(cycleCtx, dough, 1).children?.[0].issue, "cycle");
+    assert.equal(DEFAULT_MENU_PRICE_SOURCE, "reference");
+  });
+
+  await test("card save does not move stock or rewrite posted documents", async () => {
+    const kitchen = await wh("prep-kitchen");
+    const item = await saveProduct({ type: "ingredient", name_en: "Card stock item", base_unit: "kg" });
+    const prep = await saveProduct({ type: "semi_finished", name_en: "Card stock prep", base_unit: "kg" });
+    const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: prep, yield_qty: 1, lines: [{ product_id: item, qty: 1 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [recipe, ACTOR]);
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: kitchen, lines: [{ product_id: item, qty: 4, unit_price: 50 }] }));
+    const batch = await saveDoc({
+      doc_type: "production",
+      warehouse_id: kitchen,
+      target_warehouse_id: kitchen,
+      recipe_id: recipe,
+      output_product_id: prep,
+      output_qty: 1,
+      lines: [{ product_id: item, qty: 1 }],
+    });
+    await post(batch);
+    const snap = async () =>
+      one<{ lots: string; moves: string; qty: string; recipe_id: string; line_qty: string }>(
+        `select
+           (select count(*) from public.erp_lots)::text as lots,
+           (select count(*) from public.erp_movements)::text as moves,
+           (select qty_left from public.erp_lots where source_document_id = $1 and product_id = $2)::text as qty,
+           (select recipe_id::text from public.erp_documents where id = $1) as recipe_id,
+           (select qty::text from public.erp_document_lines where document_id = $1)::text as line_qty`,
+        [batch, prep],
+      );
+    const before = await snap();
+    await saveProduct({ id: item, type: "ingredient", name_en: "Card stock item renamed", base_unit: "kg" });
+    const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ id: recipe, yield_qty: 2, lines: [{ product_id: item, qty: 3 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [v2, ACTOR]);
+    await value("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({ name_en: "Card stock dish", sale_price: 10, lines: [{ product_id: prep, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const after = await snap();
+    assert.deepEqual(after, before);
+    assert.equal(after.recipe_id, recipe);
+  });
+
+  await test("dish history snapshots; losses cost gross qty; VAT follows settings", async () => {
+    const apple = await saveProduct({ type: "ingredient", name_en: "History apple", base_unit: "kg", est_unit_cost: 1000 });
+    const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "History pie",
+        sale_price: 20000,
+        vat_rate: 8,
+        lines: [{ product_id: apple, qty: 1.351, net_qty: 1, methods: ["clean"] }],
+      }),
+      ACTOR,
+    ]);
+    await value("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        id: dish,
+        name_en: "History pie",
+        sale_price: 25000,
+        vat_rate: 8,
+        lines: [{ product_id: apple, qty: 1.351, net_qty: 1, methods: ["clean"] }],
+      }),
+      ACTOR,
+    ]);
+    const revisions = await value<Record<string, unknown>[]>("select public.erp_card_history('dish', $1, 10)", [dish]);
+    assert.ok(revisions.length >= 2);
+    const prices = revisions.map((row) => Number((row.snapshot as { sale_price: number }).sale_price));
+    assert.ok(prices.includes(20000));
+    assert.ok(prices.includes(25000));
+
+    const products = [
+      {
+        id: apple,
+        type: "ingredient" as const,
+        name_en: "History apple",
+        name_vn: "",
+        base_unit: "kg" as const,
+        est_unit_cost: 1000,
+        est_cost_source: "manual" as const,
+      },
+    ];
+    const ctx = menuCostContext({ products, recipes: [] });
+    const line = costLine(ctx, apple, 1.351);
+    assert.ok(Math.abs(line.cost! - 1351) < 1e-9, "cost uses gross qty, not net");
+
+    const summary = summarize([line]);
+    const withVat = channelResult(summary, { id: "d", name: "Direct", commission_pct: 0, price: 10800 }, { output_vat_enabled: true, default_output_vat_rate: 8 }, null);
+    assert.ok(Math.abs(withVat.netRevenue! - 10000) < 1e-9);
+    const noVat = channelResult(summary, { id: "d", name: "Direct", commission_pct: 0, price: 10800 }, { output_vat_enabled: false, default_output_vat_rate: 8 }, 10);
+    assert.equal(noVat.vatRate, null);
+    assert.equal(noVat.netRevenue, 10800);
+
+    const dishRow = {
+      lines: [{ id: "1", dish_id: dish, line_no: 1, product_id: apple, qty: 1.351, note: null }],
+      sale_price: 10800,
+      vat_rate: null,
+      channel_prices: [] as { channel_id: string; sale_price: number }[],
+    };
+    const priced = dishCost(ctx, dishRow, { output_vat_enabled: false, default_output_vat_rate: null }, [
+      { id: "d", code: "direct", name: "Direct", commission_pct: 0, sort: 0, archived_at: null },
+    ]);
+    assert.ok(priced.main);
+    assert.ok(Math.abs(priced.summary.foodCost! - 1351) < 1e-9);
   });
 
   console.log(`\n${passed} checks passed`);
