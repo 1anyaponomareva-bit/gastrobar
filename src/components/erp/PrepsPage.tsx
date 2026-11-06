@@ -6,6 +6,7 @@ import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
+import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText } from "./losses";
 import {
   Empty,
@@ -29,7 +30,7 @@ import {
 } from "./ui";
 
 const prepTabs = () => [
-  { href: "/erp/preps", label: T("Рецептуры", "Recipes", "Công thức") },
+  { href: "/erp/menu/preps", label: T("Рецептуры", "Recipes", "Công thức") },
   { href: "/erp/preps/batches", label: T("Изготовленные партии", "Produced batches", "Mẻ đã sản xuất") },
 ];
 
@@ -190,6 +191,7 @@ export function BatchesPage() {
           </NavLink>
         }
       />
+      <MenuMobileNav active={MENU_HREFS.preps} />
       <SubTabs tabs={prepTabs()} active="/erp/preps/batches" />
       <DocTable
         state={state}
@@ -225,7 +227,7 @@ export function RecipePage({ id }: { id: string }) {
         kind="error"
         title={T("Полуфабрикат не найден", "Product not found", "Không tìm thấy")}
         action={
-          <NavLink href="/erp/preps" className="erpBtn">
+          <NavLink href="/erp/menu/preps" className="erpBtn">
             {T("К списку полуфабрикатов", "Back to the list", "Về danh sách")}
           </NavLink>
         }
@@ -236,7 +238,7 @@ export function RecipePage({ id }: { id: string }) {
 }
 
 const BackLink = () => (
-  <NavLink href="/erp/preps" className="erpBack">
+  <NavLink href="/erp/menu/preps" className="erpBack">
     ← {T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")}
   </NavLink>
 );

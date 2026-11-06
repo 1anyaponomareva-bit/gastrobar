@@ -1,5 +1,5 @@
-import { MenuPage } from "@/components/erp/MenuPage";
+import { MenuGoodsPage } from "@/components/erp/MenuGoodsPage";
 
 export default function ErpMenuPage() {
-  return <MenuPage />;
+  return <MenuGoodsPage />;
 }

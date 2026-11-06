@@ -3,19 +3,22 @@
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import {
-  buildCostContext,
-  channelResult,
   costLine,
+  DEFAULT_MENU_PRICE_SOURCE,
   isPackaging,
-  summarize,
   type ChannelResult,
   type CostContext,
   type CostLine,
   type LossMethod,
+  type MenuPriceSource,
 } from "@/lib/erp/costing";
+import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
+import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
+import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
+import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
   Empty,
   Field,
@@ -67,11 +70,11 @@ const isPackagingId = (state: ErpState, id: string | null) => {
   return product ? isPackaging(product.type) : false;
 };
 
-function toForm(dish: ErpDish | null): DishForm {
+function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
   return {
     name_en: dish?.name_en ?? "",
     name_vn: dish?.name_vn ?? "",
-    category_id: dish?.category_id ?? "",
+    category_id: dish?.category_id ?? defaultCategory,
     sale_price: dish?.sale_price ?? null,
     vat_rate: dish?.vat_rate ?? null,
     note: dish?.note ?? "",
@@ -86,15 +89,28 @@ function toForm(dish: ErpDish | null): DishForm {
 }
 
 function calculate(state: ErpState, ctx: CostContext, form: DishForm) {
-  const lines = form.lines.filter((l) => l.product_id && l.qty).map((l) => costLine(ctx, l.product_id, l.qty!));
-  const summary = summarize(lines);
-  const channels = state.channels
-    .filter((c) => !c.archived_at)
-    .map((c) =>
-      channelResult(summary, { id: c.id, name: c.name, commission_pct: c.commission_pct, price: form.channel_prices[c.id] ?? form.sale_price }, state.settings, form.vat_rate),
-    );
-  const directId = state.channels.find((c) => c.code === "direct")?.id;
-  const main = channels.find((c) => c.id === directId) ?? channels[0] ?? null;
+  const priced = form.lines.filter((l) => l.product_id && l.qty);
+  const { summary, channels, main } = dishCost(
+    ctx,
+    {
+      lines: priced.map((l, i) => ({
+        id: String(i),
+        dish_id: "",
+        line_no: i + 1,
+        product_id: l.product_id,
+        qty: l.qty!,
+        note: null,
+      })),
+      sale_price: form.sale_price,
+      vat_rate: form.vat_rate,
+      channel_prices: Object.entries(form.channel_prices)
+        .filter((entry): entry is [string, number] => entry[1] !== null)
+        .map(([channel_id, sale_price]) => ({ channel_id, sale_price })),
+    },
+    state.settings,
+    state.channels,
+  );
+  const lines = priced.map((l) => costLine(ctx, l.product_id, l.qty!));
   return { lines, summary, channels, main };
 }
 
@@ -132,7 +148,7 @@ export function MenuPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [archived, setArchived] = useState(false);
-  const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  const ctx = useMemo(() => (state ? menuCostContext(state) : null), [state]);
   if (!state || !ctx) return null;
 
   const q = query.trim().toLowerCase();
@@ -254,9 +270,8 @@ export function MenuPage() {
 
 export function DishPage({ id }: { id: string }) {
   const { state } = useErp();
-  const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
-  if (!state || !ctx) return null;
-  if (id === "new") return <DishEditor key="new" state={state} ctx={ctx} dish={null} />;
+  if (!state) return null;
+  if (id === "new") return <DishEditor key="new" state={state} dish={null} />;
   const dish = state.dishes.find((d) => d.id === id);
   if (!dish) {
     return (
@@ -264,22 +279,30 @@ export function DishPage({ id }: { id: string }) {
         kind="error"
         title={T("Блюдо не найдено", "Dish not found", "Không tìm thấy món")}
         action={
-          <NavLink href="/erp/menu" className="erpBtn">
-            {T("К меню", "Back to menu", "Về thực đơn")}
+          <NavLink href="/erp/menu/recipes" className="erpBtn">
+            {T("К тех. картам", "Back to recipes", "Về công thức")}
           </NavLink>
         }
       />
     );
   }
-  return <DishEditor key={dish.id} state={state} ctx={ctx} dish={dish} />;
+  return <DishEditor key={dish.id} state={state} dish={dish} />;
 }
 
-function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; dish: ErpDish | null }) {
-  const { act, busy } = useErp();
+function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) {
+  const { act, busy, notify } = useErp();
   const router = useRouter();
-  const [form, setForm] = useState<DishForm>(() => toForm(dish));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish)));
+  const defaultCategory = defaultDishCategoryId(state.categories);
+  const [form, setForm] = useState<DishForm>(() => toForm(dish, defaultCategory));
+  const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish, defaultCategory)));
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [priceSource, setPriceSource] = useState<MenuPriceSource>(DEFAULT_MENU_PRICE_SOURCE);
+  const [workshop, setWorkshop] = useState<string>(POSTER_WORKSHOPS[0]);
+  const [barcode, setBarcode] = useState("");
+  const [weighted, setWeighted] = useState(false);
+  const [venuePrices, setVenuePrices] = useState(false);
+  const [noDiscount, setNoDiscount] = useState(false);
+  const ctx = useMemo(() => menuCostContext(state, priceSource), [state, priceSource]);
   const dirty = JSON.stringify(form) !== baseline;
   useDirtyGuard(dirty);
   const set = <K extends keyof DishForm>(key: K, value: DishForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -337,8 +360,8 @@ function DishEditor({ state, ctx, dish }: { state: ErpState; ctx: CostContext; d
 
   return (
     <>
-      <NavLink href="/erp/menu" className="erpBack">
-        ← {T("Меню", "Menu", "Thực đơn")}
+      <NavLink href="/erp/menu/recipes" className="erpBack">
+        ← {T("Тех. карты", "Recipes", "Công thức")}
       </NavLink>
       <PageHead
         title={

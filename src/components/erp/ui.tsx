@@ -59,7 +59,13 @@ export const costSourceLabel = (source: CostSource | null | undefined) =>
       ? T("введена вручную", "entered manually", "nhập tay")
       : source === "recipe"
         ? T("по рецептуре", "from recipe", "theo công thức")
-        : "";
+        : source === "last_lot"
+          ? T("по последней партии", "from last lot", "theo lô gần nhất")
+          : source === "fifo_remaining"
+            ? T("по остатку FIFO", "from remaining FIFO", "theo tồn FIFO")
+            : source === "reference"
+              ? T("плановая цена карточки", "card reference price", "giá tham chiếu")
+              : "";
 
 export function errorText(code: string, detail?: string): string {
   const texts: Record<string, string> = {

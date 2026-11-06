@@ -14,8 +14,11 @@ import {
 } from "@/lib/erp/costing";
 import { compatiblePacks } from "@/lib/erp/packs";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
+import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
+import { POSTER_WORKSHOPS } from "./menuFields";
+import { MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
   costSourceLabel,
@@ -269,20 +272,22 @@ const staffOf = (product: ErpProduct | null): StaffForm => ({
   hidden: product?.staff_hidden ?? false,
 });
 
-export function ProductCard({ id }: { id: string }) {
+export function ProductCard({ id, presetType }: { id: string; presetType?: string }) {
   const { state } = useErp();
+  const type = PRODUCT_TYPES.includes(presetType as ErpProductType) ? (presetType as ErpProductType) : undefined;
   if (!state) return null;
-  if (id === "new") return <ProductEditor key="new" state={state} product={null} />;
+  if (id === "new") return <ProductEditor key={`new-${type ?? "default"}`} state={state} product={null} presetType={type} />;
   const product = state.products.find((p) => p.id === id);
   if (!product) {
+    const goods = type === "finished";
     return (
       <Empty
         kind="error"
         title={T("Продукт не найден", "Product not found", "Không tìm thấy sản phẩm")}
         text={T("Возможно, его удалили или ссылка устарела.", "It may have been removed or the link is outdated.", "Có thể đã bị xóa hoặc liên kết cũ.")}
         action={
-          <NavLink href="/erp/products" className="erpBtn">
-            {T("К списку продуктов", "Back to products", "Về danh sách")}
+          <NavLink href={goods ? MENU_HREFS.goods : MENU_HREFS.ingredients} className="erpBtn">
+            {goods ? T("К списку товаров", "Back to products", "Về danh sách hàng") : T("К списку ингредиентов", "Back to ingredients", "Về danh sách")}
           </NavLink>
         }
       />
@@ -291,8 +296,8 @@ export function ProductCard({ id }: { id: string }) {
   return <ProductEditor key={product.id} state={state} product={product} />;
 }
 
-function ProductEditor({ state, product }: { state: ErpState; product: ErpProduct | null }) {
-  const { act, busy } = useErp();
+function ProductEditor({ state, product, presetType }: { state: ErpState; product: ErpProduct | null; presetType?: ErpProductType }) {
+  const { act, busy, notify } = useErp();
   const router = useRouter();
   const initialPacks = (): PackDraft[] =>
     state.productPacks
@@ -308,11 +313,11 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
           supplier_id: link.supplier_id,
         };
       });
-  const [form, setForm] = useState<ProductForm>(() => formOf(product));
+  const [form, setForm] = useState<ProductForm>(() => formOf(product, presetType ? { type: presetType } : undefined));
   const [packs, setPacks] = useState<PackDraft[]>(initialPacks);
   const [staff, setStaff] = useState<StaffForm>(() => staffOf(product));
   const [staffBaseline, setStaffBaseline] = useState(() => JSON.stringify(staffOf(product)));
-  const [baseline, setBaseline] = useState(() => JSON.stringify([formOf(product), initialPacks()]));
+  const [baseline, setBaseline] = useState(() => JSON.stringify([formOf(product, presetType ? { type: presetType } : undefined), initialPacks()]));
   const staffDirty = JSON.stringify(staff) !== staffBaseline;
   const dirty = JSON.stringify([form, packs]) !== baseline || staffDirty;
   useDirtyGuard(dirty);
@@ -338,7 +343,7 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
   const canSave =
     form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (!staffDirty || !staffMissing.length) && (dirty || isNew);
 
-  const save = async () => {
+  const save = async (createAnother = false) => {
     const result = await act<{ id: string }>(
       {
         action: "saveProduct",
@@ -354,6 +359,15 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
       isNew ? T("Продукт создан", "Product created", "Đã tạo sản phẩm") : T("Изменения сохранены", "Changes saved", "Đã lưu thay đổi"),
     );
     if (!result) return;
+    if (isNew && createAnother) {
+      const next = formOf(null, { type: form.type });
+      setForm(next);
+      setPacks([]);
+      setStaff(staffOf(null));
+      setStaffBaseline(JSON.stringify(staffOf(null)));
+      setBaseline(JSON.stringify([next, []]));
+      return;
+    }
     setBaseline(JSON.stringify([form, packs]));
     setStaffBaseline(JSON.stringify(staff));
     if (isNew) router.replace(`/erp/products/${result.id}`);
@@ -653,15 +667,18 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
     </>
   );
 
+  const goodsMode = form.type === "finished";
+  const stub = (label: string) => notify({ ok: false, text: notImplemented(label) });
+
   return (
     <>
-      <NavLink href="/erp/products" className="erpBack">
-        ← {T("Продукты", "Products", "Sản phẩm")}
+      <NavLink href={goodsMode ? MENU_HREFS.goods : MENU_HREFS.ingredients} className="erpBack">
+        ← {goodsMode ? T("Товары", "Products", "Hàng hóa") : T("Ингредиенты", "Ingredients", "Nguyên liệu")}
       </NavLink>
       <PageHead
         title={
           <>
-            {product ? productTitle(product) : T("Новый продукт", "New product", "Sản phẩm mới")}
+            {product ? productTitle(product) : goodsMode ? T("Добавление товара", "Add product", "Thêm hàng hóa") : T("Новый продукт", "New product", "Sản phẩm mới")}
             {product?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
           </>
         }
@@ -679,6 +696,58 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
         <h2>{T("Основное", "Basics", "Cơ bản")}</h2>
         {basics}
       </section>
+
+      {goodsMode ? (
+        <section className="erpCard">
+          <h2>{T("Поля Poster без API", "Poster fields without an API", "Trường Poster chưa có API")}</h2>
+          <p className="erpHint">
+            {T(
+              "Цех, налог, обложка, опции, штрихкод и цена продажи в ERP ещё нет. Кнопки не сохраняют эти поля.",
+              "Workshop, tax, cover, options, barcode and sale price are not in the ERP yet. These controls do not save.",
+              "Phân xưởng, thuế, ảnh, tùy chọn, mã vạch và giá bán chưa có trong ERP. Không lưu các trường này.",
+            )}
+          </p>
+          <div className="erpGrid two">
+            <Field label={T("Цех приготовления", "Prep workshop", "Phân xưởng")}>
+              <select value={POSTER_WORKSHOPS[0]} onChange={() => stub(T("Цех приготовления", "Prep workshop", "Phân xưởng"))}>
+                {POSTER_WORKSHOPS.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={T("Налог", "Tax", "Thuế")}>
+              <select value="inherit" onChange={() => stub(T("Налог", "Tax", "Thuế"))}>
+                <option value="inherit">{T("Налог родительской категории (Налог не указан)", "Parent category tax (none)", "Thuế nhóm cha (chưa chọn)")}</option>
+              </select>
+            </Field>
+            <Field label={T("Обложка", "Cover", "Ảnh bìa")}>
+              <button type="button" className="erpBtn" onClick={() => stub(T("Обложка", "Cover", "Ảnh bìa"))}>
+                {T("Ред.", "Edit", "Sửa")}
+              </button>
+            </Field>
+            <Field label={T("Штрихкод", "Barcode", "Mã vạch")}>
+              <input readOnly value="" placeholder={T("нет в API", "not in API", "chưa có API")} onFocus={() => stub(T("Штрихкод", "Barcode", "Mã vạch"))} />
+            </Field>
+            <Field label={T("Итого (цена продажи)", "Total (sale price)", "Tổng (giá bán)")}>
+              <input readOnly value="" placeholder="—" onFocus={() => stub(T("Цена продажи", "Sale price", "Giá bán"))} />
+            </Field>
+          </div>
+          <label className="erpCheck">
+            <input type="checkbox" checked={false} onChange={() => stub(T("Весовой товар", "Weighable", "Bán theo cân"))} />
+            {T("Весовой товар", "Weighable", "Bán theo cân")}
+          </label>
+          <label className="erpCheck">
+            <input type="checkbox" checked={false} onChange={() => stub(T("Разные цены в заведениях", "Different venue prices", "Giá khác theo cơ sở"))} />
+            {T("Разные цены в заведениях и источниках заказов", "Different prices in venues and order sources", "Giá khác theo cơ sở và nguồn đơn")}
+          </label>
+          <label className="erpCheck">
+            <input type="checkbox" checked={false} onChange={() => stub(T("Не участвует в скидках", "Excluded from discounts", "Không áp dụng giảm giá"))} />
+            {T("Не участвует в скидках", "Excluded from discounts", "Không áp dụng giảm giá")}
+          </label>
+        </section>
+      ) : null}
 
       {isNew ? (
         <details className="erpMore erpCard">
@@ -730,8 +799,19 @@ function ProductEditor({ state, product }: { state: ErpState; product: ErpProduc
             </button>
           ) : null}
         </div>
-        <button type="button" className="erpBtn primary" disabled={busy || !canSave} onClick={save}>
-          {busy ? savingText() : isNew ? T("Создать продукт", "Create product", "Tạo sản phẩm") : T("Сохранить изменения", "Save changes", "Lưu thay đổi")}
+        {isNew && goodsMode ? (
+          <button type="button" className="erpBtn" disabled={busy || !canSave} onClick={() => void save(true)}>
+            {T("Сохранить и создать ещё", "Save and add another", "Lưu và tạo tiếp")}
+          </button>
+        ) : null}
+        <button type="button" className="erpBtn primary" disabled={busy || !canSave} onClick={() => void save(false)}>
+          {busy
+            ? savingText()
+            : isNew && goodsMode
+              ? T("Сохранить", "Save", "Lưu")
+              : isNew
+                ? T("Создать продукт", "Create product", "Tạo sản phẩm")
+                : T("Сохранить изменения", "Save changes", "Lưu thay đổi")}
         </button>
       </div>
     </>

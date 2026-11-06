@@ -341,8 +341,8 @@ export function StaffImportCard({ compact }: { compact?: boolean }) {
               </NavLink>
             </p>
           ) : compact ? (
-            <NavLink href="/erp/products" className="erpLink">
-              {T("Открыть каталог продуктов", "Open the product catalog", "Mở danh mục sản phẩm")}
+            <NavLink href="/erp/menu/ingredients" className="erpLink">
+              {T("Открыть каталог ингредиентов", "Open the ingredients catalog", "Mở danh mục nguyên liệu")}
             </NavLink>
           ) : null}
         </div>
@@ -395,7 +395,7 @@ function RecipesImportCard() {
           </ul>
           <p>
             {T("Следующий шаг", "Next step", "Bước tiếp theo")}:{" "}
-            <NavLink href={result.unresolved ? "/erp/service/review" : "/erp/preps"} className="erpLink">
+            <NavLink href={result.unresolved ? "/erp/service/review" : "/erp/menu/preps"} className="erpLink">
               {result.unresolved ? T("сопоставьте ингредиенты", "link the ingredients", "liên kết nguyên liệu") : T("проверьте рецептуры и сделайте их действующими", "review the recipes and make them active", "kiểm tra và áp dụng công thức")}
             </NavLink>
           </p>
