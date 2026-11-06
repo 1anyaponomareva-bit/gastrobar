@@ -1845,6 +1845,32 @@
   overflow-wrap: anywhere;
 }
 
+.erpTable td.erpPackPick select,
+.erpTable td.erpPackPick input {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.erpTable td.erpPackCode {
+  max-width: 14rem;
+  min-width: 6rem;
+}
+
+.erpTable td.erpPackCode input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .erpTable.stack td.erpPackCode {
+    max-width: none;
+  }
+}
+
 .erpBalances td.erpTotalLabel,
 .erpDetail td:first-child {
   white-space: normal;

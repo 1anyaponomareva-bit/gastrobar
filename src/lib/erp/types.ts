@@ -44,7 +44,7 @@ export type ErpPack = {
   archived_at?: string | null;
 };
 
-/** Product ↔ catalog pack link: supplier and the product's default pack. */
+/** Product ↔ catalog pack link: supplier, optional supplier SKU, and the product's default pack. */
 export type ErpProductPack = {
   id: string;
   product_id: string;
@@ -53,6 +53,8 @@ export type ErpProductPack = {
   label: string;
   qty_base: number;
   is_default: boolean;
+  /** Supplier SKU for this pack of this product. Independent of erp_products.product_code. */
+  code?: string | null;
   archived_at?: string | null;
 };
 

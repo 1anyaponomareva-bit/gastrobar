@@ -47,6 +47,8 @@ export type OrderProductPack = {
   unit: string;
   qty_base: number;
   is_default: boolean;
+  /** Supplier SKU for this pack; optional, ignored by older clients. */
+  code?: string | null;
 };
 
 export type OrderProduct = {

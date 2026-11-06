@@ -232,7 +232,7 @@ export function ProductsPage() {
   );
 }
 
-type PackDraft = { id?: string; pack_id?: string; label: string; qty_base: number; is_default: boolean; supplier_id: string | null };
+type PackDraft = { id?: string; pack_id?: string; label: string; qty_base: number; is_default: boolean; supplier_id: string | null; code: string };
 
 type ProductForm = {
   name_en: string;
@@ -314,6 +314,7 @@ function ProductEditor({
           qty_base: catalog?.qty_base ?? link.qty_base,
           is_default: link.is_default,
           supplier_id: link.supplier_id,
+          code: link.code ?? "",
         };
       });
   const [form, setForm] = useState<ProductForm>(() => formOf(product, presetType ? { type: presetType } : undefined));
@@ -473,11 +474,9 @@ function ProductEditor({
         >
           {unit ? <NumberInput value={form.est_unit_cost} onChange={(v) => set("est_unit_cost", v)} /> : <span className="erpNoUnit">{T("Сначала выберите единицу", "Choose a unit first", "Chọn đơn vị trước")}</span>}
         </Field>
-        {!packs.length ? (
-          <Field label={productCodeFieldLabel()}>
-            <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} />
-          </Field>
-        ) : null}
+        <Field label={productCodeFieldLabel()}>
+          <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} autoComplete="off" spellCheck={false} />
+        </Field>
       </div>
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
       <p className="erpHint">
@@ -488,7 +487,7 @@ function ProductEditor({
         )}
       </p>
       {packs.length ? (
-        <div className="erpTableWrap">
+        <div className="erpTableWrap scroll">
           <table className="erpTable stack">
             <thead>
               <tr>
@@ -507,7 +506,7 @@ function ProductEditor({
                 const options = compatiblePacks(state.packs, unit).filter((p) => p.id === pack.pack_id || !packs.some((row) => row.pack_id === p.id));
                 return (
                   <tr key={pack.id ?? `new-${index}`}>
-                    <td className="main">
+                    <td className="main erpPackPick">
                       {pack.pack_id ? (
                         <select
                           value={pack.pack_id}
@@ -545,8 +544,15 @@ function ProductEditor({
                           ))}
                       </select>
                     </td>
-                    <td className="edit" data-label={productCodeFieldLabel()}>
-                      <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} />
+                    <td className="edit erpPackCode" data-label={productCodeFieldLabel()}>
+                      <input
+                        value={pack.code}
+                        onChange={(e) => update({ code: e.target.value })}
+                        autoComplete="off"
+                        spellCheck={false}
+                        aria-label={productCodeFieldLabel()}
+                        data-testid="pack-code"
+                      />
                     </td>
                     <td data-label={T("Основная", "Default", "Mặc định")}>
                       <input
@@ -573,7 +579,7 @@ function ProductEditor({
           type="button"
           className="erpBtn"
           disabled={!unit}
-          onClick={() => setPacks((prev) => [...prev, { label: "", qty_base: 0, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null }])}
+          onClick={() => setPacks((prev) => [...prev, { label: "", qty_base: 0, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null, code: "" }])}
         >
           + {T("Новая фасовка", "New pack", "Quy cách mới")}
         </button>
@@ -584,7 +590,7 @@ function ProductEditor({
           onClick={() => {
             const next = compatiblePacks(state.packs, unit).find((p) => !packs.some((row) => row.pack_id === p.id));
             if (!next) return;
-            setPacks((prev) => [...prev, { pack_id: next.id, label: next.name, qty_base: next.qty_base, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null }]);
+            setPacks((prev) => [...prev, { pack_id: next.id, label: next.name, qty_base: next.qty_base, is_default: !prev.length, supplier_id: product?.staff_supplier_id ?? null, code: "" }]);
           }}
         >
           + {T("Из справочника", "From catalog", "Từ danh mục")}

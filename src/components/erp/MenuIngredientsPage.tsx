@@ -161,7 +161,11 @@ function MenuIngredientsList() {
         if (!ids.length) return supplierSet.has("none");
         if (!ids.some((id) => supplierSet.has(id))) return false;
       }
-      return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code} ${p.product_code ?? ""}`.toLowerCase().includes(q);
+      const packCodes = packs
+        .filter((link) => link.product_id === p.id)
+        .map((link) => link.code ?? "")
+        .join(" ");
+      return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code} ${p.product_code ?? ""} ${packCodes}`.toLowerCase().includes(q);
     })
     .map((p) => {
       const stock = stockOf(stockMap, p.id);

@@ -52,7 +52,7 @@ export function productBrandFieldLabel(type: string | null | undefined) {
     : T("Бренд", "Brand", "Thương hiệu");
 }
 
-/** Kitchen article on the ingredient card. Stored as erp_products.product_code, not the slug `code`. */
+/** Kitchen article / pack SKU label. Product-level: erp_products.product_code. Pack-level: erp_product_packs.code. Not the slug `code`. */
 export function productCodeFieldLabel() {
   return T("Код товара", "Product code", "Mã hàng");
 }

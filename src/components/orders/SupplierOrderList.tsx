@@ -189,7 +189,8 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     (product: OrderProduct) => {
       const query = search.toLowerCase().trim();
       if (!query) return true;
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", supplier?.name ?? ""].some((text) =>
+      const packCodes = product.packs.map((item) => item.code ?? "");
+      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", supplier?.name ?? "", ...packCodes].some((text) =>
         text.toLowerCase().includes(query),
       );
     },
@@ -325,7 +326,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
             <select className="orders-select" value={row.packId ?? ""} onChange={(event) => setPack(product, event.target.value)}>
               {product.packs.map((item) => (
                 <option key={item.pack_id} value={item.pack_id}>
-                  {item.label}
+                  {item.code ? `${item.label} · ${item.code}` : item.label}
                 </option>
               ))}
             </select>

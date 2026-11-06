@@ -3079,6 +3079,117 @@ async function main() {
     assert.equal((await one<{ product_code: string | null }>("select product_code from public.erp_products where id = $1", [a])).product_code, null);
   });
 
+  await test("pack link code is optional, per pack, and independent of product code", async () => {
+    assert.equal(productCodeFieldLabel(), "Код товара");
+    const kg = await savePack({ name: "Pack-code kg", unit: "kg", qty_base: 1 });
+    const bag = await savePack({ name: "Pack-code bag", unit: "kg", qty_base: 2.5 });
+    const id = await saveProduct({
+      type: "ingredient",
+      name_en: "Pack code item",
+      name_vn: "Mặt hàng mã quy cách",
+      base_unit: "kg",
+      product_code: "ING-1",
+      packs: [
+        { pack_id: kg, label: "Pack-code kg", qty_base: 1, is_default: true, code: "  A  " },
+        { pack_id: bag, label: "Pack-code bag", qty_base: 2.5, is_default: false, code: "B" },
+      ],
+    });
+    const rows = await q<{ label: string; code: string | null }>(
+      "select label, code from public.erp_product_packs where product_id = $1 and archived_at is null order by label",
+      [id],
+    );
+    assert.deepEqual(rows, [
+      { label: "Pack-code bag", code: "B" },
+      { label: "Pack-code kg", code: "A" },
+    ]);
+    assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [id])).product_code, "ING-1");
+
+    const saved = await q<{
+      id: string;
+      pack_id: string;
+      label: string;
+      qty_base: string;
+      is_default: boolean;
+      supplier_id: string | null;
+      code: string | null;
+    }>("select id, pack_id, label, qty_base, is_default, supplier_id, code from public.erp_product_packs where product_id = $1 and archived_at is null order by label", [id]);
+    const payloadOf = (row: (typeof saved)[0], code?: string | null) => ({
+      id: row.id,
+      pack_id: row.pack_id,
+      label: row.label,
+      qty_base: Number(row.qty_base),
+      is_default: row.is_default,
+      supplier_id: row.supplier_id,
+      ...(code === undefined ? {} : { code }),
+    });
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Pack code item",
+      name_vn: "Mặt hàng mã quy cách",
+      base_unit: "kg",
+      product_code: "ING-1",
+      packs: saved.map((row) => payloadOf(row, row.label === "Pack-code kg" ? "" : row.code)),
+    });
+    const cleared = await q<{ label: string; code: string | null }>(
+      "select label, code from public.erp_product_packs where product_id = $1 and archived_at is null order by label",
+      [id],
+    );
+    assert.deepEqual(cleared, [
+      { label: "Pack-code bag", code: "B" },
+      { label: "Pack-code kg", code: null },
+    ]);
+    assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [id])).product_code, "ING-1");
+
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Pack code item",
+      name_vn: "Mặt hàng mã quy cách",
+      base_unit: "kg",
+      product_code: "ING-KEEP",
+      packs: saved.map((row) => payloadOf(row)),
+    });
+    const kept = await q<{ label: string; code: string | null; supplier_id: string | null; is_default: boolean }>(
+      "select label, code, supplier_id, is_default from public.erp_product_packs where product_id = $1 and archived_at is null order by label",
+      [id],
+    );
+    assert.deepEqual(
+      kept.map((row) => ({ label: row.label, code: row.code })),
+      [
+        { label: "Pack-code bag", code: "B" },
+        { label: "Pack-code kg", code: null },
+      ],
+      "omitting pack code keeps the stored value",
+    );
+    assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [id])).product_code, "ING-KEEP");
+    assert.ok(kept.every((row) => row.supplier_id === null));
+    assert.deepEqual(
+      kept.map((row) => row.is_default),
+      [false, true],
+    );
+
+    const mm = await value<string>("select id from public.erp_suppliers where code = 'mm'");
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Pack code item",
+      name_vn: "Mặt hàng mã quy cách",
+      base_unit: "kg",
+      product_code: "ING-KEEP",
+      packs: saved.map((row) => ({
+        ...payloadOf(row, row.label === "Pack-code kg" ? null : "B"),
+        supplier_id: mm,
+      })),
+    });
+    const catalog = await value<unknown>("select public.erp_order_supplier_products($1)", [mm]);
+    const item = (catalog as { id: string; packs: { code: string | null; label: string }[] }[]).find((row) => row.id === id);
+    assert.ok(item);
+    const byLabel = Object.fromEntries(item!.packs.map((pack) => [pack.label, pack.code]));
+    assert.equal(byLabel["Pack-code bag"], "B");
+    assert.equal(byLabel["Pack-code kg"] ?? null, null);
+  });
+
   console.log(`\n${passed} checks passed`);
 }
 
