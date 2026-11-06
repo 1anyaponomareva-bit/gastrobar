@@ -118,6 +118,40 @@ async function main() {
       await value("select has_function_privilege('service_role', 'public.erp_post_document(uuid,text)', 'execute')"),
       true,
     );
+    for (const role of ["anon", "authenticated"]) {
+      assert.equal(
+        await value("select has_function_privilege($1, 'public.erp_load_state(text)', 'execute')", [role]),
+        false,
+      );
+    }
+    assert.equal(
+      await value("select has_function_privilege('service_role', 'public.erp_load_state(text)', 'execute')"),
+      true,
+    );
+  });
+
+  await test("erp_load_state returns screen parts in one call", async () => {
+    const full = await value<Record<string, unknown>>("select public.erp_load_state(null)");
+    assert.equal(typeof full, "object");
+    assert.ok(full);
+    for (const key of [
+      "settings",
+      "categories",
+      "suppliers",
+      "warehouses",
+      "channels",
+      "products",
+      "packs",
+      "productPacks",
+      "stock",
+      "recipes",
+      "dishes",
+      "writeoffReasons",
+    ]) {
+      assert.ok(key in full, key);
+    }
+    const stock = await value<Record<string, unknown>>("select public.erp_load_state($1)", ["stock,products"]);
+    assert.deepEqual(Object.keys(stock).sort(), ["products", "stock"]);
   });
 
   await test("pack parsing never guesses", async () => {

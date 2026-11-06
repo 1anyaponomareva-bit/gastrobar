@@ -6,35 +6,42 @@ export type StatePart = keyof ErpState;
 
 export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons"];
 
-/** Warehouse screens need these before recipes/dishes. ErpShell still loads ALL_PARTS today. */
+/** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
 export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
 
 const MISSING_FN = new Set(["PGRST202", "42883"]);
-let loadStateRpcMissing = false;
+/** Skip a missing RPC for a while, then try again (migration may land after the first warm instance). */
+let loadStateRpcMissingUntil = 0;
+const LOAD_STATE_RETRY_MS = 60_000;
 
 function isMissingLoadState(code: string, message: string) {
   return MISSING_FN.has(code) || /erp_load_state|does not exist|could not find the function/i.test(message);
 }
 
+function markLoadStateMissing() {
+  loadStateRpcMissingUntil = Date.now() + LOAD_STATE_RETRY_MS;
+}
+
 async function loadStateRpc(parts: StatePart[]): Promise<Partial<ErpState> | null> {
-  if (loadStateRpcMissing) return null;
+  if (Date.now() < loadStateRpcMissingUntil) return null;
   try {
     const result = await erpDb().rpc("erp_load_state", { p_parts: parts.join(",") });
     if (result.error) {
       const message = result.error.message ?? "";
       if (isMissingLoadState(result.error.code ?? "", message)) {
-        loadStateRpcMissing = true;
+        markLoadStateMissing();
         return null;
       }
       check(result);
     }
     const data = result.data;
     if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    loadStateRpcMissingUntil = 0;
     return data as Partial<ErpState>;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (isMissingLoadState("", message)) {
-      loadStateRpcMissing = true;
+      markLoadStateMissing();
       return null;
     }
     throw error;
