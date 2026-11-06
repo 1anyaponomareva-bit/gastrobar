@@ -28,7 +28,7 @@ import {
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
 import { setErpLang } from "../../src/components/erp/i18n";
-import { lossPercentsText, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
+import { categoryLabel, lossPercentsText, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -2710,6 +2710,20 @@ async function main() {
     await post(await saveDoc({ doc_type: "opening", warehouse_id: warehouse, lines: [{ product_id: unknown, qty: 2 }] }));
     const stockRows = await q<ErpStockRow>("select product_id, warehouse_id, qty, known_value, cost_known, nearest_expiry from public.erp_stock where product_id = $1", [unknown]);
     assert.equal(stockValue(stockOf(stockByProduct(stockRows, null), unknown)), null, "unknown remaining value is null, not 0");
+
+    const herbs = await value<string>("select public.erp_save_ref('category', $1::jsonb, $2)", [
+      JSON.stringify({ name_en: "LOC HERBS", name_vn: "Rau thơm" }),
+      ACTOR,
+    ]);
+    assert.deepEqual(await one<{ name_en: string; name_vn: string }>("select name_en, name_vn from public.erp_categories where id = $1", [herbs]), {
+      name_en: "LOC HERBS",
+      name_vn: "Rau thơm",
+    });
+    await value("select public.erp_save_ref('category', $1::jsonb, $2)", [
+      JSON.stringify({ id: herbs, name_en: "LOC HERBS", name_vn: "" }),
+      ACTOR,
+    ]);
+    assert.equal(await value("select name_vn from public.erp_categories where id = $1", [herbs]), "");
   });
 
   await test("supplier categories come from product.category_id; VAT follows settings", async () => {
@@ -2813,6 +2827,23 @@ async function main() {
     assert.equal(safeMenuListReturn("//evil.example/erp/menu"), null);
     assert.equal(safeMenuListReturn("/erp/menu/ingredients/../../service"), null);
     assert.equal(withMenuListReturn("/erp/products/x", "/erp/products"), "/erp/products/x");
+  });
+
+  await test("ingredient category names are stored fields: EN on RU/EN, VN on VN", async () => {
+    const cat = { name_en: "MEAT & POULTRY", name_vn: "Thịt & gia cầm" };
+    try {
+      setErpLang("ru");
+      assert.equal(categoryLabel(cat), "MEAT & POULTRY");
+      assert.ok(!categoryLabel(cat).includes("/"));
+      setErpLang("en");
+      assert.equal(categoryLabel(cat), "MEAT & POULTRY");
+      setErpLang("vn");
+      assert.equal(categoryLabel(cat), "Thịt & gia cầm");
+      assert.equal(categoryLabel({ name_en: "PANTRY", name_vn: "" }), "PANTRY");
+      assert.equal(categoryLabel(undefined), "—");
+    } finally {
+      setErpLang("ru");
+    }
   });
 
   await test("ingredient names are stored fields, not translations: EN on RU/EN, VN on VN", async () => {

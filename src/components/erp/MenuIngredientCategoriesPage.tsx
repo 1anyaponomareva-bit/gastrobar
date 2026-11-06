@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ErpCategory } from "@/lib/erp/types";
 import {
   CATEGORY_TRASH_DAYS,
   ingredientCategoryStats,
+  liveCategories,
   sumIngredientCategoryStats,
   trashAlive,
   trashedCategories,
@@ -16,7 +18,7 @@ import { useErp } from "./ErpShell";
 import { MenuFormShell } from "./MenuFormShell";
 import { categoryLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
-import { dateTimeText, Field, packQtyText, T, unitLabel, vnd } from "./ui";
+import { dateTimeText, Empty, Field, NavLink, packQtyText, T, unitLabel, vnd } from "./ui";
 
 const pcs = () => T("шт.", "pcs", "cái");
 const dash = "";
@@ -30,6 +32,10 @@ function qtyLabel(qty: number, unit: string | null, mixed: boolean) {
 function valueCell(net: number | null, withVat: (n: number | null) => number | null) {
   const value = withVat(net);
   return value == null ? "—" : vnd(value);
+}
+
+function editHref(row: { id: string }) {
+  return `${MENU_HREFS.ingredientCategories}/${row.id}`;
 }
 
 export function MenuIngredientCategoriesPage() {
@@ -54,8 +60,8 @@ export function MenuIngredientCategoriesPage() {
       id: "name",
       label: T("Категория", "Category", "Nhóm"),
       locked: true,
-      cell: (row) => (row.nameVn && row.nameVn !== row.nameEn ? `${row.nameEn} / ${row.nameVn}` : row.nameEn),
-      text: (row) => row.nameEn,
+      cell: (row) => categoryLabel({ name_en: row.nameEn, name_vn: row.nameVn }),
+      text: (row) => categoryLabel({ name_en: row.nameEn, name_vn: row.nameVn }),
     },
     {
       id: "count",
@@ -92,12 +98,13 @@ export function MenuIngredientCategoriesPage() {
   ];
 
   const remove = (row: IngredientCategoryStat) => {
+    const label = categoryLabel({ name_en: row.nameEn, name_vn: row.nameVn });
     if (
       !window.confirm(
         T(
-          `Удалить «${row.nameEn}»? Категория попадёт в «Удалённые» на ${CATEGORY_TRASH_DAYS} дней.`,
-          `Delete “${row.nameEn}”? It will stay in Deleted for ${CATEGORY_TRASH_DAYS} days.`,
-          `Xóa “${row.nameEn}”? Sẽ nằm trong Đã xóa ${CATEGORY_TRASH_DAYS} ngày.`,
+          `Удалить «${label}»? Категория попадёт в «Удалённые» на ${CATEGORY_TRASH_DAYS} дней.`,
+          `Delete “${label}”? It will stay in Deleted for ${CATEGORY_TRASH_DAYS} days.`,
+          `Xóa “${label}”? Sẽ nằm trong Đã xóa ${CATEGORY_TRASH_DAYS} ngày.`,
         ),
       )
     ) {
@@ -120,13 +127,26 @@ export function MenuIngredientCategoriesPage() {
       addHref={`${MENU_HREFS.ingredientCategories}/new`}
       addLabel={T("Добавить", "Add", "Thêm")}
       trashHref={MENU_HREFS.ingredientCategoriesTrash}
+      rowHref={editHref}
       hideMore
       hideCheck
       defaultSort="name"
       emptyTitle={T("Категорий ингредиентов пока нет", "No ingredient categories yet", "Chưa có nhóm nguyên liệu")}
       emptyMessage={T("Нет категорий, соответствующих выбранным фильтрам", "No categories match the selected filters", "Không có nhóm khớp bộ lọc")}
       rowEnd={(row) => (
-        <button type="button" className="erpLink erpDanger" onClick={() => remove(row)}>
+        <NavLink href={editHref(row)} className="erpLink">
+          {T("Ред.", "Edit", "Sửa")}
+        </NavLink>
+      )}
+      rowMenu={(row, close) => (
+        <button
+          type="button"
+          className="erpDropAction erpDanger"
+          onClick={() => {
+            close();
+            remove(row);
+          }}
+        >
           {T("Удалить", "Delete", "Xóa")}
         </button>
       )}
@@ -159,26 +179,61 @@ export function MenuIngredientCategoriesPage() {
 }
 
 export function MenuIngredientCategoryNewPage() {
+  return <MenuIngredientCategoryForm />;
+}
+
+export function MenuIngredientCategoryEditPage({ id }: { id: string }) {
+  const { state } = useErp();
+  if (!state) return null;
+  const category = liveCategories(state.categories).find((row) => row.id === id);
+  if (!category) {
+    return (
+      <Empty
+        title={T("Категория не найдена", "Category not found", "Không thấy nhóm")}
+        text={T("Её уже удалили или она в «Удалённых».", "It may already be deleted or in Deleted.", "Có thể đã xóa hoặc nằm trong Đã xóa.")}
+        action={
+          <NavLink href={MENU_HREFS.ingredientCategories} className="erpBtn">
+            {T("К списку", "Back to list", "Về danh sách")}
+          </NavLink>
+        }
+      />
+    );
+  }
+  return <MenuIngredientCategoryForm category={category} />;
+}
+
+function MenuIngredientCategoryForm({ category }: { category?: ErpCategory }) {
   const { act, busy } = useErp();
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState(category?.name_en ?? "");
+  const [nameVn, setNameVn] = useState(category?.name_vn ?? "");
+  const title = category
+    ? T("Редактирование категории ингредиентов", "Edit ingredient category", "Sửa nhóm nguyên liệu")
+    : T("Добавление категории ингредиентов", "Add ingredient category", "Thêm nhóm nguyên liệu");
+
   return (
     <MenuFormShell
       backHref={MENU_HREFS.ingredientCategories}
       backLabel={T("Категории ингредиентов", "Ingredient categories", "Nhóm nguyên liệu")}
       activeHref={MENU_HREFS.ingredientCategories}
-      title={T("Добавление категории ингредиентов", "Add ingredient category", "Thêm nhóm nguyên liệu")}
+      title={title}
       footer={
         <button
           type="button"
           className="erpBtn primary"
-          disabled={busy || !name.trim()}
+          disabled={busy || !nameEn.trim()}
           onClick={async () => {
-            const value = name.trim();
-            if (!value) return;
+            const english = nameEn.trim();
+            if (!english) return;
             const saved = await act(
-              { action: "saveRef", entity: "category", value: { name_en: value, name_vn: value, name: value } },
-              T("Категория создана", "Category created", "Đã tạo nhóm"),
+              {
+                action: "saveRef",
+                entity: "category",
+                value: { id: category?.id, name_en: english, name_vn: nameVn.trim() },
+              },
+              category
+                ? T("Категория сохранена", "Category saved", "Đã lưu nhóm")
+                : T("Категория создана", "Category created", "Đã tạo nhóm"),
             );
             if (saved) router.push(MENU_HREFS.ingredientCategories);
           }}
@@ -188,9 +243,23 @@ export function MenuIngredientCategoryNewPage() {
       }
     >
       <section className="erpCard">
-        <Field label={T("Название", "Name", "Tên")}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={T("Например, «Овощи» или «Мясо»", "For example, “Vegetables” or “Meat”", "Ví dụ: “Rau” hoặc “Thịt”")} />
-        </Field>
+        <div className="erpGrid two">
+          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
+            <input
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              autoFocus
+              placeholder={T("Например, «Vegetables» или «Meat»", "For example, “Vegetables” or “Meat”", "Ví dụ: “Vegetables” hoặc “Meat”")}
+            />
+          </Field>
+          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
+            <input
+              value={nameVn}
+              onChange={(e) => setNameVn(e.target.value)}
+              placeholder={T("Например, «Rau» или «Thịt»", "For example, “Rau” or “Thịt”", "Ví dụ: “Rau” hoặc “Thịt”")}
+            />
+          </Field>
+        </div>
       </section>
     </MenuFormShell>
   );

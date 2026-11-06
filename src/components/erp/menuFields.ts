@@ -1,5 +1,6 @@
 import { DEFAULT_MENU_PRICE_SOURCE, LOSS_METHODS, type CostContext, type LossPcts, type MenuPriceSource } from "@/lib/erp/costing";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
+import { productLabel } from "@/lib/erp/productName";
 import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
 import { T, locale } from "./i18n";
 
@@ -60,9 +61,9 @@ export function dishTitle(dish: Pick<ErpDish, "name_en" | "name_vn">) {
   return dish.name_vn && dish.name_vn !== dish.name_en ? `${dish.name_en} / ${dish.name_vn}` : dish.name_en;
 }
 
-export function categoryLabel(category: ErpCategory | undefined) {
+export function categoryLabel(category: Pick<ErpCategory, "name_en" | "name_vn"> | undefined) {
   if (!category) return "—";
-  return category.name_vn && category.name_vn !== category.name_en ? `${category.name_en} / ${category.name_vn}` : category.name_en;
+  return productLabel(category);
 }
 
 export function visibleCategories(categories: ErpCategory[]) {
