@@ -9,8 +9,8 @@
 | Вкладка Poster | Спека | Наш чек-лист | Статус спеки |
 |----------------|-------|--------------|--------------|
 | Товары | `tovary.md` | [tovary.md](tovary.md) | **есть файл, нет коммита** |
-| Тех. карты | | [tech-cards.md](tech-cards.md) | нет файла |
-| Полуфабрикаты | | [preps.md](preps.md) | нет файла |
+| Тех. карты | `tech-karty.md` | [tech-cards.md](tech-cards.md) | **есть файл, нет коммита** |
+| Полуфабрикаты | `polufabrikaty.md` | [preps.md](preps.md) | нет файла (Agent 1 смотрит экран) |
 | Ингредиенты | | [ingredients.md](ingredients.md) | нет файла |
 | Контроль фудкоста | | [foodcost.md](foodcost.md) | нет файла |
 | Категории товаров и тех. карт | | [categories-goods.md](categories-goods.md) | нет файла |

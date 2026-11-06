@@ -78,9 +78,9 @@ Shopee без комиссии: `complete=false`, `grossProfit=null`, issues = `
 
 Проведение партии котлет в том же тесте: actual beef 2,1 кг + salt 0,02 → `total_cost` **420 200**, `output_unit_cost` **32 323,076923** на 13 шт. Карточка рецепта после этого числа не меняет.
 
-## Черновик Agent 3 (ещё не в main)
+## Логика в локальном `main` (`8d2af42`)
 
-`GASTROBAR-menu-logic`, без коммита: default источника техкарты = `reference` (= текущий `est_unit_cost`). C1–C6 остаются верны.
+Default источника техкарты = `reference` (= текущий `est_unit_cost`). C1–C6 остаются верны. Prod-SQL ещё не applied.
 
 Дополнительно в `channelResult`:
 
