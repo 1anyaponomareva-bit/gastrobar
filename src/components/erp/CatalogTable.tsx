@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
@@ -149,6 +149,9 @@ export function CatalogTable<Row extends { id: string }>({
   hideTrash,
   hideMore,
   hideCheck,
+  showImport,
+  expandedId,
+  rowExpand,
   emptyMessage,
   backHref,
   backLabel,
@@ -182,6 +185,10 @@ export function CatalogTable<Row extends { id: string }>({
   hideTrash?: boolean;
   hideMore?: boolean;
   hideCheck?: boolean;
+  /** Poster ingredients toolbar has Импорт as its own button, not inside ⋯. */
+  showImport?: boolean;
+  expandedId?: string | null;
+  rowExpand?: (row: Row) => ReactNode;
   emptyMessage?: string;
   backHref?: string;
   backLabel?: string;
@@ -376,6 +383,15 @@ export function CatalogTable<Row extends { id: string }>({
         <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={exportList}>
           {T("Экспорт", "Export", "Xuất")}
         </button>
+        {showImport ? (
+          <button
+            type="button"
+            className="erpHeadBtn"
+            onClick={() => notify({ ok: false, text: notImplemented(T("Импорт", "Import", "Nhập")) })}
+          >
+            {T("Импорт", "Import", "Nhập")}
+          </button>
+        ) : null}
         <button type="button" className="erpHeadBtn" onClick={() => window.print()}>
           {T("Печать", "Print", "In")}
         </button>
@@ -446,9 +462,10 @@ export function CatalogTable<Row extends { id: string }>({
               ) : (
                 pageRows.map((row) => {
                   const href = rowHref?.(row);
+                  const span = shown.length + (hideCheck ? 1 : 2);
                   return (
+                    <Fragment key={row.id}>
                     <tr
-                      key={row.id}
                       className={href ? "clickable" : ""}
                       onClick={(e) => {
                         if (!href) return;
@@ -485,6 +502,12 @@ export function CatalogTable<Row extends { id: string }>({
                         </div>
                       </td>
                     </tr>
+                    {expandedId === row.id && rowExpand ? (
+                      <tr className="erpMenuExpandRow">
+                        <td colSpan={span}>{rowExpand(row)}</td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   );
                 })
               )}

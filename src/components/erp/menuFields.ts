@@ -1,6 +1,7 @@
-import { DEFAULT_MENU_PRICE_SOURCE, type CostContext, type MenuPriceSource } from "@/lib/erp/costing";
+import { DEFAULT_MENU_PRICE_SOURCE, LOSS_METHODS, type CostContext, type LossPcts, type MenuPriceSource } from "@/lib/erp/costing";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
+import { T, locale } from "./i18n";
 
 /**
  * Field map for the Menu UI. Agreed with Agent 3:
@@ -74,4 +75,33 @@ export function dishEconomics(state: ErpState, ctx: CostContext, dish: ErpDish) 
     margin: main?.grossMarginPct ?? null,
     profit: main?.grossProfit ?? null,
   };
+}
+
+export function posterDecimals(value: number, decimals: number) {
+  return value.toLocaleString(locale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** Poster list: «26% 0% 0% 0% 0%», or «—» when no loss % is stored. Do not invent 0 for empty cards. */
+export function lossPercentsText(product: LossPcts): string {
+  const values = LOSS_METHODS.map((method) => product[`loss_${method}_pct`]);
+  if (values.every((value) => value == null)) return "—";
+  return values.map((value) => `${Math.round(Number(value ?? 0))}%`).join(" ");
+}
+
+/** Table qty: `0,00 шт` / `0,000 кг` / `0,000 л` (no period on шт in the grid). */
+export function posterStockQty(qty: number, unit: string | null | undefined): string {
+  if (!unit) return posterDecimals(qty, 3);
+  const decimals = unit === "pcs" ? 2 : 3;
+  const suffix = unit === "pcs" ? T("шт", "pcs", "cái") : unit === "l" ? T("л", "l", "l") : T("кг", "kg", "kg");
+  return `${posterDecimals(qty, decimals)} ${suffix}`;
+}
+
+export function prepsUsingProduct(state: ErpState, productId: string) {
+  const active = new Set<string>();
+  for (const recipe of state.recipes) {
+    if (recipe.status !== "active") continue;
+    if (!recipe.lines.some((line) => line.product_id === productId)) continue;
+    active.add(recipe.product_id);
+  }
+  return state.products.filter((product) => product.type === "semi_finished" && !product.archived_at && active.has(product.id));
 }

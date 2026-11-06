@@ -116,8 +116,33 @@
 
 .erpMenuTable .erpMenuRowActions {
   width: auto;
-  min-width: 120px;
+  min-width: 168px;
   padding-right: 10px;
+}
+
+.erpMenuTable tbody tr.erpMenuExpandRow > td {
+  white-space: normal;
+  background: var(--erp-soft);
+  padding: 12px 16px 16px;
+}
+
+.erpMenuTable tbody tr.erpMenuExpandRow:hover > td {
+  background: var(--erp-soft);
+}
+
+.erpMenuUsageBlock h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.erpMenuUsageBlock h3 + .erpTableWrap,
+.erpMenuUsageBlock h3 + .erpHint {
+  margin-bottom: 12px;
+}
+
+.erpMenuLinks .erpLink {
+  text-decoration: none;
 }
 
 .erpMenuTable tfoot td {

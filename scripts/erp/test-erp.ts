@@ -20,6 +20,7 @@ import {
   type CostRecipe,
 } from "../../src/lib/erp/costing";
 import { dishCost, menuCostContext } from "../../src/lib/erp/menu";
+import { lossPercentsText, posterStockQty } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -2750,6 +2751,28 @@ async function main() {
     assert.deepEqual(packSupplierIds(rice, packLinks), [supplier]);
     assert.equal(packSupplierLabel(rice, packLinks, [{ id: supplier, name: "LOC Farm" }]), "LOC Farm");
     assert.deepEqual(packSupplierIds(rice, []), [], "no invented supplier when packs are empty");
+  });
+
+  await test("ingredient list losses and stock stay honest: empty losses are —, unknown cost is null", async () => {
+    assert.equal(lossPercentsText({}), "—");
+    assert.equal(
+      lossPercentsText({ loss_clean_pct: null, loss_boil_pct: null, loss_fry_pct: null, loss_stew_pct: null, loss_bake_pct: null }),
+      "—",
+    );
+    assert.equal(lossPercentsText({ loss_clean_pct: 26 }), "26% 0% 0% 0% 0%");
+    assert.equal(
+      lossPercentsText({ loss_clean_pct: 13, loss_boil_pct: 0, loss_fry_pct: 0, loss_stew_pct: 0, loss_bake_pct: 0 }),
+      "13% 0% 0% 0% 0%",
+    );
+    assert.match(posterStockQty(0, "pcs"), /0[,.]00/);
+    assert.match(posterStockQty(0, "kg"), /0[,.]000/);
+    const unknownStock = { qty: 2, knownValue: 0, complete: false as const };
+    assert.equal(stockValue(unknownStock), null);
+    assert.equal(costNumber(costInfo(unknownStock, { est_unit_cost: 9000 })), null, "incomplete lots do not fall back to 0 or a card price");
+    const emptyStock = { qty: 0, knownValue: 0, complete: true as const };
+    assert.equal(stockValue(emptyStock), 0);
+    assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: null })), null);
+    assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: 1500 })), 1500);
   });
 
   console.log(`\n${passed} checks passed`);
