@@ -34,6 +34,7 @@ export function activeMenuHref(pathname: string | null): string | null {
   const listed = menuNavItems().find((item) => path === item.href || (item.href !== MENU_HREFS.goods && path.startsWith(`${item.href}/`)));
   if (listed) return listed.href;
   if (path === MENU_HREFS.trash || path.startsWith(`${MENU_HREFS.trash}/`)) return MENU_HREFS.goods;
+  if (path.startsWith("/erp/menu/recipes")) return MENU_HREFS.recipes;
   if (path === "/erp/menu" || path === "/erp/menu/" || path.startsWith("/erp/menu/new") || /^\/erp\/menu\/[^/]+$/.test(path)) return MENU_HREFS.goods;
   if (path.startsWith("/erp/products/categories")) return MENU_HREFS.ingredientCategories;
   if (path.startsWith("/erp/products")) return MENU_HREFS.ingredients;

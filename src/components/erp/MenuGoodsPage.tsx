@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { costLine, productTitle } from "@/lib/erp/costing";
 import type { ErpProduct } from "@/lib/erp/types";
-import { CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
+import { CatalogTable, ExtraFilterStub, notImplemented, VenueFilter, WorkshopFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
 import { categoryLabel, costContextOf } from "./menuFields";
@@ -13,28 +13,6 @@ import { NavLink, T, typeLabel, unitLabel, vnd } from "./ui";
 type Row = ErpProduct & { categoryName: string; cost: number | null };
 
 const dash = "—";
-
-function GoodsFilters({
-  categories,
-  setCategories,
-  options,
-}: {
-  categories: string[];
-  setCategories: (value: string[]) => void;
-  options: { id: string; label: string }[];
-}) {
-  const { notify } = useErp();
-  return (
-    <>
-      <MultiSelect label={T("Категория", "Category", "Nhóm")} options={options} value={categories} onChange={setCategories} searchable />
-      <WorkshopStubFilter />
-      <VenueStubFilter />
-      <button type="button" className="erpFilterBtn" onClick={() => notify({ ok: false, text: notImplemented(T("Фильтр", "Filter", "Bộ lọc")) })}>
-        <span>+ {T("Фильтр", "Filter", "Bộ lọc")}</span>
-      </button>
-    </>
-  );
-}
 
 export function MenuGoodsPage() {
   const { state, act, notify } = useErp();
@@ -59,7 +37,7 @@ export function MenuGoodsPage() {
     }));
 
   const costCell = (row: Row) =>
-    !row.base_unit || row.cost === null ? <span className="erpBadge warn">{T("неполная", "incomplete", "chưa đủ")}</span> : vnd(row.cost);
+    row.cost == null ? dash : <span className={row.cost === 0 ? "erpCostZero" : undefined}>{vnd(row.cost)}</span>;
 
   const columns: CatalogColumn<Row>[] = [
     {
@@ -109,7 +87,7 @@ export function MenuGoodsPage() {
 
   return (
     <CatalogTable
-      storeKey="gastrofood-erp-menu-goods-v2"
+      storeKey="gastrofood-erp-menu-goods-v3"
       activeHref={MENU_HREFS.goods}
       title={T("Товары", "Products", "Hàng hóa")}
       sheetName="menu-goods"
@@ -118,17 +96,34 @@ export function MenuGoodsPage() {
       query={query}
       onQuery={setQuery}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
-      emptyTitle={T("Товаров пока нет", "No products yet", "Chưa có hàng hóa")}
       addHref="/erp/products/new?type=finished"
       addLabel={T("Добавить", "Add", "Thêm")}
       rowHref={editHref}
       trashHref={MENU_HREFS.trash}
-      filterBar={<GoodsFilters categories={categories} setCategories={setCategories} options={categoryOptions} />}
+      filterBar={
+        <>
+          <MultiSelect label={T("Категория", "Category", "Nhóm")} options={categoryOptions} value={categories} onChange={setCategories} searchable />
+          <WorkshopFilter />
+          <VenueFilter />
+          <ExtraFilterStub />
+        </>
+      }
+      moreItems={(close) => (
+        <p className="erpDropEmpty" onClick={close}>
+          {T(
+            "Состав ⋯ тулбара в Poster не проверен.",
+            "Poster's toolbar ⋯ items were not verified.",
+            "Mục ⋯ trên thanh Poster chưa kiểm.",
+          )}
+        </p>
+      )}
+      rowLinks={(row) => (
+        <NavLink href={editHref(row)} className="erpLink">
+          {T("Ред.", "Edit", "Sửa")}
+        </NavLink>
+      )}
       rowMenu={(row, close) => (
         <>
-          <NavLink href={editHref(row)} className="erpDropAction" onClick={close}>
-            {T("Ред.", "Edit", "Sửa")}
-          </NavLink>
           <button
             type="button"
             className="erpDropAction"
@@ -153,9 +148,9 @@ export function MenuGoodsPage() {
         </>
       )}
       note={T(
-        "Poster «Товары» — готовая перепродажа (erp_products type=finished), не блюда. Цена, наценка, штрихкод, цех и налог в API ещё нет — в таблице «—». Себестоимость — оценка из карточки/поставки; неизвестная цена не подменяется нулём. Корзина открывает архив, не массовое удаление.",
-        "Poster Products are buy-ready resale (erp_products type=finished), not dishes. Price, markup, barcode, workshop and tax are not in the API yet — the table shows —. Cost is the card/delivery estimate; unknown stays empty, not zero. Trash opens the archive; it does not bulk-delete.",
-        "Poster Hàng hóa là bán sẵn (erp_products type=finished), không phải món. Giá, phụ thu, mã vạch, phân xưởng và thuế chưa có API — bảng hiện —. Giá vốn theo thẻ/nhập; giá chưa biết để trống. Thùng rác mở lưu trữ, không xóa hàng loạt.",
+        "Poster «Товары» — готовая перепродажа (erp_products type=finished). Цена, наценка, штрихкод, цех и налог в API нет — в таблице «—». Неизвестная себестоимость не подменяется нулём. Фильтр заведения не скрывает строки: нет доступности по точке.",
+        "Poster Products are buy-ready resale (erp_products type=finished). Price, markup, barcode, workshop and tax are not in the API — the table shows —. Unknown cost stays empty, not zero. The venue chip does not hide rows: there is no per-location availability yet.",
+        "Poster Hàng hóa là bán sẵn (erp_products type=finished). Giá, phụ thu, mã vạch, phân xưởng và thuế chưa có API — bảng hiện —. Giá vốn chưa biết để trống. Chip cơ sở chưa ẩn dòng.",
       )}
     />
   );

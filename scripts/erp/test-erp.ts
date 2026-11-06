@@ -20,6 +20,7 @@ import {
   type CostRecipe,
 } from "../../src/lib/erp/costing";
 import { dishCost, menuCostContext } from "../../src/lib/erp/menu";
+import { lossPercentsText, nameInitials, posterMarkupPct, posterYieldKg } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -99,6 +100,18 @@ async function wh(code: string) {
 
 async function main() {
   db = await createTestDb();
+
+  await test("poster menu list markup, yield and losses", async () => {
+    assert.equal(posterMarkupPct(null, 10), null);
+    assert.equal(posterMarkupPct(100, 0), null);
+    assert.equal(posterMarkupPct(0, 24030), -100);
+    assert.equal(Math.round(posterMarkupPct(130000, 38577.14)!), 237);
+    assert.equal(posterYieldKg(0.18), "0,180 кг");
+    assert.equal(nameInitials("CHEESEBURGER"), "CHE");
+    assert.equal(nameInitials("HOT DOG"), "HD");
+    assert.equal(lossPercentsText({}), "—");
+    assert.equal(lossPercentsText({ loss_clean_pct: 26, loss_boil_pct: 0, loss_fry_pct: 0, loss_stew_pct: 0, loss_bake_pct: 0 }), "26% 0% 0% 0% 0%");
+  });
 
   await test("migration can be applied twice", async () => {
     await applyMigration(db);

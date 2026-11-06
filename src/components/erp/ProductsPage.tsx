@@ -18,7 +18,7 @@ import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
 import { POSTER_WORKSHOPS } from "./menuFields";
-import { MENU_HREFS } from "./menuNav";
+import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
   costSourceLabel,
@@ -668,12 +668,19 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
   );
 
   const goodsMode = form.type === "finished";
+  const prepMode = form.type === "semi_finished";
+  const menuHref = goodsMode ? MENU_HREFS.goods : prepMode ? MENU_HREFS.preps : MENU_HREFS.ingredients;
+  const menuBack = goodsMode
+    ? T("Товары", "Products", "Hàng hóa")
+    : prepMode
+      ? T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")
+      : T("Ингредиенты", "Ingredients", "Nguyên liệu");
   const stub = (label: string) => notify({ ok: false, text: notImplemented(label) });
 
   return (
-    <>
-      <NavLink href={goodsMode ? MENU_HREFS.goods : MENU_HREFS.ingredients} className="erpBack">
-        ← {goodsMode ? T("Товары", "Products", "Hàng hóa") : T("Ингредиенты", "Ingredients", "Nguyên liệu")}
+    <div className="erpMenu erpMenuForm">
+      <NavLink href={menuHref} className="erpBack">
+        ← {menuBack}
       </NavLink>
       <PageHead
         title={
@@ -691,6 +698,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
           ) : null
         }
       />
+      <MenuMobileNav active={menuHref} />
 
       <section className="erpCard">
         <h2>{T("Основное", "Basics", "Cơ bản")}</h2>
@@ -814,7 +822,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
                 : T("Сохранить изменения", "Save changes", "Lưu thay đổi")}
         </button>
       </div>
-    </>
+    </div>
   );
 }
 

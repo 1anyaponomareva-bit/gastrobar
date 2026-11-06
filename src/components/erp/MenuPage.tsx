@@ -17,8 +17,9 @@ import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
-import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
-import { MENU_HREFS, MenuMobileNav } from "./menuNav";
+import { MenuFormShell } from "./MenuFormShell";
+import { defaultDishCategoryId, isPrepProduct, nameInitials, POSTER_VENUES, POSTER_WORKSHOPS, posterMarkupText, posterYieldG } from "./menuFields";
+import { MENU_HREFS } from "./menuNav";
 import {
   Empty,
   Field,
@@ -297,11 +298,13 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
   const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish, defaultCategory)));
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [priceSource, setPriceSource] = useState<MenuPriceSource>(DEFAULT_MENU_PRICE_SOURCE);
-  const [workshop, setWorkshop] = useState<string>(POSTER_WORKSHOPS[0]);
-  const [barcode, setBarcode] = useState("");
-  const [weighted, setWeighted] = useState(false);
-  const [venuePrices, setVenuePrices] = useState(false);
-  const [noDiscount, setNoDiscount] = useState(false);
+  const workshop = POSTER_WORKSHOPS[0];
+  const barcode = "";
+  const weighted = false;
+  const noDiscount = false;
+  const cookMin = "";
+  const cookSec = "";
+  const venuesOn = Object.fromEntries(POSTER_VENUES.map((item) => [item.id, true]));
   const ctx = useMemo(() => menuCostContext(state, priceSource), [state, priceSource]);
   const dirty = JSON.stringify(form) !== baseline;
   useDirtyGuard(dirty);
@@ -328,6 +331,9 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
     setBaseline(JSON.stringify(form));
     if (isNew) router.replace(`/erp/menu/${result.id}`);
   };
+
+  const stub = (label: string) => notify({ ok: false, text: notImplemented(label) });
+  const compositionTypes = ["ingredient", "semi_finished", "packaging", "consumable"] as const;
 
   const toggle = (index: number) =>
     setOpen((prev) => {
@@ -359,35 +365,52 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
   );
 
   return (
-    <>
-      <NavLink href="/erp/menu/recipes" className="erpBack">
-        ← {T("Тех. карты", "Recipes", "Công thức")}
-      </NavLink>
-      <PageHead
-        title={
-          <>
-            {form.name_en || T("Новое блюдо", "New dish", "Món mới")}
-            {dish?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
-          </>
-        }
-        sub={form.name_vn || undefined}
-      />
-
+    <MenuFormShell
+      backHref={MENU_HREFS.recipes}
+      backLabel={T("Тех. карты", "Recipes", "Công thức")}
+      activeHref={MENU_HREFS.recipes}
+      title={
+        <>
+          {isNew ? T("Добавление тех. карты", "Add recipe", "Thêm công thức") : T("Редактирование тех. карты", "Edit recipe", "Sửa công thức")}
+          {dish?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
+        </>
+      }
+      sub={form.name_en || form.name_vn || undefined}
+      onPrint={() => window.print()}
+      footer={
+        <>
+          {dish ? (
+            <button
+              type="button"
+              className="erpBtn ghost"
+              disabled={busy}
+              onClick={() =>
+                act(
+                  { action: "setArchived", entity: "dish", id: dish.id, archived: !dish.archived_at },
+                  dish.archived_at ? T("Блюдо восстановлено", "Dish restored", "Đã khôi phục") : T("Блюдо перенесено в корзину", "Dish moved to trash", "Đã chuyển vào thùng rác"),
+                )
+              }
+            >
+              {dish.archived_at ? T("Восстановить", "Restore", "Khôi phục") : T("Удалить", "Delete", "Xóa")}
+            </button>
+          ) : null}
+          <button type="button" className="erpBtn primary" disabled={busy || !form.name_en.trim() || (!dirty && !isNew)} onClick={() => void save()}>
+            {busy ? savingText() : T("Сохранить", "Save", "Lưu")}
+          </button>
+        </>
+      }
+    >
       <section className="erpCard">
-        <h2>{T("Основное", "Basics", "Cơ bản")}</h2>
         <div className="erpGrid two">
-          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
+          <Field label={T("Название *", "Name *", "Tên *")}>
             <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} autoFocus={isNew} />
           </Field>
           <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
             <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} />
           </Field>
-          <Field label={T("Цена в меню, ₫", "Menu price, ₫", "Giá trên menu, ₫")}>
-            <NumberInput value={form.sale_price} onChange={(v) => set("sale_price", v)} />
-          </Field>
           <Field label={T("Категория", "Category", "Nhóm")}>
             <select value={form.category_id} onChange={(e) => set("category_id", e.target.value)}>
-              <option value="">{T("— без категории —", "— none —", "— không —")}</option>
+              <option value="">{T("Главный экран", "Home screen", "Màn hình chính")}</option>
               {state.categories
                 .filter((c) => !c.archived_at || c.id === form.category_id)
                 .map((c) => (
@@ -397,23 +420,101 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
                 ))}
             </select>
           </Field>
+          <Field label={T("Цех приготовления", "Prep workshop", "Phân xưởng")} hint={T("Не сохраняется — нет workshop_id в API", "Not saved — no workshop_id in the API", "Không lưu — chưa có workshop_id")}>
+            <select value={workshop} onChange={() => stub(T("Цех приготовления", "Prep workshop", "Phân xưởng"))}>
+              {POSTER_WORKSHOPS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={T("Налог", "Tax", "Thuế")}>
+            <select value="inherit" onChange={() => stub(T("Налог", "Tax", "Thuế"))}>
+              <option value="inherit">{T("Налог родительской категории (Налог не указан)", "Parent category tax (none)", "Thuế nhóm cha (chưa chọn)")}</option>
+            </select>
+          </Field>
           {state.settings.output_vat_enabled ? (
             <Field label={T("НДС, %", "VAT, %", "VAT, %")} hint={`${T("По умолчанию", "Default", "Mặc định")}: ${state.settings.default_output_vat_rate ?? "—"}%`}>
               <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />
             </Field>
           ) : null}
         </div>
+        <div className="erpRow" style={{ marginTop: 12, gap: 16, alignItems: "flex-start" }}>
+          <div className="erpMenuCover" aria-hidden>
+            {nameInitials(form.name_en)}
+          </div>
+          <div>
+            <label className="erpCheck">
+              <input type="checkbox" checked={weighted} onChange={() => stub(T("Весовая тех. карта", "Weighable recipe", "Công thức theo cân"))} />
+              {T("Весовая тех. карта", "Weighable recipe", "Công thức theo cân")}
+            </label>
+            <label className="erpCheck">
+              <input type="checkbox" checked={noDiscount} onChange={() => stub(T("Не участвует в скидках", "Excluded from discounts", "Không áp dụng giảm giá"))} />
+              {T("Не участвует в скидках", "Excluded from discounts", "Không áp dụng giảm giá")}
+            </label>
+          </div>
+        </div>
+        <div className="erpGrid two" style={{ marginTop: 12 }}>
+          <Field label={T("Цена", "Price", "Giá")}>
+            <NumberInput value={form.sale_price} onChange={(v) => set("sale_price", v)} />
+          </Field>
+          <Field label={T("Наценка до налога", "Markup before tax", "Phụ thu trước thuế")}>
+            <input readOnly value={posterMarkupText(form.sale_price, summary.totalCost)} />
+          </Field>
+          <Field label={T("Себестоимость без НДС", "Cost excl. VAT", "Giá vốn chưa VAT")}>
+            <span className={summary.totalCost === 0 ? "erpCostZero" : undefined}>{summary.totalCost == null ? "—" : vnd(summary.totalCost)}</span>
+          </Field>
+        </div>
       </section>
 
       <section className="erpCard">
-        <h2>{T("Состав на 1 порцию", "Composition per portion", "Thành phần mỗi phần")}</h2>
+        <h2>{T("Настройки цен и отображение для заведений", "Venue prices and visibility", "Giá và hiện theo cơ sở")}</h2>
+        <p className="erpMenuStub">{T("Тумблеры не сохраняются: доступность по заведению в API нет.", "Toggles are not saved: per-venue availability is not in the API.", "Công tắc không lưu: chưa có API theo cơ sở.")}</p>
+        <div className="erpMenuVenues">
+          {POSTER_VENUES.map((venue) => (
+            <div key={venue.id} className="erpMenuVenueRow">
+              <label className="erpCheck">
+                <input
+                  type="checkbox"
+                  checked={venuesOn[venue.id] ?? true}
+                  onChange={() => stub(T("Отображение в заведении", "Venue visibility", "Hiện tại cơ sở"))}
+                />
+                {venue.label}
+              </label>
+              <strong>{vnd(form.sale_price)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="erpCard">
+        <h2>{T("Дополнительно", "More", "Thêm")}</h2>
+        <div className="erpGrid two">
+          <Field label={T("Штрихкод", "Barcode", "Mã vạch")} hint={T("Нет в API", "Not in the API", "Chưa có API")}>
+            <input readOnly value={barcode} placeholder={T("нет в API", "not in API", "chưa có API")} onFocus={() => stub(T("Штрихкод", "Barcode", "Mã vạch"))} />
+          </Field>
+          <Field label={T("Время приготовления", "Prep time", "Thời gian nấu")} hint={T("Нет в API", "Not in the API", "Chưa có API")}>
+            <span className="erpRow">
+              <input readOnly value={cookMin} placeholder={T("мин", "min", "phút")} style={{ width: 80 }} onFocus={() => stub(T("Время приготовления", "Prep time", "Thời gian nấu"))} />
+              <input readOnly value={cookSec} placeholder={T("с", "sec", "giây")} style={{ width: 80 }} onFocus={() => stub(T("Время приготовления", "Prep time", "Thời gian nấu"))} />
+            </span>
+          </Field>
+          <Field label={T("Процесс приготовления", "Cooking process", "Quy trình nấu")} wide>
+            <textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={4} />
+          </Field>
+        </div>
+      </section>
+
+      <section className="erpCard">
+        <h2>{T("Ингредиенты и полуфабрикаты, из которых состоит тех. карта", "Ingredients and preps in this recipe", "Nguyên liệu và bán thành phẩm của công thức")}</h2>
         {form.lines.length ? (
           <div className="erpTableWrap">
             <table className="erpTable stack">
               <thead>
                 <tr>
                   <th>{T("Продукт", "Product", "Sản phẩm")}</th>
-                  <th>{T("Обработка", "Processing", "Sơ chế")}</th>
+                  <th>{T("Метод приготовления", "Cooking method", "Cách chế biến")}</th>
                   <th>{T("Брутто", "Gross", "Brutto")}</th>
                   <th>{T("Нетто", "Net", "Netto")}</th>
                   <th className="num">{T("Цена за единицу", "Unit cost", "Đơn giá")}</th>
@@ -438,9 +539,11 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
                           <ProductPicker
                             state={state}
                             value={line.product_id}
+                            types={[...compositionTypes]}
                             onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null })}
                           />
                           <span className="erpRow">
+                            {isPrepProduct(state.products.find((p) => p.id === line.product_id)) ? <span className="erpMenuPrep">{T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
                             {cost?.packaging ? <span className="erpBadge">{T("упаковка", "packaging", "bao bì")}</span> : null}
                             {cost?.children ? (
                               <button type="button" className="erpLink" onClick={() => toggle(index)}>
@@ -482,11 +585,20 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
             </table>
           </div>
         ) : (
-          <p className="erpHint">{T("Добавьте продукты, полуфабрикаты и упаковку, которые идут в одну порцию.", "Add the products, semi-finished items and packaging used in one portion.", "Thêm sản phẩm, bán thành phẩm và bao bì cho một phần.")}</p>
+          <div className="erpHint">
+            <p>{T("Заполните составляющие тех. карты для расчёта её себестоимости", "Fill in the recipe components to calculate cost", "Điền thành phần công thức để tính giá vốn")}</p>
+            <p>
+              {T(
+                "Выберите существующие или создайте новые продукты по рецепту и добавьте ещё расходники: упаковку и посуду для доставки, одноразовые приборы, стики сахара и т. д.",
+                "Pick existing products or create new ones for the recipe, then add consumables: packaging, delivery ware, disposables, sugar sticks, and so on.",
+                "Chọn sản phẩm có sẵn hoặc tạo mới, rồi thêm vật tư: bao bì, đồ giao hàng, dụng cụ dùng một lần…",
+              )}
+            </p>
+          </div>
         )}
         <div className="erpActions">
           <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null }])}>
-            + {T("Добавить в состав", "Add component", "Thêm thành phần")}
+            + {isNew ? T("Добавить продукт", "Add product", "Thêm sản phẩm") : T("Добавить ингредиент", "Add ingredient", "Thêm nguyên liệu")}
           </button>
         </div>
         {form.lines.length ? <p className="erpHint">{lossHint()}</p> : null}
@@ -532,13 +644,12 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
             <span>{T("Маржа", "Margin", "Biên LN")}</span>
             <strong>{main?.grossProfit === null || main?.grossProfit === undefined ? "—" : `${vnd(main.grossProfit)} · ${pct(main.grossMarginPct)}`}</strong>
           </div>
-          {portion.kg ? (
-            <div className="erpKpi">
-              <span>{T("Выход порции (нетто)", "Portion weight (net)", "Khối lượng phần (netto)")}</span>
-              <strong>{netWeightText(portion)}</strong>
-            </div>
-          ) : null}
+          <div className="erpKpi">
+            <span>{T("Выход", "Yield", "Định lượng")}</span>
+            <strong>{portion.kg ? posterYieldG(portion.kg) : netWeightText(portion)}</strong>
+          </div>
         </div>
+        <p className="erpHint">{T("Выход на форме в граммах, в списке — в кг. Состав не списывает склад.", "Yield is grams on the form and kilograms on the list. Composition does not move stock.", "Định lượng trên form là gram, trên danh sách là kg. Thành phần không trừ kho.")}</p>
       </section>
 
       {channels.length ? (
@@ -608,28 +719,19 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
         </section>
       ) : null}
 
-      <div className="erpActions split">
-        <div className="erpRow">
-          {dish ? (
-            <button
-              type="button"
-              className="erpBtn ghost"
-              disabled={busy}
-              onClick={() =>
-                act(
-                  { action: "setArchived", entity: "dish", id: dish.id, archived: !dish.archived_at },
-                  dish.archived_at ? T("Блюдо восстановлено", "Dish restored", "Đã khôi phục") : T("Блюдо перенесено в архив", "Dish archived", "Đã lưu trữ"),
-                )
-              }
-            >
-              {dish.archived_at ? T("Восстановить из архива", "Restore", "Khôi phục") : T("Перенести в архив", "Archive", "Lưu trữ")}
-            </button>
-          ) : null}
-        </div>
-        <button type="button" className="erpBtn primary" disabled={busy || !form.name_en.trim() || (!dirty && !isNew)} onClick={save}>
-          {busy ? savingText() : isNew ? T("Создать блюдо", "Create dish", "Tạo món") : T("Сохранить изменения", "Save changes", "Lưu thay đổi")}
+      <section className="erpCard">
+        <h2>{T("Модификаторы", "Modifiers", "Tùy chọn")}</h2>
+        <p className="erpHint">
+          {T(
+            "В Poster модификаторы доступны в тарифах Business и Pro. Набора в ERP нет — добавить нельзя.",
+            "In Poster, modifiers need Business or Pro. The ERP has no modifier sets — add is not implemented.",
+            "Poster cần gói Business/Pro. ERP chưa có bộ tùy chọn — thêm chưa làm.",
+          )}
+        </p>
+        <button type="button" className="erpLink" onClick={() => stub(T("Добавить набор модификаторов", "Add a modifier set", "Thêm bộ tùy chọn"))}>
+          + {T("Добавить набор модификаторов...", "Add a modifier set...", "Thêm bộ tùy chọn...")}
         </button>
-      </div>
-    </>
+      </section>
+    </MenuFormShell>
   );
 }

@@ -105,6 +105,23 @@
   background: var(--erp-soft);
 }
 
+.erpMenuTable tbody tr.erpMenuExpandRow > td {
+  white-space: normal;
+  background: var(--erp-soft);
+  padding: 12px 16px 16px;
+}
+
+.erpMenuUsageBlock h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.erpMenuUsageBlock h3 + .erpTableWrap,
+.erpMenuUsageBlock h3 + .erpHint {
+  margin-bottom: 12px;
+}
+
 .erpMenuTable tbody tr.muted td {
   color: var(--erp-muted);
 }
@@ -211,5 +228,280 @@
 @media (max-width: 900px) {
   .erpBottomNav {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.erpMenuSearch {
+  position: relative;
+  flex: 0 1 220px;
+  min-width: 140px;
+}
+
+.erpMenuSearch .erpSearch {
+  width: 100%;
+  padding-right: 28px;
+}
+
+.erpMenuSearchClear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: var(--erp-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.erpMenuName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 420px;
+}
+
+.erpMenuThumb {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 4px;
+  background: #d8d6d2;
+  color: #5c5a56;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.erpMenuLinks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.erpMenuLinks .erpLink,
+.erpMenuLinks .erpName {
+  font-size: 13px;
+}
+
+.erpMenuDots {
+  border: none;
+  background: none;
+  color: var(--erp-accent);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.erpMenuTable .erpMenuRowActions {
+  width: auto;
+  min-width: 120px;
+  padding-right: 10px;
+}
+
+.erpCostZero {
+  color: var(--erp-warn);
+  font-weight: 600;
+}
+
+.erpMenuPrep {
+  margin-left: 6px;
+  color: #1b6ec2;
+  font-weight: 600;
+}
+
+.erpMenuModal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(20, 18, 16, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.erpMenuModalCard {
+  width: min(520px, 100%);
+  background: var(--erp-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.erpMenuExportCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.erpMenuExportCard {
+  font: inherit;
+  min-height: 72px;
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  background: var(--erp-soft);
+  cursor: pointer;
+}
+
+.erpMenuExportCard.on {
+  border-color: #4aa3d9;
+  background: #e8f4fb;
+}
+
+.erpMenuDrawer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.erpMenuDrawerBack {
+  flex: 1;
+  border: none;
+  background: rgba(20, 18, 16, 0.28);
+  cursor: pointer;
+}
+
+.erpMenuDrawerPanel {
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--erp-card);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+.erpMenuDrawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--erp-line);
+  position: sticky;
+  top: 0;
+  background: var(--erp-card);
+  z-index: 1;
+}
+
+.erpMenuDrawerBlock {
+  padding: 12px 16px 16px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.erpMenuDrawerBlock h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.erpMenuUsage {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.erpMenuFormBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.erpMenuSave {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px -4px 0;
+  padding: 10px 12px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+}
+
+.erpMenuCover {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: #d8d6d2;
+  color: #5c5a56;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.erpMenuVenues {
+  display: grid;
+  gap: 8px;
+}
+
+.erpMenuVenueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.erpMenuStub {
+  color: var(--erp-muted);
+  font-size: 12px;
+}
+
+@media screen and (max-width: 900px) {
+  .erpMenuSearch {
+    flex: 1 1 100%;
+  }
+
+  .erpMenuSave {
+    bottom: 58px;
+  }
+
+  .erpMenuDrawer {
+    align-items: flex-end;
+  }
+
+  .erpMenuDrawerPanel {
+    width: 100%;
+    max-height: 85vh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .erpMenuExportCards {
+    grid-template-columns: 1fr;
+  }
+
+  .erpMenuTable .erpMenuRowActions {
+    min-width: 96px;
+  }
+
+  .erpMenuLinks {
+    gap: 8px;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  .erpMenuName {
+    max-width: 180px;
+  }
+
+  .erpMenuLinks {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }

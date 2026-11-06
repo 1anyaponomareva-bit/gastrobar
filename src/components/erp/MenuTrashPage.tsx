@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { costLine, productTitle } from "@/lib/erp/costing";
 import type { ErpProduct } from "@/lib/erp/types";
-import { CatalogTable, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
+import { CatalogTable, ExtraFilterStub, VenueFilter, WorkshopFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
 import { categoryLabel, costContextOf } from "./menuFields";
@@ -51,7 +51,7 @@ export function MenuTrashPage() {
       label: T("Себестоимость без НДС", "Cost excl. VAT", "Giá vốn chưa VAT"),
       num: true,
       sort: false,
-      cell: (row) => (row.cost == null ? dash : vnd(row.cost)),
+      cell: (row) => (row.cost == null ? dash : <span className={row.cost === 0 ? "erpCostZero" : undefined}>{vnd(row.cost)}</span>),
       text: (row) => (row.cost == null ? "" : String(Math.round(row.cost))),
     },
     { id: "price", label: T("Цена", "Price", "Giá"), num: true, sort: false, cell: () => dash, text: () => "" },
@@ -76,7 +76,6 @@ export function MenuTrashPage() {
       query={query}
       onQuery={setQuery}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
-      emptyTitle={T("Корзина пуста", "Trash is empty", "Thùng rác trống")}
       emptyMessage={T(
         "По этим фильтрам нет удаленных товаров. Проверьте или измените фильтры.",
         "No deleted products match these filters. Check or change the filters.",
@@ -103,18 +102,16 @@ export function MenuTrashPage() {
             onChange={setCategories}
             searchable
           />
-          <WorkshopStubFilter />
-          <VenueStubFilter />
+          <WorkshopFilter />
+          <VenueFilter />
+          <ExtraFilterStub />
         </>
       }
-      rowMenu={(row, close) => (
+      rowLinks={(row) => (
         <button
           type="button"
-          className="erpDropAction"
-          onClick={() => {
-            close();
-            void act({ action: "setArchived", entity: "product", id: row.id, archived: false }, T("Товар восстановлен", "Product restored", "Đã khôi phục"));
-          }}
+          className="erpLink"
+          onClick={() => void act({ action: "setArchived", entity: "product", id: row.id, archived: false }, T("Товар восстановлен", "Product restored", "Đã khôi phục"))}
         >
           {T("Восстановить", "Restore", "Khôi phục")}
         </button>

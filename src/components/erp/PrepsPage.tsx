@@ -6,6 +6,7 @@ import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
+import { MenuFormShell } from "./MenuFormShell";
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText } from "./losses";
 import {
@@ -248,12 +249,36 @@ function NewPrep() {
   const router = useRouter();
   const [nameEn, setNameEn] = useState("");
   const [nameVn, setNameVn] = useState("");
-  const [unit, setUnit] = useState<ErpUnit | "">("");
+  const [unit, setUnit] = useState<ErpUnit | "">("kg");
   useDirtyGuard(Boolean(nameEn || nameVn));
   return (
-    <>
-      <BackLink />
-      <PageHead title={T("Новый полуфабрикат", "New semi-finished product", "Bán thành phẩm mới")} />
+    <MenuFormShell
+      backHref={MENU_HREFS.preps}
+      backLabel={T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")}
+      activeHref={MENU_HREFS.preps}
+      title={T("Добавление полуфабриката", "Add semi-finished product", "Thêm bán thành phẩm")}
+      onPrint={() => window.print()}
+      footer={
+        <button
+          type="button"
+          className="erpBtn primary"
+          disabled={busy || !nameEn.trim() || !unit}
+          onClick={async () => {
+            const result = await act<{ id: string }>(
+              { action: "saveProduct", product: { type: "semi_finished", name_en: nameEn, name_vn: nameVn, base_unit: unit } },
+              T("Полуфабрикат создан — добавьте состав", "Created — now add the ingredients", "Đã tạo — thêm nguyên liệu"),
+            );
+            if (result) {
+              setNameEn("");
+              setNameVn("");
+              router.replace(`/erp/preps/recipe/${result.id}`);
+            }
+          }}
+        >
+          {busy ? savingText() : T("Сохранить", "Save", "Lưu")}
+        </button>
+      }
+    >
       <div className="erpCard">
         <div className="erpGrid">
           <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
@@ -264,38 +289,17 @@ function NewPrep() {
           </Field>
           <Field
             label={T("Единица учёта *", "Unit *", "Đơn vị *")}
-            hint={T("В чём считаете готовый полуфабрикат", "How the finished product is counted", "Đơn vị đếm thành phẩm")}
+            hint={T("В Poster полуфабрикаты учитываются только в килограммах. Другие единицы — для уже существующих карточек ERP.", "Poster counts preps in kilograms only. Other units stay for existing ERP cards.", "Poster chỉ tính bán thành phẩm bằng kg.")}
           >
             <select value={unit} onChange={(event) => setUnit(event.target.value as ErpUnit | "")}>
-              <option value="">{T("— выберите —", "— choose —", "— chọn —")}</option>
               <option value="kg">{T("килограммы (кг)", "kilograms (kg)", "kilôgam (kg)")}</option>
               <option value="l">{T("литры (л)", "litres (l)", "lít (l)")}</option>
               <option value="pcs">{T("штуки (шт)", "pieces (pcs)", "cái")}</option>
             </select>
           </Field>
         </div>
-        <div className="erpActions">
-          <button
-            type="button"
-            className="erpBtn primary"
-            disabled={busy || !nameEn.trim() || !unit}
-            onClick={async () => {
-              const result = await act<{ id: string }>(
-                { action: "saveProduct", product: { type: "semi_finished", name_en: nameEn, name_vn: nameVn, base_unit: unit } },
-                T("Полуфабрикат создан — добавьте состав", "Created — now add the ingredients", "Đã tạo — thêm nguyên liệu"),
-              );
-              if (result) {
-                setNameEn("");
-                setNameVn("");
-                router.replace(`/erp/preps/recipe/${result.id}`);
-              }
-            }}
-          >
-            {busy ? savingText() : T("Создать и перейти к составу", "Create and add ingredients", "Tạo và thêm nguyên liệu")}
-          </button>
-        </div>
       </div>
-    </>
+    </MenuFormShell>
   );
 }
 
@@ -426,13 +430,12 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
             : T("Нет действующей рецептуры", "No active recipe yet", "Chưa có công thức đang dùng")
         }
         actions={
-          active ? (
-            <NavLink href={`/erp/preps/batch/new?recipe=${active.id}`} className="erpBtn primary">
-              {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
-            </NavLink>
-          ) : null
+          <button type="button" className="erpHeadBtn" onClick={() => window.print()}>
+            {T("Распечатать", "Print", "In")}
+          </button>
         }
       />
+      <MenuMobileNav active={MENU_HREFS.preps} />
 
       {recipes.length > 1 ? (
         <div className="erpSubTabs">
@@ -452,6 +455,16 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
         </div>
       ) : null}
 
+      <p className="erpHint">
+        {T(
+          "Эта карточка не двигает склад. Изготовление партии — Склад / Полуфабрикаты → партии.",
+          "This card does not move stock. Making a batch is Stock / Preps → batches.",
+          "Thẻ này không trừ kho. Sản xuất mẻ ở Kho / Bán thành phẩm → mẻ.",
+        )}{" "}
+        <NavLink href="/erp/preps/batches" className="erpLink">
+          {T("К партиям", "To batches", "Đến mẻ")}
+        </NavLink>
+      </p>
       {viewed && viewed.status !== "draft" && !editing ? (
         <div className="erpNotice warn">
           {viewed.status === "active"

@@ -1,6 +1,7 @@
-import { DEFAULT_MENU_PRICE_SOURCE, type CostContext, type MenuPriceSource } from "@/lib/erp/costing";
+import { DEFAULT_MENU_PRICE_SOURCE, LOSS_METHODS, type CostContext, type LossPcts, type MenuPriceSource } from "@/lib/erp/costing";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
-import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
+import type { ErpCategory, ErpDish, ErpProduct, ErpRecipe, ErpState } from "@/lib/erp/types";
+import { locale, T } from "./i18n";
 
 /**
  * Field map for the Menu UI. Agreed with Agent 3:
@@ -70,4 +71,78 @@ export function dishEconomics(state: ErpState, ctx: CostContext, dish: ErpDish) 
     margin: main?.grossMarginPct ?? null,
     profit: main?.grossProfit ?? null,
   };
+}
+
+/** Poster list «Наценка»: (цена / себестоимость − 1) × 100. Zero/unknown cost → «—»; price 0 with cost → −100%. */
+export function posterMarkupPct(price: number | null | undefined, cost: number | null | undefined): number | null {
+  if (cost == null || cost === 0) return null;
+  if (price == null) return null;
+  return (price / cost - 1) * 100;
+}
+
+export function posterMarkupText(price: number | null | undefined, cost: number | null | undefined): string {
+  const value = posterMarkupPct(price, cost);
+  return value == null ? "—" : `${Math.round(value)}%`;
+}
+
+export function posterDecimals(value: number, decimals: number) {
+  return value.toLocaleString(locale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** List yield is kilograms with 3 decimals (`0,180 кг`), even when the form shows grams. */
+export function posterYieldKg(qtyKg: number | null | undefined): string {
+  if (qtyKg == null) return "—";
+  return `${posterDecimals(qtyKg, 3)} ${T("кг", "kg", "kg")}`;
+}
+
+export function posterYieldG(qtyKg: number | null | undefined): string {
+  if (qtyKg == null) return "—";
+  return `${Math.round(qtyKg * 1000)} ${T("г", "g", "g")}`;
+}
+
+/** Screenshot: «26% 0% 0% 0% 0%», or «—» when no loss % is stored. */
+export function lossPercentsText(product: LossPcts): string {
+  const values = LOSS_METHODS.map((method) => product[`loss_${method}_pct`]);
+  if (values.every((value) => value == null)) return "—";
+  return values.map((value) => `${Math.round(Number(value ?? 0))}%`).join(" ");
+}
+
+export function posterStockQty(qty: number, unit: string | null | undefined): string {
+  if (!unit) return posterDecimals(qty, 3);
+  const decimals = unit === "pcs" ? 2 : 3;
+  const suffix = unit === "pcs" ? T("шт.", "pcs", "cái") : unit === "l" ? T("л", "l", "l") : T("кг", "kg", "kg");
+  return `${posterDecimals(qty, decimals)} ${suffix}`;
+}
+
+export function nameInitials(name: string) {
+  const parts = name
+    .replace(/[^\w\u00C0-\u024F]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return "";
+  if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase();
+  return parts
+    .slice(0, 3)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+export function isPrepProduct(product: Pick<ErpProduct, "type"> | undefined) {
+  return product?.type === "semi_finished";
+}
+
+export function dishesUsingProduct(state: ErpState, productId: string) {
+  return state.dishes.filter((dish) => !dish.archived_at && dish.lines.some((line) => line.product_id === productId));
+}
+
+export function prepsUsingProduct(state: ErpState, productId: string) {
+  const active = new Map<string, ErpRecipe>();
+  for (const recipe of state.recipes) {
+    if (recipe.status !== "active") continue;
+    if (!recipe.lines.some((line) => line.product_id === productId)) continue;
+    active.set(recipe.product_id, recipe);
+  }
+  return state.products.filter((product) => product.type === "semi_finished" && !product.archived_at && active.has(product.id));
 }

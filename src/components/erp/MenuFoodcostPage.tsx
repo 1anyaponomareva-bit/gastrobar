@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DEFAULT_MENU_PRICE_SOURCE, type MenuPriceSource } from "@/lib/erp/costing";
 import type { ErpDish } from "@/lib/erp/types";
-import { CatalogTable, StubFilter, VenueStubFilter, type CatalogColumn } from "./CatalogTable";
+import { CatalogTable, ExtraFilterStub, StubFilter, VenueFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
 import { categoryLabel, costContextOf, dishEconomics, dishTitle } from "./menuFields";
@@ -73,7 +73,7 @@ export function MenuFoodcostPage() {
       id: "cost",
       label: T("Себестоимость", "Cost", "Giá vốn"),
       num: true,
-      cell: (row) => (row.cost === null ? "—" : vnd(row.cost)),
+      cell: (row) => (row.cost === null ? "—" : <span className={row.cost === 0 ? "erpCostZero" : undefined}>{vnd(row.cost)}</span>),
       text: (row) => (row.cost == null ? "" : String(Math.round(row.cost))),
     },
     {
@@ -97,7 +97,7 @@ export function MenuFoodcostPage() {
 
   return (
     <CatalogTable
-      storeKey="gastrofood-erp-menu-foodcost"
+      storeKey="gastrofood-erp-menu-foodcost-v2"
       activeHref={MENU_HREFS.foodcost}
       title={T("Контроль фудкоста", "Food cost", "Kiểm soát food cost")}
       sheetName="menu-foodcost"
@@ -106,10 +106,9 @@ export function MenuFoodcostPage() {
       query={query}
       onQuery={setQuery}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
-      emptyTitle={T("Нет блюд для расчёта", "No dishes to calculate", "Chưa có món để tính")}
-      addHref="/erp/menu/new"
-      addLabel={T("Добавить", "Add", "Thêm")}
       rowHref={(row) => `/erp/menu/${row.id}`}
+      hideTrash
+      hideMore
       filterBar={
         <>
           <MultiSelect
@@ -131,18 +130,19 @@ export function MenuFoodcostPage() {
             </select>
           </label>
           <StubFilter label={T("Период", "Period", "Kỳ")} />
-          <VenueStubFilter />
+          <VenueFilter />
+          <ExtraFilterStub />
         </>
       }
-      rowMenu={(row) => (
-        <NavLink href={`/erp/menu/${row.id}`} className="erpDropAction">
-          {T("Открыть блюдо", "Open item", "Mở món")}
+      rowLinks={(row) => (
+        <NavLink href={`/erp/menu/${row.id}`} className="erpLink">
+          {T("Открыть", "Open", "Mở")}
         </NavLink>
       )}
       note={T(
-        "Food cost / цена — формула Poster (себестоимость / цена × 100). Food cost / выручка — уже существующий расчёт ERP от цены без НДС. last_lot и FIFO remaining пустые, пока нет costSources. Период продаж не реализован. Списание склада не меняется.",
-        "Food cost / price is Poster's formula (cost / price × 100). Food cost / net is the existing ERP figure on revenue excl. VAT. last_lot and FIFO remaining stay empty until costSources load. Sales period is not implemented. Warehouse posting is unchanged.",
-        "Food cost / giá = Poster. Food cost / DT = ERP (chưa VAT). last_lot / FIFO trống nếu chưa có costSources. Kỳ bán chưa làm.",
+        "Это таблица ERP, не отчёт Postie AI (его в Poster не открывали). Food cost / цена — формула Poster (себестоимость / цена × 100). Food cost / выручка — расчёт ERP от цены без НДС. Период продаж не реализован. Списание склада не меняется.",
+        "This is the ERP table, not the Postie AI report (that screen was not opened in Poster). Food cost / price is Poster's formula (cost / price × 100). Food cost / net is ERP on revenue excl. VAT. Sales period is not implemented. Warehouse posting is unchanged.",
+        "Đây là bảng ERP, không phải báo cáo Postie AI. Food cost / giá = Poster. Food cost / DT = ERP (chưa VAT). Kỳ bán chưa làm.",
       )}
     />
   );

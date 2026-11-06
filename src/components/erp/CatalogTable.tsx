@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
@@ -31,9 +31,34 @@ export function StubFilter({ label }: { label: string }) {
   );
 }
 
-/** Poster: one venue, radio, cannot clear. No ERP field yet — choosing a name does not filter. */
-export function VenueStubFilter() {
-  const { notify } = useErp();
+/** Extra-filter contents were not opened in Poster — the button opens that fact, it does not pretend to filter. */
+export function ExtraFilterStub() {
+  return (
+    <DropMenu
+      trigger={({ open, toggle }) => (
+        <button type="button" className="erpFilterBtn" aria-expanded={open} onClick={toggle}>
+          <span>+ {T("Фильтр", "Filter", "Bộ lọc")}</span>
+          <Caret />
+        </button>
+      )}
+    >
+      {() => (
+        <div className="erpDropList">
+          <p className="erpDropEmpty">
+            {T(
+              "Состав «+ Фильтр» в Poster не проверен. Не фильтрует список.",
+              "Poster's extra-filter items were not verified. This does not filter the list.",
+              "Mục «+ Bộ lọc» của Poster chưa kiểm. Không lọc danh sách.",
+            )}
+          </p>
+        </div>
+      )}
+    </DropMenu>
+  );
+}
+
+/** Poster: one venue, radio, cannot clear. No availability field yet — choosing a name does not hide rows. */
+export function VenueFilter() {
   const [venue, setVenue] = useState<string>(POSTER_VENUES[0].id);
   const label = T("Заведение", "Venue", "Cơ sở");
   return (
@@ -59,7 +84,6 @@ export function VenueStubFilter() {
               onClick={() => {
                 setVenue(item.id);
                 close();
-                notify({ ok: false, text: notImplemented(label) });
               }}
             >
               {item.label}
@@ -71,29 +95,34 @@ export function VenueStubFilter() {
   );
 }
 
-/** Poster workshop names. Not warehouses — choosing does not filter. */
-export function WorkshopStubFilter() {
-  const { notify } = useErp();
+/** @deprecated use VenueFilter — kept so existing imports keep working. */
+export const VenueStubFilter = VenueFilter;
+
+/** Workshop names from the add form. Not warehouses — choosing does not filter rows (no workshop_id yet). */
+export function WorkshopFilter() {
+  const [workshop, setWorkshop] = useState<string>("");
   const label = T("Цех", "Workshop", "Phân xưởng");
   return (
     <DropMenu
       trigger={({ open, toggle }) => (
-        <button type="button" className="erpFilterBtn" aria-expanded={open} onClick={toggle}>
-          <span>{label}</span>
+        <button type="button" className={`erpFilterBtn ${workshop ? "on" : ""}`} aria-expanded={open} onClick={toggle}>
+          <span>{workshop ? `${label}: ${workshop}` : label}</span>
           <Caret />
         </button>
       )}
     >
       {(close) => (
-        <div className="erpDropList">
+        <div className="erpDropList" role="radiogroup" aria-label={label}>
           {POSTER_WORKSHOPS.map((name) => (
             <button
               key={name}
               type="button"
-              className="erpDropAction"
+              className={`erpDropAction ${name === workshop ? "on" : ""}`}
+              role="radio"
+              aria-checked={name === workshop}
               onClick={() => {
+                setWorkshop(name);
                 close();
-                notify({ ok: false, text: notImplemented(label) });
               }}
             >
               {name}
@@ -104,6 +133,9 @@ export function WorkshopStubFilter() {
     </DropMenu>
   );
 }
+
+/** @deprecated use WorkshopFilter */
+export const WorkshopStubFilter = WorkshopFilter;
 
 export type CatalogColumn<Row> = {
   id: string;
@@ -127,6 +159,7 @@ function readSaved(key: string, fallback: Saved): Saved {
   }
 }
 
+
 export function CatalogTable<Row extends { id: string }>({
   storeKey,
   activeHref,
@@ -143,11 +176,14 @@ export function CatalogTable<Row extends { id: string }>({
   extraActions,
   moreItems,
   rowHref,
+  rowLinks,
   rowMenu,
-  onTrash,
   trashHref,
   hideTrash,
   hideMore,
+  showImport,
+  exportKind = "button",
+  onExportComposition,
   emptyMessage,
   backHref,
   backLabel,
@@ -156,6 +192,8 @@ export function CatalogTable<Row extends { id: string }>({
   defaultSort = "name",
   defaultDesc = false,
   sheetName,
+  expandedId,
+  rowExpand,
 }: {
   storeKey: string;
   activeHref: string;
@@ -172,27 +210,32 @@ export function CatalogTable<Row extends { id: string }>({
   extraActions?: ReactNode;
   moreItems?: (close: () => void) => ReactNode;
   rowHref?: (row: Row) => string;
+  /** Visible Poster links (Состав, Ред., Детали) — not inside ⋯. */
+  rowLinks?: (row: Row) => ReactNode;
   rowMenu?: (row: Row, close: () => void) => ReactNode;
   onTrash?: (ids: string[]) => void | Promise<void>;
-  /** Poster header trash opens the recycle bin, it does not bulk-delete. */
   trashHref?: string;
   hideTrash?: boolean;
   hideMore?: boolean;
+  showImport?: boolean;
+  exportKind?: "button" | "menu";
+  onExportComposition?: (rows: Row[]) => void;
   emptyMessage?: string;
   backHref?: string;
   backLabel?: string;
   banner?: ReactNode;
-  /** True when the catalog itself has no rows (before search/filters). */
   catalogEmpty?: boolean;
-  emptyTitle: string;
+  emptyTitle?: string;
   emptyText?: ReactNode;
   emptyAction?: ReactNode;
   note?: ReactNode;
   defaultSort?: string;
   defaultDesc?: boolean;
   sheetName: string;
+  expandedId?: string | null;
+  rowExpand?: (row: Row) => ReactNode;
 }) {
-  const { notify, busy } = useErp();
+  const { notify } = useErp();
   const router = useRouter();
   const defaultHiddenKey = columns
     .filter((c) => c.defaultHidden && !c.locked)
@@ -204,7 +247,8 @@ export function CatalogTable<Row extends { id: string }>({
   );
   const [saved, setSaved] = useState<Saved | null>(null);
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportWithLines, setExportWithLines] = useState(false);
 
   useEffect(() => setSaved(readSaved(storeKey, initial)), [storeKey, initial]);
   useEffect(() => {
@@ -235,46 +279,26 @@ export function CatalogTable<Row extends { id: string }>({
   const pages = Math.max(1, Math.ceil(sorted.length / PAGE));
   const current = Math.min(page, pages - 1);
   const pageRows = sorted.slice(current * PAGE, current * PAGE + PAGE);
-  const allOnPage = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
 
   const toggleSort = (id: string) => set(filters.sort === id ? { desc: !filters.desc } : { sort: id, desc: false });
-  const toggleOne = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const togglePage = () => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (allOnPage) pageRows.forEach((row) => next.delete(row.id));
-      else pageRows.forEach((row) => next.add(row.id));
-      return next;
-    });
-  };
 
   const exportList = () => {
     if (!sorted.length) return;
-    downloadDocumentExport(`${sheetName}_${today()}`, sheetName, shown.map((c) => c.label), sorted.map((row) => shown.map((c) => c.text(row))));
+    downloadDocumentExport(
+      `${sheetName}_${today()}`,
+      sheetName,
+      shown.map((c) => c.label),
+      sorted.map((row) => shown.map((c) => c.text(row))),
+    );
   };
 
-  const trash = () => {
-    if (trashHref) {
-      router.push(trashHref);
-      return;
-    }
-    if (!onTrash) {
-      notify({ ok: false, text: notImplemented(T("Корзина", "Trash", "Thùng rác")) });
-      return;
-    }
-    if (!selected.size) {
-      notify({ ok: false, text: T("Выберите позиции", "Select items first", "Hãy chọn dòng") });
-      return;
-    }
-    void onTrash([...selected]);
-    setSelected(new Set());
+  const runExport = () => {
+    if (exportWithLines && onExportComposition) onExportComposition(sorted);
+    else exportList();
+    setExportOpen(false);
   };
+
+  const stubImport = () => notify({ ok: false, text: notImplemented(T("Импорт", "Import", "Nhập")) });
 
   const addButton = addHref ? (
     <NavLink href={addHref} className="erpBtn primary">
@@ -291,7 +315,7 @@ export function CatalogTable<Row extends { id: string }>({
       align="right"
       trigger={({ open, toggle }) => (
         <button type="button" className="erpHeadBtn" aria-expanded={open} onClick={toggle}>
-          {T("Столбцы", "Columns", "Cột")}+
+          {T("Столбцы", "Columns", "Cột")}
           <Caret />
         </button>
       )}
@@ -324,60 +348,61 @@ export function CatalogTable<Row extends { id: string }>({
     </DropMenu>
   );
 
-  const moreMenu = (
-    <DropMenu
-      align="right"
-      trigger={({ open, toggle }) => (
-        <button type="button" className="erpHeadBtn" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
-          ⋯
-        </button>
-      )}
-    >
-      {(close) => (
-        <div className="erpDropList">
-          {moreItems ? moreItems(close) : null}
-          <button
-            type="button"
-            className="erpDropAction"
-            onClick={() => {
-              close();
-              notify({ ok: false, text: notImplemented(T("Импорт", "Import", "Nhập")) });
-            }}
-          >
-            {T("Импорт", "Import", "Nhập")}
-          </button>
-        </div>
-      )}
-    </DropMenu>
-  );
+  const exportButton =
+    exportKind === "menu" ? (
+      <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={() => setExportOpen(true)}>
+        {T("Экспорт", "Export", "Xuất")}
+        <Caret />
+      </button>
+    ) : (
+      <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={exportList}>
+        {T("Экспорт", "Export", "Xuất")}
+      </button>
+    );
 
-  const trashButton = hideTrash ? null : trashHref ? (
-    <NavLink href={trashHref} className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} title={T("Корзина", "Trash", "Thùng rác")}>
-      <TrashIcon />
-    </NavLink>
-  ) : (
-    <button type="button" className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} disabled={busy} onClick={trash} title={T("Корзина", "Trash", "Thùng rác")}>
-      <TrashIcon />
-    </button>
-  );
+  const moreMenu =
+    hideMore || !moreItems ? null : (
+      <DropMenu
+        align="right"
+        trigger={({ open, toggle }) => (
+          <button type="button" className="erpHeadBtn" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
+            ⋯
+          </button>
+        )}
+      >
+        {(close) => <div className="erpDropList">{moreItems(close)}</div>}
+      </DropMenu>
+    );
+
+  const trashButton =
+    hideTrash || !trashHref ? null : (
+      <NavLink href={trashHref} className="erpHeadBtn erpMenuTrash" aria-label={T("Корзина", "Trash", "Thùng rác")} title={T("Корзина", "Trash", "Thùng rác")}>
+        <TrashIcon />
+      </NavLink>
+    );
 
   const actions = (
     <div className="erpHeadActions">
       <div className="erpHeadGroup">
         {trashButton}
         {columnsMenu}
-        <button type="button" className="erpHeadBtn" disabled={!sorted.length} onClick={exportList}>
-          {T("Экспорт", "Export", "Xuất")}
-        </button>
+        {exportButton}
+        {showImport ? (
+          <button type="button" className="erpHeadBtn" onClick={stubImport}>
+            {T("Импорт", "Import", "Nhập")}
+          </button>
+        ) : null}
         <button type="button" className="erpHeadBtn" onClick={() => window.print()}>
           {T("Печать", "Print", "In")}
         </button>
-        {hideMore ? null : moreMenu}
+        {moreMenu}
       </div>
       {extraActions}
       {addButton}
     </div>
   );
+
+  const actionCol = Boolean(rowLinks || rowMenu);
 
   return (
     <div className="erpMenu">
@@ -399,7 +424,14 @@ export function CatalogTable<Row extends { id: string }>({
       <section className="erpMenuPanel">
         {banner ? <div className="erpMenuBanner erpNoPrint">{banner}</div> : null}
         <div className="erpFilters erpNoPrint">
-          <input type="search" className="erpSearch" placeholder={searchPlaceholder} value={query} onChange={(e) => onQuery(e.target.value)} />
+          <div className="erpMenuSearch">
+            <input type="search" className="erpSearch" placeholder={searchPlaceholder} value={query} onChange={(e) => onQuery(e.target.value)} />
+            {query ? (
+              <button type="button" className="erpMenuSearchClear" aria-label={T("Очистить", "Clear", "Xóa")} onClick={() => onQuery("")}>
+                ×
+              </button>
+            ) : null}
+          </div>
           {filterBar}
         </div>
 
@@ -408,28 +440,25 @@ export function CatalogTable<Row extends { id: string }>({
           <table className="erpTable erpMenuTable">
             <thead>
               <tr>
-                <th className="erpMenuCheck erpNoPrint">
-                  <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label={T("Выбрать все", "Select all", "Chọn tất cả")} />
-                </th>
                 {shown.map((c) => (
                   <th key={c.id} className={c.num ? "num" : ""} aria-sort={filters.sort === c.id ? (filters.desc ? "descending" : "ascending") : undefined}>
                     {c.sort !== false ? (
                       <button type="button" className="erpSortBtn" onClick={() => toggleSort(c.id)}>
                         {c.label}
-                        {filters.sort === c.id ? <span aria-hidden>{filters.desc ? " ↓" : " ↑"}</span> : null}
+                        {filters.sort === c.id ? <span aria-hidden>{filters.desc ? " ▼" : " ▲"}</span> : null}
                       </button>
                     ) : (
                       c.label
                     )}
                   </th>
                 ))}
-                <th className="erpMenuRowActions erpNoPrint" aria-label={T("Действия", "Actions", "Thao tác")} />
+                {actionCol ? <th className="erpMenuRowActions erpNoPrint" aria-label={T("Действия", "Actions", "Thao tác")} /> : null}
               </tr>
             </thead>
             <tbody>
               {!pageRows.length ? (
                 <tr>
-                  <td colSpan={shown.length + 2} className="erpMenuEmpty">
+                  <td colSpan={shown.length + (actionCol ? 1 : 0)} className="erpMenuEmpty">
                     {emptyMessage ??
                       T("Нет данных, соответствующих выбранным фильтрам", "No data matches the selected filters", "Không có dữ liệu khớp bộ lọc")}
                   </td>
@@ -438,8 +467,8 @@ export function CatalogTable<Row extends { id: string }>({
                 pageRows.map((row) => {
                   const href = rowHref?.(row);
                   return (
+                    <Fragment key={row.id}>
                     <tr
-                      key={row.id}
                       className={href ? "clickable" : ""}
                       onClick={(e) => {
                         if (!href) return;
@@ -447,30 +476,38 @@ export function CatalogTable<Row extends { id: string }>({
                         router.push(href);
                       }}
                     >
-                      <td className="erpMenuCheck erpNoPrint">
-                        <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleOne(row.id)} aria-label={T("Выбрать", "Select", "Chọn")} />
-                      </td>
                       {shown.map((c) => (
                         <td key={c.id} className={c.num ? "num" : ""}>
                           {c.cell(row)}
                         </td>
                       ))}
-                      <td className="erpMenuRowActions erpNoPrint">
-                        {rowMenu ? (
-                          <DropMenu
-                            align="right"
-                            fixed
-                            trigger={({ open, toggle }) => (
-                              <button type="button" className="erpRcDots" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
-                                ⋯
-                              </button>
-                            )}
-                          >
-                            {(close) => <div className="erpDropList">{rowMenu(row, close)}</div>}
-                          </DropMenu>
-                        ) : null}
-                      </td>
+                      {actionCol ? (
+                        <td className="erpMenuRowActions erpNoPrint">
+                          <div className="erpMenuLinks">
+                            {rowLinks?.(row)}
+                            {rowMenu ? (
+                              <DropMenu
+                                align="right"
+                                fixed
+                                trigger={({ open, toggle }) => (
+                                  <button type="button" className="erpMenuDots" aria-label={T("Ещё", "More", "Thêm")} aria-expanded={open} onClick={toggle}>
+                                    ⋯
+                                  </button>
+                                )}
+                              >
+                                {(close) => <div className="erpDropList">{rowMenu(row, close)}</div>}
+                              </DropMenu>
+                            ) : null}
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
+                    {expandedId === row.id && rowExpand ? (
+                      <tr className="erpMenuExpandRow">
+                        <td colSpan={shown.length + (actionCol ? 1 : 0)}>{rowExpand(row)}</td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   );
                 })
               )}
@@ -484,6 +521,38 @@ export function CatalogTable<Row extends { id: string }>({
         ) : null}
         {note ? <div className="erpMenuNote erpNoPrint">{note}</div> : null}
       </section>
+
+      {exportOpen ? (
+        <div className="erpMenuModal" role="dialog" aria-modal="true" aria-labelledby="erp-menu-export-title">
+          <div className="erpMenuModalCard">
+            <h2 id="erp-menu-export-title">{T("Выберите содержание таблицы для экспорта:", "Choose what to export:", "Chọn nội dung xuất:")}</h2>
+            <div className="erpMenuExportCards">
+              <button type="button" className={`erpMenuExportCard ${!exportWithLines ? "on" : ""}`} onClick={() => setExportWithLines(false)}>
+                {T("Только список", "List only", "Chỉ danh sách")}
+              </button>
+              <button
+                type="button"
+                className={`erpMenuExportCard ${exportWithLines ? "on" : ""}`}
+                disabled={!onExportComposition}
+                onClick={() => setExportWithLines(true)}
+              >
+                {T("С составом", "With composition", "Kèm thành phần")}
+              </button>
+            </div>
+            <p className="erpHint">
+              {T("CSV/XLSX этого ERP, не файл Poster. Формат Poster не проверяли.", "This ERP's CSV/XLSX, not Poster's file. Poster's format was not verified.", "CSV/XLSX của ERP này, không phải file Poster.")}
+            </p>
+            <div className="erpActions">
+              <button type="button" className="erpBtn" onClick={() => setExportOpen(false)}>
+                {T("Отмена", "Cancel", "Hủy")}
+              </button>
+              <button type="button" className="erpBtn primary" onClick={runExport}>
+                {T("Выгрузить", "Download", "Tải")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
