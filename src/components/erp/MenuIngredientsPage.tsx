@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
+import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "@/lib/erp/stockView";
 import { packSupplierIds, packSupplierLabel } from "@/lib/erp/supplierCategories";
 import type { ErpProduct, ErpState } from "@/lib/erp/types";
@@ -18,6 +19,7 @@ import {
   prepsUsingProduct,
   visibleCategories,
 } from "./menuFields";
+import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, qtyText, T, unitLabel, unitOf, vnd } from "./ui";
 
@@ -122,12 +124,21 @@ function UsageMiniTable({ rows, price }: { rows: UsageRow[]; price?: boolean }) 
 }
 
 export function MenuIngredientsPage() {
+  return (
+    <Suspense fallback={null}>
+      <MenuIngredientsList />
+    </Suspense>
+  );
+}
+
+function MenuIngredientsList() {
   const { state, act } = useErp();
-  const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [units, setUnits] = useState<string[]>([]);
-  const [suppliers, setSuppliers] = useState<string[]>([]);
-  const [archived, setArchived] = useState(false);
+  const list = useMenuListQuery(MENU_HREFS.ingredients);
+  const query = list.q;
+  const categories = list.category;
+  const units = list.unit;
+  const suppliers = list.supplier;
+  const archived = list.archived;
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const stockMap = useMemo(() => (state ? stockByProduct(state.stock, null) : new Map()), [state]);
   if (!state) return null;
@@ -182,7 +193,7 @@ export function MenuIngredientsPage() {
       id: "name",
       label: T("Название", "Name", "Tên"),
       cell: (row) => (
-        <NavLink href={`/erp/products/${row.id}`} className="erpName">
+        <NavLink href={withMenuListReturn(`/erp/products/${row.id}`, list.href)} className="erpName">
           {productTitle(row)}
         </NavLink>
       ),
@@ -249,7 +260,11 @@ export function MenuIngredientsPage() {
       columns={columns}
       rows={rows}
       query={query}
-      onQuery={setQuery}
+      onQuery={(value) => list.set({ q: value })}
+      listHref={list.href}
+      urlSort={list.sort || undefined}
+      urlDesc={list.desc}
+      onSortChange={(sort, desc) => list.set({ sort, desc })}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
       catalogEmpty={!state.products.some((p) => allowed.has(p.type))}
       emptyTitle={T("Ингредиентов пока нет", "No ingredients yet", "Chưa có nguyên liệu")}
@@ -276,15 +291,15 @@ export function MenuIngredientsPage() {
               { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
             ]}
             value={categories}
-            onChange={setCategories}
+            onChange={(value) => list.set({ category: value })}
             searchable
           />
-          <MultiSelect label={T("Ед. измерения", "Unit", "Đơn vị")} options={unitOptions} value={units} onChange={setUnits} />
+          <MultiSelect label={T("Ед. измерения", "Unit", "Đơn vị")} options={unitOptions} value={units} onChange={(value) => list.set({ unit: value })} />
           <MultiSelect
             label={T("Поставщик", "Supplier", "Nhà cung cấp")}
             options={supplierOptions}
             value={suppliers}
-            onChange={setSuppliers}
+            onChange={(value) => list.set({ supplier: value })}
             searchable
           />
           <DropMenu
@@ -298,7 +313,7 @@ export function MenuIngredientsPage() {
             {() => (
               <div className="erpDropList">
                 <label className="erpDropItem">
-                  <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
+                  <input type="checkbox" checked={archived} onChange={(e) => list.set({ archived: e.target.checked })} />
                   <span>{T("Архив", "Archived", "Lưu trữ")}</span>
                 </label>
               </div>
@@ -311,7 +326,7 @@ export function MenuIngredientsPage() {
           <button type="button" className="erpLink" onClick={() => setDetailsId(row.id === detailsId ? null : row.id)}>
             {T("Детали", "Details", "Chi tiết")}
           </button>
-          <NavLink href={`/erp/products/${row.id}`} className="erpLink">
+          <NavLink href={withMenuListReturn(`/erp/products/${row.id}`, list.href)} className="erpLink">
             {T("Ред.", "Edit", "Sửa")}
           </NavLink>
         </>

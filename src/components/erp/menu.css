@@ -1,5 +1,12 @@
 /* Menu section (Poster «Меню»). Do not restyle stock write-offs here. */
 
+.erpMain:has(.erpMenuPanel) {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 16px 12px 80px;
+}
+
 .erpMenu {
   min-width: 0;
 }
@@ -49,8 +56,9 @@
   border-radius: 6px;
 }
 
-.erpMenuWrap {
+.erpTableWrap.erpMenuWrap {
   overflow-x: auto;
+  overflow-y: hidden;
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
 }
@@ -58,21 +66,27 @@
 .erpMenuTable {
   table-layout: auto;
   font-size: 13px;
-  min-width: 640px;
+  width: max-content;
+  min-width: 100%;
 }
 
 .erpMenuTable > * > tr > th,
 .erpMenuTable > * > tr > td {
   padding: 8px 10px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .erpMenuTable > thead > tr > th {
   position: sticky;
   top: 0;
   z-index: 1;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.erpMenuTable > tbody > tr > td {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .erpMenuTable .erpMenuCheck {
@@ -241,6 +255,10 @@
 }
 
 @media screen and (max-width: 900px) {
+  .erpMain:has(.erpMenuPanel) {
+    padding: 16px 8px 96px;
+  }
+
   .erpMenuSave {
     bottom: 58px;
   }
@@ -271,7 +289,6 @@
   }
 
   .erpMenuTable {
-    min-width: 560px;
     font-size: 12px;
   }
 

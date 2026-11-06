@@ -20,6 +20,13 @@ import {
   type CostRecipe,
 } from "../../src/lib/erp/costing";
 import { dishCost, menuCostContext } from "../../src/lib/erp/menu";
+import {
+  menuListBackHref,
+  menuListHref,
+  parseMenuListSearch,
+  safeMenuListReturn,
+  withMenuListReturn,
+} from "../../src/lib/erp/menuListQuery";
 import { lossPercentsText, posterStockQty } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
@@ -2773,6 +2780,38 @@ async function main() {
     assert.equal(stockValue(emptyStock), 0);
     assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: null })), null);
     assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: 1500 })), 1500);
+  });
+
+  await test("menu list URL keeps category and other filters; card from only accepts Menu lists", async () => {
+    const cat = "pack-uuid";
+    const href = menuListHref("/erp/menu/ingredients", {
+      q: "foil",
+      category: [cat],
+      unit: ["pcs"],
+      supplier: ["sup-1"],
+      archived: true,
+      sort: "stock",
+      desc: true,
+    });
+    assert.equal(href, `/erp/menu/ingredients?q=foil&category=${cat}&unit=pcs&supplier=sup-1&archived=1&sort=stock&desc=1`);
+    const parsed = parseMenuListSearch(href.split("?")[1]);
+    assert.deepEqual(parsed.category, [cat]);
+    assert.equal(parsed.q, "foil");
+    assert.equal(parsed.archived, true);
+    assert.equal(parsed.sort, "stock");
+    assert.equal(parsed.desc, true);
+
+    const card = withMenuListReturn(`/erp/products/${cat}`, href);
+    assert.match(card, /^\/erp\/products\/pack-uuid\?from=/);
+    const from = new URL(card, "https://gastrotruck.local").searchParams.get("from");
+    assert.equal(from, href);
+    assert.equal(menuListBackHref(from, "/erp/menu/ingredients"), href);
+    assert.equal(menuListBackHref(undefined, "/erp/menu/ingredients"), "/erp/menu/ingredients");
+    assert.equal(safeMenuListReturn("/erp/products"), null);
+    assert.equal(safeMenuListReturn("https://evil.example/erp/menu/ingredients"), null);
+    assert.equal(safeMenuListReturn("//evil.example/erp/menu"), null);
+    assert.equal(safeMenuListReturn("/erp/menu/ingredients/../../service"), null);
+    assert.equal(withMenuListReturn("/erp/products/x", "/erp/products"), "/erp/products/x");
   });
 
   console.log(`\n${passed} checks passed`);

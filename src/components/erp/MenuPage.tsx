@@ -17,6 +17,7 @@ import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
+import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
 import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
@@ -268,10 +269,10 @@ export function MenuPage() {
   );
 }
 
-export function DishPage({ id }: { id: string }) {
+export function DishPage({ id, from }: { id: string; from?: string }) {
   const { state } = useErp();
   if (!state) return null;
-  if (id === "new") return <DishEditor key="new" state={state} dish={null} />;
+  if (id === "new") return <DishEditor key="new" state={state} dish={null} from={from} />;
   const dish = state.dishes.find((d) => d.id === id);
   if (!dish) {
     return (
@@ -279,17 +280,17 @@ export function DishPage({ id }: { id: string }) {
         kind="error"
         title={T("Блюдо не найдено", "Dish not found", "Không tìm thấy món")}
         action={
-          <NavLink href="/erp/menu/recipes" className="erpBtn">
+          <NavLink href={menuListBackHref(from, "/erp/menu/recipes")} className="erpBtn">
             {T("К тех. картам", "Back to recipes", "Về công thức")}
           </NavLink>
         }
       />
     );
   }
-  return <DishEditor key={dish.id} state={state} dish={dish} />;
+  return <DishEditor key={dish.id} state={state} dish={dish} from={from} />;
 }
 
-function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) {
+function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | null; from?: string }) {
   const { act, busy, notify } = useErp();
   const router = useRouter();
   const defaultCategory = defaultDishCategoryId(state.categories);
@@ -326,7 +327,7 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
     );
     if (!result) return;
     setBaseline(JSON.stringify(form));
-    if (isNew) router.replace(`/erp/menu/${result.id}`);
+    if (isNew) router.replace(withMenuListReturn(`/erp/menu/${result.id}`, from ?? ""));
   };
 
   const toggle = (index: number) =>
@@ -360,7 +361,7 @@ function DishEditor({ state, dish }: { state: ErpState; dish: ErpDish | null }) 
 
   return (
     <>
-      <NavLink href="/erp/menu/recipes" className="erpBack">
+      <NavLink href={menuListBackHref(from, "/erp/menu/recipes")} className="erpBack">
         ← {T("Тех. карты", "Recipes", "Công thức")}
       </NavLink>
       <PageHead

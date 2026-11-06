@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { costLine, productTitle } from "@/lib/erp/costing";
+import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
 import { categoryLabel, costContextOf, visibleCategories } from "./menuFields";
+import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, T, typeLabel, unitLabel, vnd } from "./ui";
 
@@ -37,9 +39,18 @@ function GoodsFilters({
 }
 
 export function MenuGoodsPage() {
+  return (
+    <Suspense fallback={null}>
+      <MenuGoodsList />
+    </Suspense>
+  );
+}
+
+function MenuGoodsList() {
   const { state, act, notify } = useErp();
-  const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const list = useMenuListQuery(MENU_HREFS.goods);
+  const query = list.q;
+  const categories = list.category;
   const ctx = useMemo(() => (state ? costContextOf(state) : null), [state]);
   if (!state || !ctx) return null;
 
@@ -67,7 +78,7 @@ export function MenuGoodsPage() {
       label: T("Название", "Name", "Tên"),
       locked: true,
       cell: (row) => (
-        <NavLink href={`/erp/products/${row.id}`} className="erpName">
+        <NavLink href={withMenuListReturn(`/erp/products/${row.id}`, list.href)} className="erpName">
           {productTitle(row)}
         </NavLink>
       ),
@@ -105,7 +116,7 @@ export function MenuGoodsPage() {
     ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
     { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
   ];
-  const editHref = (row: Row) => `/erp/products/${row.id}`;
+  const editHref = (row: Row) => withMenuListReturn(`/erp/products/${row.id}`, list.href);
 
   return (
     <CatalogTable
@@ -116,14 +127,18 @@ export function MenuGoodsPage() {
       columns={columns}
       rows={rows}
       query={query}
-      onQuery={setQuery}
+      onQuery={(value) => list.set({ q: value })}
+      listHref={list.href}
+      urlSort={list.sort || undefined}
+      urlDesc={list.desc}
+      onSortChange={(sort, desc) => list.set({ sort, desc })}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
       emptyTitle={T("Товаров пока нет", "No products yet", "Chưa có hàng hóa")}
       addHref="/erp/products/new?type=finished"
       addLabel={T("Добавить", "Add", "Thêm")}
       rowHref={editHref}
       trashHref={MENU_HREFS.trash}
-      filterBar={<GoodsFilters categories={categories} setCategories={setCategories} options={categoryOptions} />}
+      filterBar={<GoodsFilters categories={categories} setCategories={(value) => list.set({ category: value })} options={categoryOptions} />}
       rowMenu={(row, close) => (
         <>
           <NavLink href={editHref(row)} className="erpDropAction" onClick={close}>

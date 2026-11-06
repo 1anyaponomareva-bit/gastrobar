@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
@@ -162,6 +163,10 @@ export function CatalogTable<Row extends { id: string }>({
   defaultSort = "name",
   defaultDesc = false,
   sheetName,
+  listHref,
+  urlSort,
+  urlDesc,
+  onSortChange,
 }: {
   storeKey: string;
   activeHref: string;
@@ -204,6 +209,11 @@ export function CatalogTable<Row extends { id: string }>({
   defaultSort?: string;
   defaultDesc?: boolean;
   sheetName: string;
+  /** Current Menu list URL (with filters). Card links keep it as `from`. */
+  listHref?: string;
+  urlSort?: string;
+  urlDesc?: boolean;
+  onSortChange?: (sort: string, desc: boolean) => void;
 }) {
   const { notify, busy } = useErp();
   const router = useRouter();
@@ -219,7 +229,10 @@ export function CatalogTable<Row extends { id: string }>({
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  useEffect(() => setSaved(readSaved(storeKey, initial)), [storeKey, initial]);
+  useEffect(() => {
+    const stored = readSaved(storeKey, initial);
+    setSaved(urlSort ? { ...stored, sort: urlSort, desc: Boolean(urlDesc) } : stored);
+  }, [storeKey, initial, urlSort, urlDesc]);
   useEffect(() => {
     if (saved) window.localStorage.setItem(storeKey, JSON.stringify(saved));
   }, [saved, storeKey]);
@@ -251,7 +264,12 @@ export function CatalogTable<Row extends { id: string }>({
   const pageRows = sorted.slice(current * PAGE, current * PAGE + PAGE);
   const allOnPage = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
 
-  const toggleSort = (id: string) => set(filters.sort === id ? { desc: !filters.desc } : { sort: id, desc: false });
+  const toggleSort = (id: string) => {
+    const next = filters.sort === id ? { desc: !filters.desc } : { sort: id, desc: false };
+    set(next);
+    onSortChange?.(next.sort ?? id, next.desc ?? false);
+  };
+  const hrefWithReturn = (href: string) => (listHref ? withMenuListReturn(href, listHref) : href);
   const toggleOne = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -291,7 +309,7 @@ export function CatalogTable<Row extends { id: string }>({
   };
 
   const addButton = addHref ? (
-    <NavLink href={addHref} className="erpBtn primary">
+    <NavLink href={hrefWithReturn(addHref)} className="erpBtn primary">
       {addLabel ?? T("Добавить", "Add", "Thêm")}
     </NavLink>
   ) : onAdd ? (
@@ -462,15 +480,16 @@ export function CatalogTable<Row extends { id: string }>({
               ) : (
                 pageRows.map((row) => {
                   const href = rowHref?.(row);
+                  const openHref = href ? hrefWithReturn(href) : undefined;
                   const span = shown.length + (hideCheck ? 1 : 2);
                   return (
                     <Fragment key={row.id}>
                     <tr
-                      className={href ? "clickable" : ""}
+                      className={openHref ? "clickable" : ""}
                       onClick={(e) => {
-                        if (!href) return;
+                        if (!openHref) return;
                         if ((e.target as HTMLElement).closest("a, button, input, label")) return;
-                        router.push(href);
+                        router.push(openHref);
                       }}
                     >
                       {hideCheck ? null : (

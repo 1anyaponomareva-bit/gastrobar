@@ -1,6 +1,13 @@
 import { RecipePage } from "@/components/erp/PrepsPage";
 
-export default async function ErpRecipePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ErpRecipePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
-  return <RecipePage id={id} />;
+  const { from } = await searchParams;
+  return <RecipePage id={id} from={from} />;
 }

@@ -1,21 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { plannedUnitCost, productTitle } from "@/lib/erp/costing";
+import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
 import { costContextOf } from "./menuFields";
+import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, qtyText, T, unitLabel, vnd } from "./ui";
 
 type Row = ErpProduct & { yieldText: string; cost: number | null; recipeStatus: string };
 
 export function MenuPrepsList() {
+  return (
+    <Suspense fallback={null}>
+      <MenuPrepsTable />
+    </Suspense>
+  );
+}
+
+function MenuPrepsTable() {
   const { state, act } = useErp();
-  const [query, setQuery] = useState("");
-  const [archived, setArchived] = useState(false);
+  const list = useMenuListQuery(MENU_HREFS.preps);
+  const query = list.q;
+  const archived = list.archived;
   const ctx = useMemo(() => (state ? costContextOf(state) : null), [state]);
   if (!state || !ctx) return null;
 
@@ -47,7 +58,7 @@ export function MenuPrepsList() {
       locked: true,
       cell: (row) => (
         <>
-          <NavLink href={`/erp/preps/recipe/${row.id}`} className="erpName">
+          <NavLink href={withMenuListReturn(`/erp/preps/recipe/${row.id}`, list.href)} className="erpName">
             {productTitle(row)}
           </NavLink>
           {row.recipeStatus ? <span className="erpBadge warn">{row.recipeStatus}</span> : null}
@@ -81,7 +92,11 @@ export function MenuPrepsList() {
       columns={columns}
       rows={rows}
       query={query}
-      onQuery={setQuery}
+      onQuery={(value) => list.set({ q: value })}
+      listHref={list.href}
+      urlSort={list.sort || undefined}
+      urlDesc={list.desc}
+      onSortChange={(sort, desc) => list.set({ sort, desc })}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
       catalogEmpty={!state.products.some((p) => p.type === "semi_finished")}
       emptyTitle={T("Пока нет полуфабрикатов", "No semi-finished products yet", "Chưa có bán thành phẩm")}
@@ -111,7 +126,7 @@ export function MenuPrepsList() {
             {() => (
               <div className="erpDropList">
                 <label className="erpDropItem">
-                  <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
+                  <input type="checkbox" checked={archived} onChange={(e) => list.set({ archived: e.target.checked })} />
                   <span>{T("Архив", "Archived", "Lưu trữ")}</span>
                 </label>
               </div>
@@ -121,7 +136,7 @@ export function MenuPrepsList() {
       }
       rowMenu={(row) => (
         <>
-          <NavLink href={`/erp/preps/recipe/${row.id}`} className="erpDropAction">
+          <NavLink href={withMenuListReturn(`/erp/preps/recipe/${row.id}`, list.href)} className="erpDropAction">
             {T("Открыть рецепт", "Open recipe", "Mở công thức")}
           </NavLink>
           <NavLink href="/erp/preps/batches" className="erpDropAction">

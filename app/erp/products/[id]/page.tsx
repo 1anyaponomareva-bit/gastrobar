@@ -5,9 +5,9 @@ export default async function ErpProductPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; from?: string }>;
 }) {
   const { id } = await params;
-  const { type } = await searchParams;
-  return <ProductCard id={id} presetType={type} />;
+  const { type, from } = await searchParams;
+  return <ProductCard id={id} presetType={type} from={from} />;
 }

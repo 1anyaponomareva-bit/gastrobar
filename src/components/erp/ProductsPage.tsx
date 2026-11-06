@@ -13,6 +13,7 @@ import {
   type LossPcts,
 } from "@/lib/erp/costing";
 import { compatiblePacks } from "@/lib/erp/packs";
+import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
@@ -261,31 +262,42 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   ...preset,
 });
 
-export function ProductCard({ id, presetType }: { id: string; presetType?: string }) {
+export function ProductCard({ id, presetType, from }: { id: string; presetType?: string; from?: string }) {
   const { state } = useErp();
   const type = PRODUCT_TYPES.includes(presetType as ErpProductType) ? (presetType as ErpProductType) : undefined;
   if (!state) return null;
-  if (id === "new") return <ProductEditor key={`new-${type ?? "default"}`} state={state} product={null} presetType={type} />;
+  if (id === "new") return <ProductEditor key={`new-${type ?? "default"}`} state={state} product={null} presetType={type} from={from} />;
   const product = state.products.find((p) => p.id === id);
   if (!product) {
     const goods = type === "finished";
+    const backHref = menuListBackHref(from, goods ? MENU_HREFS.goods : MENU_HREFS.ingredients);
     return (
       <Empty
         kind="error"
         title={T("Продукт не найден", "Product not found", "Không tìm thấy sản phẩm")}
         text={T("Возможно, его удалили или ссылка устарела.", "It may have been removed or the link is outdated.", "Có thể đã bị xóa hoặc liên kết cũ.")}
         action={
-          <NavLink href={goods ? MENU_HREFS.goods : MENU_HREFS.ingredients} className="erpBtn">
+          <NavLink href={backHref} className="erpBtn">
             {goods ? T("К списку товаров", "Back to products", "Về danh sách hàng") : T("К списку ингредиентов", "Back to ingredients", "Về danh sách")}
           </NavLink>
         }
       />
     );
   }
-  return <ProductEditor key={product.id} state={state} product={product} />;
+  return <ProductEditor key={product.id} state={state} product={product} from={from} />;
 }
 
-function ProductEditor({ state, product, presetType }: { state: ErpState; product: ErpProduct | null; presetType?: ErpProductType }) {
+function ProductEditor({
+  state,
+  product,
+  presetType,
+  from,
+}: {
+  state: ErpState;
+  product: ErpProduct | null;
+  presetType?: ErpProductType;
+  from?: string;
+}) {
   const { act, busy, notify } = useErp();
   const router = useRouter();
   const initialPacks = (): PackDraft[] =>
@@ -357,7 +369,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
       return;
     }
     setBaseline(JSON.stringify([form, packs]));
-    if (isNew) router.replace(`/erp/products/${result.id}`);
+    if (isNew) router.replace(withMenuListReturn(`/erp/products/${result.id}`, from ?? ""));
   };
 
   const archive = async (archived: boolean) => {
@@ -627,7 +639,7 @@ function ProductEditor({ state, product, presetType }: { state: ErpState; produc
 
   return (
     <>
-      <NavLink href={goodsMode ? MENU_HREFS.goods : MENU_HREFS.ingredients} className="erpBack">
+      <NavLink href={menuListBackHref(from, goodsMode ? MENU_HREFS.goods : MENU_HREFS.ingredients)} className="erpBack">
         ← {goodsMode ? T("Товары", "Products", "Hàng hóa") : T("Ингредиенты", "Ingredients", "Nguyên liệu")}
       </NavLink>
       <PageHead

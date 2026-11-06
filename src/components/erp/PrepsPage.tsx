@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
+import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
@@ -216,10 +217,10 @@ export function BatchesPage() {
   );
 }
 
-export function RecipePage({ id }: { id: string }) {
+export function RecipePage({ id, from }: { id: string; from?: string }) {
   const { state } = useErp();
   if (!state) return null;
-  if (id === "new") return <NewPrep />;
+  if (id === "new") return <NewPrep from={from} />;
   const product = state.products.find((p) => p.id === id);
   if (!product) {
     return (
@@ -227,23 +228,23 @@ export function RecipePage({ id }: { id: string }) {
         kind="error"
         title={T("Полуфабрикат не найден", "Product not found", "Không tìm thấy")}
         action={
-          <NavLink href="/erp/menu/preps" className="erpBtn">
+          <NavLink href={menuListBackHref(from, "/erp/menu/preps")} className="erpBtn">
             {T("К списку полуфабрикатов", "Back to the list", "Về danh sách")}
           </NavLink>
         }
       />
     );
   }
-  return <RecipeEditor key={product.id} state={state} product={product} />;
+  return <RecipeEditor key={product.id} state={state} product={product} from={from} />;
 }
 
-const BackLink = () => (
-  <NavLink href="/erp/menu/preps" className="erpBack">
+const BackLink = ({ from }: { from?: string }) => (
+  <NavLink href={menuListBackHref(from, "/erp/menu/preps")} className="erpBack">
     ← {T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")}
   </NavLink>
 );
 
-function NewPrep() {
+function NewPrep({ from }: { from?: string }) {
   const { act, busy } = useErp();
   const router = useRouter();
   const [nameEn, setNameEn] = useState("");
@@ -252,7 +253,7 @@ function NewPrep() {
   useDirtyGuard(Boolean(nameEn || nameVn));
   return (
     <>
-      <BackLink />
+      <BackLink from={from} />
       <PageHead title={T("Новый полуфабрикат", "New semi-finished product", "Bán thành phẩm mới")} />
       <div className="erpCard">
         <div className="erpGrid">
@@ -287,7 +288,7 @@ function NewPrep() {
               if (result) {
                 setNameEn("");
                 setNameVn("");
-                router.replace(`/erp/preps/recipe/${result.id}`);
+                router.replace(withMenuListReturn(`/erp/preps/recipe/${result.id}`, from ?? ""));
               }
             }}
           >
@@ -346,7 +347,7 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
   };
 }
 
-function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct }) {
+function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpProduct; from?: string }) {
   const { act, busy } = useErp();
   const recipes = state.recipes.filter((r) => r.product_id === product.id).sort((a, b) => b.version - a.version);
   const active = recipes.find((r) => r.status === "active");
@@ -417,7 +418,7 @@ function RecipeEditor({ state, product }: { state: ErpState; product: ErpProduct
 
   return (
     <>
-      <BackLink />
+      <BackLink from={from} />
       <PageHead
         title={productTitle(product)}
         sub={
