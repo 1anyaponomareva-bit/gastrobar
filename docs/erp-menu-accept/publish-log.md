@@ -1,5 +1,39 @@
 # Журнал публикации ERP «Меню»
 
+## Состояние на 2026-11-06 16:26 +07
+
+Publish worktree: `GASTROBAR-inventory` `main` = `490d1dd` = `origin/main`. `erp-menu-ui` не пушили.
+
+### Порядок merge (факт)
+
+1. **Логика** `8d2af42`
+2. **UI** `cc6d30d` через merge `d6c5269` (после логики)
+3. **Документы приёмки** `e85a003` / `490d1dd`
+
+### Проверки
+
+| Проверка | Результат |
+|----------|-----------|
+| `npx tsc --noEmit -p .` | ok |
+| `npx tsx scripts/erp/test-erp.ts` | **77/77** |
+| `npx next build` | ok, `/erp/products` и `/erp/menu` раздельно |
+| `git push origin main` | already up to date, без force |
+| Prod SQL `20261106143000_erp_menu_cost_history.sql` | **applied** в SQL Editor, `main (PRODUCTION)`. Start `-- Menu / tech-card: planned cost quotes…`, end `grant execute on function %s to service_role`. Success. No rows returned. Без truncate. |
+| PostgREST probe | view ok; `erp_card_revisions` ok; `erp_card_history` ok; `erp_load_state(products)` = **127** |
+| Live `/erp/products` | RSC `ProductsPage`, каталог 127/127 live |
+| Live `/erp/menu` | RSC `MenuGoodsPage` |
+| Staff catalog | не трогали |
+
+Pooler ENOTFOUND не повторяли. Cursor-browser для Supabase не использовали.
+
+### Живые URL
+
+- https://www.gastrotruck.org/erp/menu
+- https://www.gastrotruck.org/erp/products — полный каталог, 127
+- https://www.gastrotruck.org/erp/stock
+
+Staff↔ERP выключен намеренно.
+
 ## Состояние на 2026-11-06 15:50 +07
 
 Publish worktree: `GASTROBAR-inventory` `main` = `d6c5269`, **на 7 коммитов впереди** `origin/main` (`dd665dc`). Не запушено.
