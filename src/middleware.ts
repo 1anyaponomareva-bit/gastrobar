@@ -61,7 +61,7 @@ export function middleware(request: NextRequest) {
   if (gate.action === "rewrite") {
     const url = request.nextUrl.clone();
     url.pathname = gate.pathname;
-    return withMenuPeriod(NextResponse.rewrite(url), period);
+    return noStore(withMenuPeriod(NextResponse.rewrite(url), period));
   }
 
   if (isKitchenHost(host) && request.nextUrl.pathname === "/") {

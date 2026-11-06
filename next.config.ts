@@ -13,7 +13,33 @@ const nextConfig: NextConfig = {
    * /staff, /kitchen and /food are left untouched.
    */
   async rewrites() {
+    // beforeFiles runs before the prerendered homepage, so gastrofood.vn/ is ERP
+    // instead of the cached «Еда / Бар» page. Keep in sync with ERP_PAGE_SEGMENTS.
+    const erpHosts = ["gastrofood.vn", "www.gastrofood.vn"];
+    const erpSegments = [
+      "stock",
+      "menu",
+      "products",
+      "preps",
+      "documents",
+      "catalog",
+      "production",
+      "review",
+      "service",
+      "settings",
+    ];
+    const erpHostRewrites = erpHosts.flatMap((host) => {
+      const hasHost = [{ type: "host" as const, value: host }];
+      return [
+        { source: "/", has: hasHost, destination: "/erp" },
+        ...erpSegments.flatMap((seg) => [
+          { source: `/${seg}`, has: hasHost, destination: `/erp/${seg}` },
+          { source: `/${seg}/:path*`, has: hasHost, destination: `/erp/${seg}/:path*` },
+        ]),
+      ];
+    });
     return {
+      beforeFiles: erpHostRewrites,
       afterFiles: [{ source: "/food", destination: "/food/index.html" }],
       fallback: [
         { source: "/schedule", destination: "https://gastrofood-schedule.vercel.app/schedule" },
