@@ -1,16 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { channelResult } from "@/lib/erp/costing";
 import type { ErpDish } from "@/lib/erp/types";
-import { CatalogTable, StubFilter, type CatalogColumn } from "./CatalogTable";
+import { CatalogTable, StubFilter, VenueStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, dishSummary, dishTitle, markupPct } from "./menuFields";
+import { categoryLabel, costContextOf, dishEconomics, dishTitle } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, pct, T, vnd } from "./ui";
 
-type Row = ErpDish & { categoryName: string; cost: number | null; foodCost: number | null; margin: number | null; markup: number | null };
+type Row = ErpDish & { categoryName: string; cost: number | null; foodCost: number | null; foodOnPrice: number | null; margin: number | null; markup: number | null };
 
 export function MenuFoodcostPage() {
   const { state } = useErp();
@@ -22,7 +21,6 @@ export function MenuFoodcostPage() {
   const catMap = new Map(state.categories.map((c) => [c.id, c]));
   const q = query.trim().toLowerCase();
   const catSet = new Set(categories);
-  const direct = state.channels.find((c) => c.code === "direct") ?? state.channels.filter((c) => !c.archived_at)[0];
   const pool = state.dishes.filter((d) => !d.archived_at);
   const rows: Row[] = pool
     .filter((d) => {
@@ -30,17 +28,15 @@ export function MenuFoodcostPage() {
       return !q || `${d.name_en} ${d.name_vn}`.toLowerCase().includes(q);
     })
     .map((d) => {
-      const summary = dishSummary(ctx, d);
-      const channel = direct
-        ? channelResult(summary, { id: direct.id, name: direct.name, commission_pct: direct.commission_pct, price: d.sale_price }, state.settings, d.vat_rate)
-        : null;
+      const eco = dishEconomics(state, ctx, d);
       return {
         ...d,
         categoryName: categoryLabel(d.category_id ? catMap.get(d.category_id) : undefined),
-        cost: summary.totalCost,
-        foodCost: channel?.foodCostPct ?? null,
-        margin: channel?.grossMarginPct ?? null,
-        markup: markupPct(d.sale_price, summary.totalCost),
+        cost: eco.cost,
+        foodCost: eco.foodCostPct,
+        foodOnPrice: eco.foodOnPrice,
+        margin: eco.margin,
+        markup: eco.markup,
       };
     });
 
@@ -70,7 +66,7 @@ export function MenuFoodcostPage() {
       cell: (row) => (row.cost === null ? "—" : vnd(row.cost)),
       text: (row) => (row.cost == null ? "" : String(Math.round(row.cost))),
     },
-    { id: "foodcost", label: "Food Cost", num: true, cell: (row) => pct(row.foodCost), text: (row) => (row.foodCost == null ? "" : String(row.foodCost)) },
+    { id: "foodcost", label: "Food Cost", num: true, cell: (row) => pct(row.foodOnPrice ?? row.foodCost), text: (row) => (row.foodOnPrice == null ? "" : String(row.foodOnPrice)) },
     { id: "markup", label: T("Наценка", "Markup", "Phụ thu"), num: true, cell: (row) => pct(row.markup), text: (row) => (row.markup == null ? "" : String(row.markup)) },
     { id: "margin", label: T("Маржа", "Margin", "Biên LN"), num: true, cell: (row) => pct(row.margin), text: (row) => (row.margin == null ? "" : String(row.margin)) },
   ];
@@ -105,7 +101,7 @@ export function MenuFoodcostPage() {
             searchable
           />
           <StubFilter label={T("Период", "Period", "Kỳ")} />
-          <StubFilter label={T("Заведение", "Venue", "Cơ sở")} />
+          <VenueStubFilter />
         </>
       }
       rowMenu={(row) => (
@@ -113,15 +109,11 @@ export function MenuFoodcostPage() {
           {T("Открыть блюдо", "Open item", "Mở món")}
         </NavLink>
       )}
-      note={
-        direct
-          ? T(
-              `Food Cost и маржа — канал «${direct.name}»: (себестоимость продуктов / цена без НДС). Период продаж и факт vs план — не реализовано.`,
-              `Food cost and margin are for «${direct.name}»: (food cost / price excl. VAT). Sales period and actual vs plan are not implemented.`,
-              `Food cost và biên LN theo kênh «${direct.name}». Kỳ bán và thực tế/kế hoạch chưa làm.`,
-            )
-          : T("Нет канала продаж — маржа не считается.", "No sales channel — margin is not calculated.", "Chưa có kênh bán — không tính biên LN.")
-      }
+      note={T(
+        "Food Cost (Poster) = себестоимость продуктов / цена × 100%. Наценка = (цена без НДС − себестоимость) / себестоимость. Период продаж и факт vs план — не реализовано.",
+        "Poster food cost = food cost / price × 100%. Markup = (price excl. VAT − cost) / cost. Sales period and actual vs plan are not implemented.",
+        "Food cost Poster = giá vốn / giá × 100%. Phụ thu = (giá chưa VAT − giá vốn) / giá vốn. Kỳ bán chưa làm.",
+      )}
     />
   );
 }

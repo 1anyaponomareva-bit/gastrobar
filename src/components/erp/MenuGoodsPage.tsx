@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
+import { CatalogTable, Caret, StubFilter, VenueStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, dishSummary, dishTitle, markupPct } from "./menuFields";
+import { categoryLabel, costContextOf, dishEconomics, dishTitle } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, pct, T, vnd } from "./ui";
 import type { ErpDish } from "@/lib/erp/types";
@@ -29,12 +29,12 @@ export function MenuGoodsPage() {
       return !q || `${d.name_en} ${d.name_vn} ${d.code}`.toLowerCase().includes(q);
     })
     .map((d) => {
-      const summary = dishSummary(ctx, d);
+      const eco = dishEconomics(state, ctx, d);
       return {
         ...d,
         categoryName: categoryLabel(d.category_id ? catMap.get(d.category_id) : undefined),
-        cost: summary.totalCost,
-        markup: markupPct(d.sale_price, summary.totalCost),
+        cost: eco.cost,
+        markup: eco.markup,
       };
     });
 
@@ -108,7 +108,7 @@ export function MenuGoodsPage() {
             searchable
           />
           <StubFilter label={T("Цех", "Workshop", "Phân xưởng")} />
-          <StubFilter label={T("Заведение", "Venue", "Cơ sở")} />
+          <VenueStubFilter />
           <DropMenu
             trigger={({ open, toggle }) => (
               <button type="button" className={`erpFilterBtn ${archived ? "on" : ""}`} aria-expanded={open} onClick={toggle}>
@@ -136,9 +136,9 @@ export function MenuGoodsPage() {
         </>
       )}
       note={T(
-        "Себестоимость — плановая по составу блюда (без НДС закупки, если НДС входной включён). Наценка = (цена − себестоимость) / себестоимость. Цех и заведение в API ещё нет.",
-        "Cost is planned from the dish recipe (purchase VAT stripped when input VAT is on). Markup = (price − cost) / cost. Workshop and venue are not in the API yet.",
-        "Giá vốn theo công thức món. Phụ thu = (giá − giá vốn) / giá vốn. Phân xưởng và cơ sở chưa có API.",
+        "Себестоимость — плановая по составу (неизвестная цена остаётся пустой). Наценка = (цена без НДС − себестоимость) / себестоимость. Цех и заведение в API ещё нет — выбор не фильтрует список.",
+        "Cost is planned from the recipe (unknown prices stay empty). Markup = (price excl. VAT − cost) / cost. Workshop and venue are not in the API yet — choosing them does not filter.",
+        "Giá vốn theo công thức (giá chưa biết để trống). Phụ thu = (giá chưa VAT − giá vốn) / giá vốn. Phân xưởng và cơ sở chưa có API.",
       )}
     />
   );

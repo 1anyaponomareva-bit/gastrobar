@@ -26,10 +26,11 @@ export function MenuIngredientsPage() {
   const catSet = new Set(categories);
   const typeSet = new Set(types);
   const allowed = new Set<string>(INGREDIENT_TYPES);
+  const shownTypes = typeSet.size ? typeSet : new Set<string>(["ingredient"]);
   const pool = state.products.filter((p) => allowed.has(p.type) && Boolean(p.archived_at) === archived);
   const rows: Row[] = pool
     .filter((p) => {
-      if (typeSet.size && !typeSet.has(p.type)) return false;
+      if (!shownTypes.has(p.type)) return false;
       if (catSet.size && !catSet.has(p.category_id ?? "none")) return false;
       return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q);
     })

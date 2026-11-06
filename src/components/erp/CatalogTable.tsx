@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { downloadDocumentExport } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
+import { POSTER_VENUES } from "./menuFields";
 import { MenuMobileNav } from "./menuNav";
 import { Pager, PAGE } from "./StockBalances";
 import { NavLink, PageHead, T, today } from "./ui";
@@ -27,6 +28,40 @@ export function StubFilter({ label }: { label: string }) {
       <span>{label}</span>
       <Caret />
     </button>
+  );
+}
+
+/** Poster: one venue, radio, cannot clear. No ERP field yet — choosing a name does not filter. */
+export function VenueStubFilter() {
+  const { notify } = useErp();
+  const label = T("Заведение", "Venue", "Cơ sở");
+  return (
+    <DropMenu
+      trigger={({ open, toggle }) => (
+        <button type="button" className="erpFilterBtn" aria-expanded={open} onClick={toggle}>
+          <span>{label}</span>
+          <Caret />
+        </button>
+      )}
+    >
+      {(close) => (
+        <div className="erpDropList">
+          {POSTER_VENUES.map((venue) => (
+            <button
+              key={venue.id}
+              type="button"
+              className="erpDropAction"
+              onClick={() => {
+                close();
+                notify({ ok: false, text: notImplemented(label) });
+              }}
+            >
+              {venue.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </DropMenu>
   );
 }
 
