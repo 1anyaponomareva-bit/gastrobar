@@ -27,6 +27,7 @@ import {
   safeMenuListReturn,
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
+import { setErpLang } from "../../src/components/erp/i18n";
 import { lossPercentsText, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
@@ -626,7 +627,7 @@ async function main() {
     assert.equal(summary.complete, false);
     assert.equal(summary.totalCost, null);
     assert.equal(summary.packagingCost, null);
-    assert.deepEqual(summary.missing, ["Burger box test / Hộp burger"]);
+    assert.deepEqual(summary.missing, ["Burger box test"]);
     const pattyLine = summary.lines[0];
     assert.equal(pattyLine.source, "recipe");
     assert.equal(pattyLine.children?.length, 2);
@@ -771,7 +772,7 @@ async function main() {
     const titles = rows.map((r) => productTitle(r));
     assert.notEqual(titles[0], titles[1]);
     assert.ok(titles[1].endsWith(" · Mlekpol"), titles[1]);
-    assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: null }), "Salt / Muối");
+    assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: null }), "Salt");
     assert.equal(productTitle({ name_en: "Salt", name_vn: "Salt", brand: "  " }), "Salt");
     await q("select public.erp_sync_staff_catalog($1::jsonb, $2)", [JSON.stringify(catalog), ACTOR]);
     const again = await q<{ id: string }>("select id from public.erp_products where name_en = 'Cheese - Mozzarella' order by brand");
@@ -2812,6 +2813,26 @@ async function main() {
     assert.equal(safeMenuListReturn("//evil.example/erp/menu"), null);
     assert.equal(safeMenuListReturn("/erp/menu/ingredients/../../service"), null);
     assert.equal(withMenuListReturn("/erp/products/x", "/erp/products"), "/erp/products/x");
+  });
+
+  await test("ingredient names are stored fields, not translations: EN on RU/EN, VN on VN", async () => {
+    const foil = { name_en: "Aluminum Foil (45x285m)", name_vn: "Giấy bạc cuộn (45x285m)", brand: null as string | null };
+    const englishOnly = { name_en: "Lime", name_vn: "  ", brand: null as string | null };
+    try {
+      setErpLang("ru");
+      assert.equal(productTitle(foil), "Aluminum Foil (45x285m)");
+      assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: "Mlekpol" }), "Salt · Mlekpol");
+      assert.ok(!productTitle(foil).includes("/"));
+      setErpLang("en");
+      assert.equal(productTitle(foil), "Aluminum Foil (45x285m)");
+      setErpLang("vn");
+      assert.equal(productTitle(foil), "Giấy bạc cuộn (45x285m)");
+      assert.equal(productTitle(englishOnly), "Lime");
+      assert.equal(productTitle({ name_en: "Salt", name_vn: "Salt" }), "Salt");
+      assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: "Mlekpol" }), "Muối · Mlekpol");
+    } finally {
+      setErpLang("ru");
+    }
   });
 
   await test("ingredient card label is Характеристики; brand field name is unchanged", async () => {

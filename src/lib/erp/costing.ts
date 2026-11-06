@@ -42,6 +42,9 @@
  *   grossMarginPct = grossProfit / netRevenue × 100
  */
 
+import { productLabel } from "./productName";
+export { productLabel, productTitle } from "./productName";
+
 export type ErpUnit = "kg" | "l" | "pcs";
 export type ErpProductType = "ingredient" | "semi_finished" | "finished" | "packaging" | "consumable";
 
@@ -164,13 +167,6 @@ export const netFactor = (product: LossPcts | undefined, methods: readonly LossM
 export const roundQty = (value: number) => Math.round(value * 1e6) / 1e6;
 
 export const isPackaging = (type: ErpProductType) => type === "packaging" || type === "consumable";
-
-export const productLabel = (product: Pick<CostProduct, "name_en" | "name_vn">) =>
-  product.name_vn && product.name_vn !== product.name_en ? `${product.name_en} / ${product.name_vn}` : product.name_en;
-
-/** Name with the brand: items that differ only by brand are separate products. */
-export const productTitle = (product: Pick<CostProduct, "name_en" | "name_vn"> & { brand?: string | null }) =>
-  product.brand?.trim() ? `${productLabel(product)} · ${product.brand.trim()}` : productLabel(product);
 
 function leafPrice(ctx: CostContext, product: CostProduct): { unitCost: number | null; source: CostSource | null } {
   const quote = ctx.quotes.get(product.id);
