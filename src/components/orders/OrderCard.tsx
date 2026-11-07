@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
-import { displayRemainingQty, formatQty } from "@/lib/orders/qty";
+import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
+import { displayRemainingQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
@@ -69,25 +70,26 @@ export function OrderCard({ orderId }: { orderId: string }) {
             <span>
               {t("qty_ordered")}
               <b>
-                {formatQty(line.orderedQty)} {line.unit}
+                {formatOrderLineQty(line.orderedQty, line, "ordered")}
+                {formatOrderLineBaseHint(line) ? <span className="orders-meta"> {formatOrderLineBaseHint(line)}</span> : null}
               </b>
             </span>
             <span>
               {t("qty_accepted")}
               <b>
-                {formatQty(line.acceptedQty)} {line.unit}
+                {formatOrderLineQty(line.acceptedQty, line)}
               </b>
             </span>
             <span>
               {t("qty_posted")}
               <b>
-                {formatQty(line.postedQty)} {line.unit}
+                {formatOrderLineQty(line.postedQty, line)}
               </b>
             </span>
             <span>
               {t("qty_remaining")}
               <b>
-                {formatQty(displayRemainingQty(line))} {line.unit}
+                {formatOrderLineQty(displayRemainingQty(line), line)}
               </b>
             </span>
           </div>

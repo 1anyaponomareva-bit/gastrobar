@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
+import { formatOrderLineQty, orderLineDisplayCount, orderLineDisplayUnit } from "@/lib/orders/orderList";
 import { formatQty, parseQty } from "@/lib/orders/qty";
 import type { DiscrepancyKind, OrderPhoto, ReceiveLineInput, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
@@ -21,6 +22,8 @@ type LineState = Omit<ReceiveLineInput, "actualQty"> & {
   nameVn: string;
   packLabel: string;
   remainingQty: number;
+  packQty?: number | null;
+  packQtyBase?: number | null;
 };
 
 function kindFor(actual: number, remaining: number): DiscrepancyKind {
@@ -55,14 +58,16 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
             orderLineId: line.id ?? line.product_id,
             product_id: line.product_id,
             pack_id: line.pack_id,
-            actualText: formatQty(line.remainingQty),
+            actualText: formatQty(orderLineDisplayCount(line.remainingQty, line)),
             discrepancyKind: "none",
             discrepancyNote: null,
-            unit: line.unit,
+            unit: orderLineDisplayUnit(line),
             nameEn: line.nameEn,
             nameVn: line.nameVn,
             packLabel: line.packLabel,
             remainingQty: line.remainingQty,
+            packQty: line.packQty,
+            packQtyBase: line.packQtyBase,
           })),
       );
     } catch (err) {
@@ -154,7 +159,7 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
         <div key={line.orderLineId} className="orders-card">
           <div className="orders-name">{formatOrderLineName({ nameEn: line.nameEn, nameVn: line.nameVn })}</div>
           <div className="orders-meta">
-            {line.packLabel} · {t("qty_remaining")} {formatQty(line.remainingQty)} {line.unit}
+            {line.packLabel} · {t("qty_remaining")} {formatOrderLineQty(line.remainingQty, { orderedQty: line.remainingQty, packLabel: line.packLabel, unit: line.unit, packQty: line.packQty, packQtyBase: line.packQtyBase })}
           </div>
           <QtyField
             label={t("actual_qty")}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getPurchasingReceipt, postErpDocument, returnReceiptToClarify } from "@/lib/orders/api";
-import { formatQty } from "@/lib/orders/qty";
+import { formatOrderLineQty } from "@/lib/orders/orderList";
 import type { OrderReceipt, SupplierOrder } from "@/lib/orders/types";
 import { useErp } from "./ErpShell";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
@@ -167,12 +167,8 @@ export function PurchasingReceiptPanel({ documentId, required = false }: { docum
                     <div>{line.nameEn || line.nameVn}</div>
                     <div className="erpMuted">{line.packLabel}</div>
                   </td>
-                  <td>
-                    {formatQty(line.orderedQty)} {line.unit}
-                  </td>
-                  <td>
-                    {formatQty(line.actualQty)} {line.unit}
-                  </td>
+                  <td>{formatOrderLineQty(line.orderedQty, line, "ordered")}</td>
+                  <td>{formatOrderLineQty(line.actualQty, line)}</td>
                   <td>
                     {line.discrepancyKind !== "none" ? (
                       <span className="erpBadge warn">

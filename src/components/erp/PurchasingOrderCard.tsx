@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { closePurchasingOrder, errorMessage, getPurchasingOrder } from "@/lib/orders/api";
-import { displayRemainingQty, formatQty } from "@/lib/orders/qty";
+import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
+import { displayRemainingQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
@@ -127,17 +128,12 @@ export function PurchasingOrderCard({ id }: { id: string }) {
                   <div className="erpMuted">{[line.nameVn !== line.nameEn ? line.nameVn : null, line.brand, line.packLabel].filter(Boolean).join(" · ")}</div>
                 </td>
                 <td>
-                  {formatQty(line.orderedQty)} {line.unit}
+                  {formatOrderLineQty(line.orderedQty, line, "ordered")}
+                  {formatOrderLineBaseHint(line) ? <div className="erpMuted">{formatOrderLineBaseHint(line)}</div> : null}
                 </td>
-                <td>
-                  {formatQty(line.acceptedQty)} {line.unit}
-                </td>
-                <td>
-                  {formatQty(line.postedQty)} {line.unit}
-                </td>
-                <td>
-                  {formatQty(displayRemainingQty(line))} {line.unit}
-                </td>
+                <td>{formatOrderLineQty(line.acceptedQty, line)}</td>
+                <td>{formatOrderLineQty(line.postedQty, line)}</td>
+                <td>{formatOrderLineQty(displayRemainingQty(line), line)}</td>
               </tr>
             ))}
           </tbody>

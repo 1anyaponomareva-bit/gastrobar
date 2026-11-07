@@ -18,6 +18,7 @@ import {
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "../../src/lib/orders/orderPdf";
+import { formatOrderLineQty } from "../../src/lib/orders/orderList";
 import { displayRemainingQty } from "../../src/lib/orders/qty";
 import { createTestDb } from "./testDb";
 
@@ -690,6 +691,43 @@ async function main() {
     assert.equal(n(line.qty), 2);
     assert.equal(formatOrderPdfQtyCell({ qty: Number(line.qty), unit: String(line.unit) }), "2");
     assert.notEqual(n(line.qty), 24);
+  });
+
+  await test("2 boxes of 20 kg stay 2 boxes on the order, not 40 boxes", async () => {
+    const meat = await saveProduct({
+      type: "ingredient",
+      name_en: "Buffalo Striploin",
+      name_vn: "Thăn ngoại trâu",
+      base_unit: "kg",
+    });
+    await q(
+      "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default) values ($1, $2, 'Box 20 kg', 20, true)",
+      [meat, supplier],
+    );
+    const meatDraft = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({
+        warehouseId: prep,
+        lines: [{ product_id: meat, packQty: 2, qty: 2 }],
+      }),
+      ACTOR,
+    ]);
+    const placedMeat = await j("select public.erp_order_place($1, $2)", [meatDraft.id, ACTOR]);
+    const meatLine = asJson(asArr(placedMeat.lines)[0]);
+    assert.equal(n(meatLine.packQty), 2, "cook typed 2 boxes");
+    assert.equal(n(meatLine.orderedQty), 40, "warehouse qty is 2 × 20 kg");
+    assert.equal(n(meatLine.packQtyBase), 20);
+    assert.equal(
+      formatOrderLineQty(Number(meatLine.orderedQty), {
+        orderedQty: Number(meatLine.orderedQty),
+        packQty: Number(meatLine.packQty),
+        packQtyBase: Number(meatLine.packQtyBase),
+        packLabel: String(meatLine.packLabel),
+        unit: String(meatLine.unit),
+      }, "ordered"),
+      "2 box",
+      "order card must not show 40 box",
+    );
   });
 
   console.log(`\n${passed} passed (PGlite only, no production SQL)`);

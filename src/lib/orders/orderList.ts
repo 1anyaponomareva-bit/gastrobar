@@ -1,6 +1,6 @@
 import { productDisplayName, type ProductNameLocale } from "../erp/productName";
 import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
-import { isPositiveQty, parseQty } from "./qty";
+import { formatQty, isPositiveQty, parseQty } from "./qty";
 import type { OrderProduct, OrderProductPack, OrderWarehouse } from "./types";
 
 export type SelectionRow = { packId: string | null; qty: string };
@@ -324,6 +324,48 @@ export function orderPackUnit(pack: { label: string; unit: string }, productUnit
   const match = PACK_CONTAINER.exec(pack.label.replace(/\s+/g, " ").trim());
   if (match) return containerWord(match[1]);
   return pack.unit || productUnit;
+}
+
+export type OrderLineQtyView = {
+  orderedQty: number;
+  packQty?: number | null;
+  packQtyBase?: number | null;
+  qtyBase?: number | null;
+  packLabel?: string | null;
+  unit: string;
+};
+
+function packCoef(line: OrderLineQtyView): number | null {
+  const value = Number(line.packQtyBase ?? line.qtyBase);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** 2 boxes of 20 kg must stay 2 box, not 40 box (base kg shown with the pack word). */
+export function orderLineDisplayCount(baseQty: number, line: OrderLineQtyView, field: "ordered" | "other" = "other"): number {
+  const coef = packCoef(line);
+  if (field === "ordered" && line.packQty != null && Number(line.packQty) > 0) return Number(line.packQty);
+  if (coef) return Math.round((baseQty / coef) * 1e6) / 1e6;
+  return baseQty;
+}
+
+export function orderLineDisplayUnit(line: OrderLineQtyView): string {
+  if (packCoef(line)) return orderPackUnit({ label: line.packLabel || "", unit: line.unit || "" }, line.unit || "");
+  return line.unit || "";
+}
+
+export function formatOrderLineQty(baseQty: number, line: OrderLineQtyView, field: "ordered" | "other" = "other"): string {
+  return `${formatQty(orderLineDisplayCount(baseQty, line, field))} ${orderLineDisplayUnit(line)}`.trim();
+}
+
+/** Extra line under ordered packs: `= 40 kg` when one box is not 1 base unit. */
+export function formatOrderLineBaseHint(line: OrderLineQtyView): string | null {
+  const coef = packCoef(line);
+  if (!coef || Math.abs(coef - 1) < 1e-9) return null;
+  if (line.packQty == null || Number(line.packQty) <= 0) return null;
+  const match = PACK_CONTAINER.exec((line.packLabel || "").replace(/\s+/g, " ").trim());
+  const rest = match?.[2]?.trim() ?? "";
+  const baseUnit = rest.replace(/^[\d.,*\s]+/u, "").trim();
+  return `= ${formatQty(line.orderedQty)}${baseUnit ? ` ${baseUnit}` : ""}`;
 }
 
 export function productDetailLine(input: {

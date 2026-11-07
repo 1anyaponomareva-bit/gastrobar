@@ -28,6 +28,8 @@ import {
   isMarkedQty,
   isProductMarked,
   ORDER_PDF_TAP_STEPS,
+  formatOrderLineBaseHint,
+  formatOrderLineQty,
   orderPackCaption,
   orderPackUnit,
   orderPdfWarehouseFields,
@@ -165,6 +167,36 @@ test("All tab groups by category; selected yellow rows stay in their group", () 
     groups[1].products.map((row) => row.id),
     ["butter", "cheese"],
   );
+});
+
+test("ordered 2 boxes of 20 kg displays 2 box, not 40 box", () => {
+  const buffalo = {
+    orderedQty: 40,
+    packQty: 2,
+    packQtyBase: 20,
+    packLabel: "Box 20 kg",
+    unit: "Box",
+  };
+  assert.equal(formatOrderLineQty(40, buffalo, "ordered"), "2 box");
+  assert.equal(formatOrderLineBaseHint(buffalo), "= 40 kg");
+  assert.equal(formatOrderLineQty(0, buffalo), "0 box");
+  const beer = {
+    orderedQty: 15.84,
+    packQty: 2,
+    packQtyBase: 7.92,
+    packLabel: "Pack 24*330 ml",
+    unit: "l",
+  };
+  assert.equal(formatOrderLineQty(15.84, beer, "ordered"), "2 pack");
+  const each = {
+    orderedQty: 3,
+    packQty: 3,
+    packQtyBase: 1,
+    packLabel: "1 kg",
+    unit: "kg",
+  };
+  assert.equal(formatOrderLineQty(3, each, "ordered"), "3 kg");
+  assert.equal(formatOrderLineBaseHint(each), null);
 });
 
 test("pack caption and details match Staff cards: 1 pack = N, supplier + pack SKU", () => {

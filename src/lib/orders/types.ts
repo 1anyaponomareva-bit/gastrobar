@@ -16,6 +16,8 @@ export type OrderLineSnapshot = {
   unit: string;
   qty: number;
   qtyBase?: number | null;
+  packQty?: number | null;
+  packQtyBase?: number | null;
   unitPrice?: number | null;
 };
 
