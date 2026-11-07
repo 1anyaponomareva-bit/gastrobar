@@ -220,7 +220,8 @@ function productOf(raw: Json): OrderProduct {
     categoryId: optStr(pick(raw, "categoryId", "category_id")),
     categoryName: optStr(pick(raw, "categoryName", "category_name", "category")),
     unit: str(pick(raw, "unit", "base_unit")),
-    itemNo: optStr(pick(raw, "itemNo", "item_no", "product_code", "code")),
+    itemNo: optStr(pick(raw, "itemNo", "item_no")),
+    productCode: optStr(pick(raw, "productCode", "product_code")),
     supplierId: optStr(pick(raw, "supplierId", "supplier_id")),
     sort: num(pick(raw, "sort", "staff_sort", "staffSort")),
     hidden: Boolean(pick(raw, "hidden", "staff_hidden")),
@@ -535,6 +536,14 @@ export async function saveDraft(
   });
   const obj = asRecord(data);
   return draftOf(asRecord(pick(obj, "draft") ?? data), supplierId);
+}
+
+/** Freeze the current draft snapshot. Does not place and does not return a file. */
+export async function freezeDraftPdf(supplierId: string): Promise<void> {
+  await request(`/api/orders/drafts/${encodeURIComponent(supplierId)}/pdf`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 export async function buildDraftPdf(orderId: string, fallback?: OrderPdfInput): Promise<PdfResult> {

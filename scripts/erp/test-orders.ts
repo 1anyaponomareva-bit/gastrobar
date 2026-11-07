@@ -10,6 +10,7 @@ import { PDFDocument } from "pdf-lib";
 import {
   getOrderPdfFileName,
   makeOrderPdfBlob,
+  orderPdfTitle,
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "../../src/lib/orders/orderPdf";
@@ -124,9 +125,10 @@ async function main() {
     base_unit: "kg",
   });
   await q(
-    "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default) values ($1, $2, 'bag 1 kg', 1, true)",
+    "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default, code) values ($1, $2, 'bag 1 kg', 1, true, 'BEEF-PACK')",
     [beef, supplier],
   );
+  await q("update public.erp_products set product_code = 'SALT-FALLBACK' where id = $1", [salt]);
   const heavyPack = await value<string>(
     "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default) values ($1, $2, 'bag 2.5 kg', 2.5, true) returning id",
     [salt, supplier],
@@ -141,6 +143,11 @@ async function main() {
     assert.ok(ids.indexOf(salt) < ids.indexOf(beef), "lower staff_sort comes first");
     const saltRow = catalog.map(asJson).find((row) => row.id === salt);
     assert.equal(saltRow?.supplierId, supplier);
+    assert.equal(saltRow?.nameVn, "Muối đơn");
+    assert.equal(saltRow?.productCode, "SALT-FALLBACK");
+    const beefRow = catalog.map(asJson).find((row) => row.id === beef);
+    assert.equal(beefRow?.nameVn, "Thịt bò đơn");
+    assert.equal(asJson(asArr(beefRow?.packs)[0]).code, "BEEF-PACK");
     await q("select public.erp_order_reorder_products(array[$1::uuid, $2::uuid])", [beef, salt]);
     const reordered = asArr(await value("select public.erp_order_catalog_products(false)"));
     const next = reordered.map((row) => asJson(row).id);
@@ -241,6 +248,7 @@ async function main() {
         nameVn: snap.lines[0].nameVn,
         brand: snap.lines[0].brand,
         packLabel: snap.lines[0].packLabel,
+        packCode: snap.lines[0].packCode,
         unit: snap.lines[0].unit,
         qty: snap.lines[0].qty,
       },
@@ -249,24 +257,26 @@ async function main() {
         nameVn: "Thịt bò đơn",
         brand: "TestBrand",
         packLabel: "bag 1 kg",
+        packCode: "BEEF-PACK",
         unit: "kg",
         qty: 10,
       },
     );
     const file1 = getOrderPdfFileName(snap);
-    assert.match(file1, /_r1_/);
-    assert.match(file1, /^Order_/);
+    assert.match(file1, /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
+    assert.doesNotMatch(file1, /_r\d/);
+    assert.doesNotMatch(orderPdfTitle(snap), /\br\d\b|rev /i);
     const blob = await makeOrderPdfBlob(snap);
     const pdf = await PDFDocument.load(await blob.arrayBuffer());
     assert.equal(pdf.getSubject(), "revision=1");
+    assert.doesNotMatch(pdf.getTitle() ?? "", /\br\d\b/);
     assert.ok(pdf.getPageCount() >= 1);
 
     const second = await j("select public.erp_order_pdf_revision($1, $2)", [draft.id, ACTOR]);
     assert.equal(second.status, "draft", "PDF does not place");
     assert.equal(n(second.revision), 2);
     const snap2 = asJson(second.snapshot) as unknown as OrderPdfInput;
-    assert.match(getOrderPdfFileName(snap2), /_r2_/);
-    assert.notEqual(getOrderPdfFileName(snap2), file1);
+    assert.equal(getOrderPdfFileName(snap2), file1, "cook-facing filename ignores revision");
   });
 
   const placed = await j("select public.erp_order_place($1, $2)", [draft.id, ACTOR]);

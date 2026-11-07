@@ -1,3 +1,4 @@
+import { orderPdfLineCode, type OrderPdfInput } from "./orderPdfTypes";
 import { isPositiveQty, parseQty } from "./qty";
 import type { OrderProduct, OrderProductPack } from "./types";
 
@@ -205,6 +206,43 @@ export function selectionDraftLines(
     lines.push({ product_id: product.id, pack_id: row.packId, qty: parseQty(row.qty) });
   }
   return lines;
+}
+
+/** PDF of yellow (qty>0) supplier rows. Revision is unused on the cook-facing file. */
+export function supplierPrintPdfInput(
+  products: OrderProduct[],
+  selection: SelectionMap,
+  meta: {
+    orderNo: string;
+    supplierName: string;
+    orderedAt?: string;
+    warehouseName?: string;
+    comment?: string;
+  },
+): OrderPdfInput | null {
+  const marked = products.filter((product) => isProductMarked(product.id, selection));
+  if (!marked.length) return null;
+  return {
+    orderNo: meta.orderNo,
+    revision: 0,
+    orderedAt: (meta.orderedAt || new Date().toISOString()).slice(0, 10),
+    supplierName: meta.supplierName,
+    warehouseName: meta.warehouseName,
+    comment: meta.comment,
+    lines: marked.map((product) => {
+      const row = selection[product.id];
+      const pack = packOf(product, row?.packId ?? null);
+      return {
+        nameEn: product.nameEn,
+        nameVn: product.nameVn,
+        brand: product.brand ?? "",
+        packLabel: pack?.label ?? "",
+        packCode: orderPdfLineCode(pack?.code, product.productCode),
+        unit: pack?.unit || product.unit,
+        qty: parseQty(row?.qty),
+      };
+    }),
+  };
 }
 
 const PACK_CONTAINER = /^(box|pack|pcs|pc|btl|bottle|can|bag)\s+(.+)$/i;

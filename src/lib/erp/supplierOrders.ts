@@ -258,9 +258,8 @@ export async function saveDraft(supplierId: string, doc: Record<string, unknown>
 }
 
 function toArrayBuffer(bytes: Buffer): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy.buffer;
+  const copy = Uint8Array.from(bytes);
+  return copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength);
 }
 
 let orderPdfFontsReady = false;
@@ -292,6 +291,7 @@ export function asOrderPdfInput(value: unknown): OrderPdfInput {
         nameVn: String(item.nameVn ?? ""),
         brand: String(item.brand ?? ""),
         packLabel: String(item.packLabel ?? ""),
+        packCode: item.packCode == null ? undefined : String(item.packCode),
         unit: String(item.unit ?? ""),
         qty: Number(item.qty) || 0,
       };

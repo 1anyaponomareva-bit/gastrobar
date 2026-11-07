@@ -8,6 +8,9 @@ const extraDevOrigins =
     .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/api/orders/[id]/pdf": ["./public/fonts/**/*"],
+  },
   /**
    * /food stays on this site. /schedule is a separate Vercel project.
    * fallback runs only when this app has no matching page, so the homepage,

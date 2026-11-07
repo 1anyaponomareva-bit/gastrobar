@@ -6,6 +6,7 @@ export {
   getOrderPdfFileName,
   makeOrderPdfBlob,
   orderPdfCacheKey,
+  orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
   orderPdfTitle,

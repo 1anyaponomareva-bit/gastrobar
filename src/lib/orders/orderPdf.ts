@@ -6,6 +6,7 @@ import {
   formatOrderQty,
   getOrderPdfFileName,
   orderPdfCacheKey,
+  orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
   orderPdfTitle,
@@ -22,6 +23,7 @@ export {
   formatOrderQty,
   getOrderPdfFileName,
   orderPdfCacheKey,
+  orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
   orderPdfTitle,
@@ -47,9 +49,11 @@ const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
 const BLOCK_GAP = 8;
 const SECTION_GAP = 16;
 
-const COL_QTY = 400;
+const COL_QTY = 320;
+const COL_CODE = 460;
 const ITEM_WIDTH = COL_QTY - (MARGIN_LEFT + 30) - 8;
-const QTY_WIDTH = MARGIN_LEFT + CONTENT_WIDTH - COL_QTY - 8;
+const QTY_WIDTH = COL_CODE - COL_QTY - 8;
+const CODE_WIDTH = MARGIN_LEFT + CONTENT_WIDTH - COL_CODE - 8;
 
 const COLORS = {
   text: rgb(0.07, 0.07, 0.07),
@@ -227,12 +231,7 @@ function documentHeading(input: OrderPdfInput): string {
 }
 
 function metaLines(input: OrderPdfInput): string[] {
-  const revision = orderPdfRevisionLabel(input.revision);
-  const lines = [
-    `Order / Số: ${input.orderNo.trim() || "—"}`,
-    `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`,
-    `Revision / Phiên bản: ${revision}`,
-  ];
+  const lines = [`Order / Số: ${input.orderNo.trim() || "—"}`, `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`];
   const warehouse = String(input.warehouseName ?? "").trim();
   if (warehouse) lines.push(`Warehouse / Kho: ${warehouse}`);
   const comment = String(input.comment ?? "").replace(/\s+/g, " ").trim();
@@ -270,7 +269,7 @@ function drawHeader(ctx: PdfContext, input: OrderPdfInput) {
 }
 
 function drawContinuationBar(ctx: PdfContext, input: OrderPdfInput) {
-  const label = `${input.supplierName} · ${input.orderNo} · rev ${orderPdfRevisionLabel(input.revision)}`;
+  const label = `${input.supplierName} · ${input.orderNo}`;
   const block = measureWrapped(label, ctx.fontBold, 10, CONTENT_WIDTH - 16, 3);
   const height = Math.max(22, block.height + 10);
   const topY = ctx.y;
@@ -293,24 +292,31 @@ function drawTableHeader(ctx: PdfContext) {
   drawText(ctx, "#", MARGIN_LEFT + 8, baseline, 9, ctx.fontBold);
   drawText(ctx, "ITEM / MẶT HÀNG", MARGIN_LEFT + 30, baseline, 9, ctx.fontBold);
   drawText(ctx, "QTY / SỐ LƯỢNG", COL_QTY, baseline, 9, ctx.fontBold);
+  drawText(ctx, "ITEM # / MÃ HÀNG", COL_CODE, baseline, 9, ctx.fontBold);
   ctx.y = topY - height - 6;
 }
 
 function drawOrderRow(ctx: PdfContext, line: OrderPdfLine, index: number) {
-  const name = formatOrderLineName(line);
+  const nameEn = String(line.nameEn ?? "").replace(/\s+/g, " ").trim();
+  const nameVn = String(line.nameVn ?? "").replace(/\s+/g, " ").trim();
   const brand = String(line.brand ?? "").replace(/\s+/g, " ").trim();
   const pack = String(line.packLabel ?? "").replace(/\s+/g, " ").trim();
+  const code = orderPdfLineCode(line.packCode);
   const unit = String(line.unit ?? "").replace(/\s+/g, " ").trim();
   const qtyText = `${formatOrderQty(line.qty)}${unit ? ` ${unit}` : ""}`;
+  const bilingual = formatOrderLineName(line);
 
-  const nameLines = wrapText(name, ctx.fontBold, 11, ITEM_WIDTH);
+  const nameLines = wrapText(nameEn || bilingual, ctx.fontBold, 11, ITEM_WIDTH);
+  const vnLines = nameVn && nameVn !== nameEn ? wrapText(nameVn, ctx.font, 9, ITEM_WIDTH) : [];
   const brandLines = brand ? wrapText(brand, ctx.font, 9, ITEM_WIDTH) : [];
   const qtyLines = wrapText(qtyText, ctx.fontBold, 12, QTY_WIDTH);
   const packLines = pack ? wrapText(pack, ctx.font, 9, QTY_WIDTH) : [];
+  const codeLines = code ? wrapText(code, ctx.font, 9, CODE_WIDTH) : [];
 
-  const leftHeight = nameLines.length * 14 + brandLines.length * 12;
+  const leftHeight = nameLines.length * 14 + vnLines.length * 12 + brandLines.length * 12;
   const rightHeight = qtyLines.length * 15 + packLines.length * 12;
-  const rowHeight = Math.max(28, leftHeight + 12, rightHeight + 12);
+  const codeHeight = codeLines.length * 12;
+  const rowHeight = Math.max(28, leftHeight + 12, rightHeight + 12, codeHeight + 12);
 
   ensureSpace(ctx, rowHeight + 6);
   const rowTop = ctx.y;
@@ -323,6 +329,10 @@ function drawOrderRow(ctx: PdfContext, line: OrderPdfLine, index: number) {
   for (const row of nameLines) {
     drawText(ctx, row, MARGIN_LEFT + 30, nameY, 11, ctx.fontBold);
     nameY -= 14;
+  }
+  for (const row of vnLines) {
+    drawText(ctx, row, MARGIN_LEFT + 30, nameY + 1, 9, ctx.font);
+    nameY -= 12;
   }
   for (const row of brandLines) {
     drawText(ctx, row, MARGIN_LEFT + 30, nameY + 1, 9, ctx.font, COLORS.muted);
@@ -337,6 +347,12 @@ function drawOrderRow(ctx: PdfContext, line: OrderPdfLine, index: number) {
   for (const row of packLines) {
     drawText(ctx, row, COL_QTY, qtyY + 2, 9, ctx.font, COLORS.muted);
     qtyY -= 12;
+  }
+
+  let codeY = baseline;
+  for (const row of codeLines) {
+    drawText(ctx, row, COL_CODE, codeY, 9, ctx.font);
+    codeY -= 12;
   }
 
   ctx.y = rowTop - rowHeight - 6;
@@ -389,14 +405,16 @@ export async function makeOrderPdfBlob(input: OrderPdfInput): Promise<Blob> {
   const fonts = await loadFontBytes();
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
-  const font = await pdfDoc.embedFont(fonts.regular);
-  const fontBold = await pdfDoc.embedFont(fonts.bold);
+  const regularBytes = fonts.regular instanceof Uint8Array ? fonts.regular : new Uint8Array(fonts.regular);
+  const boldBytes = fonts.bold instanceof Uint8Array ? fonts.bold : new Uint8Array(fonts.bold);
+  const font = await pdfDoc.embedFont(regularBytes);
+  const fontBold = await pdfDoc.embedFont(boldBytes);
 
   const revision = orderPdfRevisionLabel(input.revision);
   pdfDoc.setTitle(orderPdfTitle(input));
   pdfDoc.setSubject(`revision=${revision}`);
-  pdfDoc.setKeywords([input.orderNo, `r${revision}`, input.supplierName]);
-  pdfDoc.setProducer(`gastrobar-order-pdf revision=${revision}`);
+  pdfDoc.setKeywords([input.orderNo, input.supplierName].filter(Boolean));
+  pdfDoc.setProducer("gastrobar-order-pdf");
   pdfDoc.setCreator("GASTROFOOD orders");
 
   const ctx: PdfContext = {

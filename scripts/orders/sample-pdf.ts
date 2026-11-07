@@ -10,6 +10,7 @@ import {
   getOrderPdfFileName,
   makeOrderPdfBlob,
   orderPdfCacheKey,
+  orderPdfTitle,
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "../../src/lib/orders/orderPdf";
@@ -37,6 +38,7 @@ const shortOrder = (): OrderPdfInput => ({
       nameVn: "Bơ",
       brand: "Allowrie Unsalted",
       packLabel: "box 5 kg",
+      packCode: "234468",
       unit: "box",
       qty: 2,
     },
@@ -83,7 +85,8 @@ async function writeSample(name: string, input: OrderPdfInput): Promise<{ pages:
   const pdf = await PDFDocument.load(bytes);
   const title = pdf.getTitle() ?? "";
   const subject = pdf.getSubject() ?? "";
-  assert.match(title, new RegExp(`r${Math.floor(input.revision)}`));
+  assert.equal(title, orderPdfTitle(input));
+  assert.doesNotMatch(title, /\br\d\b|rev /i);
   assert.equal(subject, `revision=${Math.floor(input.revision)}`);
   const file = path.join(SAMPLES, name);
   await writeFile(file, bytes);
@@ -99,8 +102,9 @@ async function main() {
 
   const short = shortOrder();
   const long = longOrder();
-  assert.match(getOrderPdfFileName(short), /Order_MM_ORD-2026-00012_r1_2026-11-07\.pdf/);
-  assert.match(getOrderPdfFileName(long), /_r3_/);
+  assert.equal(getOrderPdfFileName(short), "Order_MM_2026-11-07.pdf");
+  assert.equal(getOrderPdfFileName(long), "Order_Hisina_2026-11-07.pdf");
+  assert.doesNotMatch(getOrderPdfFileName(short), /_r\d/);
   assert.notEqual(orderPdfCacheKey({ ...short, revision: 1 }), orderPdfCacheKey({ ...short, revision: 2 }));
 
   const shortOut = await writeSample("order-mm-short.pdf", short);
@@ -111,7 +115,7 @@ async function main() {
   const rev2 = await makeOrderPdfBlob({ ...short, revision: 2 });
   const rev2Pdf = await PDFDocument.load(await rev2.arrayBuffer());
   assert.equal(rev2Pdf.getSubject(), "revision=2");
-  assert.notEqual(getOrderPdfFileName({ ...short, revision: 1 }), getOrderPdfFileName({ ...short, revision: 2 }));
+  assert.equal(getOrderPdfFileName({ ...short, revision: 1 }), getOrderPdfFileName({ ...short, revision: 2 }));
 
   const empty = await makeOrderPdfBlob({ ...short, lines: [] });
   const emptyPdf = await PDFDocument.load(await empty.arrayBuffer());

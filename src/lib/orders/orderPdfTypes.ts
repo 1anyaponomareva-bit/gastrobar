@@ -7,6 +7,8 @@ export type OrderPdfLine = {
   nameVn: string;
   brand: string;
   packLabel: string;
+  /** Supplier pack SKU; omitted when the catalog has none. */
+  packCode?: string;
   unit: string;
   qty: number;
 };
@@ -45,6 +47,13 @@ export function formatOrderLineName(line: Pick<OrderPdfLine, "nameEn" | "nameVn"
   return en || vn;
 }
 
+/** Pack SKU first; product_code only when the фасовка has no code. Never Staff itemNo. */
+export function orderPdfLineCode(packCode?: string | null, productCode?: string | null): string {
+  const pack = String(packCode ?? "").replace(/\s+/g, " ").trim();
+  if (pack) return pack;
+  return String(productCode ?? "").replace(/\s+/g, " ").trim();
+}
+
 export function formatOrderPdfDate(orderedAt: string): string {
   const raw = String(orderedAt ?? "").trim();
   const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -61,20 +70,18 @@ export function orderPdfLines(input: OrderPdfInput): OrderPdfLine[] {
   return (input.lines ?? []).filter((line) => Number(line.qty) > 0);
 }
 
-/** Filename changes when revision changes, so an older PDF is a different file. */
+/** Cook-facing filename: supplier + date. Revision stays internal (DB / PDF subject). */
 export function getOrderPdfFileName(
-  input: Pick<OrderPdfInput, "orderNo" | "revision" | "supplierName" | "orderedAt">,
+  input: Pick<OrderPdfInput, "supplierName" | "orderedAt"> & Partial<Pick<OrderPdfInput, "orderNo" | "revision">>,
 ): string {
   const supplier = asciiFileLabel(input.supplierName) || "Supplier";
-  const orderNo = asciiFileLabel(input.orderNo) || "Draft";
   const date = formatOrderPdfDate(input.orderedAt).replace(/[^\d-]/g, "") || "order";
-  const revision = Number.isFinite(input.revision) ? Math.max(0, Math.floor(input.revision)) : 0;
-  return `Order_${supplier}_${orderNo}_r${revision}_${date}.pdf`;
+  return `Order_${supplier}_${date}.pdf`;
 }
 
-export function orderPdfTitle(input: Pick<OrderPdfInput, "orderNo" | "revision" | "supplierName">): string {
-  const revision = Number.isFinite(input.revision) ? Math.floor(input.revision) : 0;
-  return `${input.supplierName} — Order ${input.orderNo} r${revision}`;
+export function orderPdfTitle(input: Pick<OrderPdfInput, "supplierName"> & Partial<Pick<OrderPdfInput, "orderNo" | "revision">>): string {
+  const orderNo = String(input.orderNo ?? "").trim();
+  return orderNo ? `${input.supplierName} — Order ${orderNo}` : `${input.supplierName} — Order`;
 }
 
 export function orderPdfRevisionLabel(revision: number): string {
@@ -92,6 +99,7 @@ export function orderPdfCacheKey(input: OrderPdfInput): string {
     nameVn: line.nameVn,
     brand: line.brand,
     packLabel: line.packLabel,
+    packCode: line.packCode ?? "",
     unit: line.unit,
     qty: Number(line.qty),
   }));

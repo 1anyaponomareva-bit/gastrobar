@@ -183,13 +183,21 @@ async function sharePdfFile(
   blob: Blob,
   fileName: string,
 ): Promise<DeliverPdfResult> {
-  const candidates = await buildShareFileCandidates(blob, fileName);
-  const file = orderCandidatesForShare(candidates)[0];
-  if (!file) {
-    throw new Error("Could not prepare PDF for sharing.");
+  try {
+    const candidates = await buildShareFileCandidates(blob, fileName);
+    const file = orderCandidatesForShare(candidates)[0];
+    if (!file) {
+      throw new Error("Could not prepare PDF for sharing.");
+    }
+    // One share call per tap — Android loses user activation after failed retries.
+    return await tryNativeFileShare(file);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return "cancelled";
+    }
+    downloadPdfFile(blob, fileName);
+    return "downloaded";
   }
-  // One share call per tap — Android loses user activation after failed retries.
-  return tryNativeFileShare(file);
 }
 
 /**

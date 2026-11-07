@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
+import { getOrderPdfFileName, orderPdfLineCode, orderPdfTitle } from "./orderPdfTypes";
 import {
   ALL_SUPPLIER_TAB,
   catalogCategories,
@@ -17,9 +18,11 @@ import {
   shouldPlaceAfterDialog,
   sortCatalogProducts,
   supplierBadgeCounts,
+  supplierPrintPdfInput,
   supplierTabChips,
   type SelectionMap,
 } from "./orderList";
+import type { OrderProduct } from "./types";
 
 test("catalog list order follows staff_sort then name", () => {
   const sorted = sortCatalogProducts([
@@ -165,6 +168,78 @@ test("place happens only after dialog submit, not the button click", () => {
 
 test("admin drag keeps unmoved rows in place", () => {
   assert.deepEqual(reorderSubset(["a", "b", "c", "d"], ["c", "b"]), ["a", "c", "b", "d"]);
+});
+
+test("print PDF uses pack SKU then product_code, bilingual names, and no revision in the filename", () => {
+  const beer: OrderProduct = {
+    id: "beer",
+    nameEn: "Beer Lager",
+    nameVn: "Bia Lager",
+    brand: "Saigon",
+    categoryId: null,
+    categoryName: null,
+    unit: "l",
+    itemNo: "STAFF-IGNORE",
+    productCode: "PROD-FALLBACK",
+    supplierId: "mm",
+    sort: 0,
+    packs: [
+      {
+        id: "p1",
+        pack_id: "p1",
+        label: "Pack 24*330 ml",
+        unit: "pack",
+        qty_base: 7.92,
+        is_default: true,
+        code: "259043",
+      },
+    ],
+  };
+  const salt: OrderProduct = {
+    ...beer,
+    id: "salt",
+    nameEn: "Salt",
+    nameVn: "Muối",
+    brand: null,
+    itemNo: "STAFF-SALT",
+    productCode: "SALT-1",
+    packs: [{ id: "p2", pack_id: "p2", label: "1 kg", unit: "kg", qty_base: 1, is_default: true, code: null }],
+  };
+  const selection: SelectionMap = {
+    beer: { packId: "p1", qty: "2" },
+    salt: { packId: "p2", qty: "0" },
+  };
+  assert.equal(orderPdfLineCode("259043", "PROD-FALLBACK"), "259043");
+  assert.equal(orderPdfLineCode("", "SALT-1"), "SALT-1");
+  assert.equal(orderPdfLineCode(null, null), "");
+  const input = supplierPrintPdfInput([beer, salt], selection, {
+    orderNo: "ORD-000005",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+  });
+  assert.ok(input);
+  assert.equal(input!.lines.length, 1);
+  assert.deepEqual(input!.lines[0], {
+    nameEn: "Beer Lager",
+    nameVn: "Bia Lager",
+    brand: "Saigon",
+    packLabel: "Pack 24*330 ml",
+    packCode: "259043",
+    unit: "pack",
+    qty: 2,
+  });
+  const saltOnly = supplierPrintPdfInput([salt], { salt: { packId: "p2", qty: "1" } }, {
+    orderNo: "ORD-1",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+  });
+  assert.equal(saltOnly!.lines[0].packCode, "SALT-1");
+  assert.equal(saltOnly!.lines[0].nameVn, "Muối");
+  const fileName = getOrderPdfFileName(input!);
+  assert.equal(fileName, "Order_MM_2026-11-07.pdf");
+  assert.doesNotMatch(fileName, /rev|_r\d/i);
+  assert.doesNotMatch(orderPdfTitle({ ...input!, revision: 2 }), /rev|\br\d\b/i);
+  assert.equal(supplierPrintPdfInput([beer], { beer: { packId: "p1", qty: "" } }, { orderNo: "x", supplierName: "MM" }), null);
 });
 
 test("orders list is public; admin cookie is the only catalog editor", () => {

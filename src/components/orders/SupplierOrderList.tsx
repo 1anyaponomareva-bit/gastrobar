@@ -4,23 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
-import { buildDraftPdf, errorMessage, getDraft, placeOrder, saveDraft } from "@/lib/orders/api";
+import { errorMessage, freezeDraftPdf, getDraft, placeOrder, saveDraft } from "@/lib/orders/api";
 import {
   catalogCategories,
   clearSupplierSelection,
   defaultPackId,
   groupProductsByCategory,
   isProductMarked,
-  packOf,
   reducePlaceDialog,
   selectionDraftLines,
   shouldPlaceAfterDialog,
+  supplierPrintPdfInput,
   type PlaceDialogPhase,
   type SelectionMap,
 } from "@/lib/orders/orderList";
-import { getOrderPdfFileName, type OrderPdfInput } from "@/lib/orders/orderPdf";
+import { getOrderPdfFileName, makeOrderPdfBlob, preloadOrderPdfFonts } from "@/lib/orders/orderPdf";
 import { readOrderSelection } from "@/lib/orders/orderSelection";
-import { formatQty, parseQty } from "@/lib/orders/qty";
+import { formatQty } from "@/lib/orders/qty";
 import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
 import { InAppShareNotice } from "./InAppShareNotice";
 import { OrdersEmpty } from "./LoadState";
@@ -70,6 +70,7 @@ export function SupplierOrderList({
   const onSelectionRef = useRef(onSelection);
   onSelectionRef.current = onSelection;
   const mergedDraft = useRef(false);
+  const preparedPdf = useRef<{ key: string; promise: Promise<Blob> } | null>(null);
 
   const persist = useCallback(
     async (nextSelection?: SelectionMap) => {
@@ -145,6 +146,7 @@ export function SupplierOrderList({
   }, [persist, resetNonce]);
 
   useEffect(() => {
+    preloadOrderPdfFonts();
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
@@ -152,29 +154,26 @@ export function SupplierOrderList({
 
   const marked = useMemo(() => products.filter((product) => isProductMarked(product.id, selection)), [products, selection]);
 
-  const pdfInput = useMemo((): OrderPdfInput | null => {
-    if (!marked.length) return null;
-    return {
-      orderNo: draft?.orderNo || draft?.id || t("draft_label"),
-      revision: draft?.revision || 0,
-      orderedAt: (draft?.placedAt || new Date().toISOString()).slice(0, 10),
-      supplierName: supplier.name,
-      warehouseName: warehouses.find((row) => row.id === warehouseId)?.name,
-      comment: comment || undefined,
-      lines: marked.map((product) => {
-        const row = selection[product.id];
-        const pack = packOf(product, row?.packId ?? null);
-        return {
-          nameEn: product.nameEn,
-          nameVn: product.nameVn,
-          brand: product.brand ?? "",
-          packLabel: pack?.label ?? "",
-          unit: pack?.unit || product.unit,
-          qty: parseQty(row?.qty),
-        };
+  const pdfInput = useMemo(
+    () =>
+      supplierPrintPdfInput(products, selection, {
+        orderNo: draft?.orderNo || draft?.id || t("draft_label"),
+        supplierName: supplier.name,
+        orderedAt: draft?.placedAt || new Date().toISOString(),
+        warehouseName: warehouses.find((row) => row.id === warehouseId)?.name,
+        comment: comment || undefined,
       }),
-    };
-  }, [comment, draft, marked, selection, supplier.name, t, warehouseId, warehouses]);
+    [comment, draft, products, selection, supplier.name, t, warehouseId, warehouses],
+  );
+  const pdfKey = pdfInput ? JSON.stringify(pdfInput) : "";
+
+  useEffect(() => {
+    if (!pdfInput) {
+      preparedPdf.current = null;
+      return;
+    }
+    preparedPdf.current = { key: pdfKey, promise: makeOrderPdfBlob(pdfInput) };
+  }, [pdfInput, pdfKey]);
 
   const currentRevision = draft?.revision ?? 0;
   const pdfStale = sharedRevision != null && currentRevision !== sharedRevision;
@@ -186,7 +185,7 @@ export function SupplierOrderList({
       const query = search.toLowerCase().trim();
       if (!query) return true;
       const packCodes = product.packs.map((item) => item.code ?? "");
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.categoryName ?? "", supplier.name, ...packCodes].some(
+      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.productCode ?? "", product.categoryName ?? "", supplier.name, ...packCodes].some(
         (text) => text.toLowerCase().includes(query),
       );
     },
@@ -207,7 +206,11 @@ export function SupplierOrderList({
   };
 
   const handlePdf = async () => {
-    if (pdfBusy || !marked.length) return;
+    if (pdfBusy) return;
+    if (!pdfInput || !marked.length) {
+      setActionError(t("place_need_lines"));
+      return;
+    }
     if (detectInAppBrowser()) {
       window.alert(t("inapp_blocked"));
       return;
@@ -215,24 +218,13 @@ export function SupplierOrderList({
     setActionError(null);
     setPdfBusy(true);
     try {
-      const saved = await persist();
-      if (!saved?.id) return;
-      const pdf = await buildDraftPdf(saved.id, pdfInput ?? undefined);
-      if (!pdf.blob) {
-        setActionError(t("error_pdf"));
-        return;
-      }
-      setDraft((prev) =>
-        prev
-          ? { ...prev, id: saved.id, orderNo: saved.orderNo, revision: pdf.revision || saved.revision, pdfRevision: pdf.revision || saved.pdfRevision }
-          : prev,
-      );
+      const prepared = preparedPdf.current;
+      const blob =
+        prepared?.key === pdfKey ? await prepared.promise : await makeOrderPdfBlob(pdfInput);
       const delivered = await deliverPdfFile(
-        pdf.blob,
+        blob,
         getOrderPdfFileName({
-          orderNo: saved.orderNo || saved.id,
-          revision: pdf.revision || saved.revision || 1,
-          orderedAt: saved.placedAt || new Date().toISOString(),
+          orderedAt: pdfInput.orderedAt,
           supplierName: supplier.name,
         }),
       );
@@ -240,7 +232,10 @@ export function SupplierOrderList({
         setActionError(t("error_pdf"));
         return;
       }
-      setSharedRevision(pdf.revision || saved.revision);
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      void persist()
+        .then((saved) => (saved?.id ? freezeDraftPdf(supplier.id) : null))
+        .catch(() => null);
     } catch (err) {
       setActionError(errorMessage(err, t("error_network"), t("error_pdf")));
     } finally {
@@ -298,7 +293,7 @@ export function SupplierOrderList({
   return (
     <div>
       <div className="orders-mode">
-        <span>{orderNo ? t("order_meta", { orderNo, revision: currentRevision || 1 }) : t("draft_label")}</span>
+        <span>{orderNo || t("draft_label")}</span>
         <span>{t("chosen_count", { supplier: supplier.name, marked: marked.length, count: products.length })}</span>
       </div>
 
@@ -314,14 +309,9 @@ export function SupplierOrderList({
           {actionError}
         </div>
       ) : null}
-      {pdfStale ? (
-        <div className="orders-banner warn">
-          {t("pdf_stale", { previous: sharedRevision ?? 0, current: currentRevision || 1 })}
-        </div>
-      ) : null}
       {orderedThisRevision ? (
         <div className="orders-banner ok">
-          {t("placed_banner", { orderNo: orderNo || placedId || "", revision: orderedRevision ?? currentRevision })}
+          {t("placed_banner", { orderNo: orderNo || placedId || "" })}
           {placedId ? (
             <>
               {" · "}
@@ -359,9 +349,8 @@ export function SupplierOrderList({
 
       <div className="orders-stickyActions">
         <div className="orders-actions">
-          <button type="button" className="orders-btn primary block" onClick={() => void handlePdf()} disabled={pdfBusy || !marked.length}>
+          <button type="button" className="orders-btn primary block" onClick={() => void handlePdf()} disabled={pdfBusy}>
             {pdfBusy ? t("pdf_sharing") : t("pdf_print")}
-            {currentRevision ? ` · ${t("pdf_revision", { revision: currentRevision })}` : ""}
           </button>
           <button
             type="button"
