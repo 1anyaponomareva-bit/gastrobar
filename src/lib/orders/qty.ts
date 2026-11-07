@@ -44,6 +44,12 @@ export function receiveLineUnits(baseUnit: string | null | undefined): string[] 
   return unit ? [unit] : [];
 }
 
+/** One «Товар получен» finishes the employee receive. Do not open the form again. */
+export function orderCanReceive(order: { status: string; receivedAt?: string | null }): boolean {
+  if (order.receivedAt) return false;
+  return order.status === "ordered" || order.status === "partial";
+}
+
 export function lineKey(productId: string, packId: string | null | undefined): string {
   return `${productId}::${packId ?? ""}`;
 }

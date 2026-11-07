@@ -4,6 +4,7 @@ import {
   displayRemainingQty,
   formatQty,
   openReceiveQty,
+  orderCanReceive,
   parseDotQty,
   parseQty,
   receiveActualBaseQty,
@@ -58,6 +59,12 @@ test("receive other qty accepts a dot and rejects a comma", () => {
   assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35,5" }), 0);
   assert.deepEqual(receiveLineUnits("kg"), ["kg"]);
   assert.deepEqual(receiveLineUnits("l"), ["l"]);
+});
+
+test("Товар получен is one step on the order; leftover kg does not ask again", () => {
+  assert.equal(orderCanReceive({ status: "ordered", receivedAt: null }), true);
+  assert.equal(orderCanReceive({ status: "partial", receivedAt: "2026-11-07T13:26:00Z" }), false);
+  assert.equal(orderCanReceive({ status: "received", receivedAt: "2026-11-07T13:26:00Z" }), false);
 });
 
 test("over-qty receive does not create leftover without a post", () => {

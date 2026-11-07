@@ -2,24 +2,66 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { errorMessage, getOrder } from "@/lib/orders/api";
+import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
 import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
-import { displayRemainingQty } from "@/lib/orders/qty";
-import type { SupplierOrder } from "@/lib/orders/types";
+import { displayRemainingQty, orderCanReceive, parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
+import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
 import { useOrders } from "./OrdersShell";
+import { QtyField } from "./QtyField";
+
+const MAX_PHOTO = 6 * 1024 * 1024;
+
+type LineMode = {
+  orderLineId: string;
+  product_id: string;
+  pack_id: string | null;
+  remainingQty: number;
+  baseUnit: string;
+  mode: ReceiveMode;
+  actualText: string;
+  actualUnit: string;
+};
+
+function receiveLinesOf(order: SupplierOrder): LineMode[] {
+  return order.lines
+    .filter((line) => line.remainingQty > 0)
+    .map((line) => {
+      const units = receiveLineUnits(line.baseUnit);
+      const baseUnit = units[0] || line.baseUnit || "";
+      return {
+        orderLineId: line.id ?? line.product_id,
+        product_id: line.product_id,
+        pack_id: line.pack_id,
+        remainingQty: line.remainingQty,
+        baseUnit,
+        mode: "as_ordered" as const,
+        actualText: "",
+        actualUnit: baseUnit,
+      };
+    });
+}
 
 export function OrderCard({ orderId }: { orderId: string }) {
   const { t, lang } = useOrders();
   const [order, setOrder] = useState<SupplierOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [receiveLines, setReceiveLines] = useState<LineMode[]>([]);
+  const [photos, setPhotos] = useState<OrderPhoto[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setOrder(await getOrder(orderId));
+      const loaded = await getOrder(orderId);
+      setOrder(loaded);
+      setReceiveLines(orderCanReceive(loaded) ? receiveLinesOf(loaded) : []);
+      setIdempotencyKey(newIdempotencyKey());
     } catch (err) {
       setOrder(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
@@ -30,12 +72,72 @@ export function OrderCard({ orderId }: { orderId: string }) {
     void load();
   }, [load]);
 
+  const canReceive = order ? orderCanReceive(order) && receiveLines.length > 0 : false;
+
+  const patchLine = (index: number, patch: Partial<LineMode>) => {
+    setReceiveLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  };
+
+  const addPhotos = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setPhotoError(null);
+    const next: OrderPhoto[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_PHOTO) {
+        setPhotoError(t("photo_too_big", { name: file.name }));
+        continue;
+      }
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      next.push({ fileName: file.name, mimeType: file.type || "image/jpeg", dataUrl });
+    }
+    if (next.length) setPhotos((prev) => [...prev, ...next]);
+  };
+
+  const submit = async () => {
+    if (busy || !order || !canReceive) return;
+    const invalidOther = receiveLines.some((line) => line.mode === "other" && !(parseDotQty(line.actualText) > 0));
+    if (invalidOther) {
+      setSubmitError(t("receive_need_qty"));
+      return;
+    }
+    setSubmitError(null);
+    setBusy(true);
+    try {
+      const saved = await receiveOrder(order.id, {
+        idempotencyKey,
+        comment: "",
+        photos,
+        lines: receiveLines.map((line) => ({
+          orderLineId: line.orderLineId,
+          product_id: line.product_id,
+          pack_id: line.pack_id,
+          actualQty: receiveActualBaseQty({
+            mode: line.mode,
+            remainingQty: line.remainingQty,
+            actualText: line.actualText,
+          }),
+          discrepancyKind: line.mode === "other" ? "other" : "none",
+          discrepancyNote: null,
+        })),
+      });
+      setOrder(saved);
+      setReceiveLines([]);
+      setPhotos([]);
+    } catch (err) {
+      setSubmitError(errorMessage(err, t("error_network"), t("error_receive")));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (error) return <OrdersError text={error} onRetry={() => void load()} />;
   if (!order) return <OrdersLoading />;
   if (!order.id) return <OrdersEmpty title={t("order_not_found")} />;
-
-  const canReceive =
-    (order.status === "ordered" || order.status === "partial") && order.lines.some((line) => line.remainingQty > 0);
 
   return (
     <div>
@@ -58,43 +160,113 @@ export function OrderCard({ orderId }: { orderId: string }) {
       {order.clarifyReason ? <div className="orders-banner warn">{t("clarify_banner", { reason: order.clarifyReason })}</div> : null}
 
       <p className="orders-note">{t("stock_note")}</p>
+      {submitError ? <div className="orders-banner error">{submitError}</div> : null}
+      {photoError ? <div className="orders-banner error">{photoError}</div> : null}
 
       <div className="orders-category">{t("lines_title")}</div>
-      {order.lines.map((line) => (
-        <div key={line.id ?? `${line.product_id}-${line.pack_id}`} className="orders-card">
-          <div className="orders-name">{productDisplayName({ locale: lang, nameEn: line.nameEn, nameVn: line.nameVn })}</div>
-          <div className="orders-meta">
-            {[line.brand, line.packLabel, line.unit].filter(Boolean).join(" · ")}
+      {order.lines.map((line) => {
+        const receiveIndex = receiveLines.findIndex((row) => row.orderLineId === (line.id ?? line.product_id));
+        const receive = receiveIndex >= 0 ? receiveLines[receiveIndex] : null;
+        const units = receive ? receiveLineUnits(receive.baseUnit) : [];
+        return (
+          <div key={line.id ?? `${line.product_id}-${line.pack_id}`} className="orders-card">
+            <div className="orders-name">{productDisplayName({ locale: lang, nameEn: line.nameEn, nameVn: line.nameVn })}</div>
+            <div className="orders-meta">
+              {[line.brand, line.packLabel, line.unit].filter(Boolean).join(" · ")}
+            </div>
+            <div className="orders-qtyGrid">
+              <span>
+                {t("qty_ordered")}
+                <b>
+                  {formatOrderLineQty(line.orderedQty, line, "ordered")}
+                  {formatOrderLineBaseHint(line) ? <span className="orders-meta"> {formatOrderLineBaseHint(line)}</span> : null}
+                </b>
+              </span>
+              <span>
+                {t("qty_accepted")}
+                <b>
+                  {formatOrderLineQty(line.acceptedQty, line, "base")}
+                </b>
+              </span>
+              <span>
+                {t("qty_posted")}
+                <b>
+                  {formatOrderLineQty(line.postedQty, line, "base")}
+                </b>
+              </span>
+              <span>
+                {t("qty_remaining")}
+                <b>
+                  {formatOrderLineQty(displayRemainingQty(line), line, "base")}
+                </b>
+              </span>
+            </div>
+            {receive ? (
+              <>
+                <div className="orders-field" style={{ marginTop: 8 }}>
+                  <label>{t("actual_qty")}</label>
+                  <select
+                    className="orders-select"
+                    value={receive.mode}
+                    onChange={(event) => patchLine(receiveIndex, { mode: event.target.value as ReceiveMode, actualText: "" })}
+                  >
+                    <option value="as_ordered">{t("discrepancy_none")}</option>
+                    <option value="other">{t("discrepancy_other")}</option>
+                  </select>
+                </div>
+                {receive.mode === "other" ? (
+                  <>
+                    <div className="orders-field" style={{ marginTop: 8 }}>
+                      <label>{t("receive_unit")}</label>
+                      <select
+                        className="orders-select"
+                        value={receive.actualUnit}
+                        onChange={(event) => patchLine(receiveIndex, { actualUnit: event.target.value })}
+                      >
+                        {units.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <QtyField
+                      label={t("actual_qty")}
+                      unit={receive.actualUnit}
+                      value={receive.actualText}
+                      dotOnly
+                      onChange={(value) => patchLine(receiveIndex, { actualText: value })}
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </div>
-          <div className="orders-qtyGrid">
-            <span>
-              {t("qty_ordered")}
-              <b>
-                {formatOrderLineQty(line.orderedQty, line, "ordered")}
-                {formatOrderLineBaseHint(line) ? <span className="orders-meta"> {formatOrderLineBaseHint(line)}</span> : null}
-              </b>
-            </span>
-            <span>
-              {t("qty_accepted")}
-              <b>
-                {formatOrderLineQty(line.acceptedQty, line, "base")}
-              </b>
-            </span>
-            <span>
-              {t("qty_posted")}
-              <b>
-                {formatOrderLineQty(line.postedQty, line, "base")}
-              </b>
-            </span>
-            <span>
-              {t("qty_remaining")}
-              <b>
-                {formatOrderLineQty(displayRemainingQty(line), line, "base")}
-              </b>
-            </span>
+        );
+      })}
+
+      {canReceive ? (
+        <>
+          <div className="orders-field">
+            <label>{t("invoice_photo")}</label>
+            <input className="orders-input" type="file" accept="image/*" multiple onChange={(event) => void addPhotos(event.target.files)} />
           </div>
-        </div>
-      ))}
+          {photos.length ? (
+            <div className="orders-photos">
+              {photos.map((photo, index) => (
+                <button
+                  key={`${photo.fileName}-${index}`}
+                  type="button"
+                  className="orders-photo"
+                  style={{ background: `url(${photo.dataUrl}) center/cover no-repeat`, border: 0 }}
+                  onClick={() => setPhotos((prev) => prev.filter((_, i) => i !== index))}
+                  aria-label={t("remove_photo")}
+                />
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
 
       <div className="orders-category">{t("receipts_title")}</div>
       {order.receipts.length ? (
@@ -137,9 +309,9 @@ export function OrderCard({ orderId }: { orderId: string }) {
 
       {canReceive ? (
         <div className="orders-stickyActions">
-          <Link href={`/orders/${order.id}/receive`} className="orders-btn primary block">
-            {t("receive_goods")}
-          </Link>
+          <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
+            {busy ? t("submitting") : t("receive_goods")}
+          </button>
         </div>
       ) : null}
     </div>

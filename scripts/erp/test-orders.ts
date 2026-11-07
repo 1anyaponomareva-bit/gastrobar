@@ -367,13 +367,13 @@ async function main() {
       }),
       ACTOR,
     ]);
-    assert.equal(rec1.status, "partial");
+    assert.equal(rec1.status, "received");
     assert.ok(rec1.receivedAt);
     const qty1 = asJson(asArr(rec1.lines)[0]);
     assert.equal(n(qty1.orderedQty), 10);
     assert.equal(n(qty1.acceptedQty), 6);
     assert.equal(n(qty1.postedQty), 0);
-    assert.equal(n(qty1.remainingQty), 4);
+    assert.equal(n(qty1.remainingQty), 0, "one receive closes leftover so the cook is not asked again");
     assert.equal(
       displayRemainingQty({
         orderedQty: Number(qty1.orderedQty),
@@ -411,7 +411,7 @@ async function main() {
     ]);
     assert.equal(rec2.status, "received");
     const qty2 = asJson(asArr(rec2.lines)[0]);
-    assert.equal(n(qty2.acceptedQty), 10);
+    assert.equal(n(qty2.acceptedQty), 6, "second receive is ignored after the first");
     assert.equal(n(qty2.postedQty), 0);
     assert.equal(n(qty2.remainingQty), 0);
     assert.equal(
@@ -487,7 +487,7 @@ async function main() {
       }),
       OTHER,
     ]);
-    assert.equal(rec.status, "partial");
+    assert.equal(rec.status, "received");
     assert.equal(asArr(rec.receipts).length, 0);
     assert.equal(n(asJson(asArr(rec.lines)[0]).acceptedQty), 5);
     assert.equal(await stock(beef, prep), 0, "receive does not post stock");
@@ -739,7 +739,8 @@ async function main() {
     ]);
     const gotLine = asJson(asArr(got.lines)[0]);
     assert.equal(n(gotLine.acceptedQty), 35.5, "other qty is kg as typed, not 35.5 boxes × 20");
-    assert.equal(n(gotLine.remainingQty), 4.5);
+    assert.equal(n(gotLine.remainingQty), 0, "other qty does not leave an open remainder to receive again");
+    assert.equal(got.status, "received");
   });
 
   console.log(`\n${passed} passed (PGlite only, no production SQL)`);
