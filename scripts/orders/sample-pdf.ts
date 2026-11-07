@@ -113,13 +113,19 @@ async function main() {
 
   const short = shortOrder();
   const long = longOrder();
-  const pre = { ...short, kind: "pre" as const };
-  const warehouseOrder = {
+  const pre: OrderPdfInput = {
+    ...short,
+    kind: "pre",
+    warehouseName: undefined,
+    warehouseAddress: undefined,
+    warehousePhone: undefined,
+  };
+  const warehouseOrder: OrderPdfInput = {
     ...short,
     warehouseName: "Warehouse / Kho",
     warehouseAddress: ORDER_PDF_WAREHOUSE_ADDRESS,
     warehousePhone: ORDER_PDF_PREP_KITCHEN_PHONE,
-    kind: "final" as const,
+    kind: "final",
   };
   assert.equal(formatOrderPdfQtyCell(short.lines[0]), "2");
   assert.equal(formatOrderPdfQtyCell(short.lines[1]), "3");
@@ -131,8 +137,32 @@ async function main() {
   assert.doesNotMatch(getOrderPdfFileName(short), /_r\d/);
   assert.notEqual(orderPdfCacheKey({ ...short, revision: 1 }), orderPdfCacheKey({ ...short, revision: 2 }));
   assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
-  assert.ok(orderPdfHeaderMeta(short).some((line) => line.includes("Mường Thanh Viễn Triều")));
-  assert.ok(orderPdfHeaderMeta(warehouseOrder).includes("152 Lk 77 Đường số 51"));
+  assert.equal(pre.warehouseName, undefined);
+  assert.equal(pre.warehouseAddress, undefined);
+  const preMeta = orderPdfHeaderMeta(pre);
+  assert.equal(preMeta[0].startsWith("Order / Số:"), true);
+  assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
+  assert.equal(
+    preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+    false,
+  );
+  const shortMeta = orderPdfHeaderMeta(short);
+  assert.equal(shortMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+  assert.equal(shortMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+  assert.ok(shortMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("Mường Thanh Viễn Triều")));
+  assert.ok(shortMeta.some((line) => line.startsWith("Phone / Điện thoại:") && line.includes(ORDER_PDF_PREP_KITCHEN_PHONE)));
+  const warehouseMeta = orderPdfHeaderMeta(warehouseOrder);
+  assert.equal(warehouseMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+  assert.equal(warehouseMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+  assert.ok(warehouseMeta.some((line) => line.includes("152 Lk 77 Đường số 51")));
+  assert.equal(
+    warehouseMeta.some((line) => /Mường Thanh|Prep Kitchen/.test(line)),
+    false,
+  );
+  assert.equal(
+    orderPdfHeaderMeta(long).some((line) => /Mường Thanh/.test(line)),
+    false,
+  );
   assert.deepEqual(orderPdfFooterLines(), [ORDER_PDF_COMPANY_NAME]);
 
   const shortOut = await writeSample("order-mm-short.pdf", short);

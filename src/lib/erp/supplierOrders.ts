@@ -17,6 +17,7 @@ import { initialWarehouses } from "@/lib/erp/docDefaults";
 import {
   getOrderPdfFileName,
   makeOrderPdfBlob,
+  orderPdfPrintWarehouse,
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "@/lib/orders/orderPdf";
@@ -282,15 +283,22 @@ export function ensureOrderPdfFonts() {
 export function asOrderPdfInput(value: unknown): OrderPdfInput {
   const row = jsonObject(value, "snapshot");
   const lines = Array.isArray(row.lines) ? row.lines : [];
+  const kind = row.kind === "pre" || row.kind === "final" ? row.kind : undefined;
+  const warehouse = orderPdfPrintWarehouse({
+    kind,
+    warehouseName: row.warehouseName == null ? undefined : String(row.warehouseName),
+    warehouseAddress: row.warehouseAddress == null ? undefined : String(row.warehouseAddress),
+    warehousePhone: row.warehousePhone == null ? undefined : String(row.warehousePhone),
+  });
   return {
     orderNo: String(row.orderNo ?? ""),
     revision: Number(row.revision) || 0,
     orderedAt: String(row.orderedAt ?? ""),
     supplierName: String(row.supplierName ?? ""),
-    warehouseName: row.warehouseName == null ? undefined : String(row.warehouseName),
-    warehouseAddress: row.warehouseAddress == null ? undefined : String(row.warehouseAddress),
-    warehousePhone: row.warehousePhone == null ? undefined : String(row.warehousePhone),
-    kind: row.kind === "pre" || row.kind === "final" ? row.kind : undefined,
+    warehouseName: warehouse.warehouseName,
+    warehouseAddress: warehouse.warehouseAddress,
+    warehousePhone: warehouse.warehousePhone,
+    kind,
     comment: row.comment == null ? undefined : String(row.comment),
     lines: lines.map((line) => {
       const item = jsonObject(line, "line");

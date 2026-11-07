@@ -116,25 +116,41 @@ export function orderPdfAddressLines(address: string): string[] {
     .filter(Boolean);
 }
 
-/** Address/phone from the chosen ERP warehouse; Prep Kitchen contact if the DTO has none. */
-export function orderPdfContactOf(
-  input: Pick<OrderPdfInput, "warehouseAddress" | "warehousePhone">,
-): { address: string; phone: string } {
-  if (input.warehouseAddress != null || input.warehousePhone != null) {
-    return {
-      address: String(input.warehouseAddress ?? "").trim(),
-      phone: String(input.warehousePhone ?? "").trim(),
-    };
+/** Pre-order PDFs omit warehouse name, address, and phone. Final PDFs use the chosen warehouse only. */
+export function orderPdfPrintWarehouse(
+  input: Pick<OrderPdfInput, "kind" | "warehouseName" | "warehouseAddress" | "warehousePhone">,
+): Pick<OrderPdfInput, "warehouseName" | "warehouseAddress" | "warehousePhone"> {
+  if (input.kind === "pre") {
+    return { warehouseName: undefined, warehouseAddress: undefined, warehousePhone: undefined };
   }
-  return { address: ORDER_PDF_PREP_KITCHEN_ADDRESS, phone: ORDER_PDF_PREP_KITCHEN_PHONE };
+  return {
+    warehouseName: String(input.warehouseName ?? "").trim() || undefined,
+    warehouseAddress: String(input.warehouseAddress ?? "").trim() || undefined,
+    warehousePhone: String(input.warehousePhone ?? "").replace(/\s+/g, " ").trim() || undefined,
+  };
+}
+
+/** Address/phone from the chosen ERP warehouse only. Never fills a second/default warehouse. */
+export function orderPdfContactOf(
+  input: Pick<OrderPdfInput, "kind" | "warehouseAddress" | "warehousePhone">,
+): { address: string; phone: string } {
+  const warehouse = orderPdfPrintWarehouse(input);
+  return {
+    address: warehouse.warehouseAddress ?? "",
+    phone: warehouse.warehousePhone ?? "",
+  };
 }
 
 export function orderPdfHeaderMeta(input: OrderPdfInput): string[] {
-  const contact = orderPdfContactOf(input);
-  const lines = [...orderPdfAddressLines(contact.address), ...(contact.phone ? [contact.phone] : [])];
-  lines.push(`Order / Số: ${input.orderNo.trim() || "—"}`, `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`);
-  const warehouse = String(input.warehouseName ?? "").trim();
-  if (warehouse) lines.push(`Warehouse / Kho: ${warehouse}`);
+  const lines = [
+    `Order / Số: ${input.orderNo.trim() || "—"}`,
+    `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`,
+  ];
+  const warehouse = orderPdfPrintWarehouse(input);
+  if (warehouse.warehouseName) lines.push(`Warehouse / Kho: ${warehouse.warehouseName}`);
+  const address = orderPdfAddressLines(warehouse.warehouseAddress ?? "").join(", ");
+  if (address) lines.push(`Address / Địa chỉ: ${address}`);
+  if (warehouse.warehousePhone) lines.push(`Phone / Điện thoại: ${warehouse.warehousePhone}`);
   const comment = String(input.comment ?? "").replace(/\s+/g, " ").trim();
   if (comment) lines.push(`Note / Ghi chú: ${comment}`);
   return lines;

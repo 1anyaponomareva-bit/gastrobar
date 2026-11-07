@@ -11,6 +11,7 @@ import {
   formatOrderPdfQtyCell,
   getOrderPdfFileName,
   makeOrderPdfBlob,
+  orderPdfHeaderMeta,
   orderPdfTitle,
   setOrderPdfFonts,
   type OrderPdfInput,
@@ -256,7 +257,6 @@ async function main() {
     assert.equal(snap.orderNo, draft.orderNo);
     assert.equal(snap.revision, 1);
     assert.equal(snap.supplierName, "Test MM");
-    assert.ok(snap.warehouseName);
     assert.equal(snap.comment, "Morning order");
     assert.equal(snap.lines.length, 1);
     assert.deepEqual(
@@ -280,8 +280,13 @@ async function main() {
       },
     );
     assert.equal(snap.kind, "pre");
-    assert.match(String(snap.warehouseAddress ?? ""), /Mường Thanh Viễn Triều/);
-    assert.match(String(snap.warehousePhone ?? ""), /\+84 98 863 15 07/);
+    const preMeta = orderPdfHeaderMeta(snap);
+    assert.equal(preMeta[0].startsWith("Order / Số:"), true);
+    assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
+    assert.equal(
+      preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+      false,
+    );
     const file1 = getOrderPdfFileName(snap);
     assert.match(file1, /^Pre_order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     assert.doesNotMatch(file1, /_r\d/);
@@ -312,6 +317,9 @@ async function main() {
     assert.equal(n(again.revision), 2, "double place does not bump revision");
     const placedSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [draft.id])) as unknown as OrderPdfInput;
     assert.equal(placedSnap.kind, "final");
+    const placedMeta = orderPdfHeaderMeta(placedSnap);
+    assert.equal(placedMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+    assert.equal(placedMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
     assert.match(getOrderPdfFileName(placedSnap), /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     await makeOrderPdfBlob(placedSnap);
   });
@@ -611,14 +619,25 @@ async function main() {
     assert.equal(pre.status, "draft", "pre-order freeze does not place");
     const preSnap = asJson(pre.snapshot) as unknown as OrderPdfInput;
     assert.equal(preSnap.kind, "pre");
-    assert.match(String(preSnap.warehouseAddress ?? ""), /152 Lk 77/);
-    assert.doesNotMatch(String(preSnap.warehouseAddress ?? ""), /Mường Thanh/);
+    const preMeta = orderPdfHeaderMeta(preSnap);
+    assert.equal(
+      preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+      false,
+    );
     await makeOrderPdfBlob(preSnap);
     const placedWh = await j("select public.erp_order_place($1, $2)", [whDraft.id, ACTOR]);
     assert.equal(placedWh.status, "ordered");
     const finalSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [whDraft.id])) as unknown as OrderPdfInput;
     assert.equal(finalSnap.kind, "final");
     assert.match(String(finalSnap.warehouseAddress ?? ""), /152 Lk 77 Đường số 51/);
+    const finalMeta = orderPdfHeaderMeta(finalSnap);
+    assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+    assert.equal(finalMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+    assert.ok(finalMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("152 Lk 77 Đường số 51")));
+    assert.equal(
+      finalMeta.some((line) => /Mường Thanh/.test(line)),
+      false,
+    );
     assert.match(getOrderPdfFileName(finalSnap), /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     const stored = asJson(await value("select public.erp_order_pdf_input($1)", [whDraft.id])) as unknown as OrderPdfInput;
     assert.equal(stored.kind, "final", "place refreshes snapshot kind to final");

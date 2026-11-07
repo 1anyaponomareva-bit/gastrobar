@@ -161,19 +161,16 @@ export function SupplierOrderList({
 
   const marked = useMemo(() => products.filter((product) => isProductMarked(product.id, selection)), [products, selection]);
 
-  const selectedWarehouse = useMemo(() => orderPdfWarehouseOf(warehouses, warehouseId), [warehouseId, warehouses]);
-
   const pdfInput = useMemo(
     () =>
       supplierPrintPdfInput(products, selection, {
         orderNo: draft?.orderNo || draft?.id || t("draft_label"),
         supplierName: supplier.name,
         orderedAt: draft?.placedAt || new Date().toISOString(),
-        ...orderPdfWarehouseFields(selectedWarehouse),
         comment: comment || undefined,
         kind: "pre",
       }),
-    [comment, draft, products, selection, selectedWarehouse, supplier.name, t],
+    [comment, draft, products, selection, supplier.name, t],
   );
   const pdfKey = pdfInput ? JSON.stringify(pdfInput) : "";
 

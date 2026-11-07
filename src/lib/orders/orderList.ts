@@ -1,4 +1,4 @@
-import { orderPdfLineCode, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
+import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
 import { isPositiveQty, parseQty } from "./qty";
 import type { OrderProduct, OrderProductPack, OrderWarehouse } from "./types";
 
@@ -246,14 +246,20 @@ export function supplierPrintPdfInput(
 ): OrderPdfInput | null {
   const marked = products.filter((product) => isProductMarked(product.id, selection));
   if (!marked.length) return null;
+  const warehouse = orderPdfPrintWarehouse({
+    kind: meta.kind,
+    warehouseName: meta.warehouseName,
+    warehouseAddress: meta.warehouseAddress,
+    warehousePhone: meta.warehousePhone,
+  });
   return {
     orderNo: meta.orderNo,
     revision: 0,
     orderedAt: (meta.orderedAt || new Date().toISOString()).slice(0, 10),
     supplierName: meta.supplierName,
-    warehouseName: meta.warehouseName,
-    warehouseAddress: meta.warehouseAddress,
-    warehousePhone: meta.warehousePhone,
+    warehouseName: warehouse.warehouseName,
+    warehouseAddress: warehouse.warehouseAddress,
+    warehousePhone: warehouse.warehousePhone,
     kind: meta.kind,
     comment: meta.comment,
     lines: marked.map((product) => {

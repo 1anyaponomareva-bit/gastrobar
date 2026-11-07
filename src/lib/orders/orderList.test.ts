@@ -281,7 +281,7 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   assert.equal(supplierPrintPdfInput([beer], { beer: { packId: "p1", qty: "" } }, { orderNo: "x", supplierName: "MM" }), null);
 });
 
-test("pre-order PDF uses Prep Kitchen contact and does not place; Submit uses chosen warehouse and places", () => {
+test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse + address", () => {
   const warehouses: OrderWarehouse[] = [
     {
       id: "prep",
@@ -332,17 +332,20 @@ test("pre-order PDF uses Prep Kitchen contact and does not place; Submit uses ch
   });
   assert.ok(pre);
   assert.equal(pre!.kind, "pre");
-  assert.equal(pre!.warehouseName, "Prep Kitchen / Bếp sơ chế");
-  assert.equal(pre!.warehouseAddress, ORDER_PDF_PREP_KITCHEN_ADDRESS);
-  assert.equal(pre!.warehousePhone, ORDER_PDF_PREP_KITCHEN_PHONE);
+  assert.equal(pre!.warehouseName, undefined);
+  assert.equal(pre!.warehouseAddress, undefined);
+  assert.equal(pre!.warehousePhone, undefined);
   assert.equal(getOrderPdfFileName(pre!), "Pre_order_MM_2026-11-07.pdf");
   assert.doesNotMatch(getOrderPdfFileName(pre!), /rev|_r\d/i);
   assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
   assert.doesNotMatch(orderPdfCompanyHeading(), /PREP KITCHEN|ORDER \/ ĐƠN ĐẶT HÀNG/i);
   const preMeta = orderPdfHeaderMeta(pre!);
-  assert.ok(preMeta.some((line) => line.includes("Mường Thanh Viễn Triều")));
-  assert.ok(preMeta.includes(ORDER_PDF_PREP_KITCHEN_PHONE));
-  assert.ok(preMeta.some((line) => line.startsWith("Warehouse / Kho:")));
+  assert.equal(preMeta[0].startsWith("Order / Số:"), true);
+  assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
+  assert.equal(
+    preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+    false,
+  );
   assert.equal(
     preMeta.some((line) => /ORDER \/ ĐƠN ĐẶT HÀNG/.test(line)),
     false,
@@ -372,10 +375,38 @@ test("pre-order PDF uses Prep Kitchen contact and does not place; Submit uses ch
   assert.ok(finalPdf!.warehouseAddress?.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"));
   assert.equal(getOrderPdfFileName(finalPdf!), "Order_MM_2026-11-07.pdf");
   const finalMeta = orderPdfHeaderMeta(finalPdf!);
-  assert.ok(finalMeta.includes("152 Lk 77 Đường số 51"));
-  assert.ok(finalMeta.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"));
+  assert.equal(finalMeta[0].startsWith("Order / Số:"), true);
+  assert.equal(finalMeta[1].startsWith("Date / Ngày:"), true);
+  assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+  assert.equal(finalMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+  assert.ok(finalMeta.some((line) => line.startsWith("Warehouse / Kho:") && line.includes("Warehouse / Kho")));
+  assert.ok(
+    finalMeta.some(
+      (line) =>
+        line.startsWith("Address / Địa chỉ:") &&
+        line.includes("152 Lk 77 Đường số 51") &&
+        line.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"),
+    ),
+  );
+  assert.ok(finalMeta.some((line) => line.startsWith("Phone / Điện thoại:") && line.includes(ORDER_PDF_PREP_KITCHEN_PHONE)));
   assert.equal(
-    finalMeta.some((line) => line.includes("Mường Thanh Viễn Triều")),
+    finalMeta.some((line) => /Mường Thanh Viễn Triều|Prep Kitchen/.test(line)),
+    false,
+  );
+
+  const prepFinal = supplierPrintPdfInput([beer], selection, {
+    orderNo: "ORD-000004",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+    ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, "prep")),
+    kind: "final",
+  });
+  const prepMeta = orderPdfHeaderMeta(prepFinal!);
+  assert.equal(prepMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
+  assert.ok(prepMeta.some((line) => line.startsWith("Warehouse / Kho:") && line.includes("Prep Kitchen / Bếp sơ chế")));
+  assert.ok(prepMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("Mường Thanh Viễn Triều")));
+  assert.equal(
+    prepMeta.some((line) => /152 Lk 77/.test(line)),
     false,
   );
 });

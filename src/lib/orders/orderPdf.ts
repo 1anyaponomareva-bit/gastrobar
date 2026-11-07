@@ -8,6 +8,7 @@ import {
   orderPdfHeaderMeta,
   orderPdfLineCode,
   orderPdfLines,
+  orderPdfPrintWarehouse,
   orderPdfRevisionLabel,
   orderPdfTitle,
   type OrderPdfFonts,
@@ -33,6 +34,7 @@ export {
   orderPdfContactOf,
   orderPdfFooterLines,
   orderPdfHeaderMeta,
+  orderPdfPrintWarehouse,
   orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
@@ -396,11 +398,12 @@ export async function makeOrderPdfBlob(input: OrderPdfInput): Promise<Blob> {
   const boldBytes = fonts.bold instanceof Uint8Array ? fonts.bold : new Uint8Array(fonts.bold);
   const font = await pdfDoc.embedFont(regularBytes);
   const fontBold = await pdfDoc.embedFont(boldBytes);
+  const printInput: OrderPdfInput = { ...input, ...orderPdfPrintWarehouse(input) };
 
-  const revision = orderPdfRevisionLabel(input.revision);
-  pdfDoc.setTitle(orderPdfTitle(input));
+  const revision = orderPdfRevisionLabel(printInput.revision);
+  pdfDoc.setTitle(orderPdfTitle(printInput));
   pdfDoc.setSubject(`revision=${revision}`);
-  pdfDoc.setKeywords([input.orderNo, input.supplierName].filter(Boolean));
+  pdfDoc.setKeywords([printInput.orderNo, printInput.supplierName].filter(Boolean));
   pdfDoc.setProducer("gastrobar-order-pdf");
   pdfDoc.setCreator("GASTROFOOD orders");
 
@@ -413,14 +416,14 @@ export async function makeOrderPdfBlob(input: OrderPdfInput): Promise<Blob> {
     onNewPage: null,
   };
 
-  drawHeader(ctx, input);
+  drawHeader(ctx, printInput);
 
-  const lines = orderPdfLines(input);
+  const lines = orderPdfLines(printInput);
   if (!lines.length) {
     drawEmpty(ctx);
   } else {
     ctx.onNewPage = () => {
-      drawContinuationBar(ctx, input);
+      drawContinuationBar(ctx, printInput);
       drawTableHeader(ctx);
     };
     drawTableHeader(ctx);

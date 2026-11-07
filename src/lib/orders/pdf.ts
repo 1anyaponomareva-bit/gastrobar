@@ -16,6 +16,7 @@ export {
   orderPdfContactOf,
   orderPdfFooterLines,
   orderPdfHeaderMeta,
+  orderPdfPrintWarehouse,
   orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
