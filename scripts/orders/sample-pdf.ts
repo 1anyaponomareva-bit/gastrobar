@@ -103,9 +103,9 @@ async function main() {
 
   const short = shortOrder();
   const long = longOrder();
-  assert.equal(formatOrderPdfQtyCell(short.lines[0]), "2 box");
-  assert.equal(formatOrderPdfQtyCell(short.lines[1]), "3 pack");
-  assert.equal(formatOrderPdfQtyCell(short.lines[2]), "1 box");
+  assert.equal(formatOrderPdfQtyCell(short.lines[0]), "2");
+  assert.equal(formatOrderPdfQtyCell(short.lines[1]), "3");
+  assert.equal(formatOrderPdfQtyCell(short.lines[2]), "1");
   assert.equal(getOrderPdfFileName(short), "Order_MM_2026-11-07.pdf");
   assert.equal(getOrderPdfFileName(long), "Order_Hisina_2026-11-07.pdf");
   assert.doesNotMatch(getOrderPdfFileName(short), /_r\d/);

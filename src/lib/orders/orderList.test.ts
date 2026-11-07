@@ -238,8 +238,9 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
     unit: "pack",
     qty: 2,
   });
-  assert.equal(formatOrderPdfQtyCell(input!.lines[0]), "2 pack");
-  assert.notEqual(formatOrderPdfQtyCell({ qty: 2, unit: beer.unit }), "2 pack");
+  assert.equal(formatOrderPdfQtyCell(input!.lines[0]), "2");
+  assert.equal(formatOrderPdfQtyCell({ qty: 2, unit: beer.unit }), "2");
+  assert.doesNotMatch(formatOrderPdfQtyCell(input!.lines[0]), /[a-zA-Z]/);
   const saltOnly = supplierPrintPdfInput([salt], { salt: { packId: "p2", qty: "3" } }, {
     orderNo: "ORD-1",
     supplierName: "MM",
@@ -247,7 +248,7 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   });
   assert.equal(saltOnly!.lines[0].packCode, "SALT-1");
   assert.equal(saltOnly!.lines[0].nameVn, "Muối");
-  assert.equal(formatOrderPdfQtyCell(saltOnly!.lines[0]), "3 kg");
+  assert.equal(formatOrderPdfQtyCell(saltOnly!.lines[0]), "3");
   const twoBoxes = supplierPrintPdfInput([butter], { butter: { packId: "p3", qty: "2" } }, {
     orderNo: "ORD-2",
     supplierName: "MM",
@@ -255,8 +256,9 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   });
   assert.equal(twoBoxes!.lines[0].qty, 2);
   assert.equal(twoBoxes!.lines[0].unit, "box");
-  assert.equal(formatOrderPdfQtyCell(twoBoxes!.lines[0]), "2 box");
-  assert.notEqual(formatOrderPdfQtyCell({ qty: 2 * 5, unit: "kg" }), "2 box");
+  assert.equal(twoBoxes!.lines[0].packLabel, "box 5 kg");
+  assert.equal(formatOrderPdfQtyCell(twoBoxes!.lines[0]), "2");
+  assert.notEqual(formatOrderPdfQtyCell({ qty: 2 * 5, unit: "kg" }), "2");
   const fileName = getOrderPdfFileName(input!);
   assert.equal(fileName, "Order_MM_2026-11-07.pdf");
   assert.doesNotMatch(fileName, /rev|_r\d/i);

@@ -66,10 +66,9 @@ export function formatOrderQty(qty: number): string {
   return String(rounded);
 }
 
-/** QTY cell: ordered pack count + pack unit (`2 box`), never converted stock kg/l. */
+/** QTY cell: ordered pack count only (`2`). Pack size stays in packLabel, never in this cell. */
 export function formatOrderPdfQtyCell(line: Pick<OrderPdfLine, "qty" | "unit">): string {
-  const unit = String(line.unit ?? "").replace(/\s+/g, " ").trim();
-  return `${formatOrderQty(line.qty)}${unit ? ` ${unit}` : ""}`;
+  return formatOrderQty(line.qty);
 }
 
 export function orderPdfLines(input: OrderPdfInput): OrderPdfLine[] {

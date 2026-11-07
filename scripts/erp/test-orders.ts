@@ -267,7 +267,7 @@ async function main() {
     assert.match(file1, /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     assert.doesNotMatch(file1, /_r\d/);
     assert.doesNotMatch(orderPdfTitle(snap), /\br\d\b|rev /i);
-    assert.equal(formatOrderPdfQtyCell(snap.lines[0]), "10 bag");
+    assert.equal(formatOrderPdfQtyCell(snap.lines[0]), "10");
     const blob = await makeOrderPdfBlob(snap);
     const pdf = await PDFDocument.load(await blob.arrayBuffer());
     assert.equal(pdf.getSubject(), "revision=1");
@@ -544,7 +544,7 @@ async function main() {
     assert.equal(closed.status, "closed");
   });
 
-  await test("PDF qty is ordered packs (2 box), not converted stock liters", async () => {
+  await test("PDF qty cell is the pack count only (2), not 24 l or 2 box", async () => {
     const milk = await saveProduct({
       type: "ingredient",
       name_en: "Order oat milk",
@@ -569,7 +569,7 @@ async function main() {
     assert.equal(line.packCode, "OAT-BOX");
     assert.equal(line.unit, "box");
     assert.equal(n(line.qty), 2);
-    assert.equal(formatOrderPdfQtyCell({ qty: Number(line.qty), unit: String(line.unit) }), "2 box");
+    assert.equal(formatOrderPdfQtyCell({ qty: Number(line.qty), unit: String(line.unit) }), "2");
     assert.notEqual(n(line.qty), 24);
   });
 
