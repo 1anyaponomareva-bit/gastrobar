@@ -8,6 +8,7 @@ import {
   getOrderPdfFileName,
   ORDER_PDF_FINAL_HEADING,
   ORDER_PDF_PRE_HEADING,
+  ORDER_PDF_PRE_NOTICE,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -15,6 +16,7 @@ import {
   orderPdfFooterLines,
   orderPdfHeaderMeta,
   orderPdfLineCode,
+  orderPdfPreNoticeParagraphs,
   orderPdfRecipientValue,
   orderPdfTitle,
 } from "./orderPdfTypes";
@@ -25,6 +27,7 @@ import {
   groupProductsByCategory,
   isMarkedQty,
   isProductMarked,
+  ORDER_PDF_TAP_STEPS,
   orderPackCaption,
   orderPackUnit,
   orderPdfWarehouseFields,
@@ -168,6 +171,11 @@ test("supplier page puts selected yellow rows first", () => {
     selectedFirst(products, selection).map((row) => row.id),
     ["b", "c", "a"],
   );
+});
+
+test("order PDF tap shares before the draft save", () => {
+  assert.deepEqual(ORDER_PDF_TAP_STEPS, ["share", "save-draft"]);
+  assert.equal(ORDER_PDF_TAP_STEPS[0], "share");
 });
 
 test("place happens only after dialog submit, not the button click", () => {
@@ -358,7 +366,13 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
   assert.equal(orderPdfCompanyHeading("final"), "GASTROFOOD - ORDER / ĐƠN ĐẶT HÀNG");
   assert.doesNotMatch(orderPdfCompanyHeading("final"), /PREP KITCHEN|PRE-ORDER/i);
   const preMeta = orderPdfHeaderMeta(pre!);
-  assert.deepEqual(preMeta, ["Order / Số: ORD-000004", "Date / Ngày: 2026-11-07"]);
+  const notice = orderPdfPreNoticeParagraphs();
+  assert.equal(preMeta[0], "Order / Số: ORD-000004");
+  assert.equal(preMeta[1], "Date / Ngày: 2026-11-07");
+  assert.deepEqual(preMeta.slice(2, 2 + notice.length), notice);
+  assert.ok(ORDER_PDF_PRE_NOTICE.includes("Kính gửi Quý Nhà cung cấp,"));
+  assert.ok(preMeta.some((line) => line.includes("Kính gửi Quý Nhà cung cấp")));
+  assert.ok(preMeta.some((line) => line.includes("đơn đặt hàng dự kiến")));
   assert.equal(
     preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
     false,
@@ -394,6 +408,10 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
   const finalMeta = orderPdfHeaderMeta(finalPdf!);
   assert.equal(finalMeta[0].startsWith("Order / Số:"), true);
   assert.equal(finalMeta[1].startsWith("Date / Ngày:"), true);
+  assert.equal(
+    finalMeta.some((line) => /Kính gửi|đơn đặt hàng dự kiến|chưa phải đơn hàng chính thức/.test(line)),
+    false,
+  );
   assert.equal(orderPdfRecipientValue("Warehouse / Kho"), "GASTROFOOD Warehouse / Kho");
   assert.equal(finalMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
   assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);

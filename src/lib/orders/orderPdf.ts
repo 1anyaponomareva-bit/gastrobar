@@ -9,6 +9,7 @@ import {
   orderPdfHeaderMeta,
   orderPdfLineCode,
   orderPdfLines,
+  orderPdfPreNoticeParagraphs,
   orderPdfPrintWarehouse,
   orderPdfRevisionLabel,
   orderPdfTitle,
@@ -29,6 +30,7 @@ export {
   ORDER_PDF_COMPANY_NAME,
   ORDER_PDF_FINAL_HEADING,
   ORDER_PDF_PRE_HEADING,
+  ORDER_PDF_PRE_NOTICE,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -38,6 +40,7 @@ export {
   orderPdfContactOf,
   orderPdfFooterLines,
   orderPdfHeaderMeta,
+  orderPdfPreNoticeParagraphs,
   orderPdfPrintWarehouse,
   orderPdfLineCode,
   orderPdfLines,
@@ -234,15 +237,33 @@ function drawWrappedLines(
   return lines.length * step - lineGap;
 }
 
+function stackedHeight(blocks: Array<{ height: number }>, gap: number): number {
+  if (!blocks.length) return 0;
+  return blocks.reduce((sum, block) => sum + block.height, 0) + (blocks.length - 1) * gap;
+}
+
 function drawHeader(ctx: PdfContext, input: OrderPdfInput) {
   const title = orderPdfCompanyHeading(input.kind ?? "final");
   const titleBlock = measureWrapped(title, ctx.fontBold, 16, CONTENT_WIDTH, 4);
   const meta = orderPdfHeaderMeta(input);
-  const metaBlocks = meta.map((line) => measureWrapped(line, ctx.font, 11, CONTENT_WIDTH - 24, 3));
+  const notice = (input.kind ?? "final") === "pre" ? orderPdfPreNoticeParagraphs() : [];
+  const lead = meta.slice(0, 2);
+  const rest = notice.length ? meta.slice(2 + notice.length) : meta.slice(2);
+  const wrapWidth = CONTENT_WIDTH - 24;
+  const leadBlocks = lead.map((line) => measureWrapped(line, ctx.font, 11, wrapWidth, 3));
+  const noticeBlocks = notice.map((line) => measureWrapped(line, ctx.font, 10, wrapWidth, 3));
+  const restBlocks = rest.map((line) => measureWrapped(line, ctx.font, 11, wrapWidth, 3));
   const metaPad = 12;
   const metaGap = 5;
+  const noticeGap = 8;
+  const afterDateGap = noticeBlocks.length ? 10 : metaGap;
+  const afterNoticeGap = restBlocks.length ? (noticeBlocks.length ? noticeGap : metaGap) : 0;
   const metaHeight =
-    metaPad + metaBlocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, meta.length - 1) * metaGap + 10;
+    metaPad +
+    stackedHeight(leadBlocks, metaGap) +
+    (noticeBlocks.length ? afterDateGap + stackedHeight(noticeBlocks, noticeGap) : 0) +
+    (restBlocks.length ? afterNoticeGap + stackedHeight(restBlocks, metaGap) : 0) +
+    10;
   const headerHeight = 6 + titleBlock.height + 10 + metaHeight + SECTION_GAP;
 
   ensureSpace(ctx, headerHeight);
@@ -255,10 +276,19 @@ function drawHeader(ctx: PdfContext, input: OrderPdfInput) {
 
   drawBox(ctx, MARGIN_LEFT, topY, CONTENT_WIDTH, metaHeight, COLORS.goldSoft);
   let metaY = topY - metaPad;
-  for (const block of metaBlocks) {
+  leadBlocks.forEach((block, index) => {
     drawWrappedLines(ctx, block.lines, metaY, { x: MARGIN_LEFT + 12, size: 11, lineGap: 3 });
-    metaY -= block.height + metaGap;
-  }
+    metaY -= block.height + (index === leadBlocks.length - 1 ? afterDateGap : metaGap);
+  });
+  noticeBlocks.forEach((block, index) => {
+    drawWrappedLines(ctx, block.lines, metaY, { x: MARGIN_LEFT + 12, size: 10, lineGap: 3 });
+    const last = index === noticeBlocks.length - 1;
+    metaY -= block.height + (last ? afterNoticeGap : noticeGap);
+  });
+  restBlocks.forEach((block, index) => {
+    drawWrappedLines(ctx, block.lines, metaY, { x: MARGIN_LEFT + 12, size: 11, lineGap: 3 });
+    metaY -= block.height + (index === restBlocks.length - 1 ? 0 : metaGap);
+  });
 
   ctx.y = headerTop - headerHeight;
 }

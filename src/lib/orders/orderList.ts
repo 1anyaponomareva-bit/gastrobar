@@ -129,6 +129,12 @@ export function reorderSubset(allIds: string[], movedIds: string[]): string[] {
   return allIds.map((id) => (moved.has(id) ? queue[next++] : id));
 }
 
+/**
+ * Public /orders Pre-order and Отправить PDF: open the share sheet in the tap,
+ * then persist the draft. Awaiting POST before share drops the user gesture.
+ */
+export const ORDER_PDF_TAP_STEPS = ["share", "save-draft"] as const;
+
 /** Place runs only after the dialog Submit, never on «Заказал у поставщика» alone. */
 export function reducePlaceDialog(phase: PlaceDialogPhase, action: "open" | "cancel" | "submit"): PlaceDialogPhase {
   if (action === "open") return "open";

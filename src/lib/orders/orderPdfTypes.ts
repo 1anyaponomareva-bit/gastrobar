@@ -34,6 +34,19 @@ export const ORDER_PDF_COMPANY_NAME = "GASTROFOOD";
 export const ORDER_PDF_PRE_HEADING = "GASTROFOOD - PRE-ORDER / ĐƠN ĐẶT TRƯỚC";
 export const ORDER_PDF_FINAL_HEADING = "GASTROFOOD - ORDER / ĐƠN ĐẶT HÀNG";
 
+/** Cream-header supplier note on Pre-order PDFs only. Keep paragraphs. */
+export const ORDER_PDF_PRE_NOTICE = `Kính gửi Quý Nhà cung cấp,
+
+Chúng tôi gửi đến Quý Nhà cung cấp danh sách hàng hóa dự kiến đặt mua. Vui lòng kiểm tra và xác nhận tình trạng sẵn có của tất cả sản phẩm trong danh sách.
+
+Lưu ý: Đây chỉ là đơn đặt hàng dự kiến, chưa phải đơn hàng chính thức. Chúng tôi sẽ gửi đơn đặt hàng chính thức sau khi hai bên xác nhận và thống nhất đầy đủ các thông tin.`;
+
+export function orderPdfPreNoticeParagraphs(): string[] {
+  return ORDER_PDF_PRE_NOTICE.split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
 export const ORDER_PDF_PREP_KITCHEN_ADDRESS =
   "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa";
 
@@ -183,6 +196,9 @@ export function orderPdfHeaderMeta(input: OrderPdfInput): string[] {
     `Order / Số: ${input.orderNo.trim() || "—"}`,
     `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`,
   ];
+  if ((input.kind ?? "final") === "pre") {
+    lines.push(...orderPdfPreNoticeParagraphs());
+  }
   const warehouse = orderPdfPrintWarehouse(input);
   if (warehouse.warehouseName) {
     lines.push(`Recipient / Người nhận: ${orderPdfRecipientValue(warehouse.warehouseName)}`);

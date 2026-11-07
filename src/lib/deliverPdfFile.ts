@@ -1,4 +1,11 @@
-export type DeliverPdfResult = "shared" | "downloaded" | "cancelled";
+export type DeliverPdfResult = "shared" | "downloaded" | "cancelled" | "failed";
+
+export type DeliverPdfShareMeta = {
+  title?: string;
+  text?: string;
+};
+
+export type PdfDeliveryChoice = "share" | "download";
 
 function isIosDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -35,22 +42,56 @@ function hasTouchScreen(): boolean {
   return window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
 }
 
-function shouldUseNativeShare(): boolean {
-  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
-    return false;
-  }
+/** Phones and tablets should attempt the native share sheet when `canShare` is missing. */
+export function isMobileOrTouchShareTarget(): boolean {
+  if (typeof navigator === "undefined") return false;
   if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
   if (isIosDevice()) return true;
   if (
     "userAgentData" in navigator &&
-    (navigator as Navigator & { userAgentData?: { mobile?: boolean } })
-      .userAgentData?.mobile === true
+    (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData?.mobile === true
   ) {
     return true;
   }
-  // Touch tablets (Lenovo Tab, Surface, etc.) — share, never auto-download.
-  if (hasTouchScreen()) return true;
-  return false;
+  return hasTouchScreen();
+}
+
+/**
+ * Download only when Web Share + files is unavailable (typical desktop).
+ * Never use this after a share attempt — AbortError / NotAllowedError must not download.
+ */
+export function choosePdfDelivery(input: {
+  hasShare: boolean;
+  canShareFiles: boolean | null;
+  mobileOrTouch: boolean;
+}): PdfDeliveryChoice {
+  if (!input.hasShare) return "download";
+  if (input.canShareFiles === true) return "share";
+  if (input.canShareFiles === false) return "download";
+  return input.mobileOrTouch ? "share" : "download";
+}
+
+export function interpretShareError(error: unknown): "cancelled" | "failed" {
+  const name =
+    error && typeof error === "object" && "name" in error ? String((error as { name: unknown }).name) : "";
+  return name === "AbortError" ? "cancelled" : "failed";
+}
+
+/**
+ * Invoke share immediately, then persist without awaiting the server first.
+ * Awaiting POST before `navigator.share` drops the user gesture (NotAllowedError → old download fallback).
+ */
+export function beginShareThenPersist<T>(
+  share: () => Promise<T>,
+  persist: () => void | Promise<unknown>,
+): Promise<T> {
+  const shared = share();
+  try {
+    void Promise.resolve(persist()).catch(() => undefined);
+  } catch {
+    // persist() already reports its own errors
+  }
+  return shared;
 }
 
 function safePdfFileName(fileName: string): string {
@@ -60,13 +101,6 @@ function safePdfFileName(fileName: string): string {
 
 function buildPdfFileFromBlob(blob: Blob, fileName: string): File {
   return new File([blob], safePdfFileName(fileName), {
-    type: "application/pdf",
-    lastModified: Date.now(),
-  });
-}
-
-function buildPdfFileFromBytes(bytes: ArrayBuffer, fileName: string): File {
-  return new File([bytes], safePdfFileName(fileName), {
     type: "application/pdf",
     lastModified: Date.now(),
   });
@@ -85,133 +119,55 @@ function downloadPdfFile(blob: Blob, fileName: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
-async function tryNativeFileShare(file: File): Promise<DeliverPdfResult> {
-  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
-    throw new Error("File sharing is not supported in this browser.");
+function readCanShareFiles(file: File): boolean | null {
+  if (typeof navigator === "undefined" || typeof navigator.canShare !== "function") {
+    return null;
   }
-
-  // iOS shares a page URL instead of the file when title/text/url are included.
-  const shareData: ShareData = { files: [file] };
-
   try {
-    await navigator.share(shareData);
-    return "shared";
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return "cancelled";
-    }
-    throw error;
+    return navigator.canShare({ files: [file] });
+  } catch {
+    return false;
   }
 }
 
-async function fetchPdfFileViaServer(
-  bytes: ArrayBuffer,
-  fileName: string,
-): Promise<File> {
-  const response = await fetch("/api/export-pdf", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/pdf",
-      "X-File-Name": encodeURIComponent(safePdfFileName(fileName)),
-    },
-    body: bytes,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to prepare PDF for sharing.");
-  }
-
-  const serverBlob = await response.blob();
-  return buildPdfFileFromBlob(serverBlob, fileName);
-}
-
-function uniqueFiles(files: File[]): File[] {
-  const seen = new Set<string>();
-  const unique: File[] = [];
-  files.forEach((file) => {
-    const key = `${file.name}:${file.size}:${file.type}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    unique.push(file);
-  });
-  return unique;
-}
-
-function orderCandidatesForShare(candidates: File[]): File[] {
-  if (typeof navigator.canShare !== "function") {
-    return candidates;
-  }
-
-  const supported = candidates.filter((file) =>
-    navigator.canShare!({ files: [file] }),
-  );
-  if (supported.length) {
-    return uniqueFiles([...supported, ...candidates]);
-  }
-
-  return candidates;
-}
-
-async function buildShareFileCandidates(
-  blob: Blob,
-  fileName: string,
-): Promise<File[]> {
-  const safeName = safePdfFileName(fileName);
-  const directFile = buildPdfFileFromBlob(blob, safeName);
-
-  // Android: share immediately from memory — no server round-trip (breaks user gesture).
-  if (isAndroidDevice()) {
-    return [directFile];
-  }
-
-  const candidates: File[] = [directFile];
-  const bytes = await blob.arrayBuffer();
-  candidates.push(buildPdfFileFromBytes(bytes, safeName));
-
+function sharePayload(file: File, meta?: DeliverPdfShareMeta): ShareData {
+  // iOS shares the page URL instead of the file when title/text/url are included.
   if (isIosDevice()) {
-    try {
-      candidates.unshift(await fetchPdfFileViaServer(bytes, safeName));
-    } catch {
-      // Continue with locally built files.
-    }
+    return { files: [file] };
   }
-
-  return uniqueFiles(candidates);
-}
-
-async function sharePdfFile(
-  blob: Blob,
-  fileName: string,
-): Promise<DeliverPdfResult> {
-  try {
-    const candidates = await buildShareFileCandidates(blob, fileName);
-    const file = orderCandidatesForShare(candidates)[0];
-    if (!file) {
-      throw new Error("Could not prepare PDF for sharing.");
-    }
-    // One share call per tap — Android loses user activation after failed retries.
-    return await tryNativeFileShare(file);
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return "cancelled";
-    }
-    downloadPdfFile(blob, fileName);
-    return "downloaded";
-  }
+  const data: ShareData = { files: [file] };
+  if (meta?.title) data.title = meta.title;
+  if (meta?.text) data.text = meta.text;
+  return data;
 }
 
 /**
  * Phones/tablets: native share sheet with a real PDF file attachment only.
  * Desktop: download the PDF file.
+ * Share is always from the in-memory File in this turn — no network before navigator.share.
  */
 export async function deliverPdfFile(
   blob: Blob,
   fileName: string,
+  meta?: DeliverPdfShareMeta,
 ): Promise<DeliverPdfResult> {
-  if (shouldUseNativeShare()) {
-    return sharePdfFile(blob, fileName);
+  const file = buildPdfFileFromBlob(blob, fileName);
+  const hasShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const mode = choosePdfDelivery({
+    hasShare,
+    canShareFiles: hasShare ? readCanShareFiles(file) : false,
+    mobileOrTouch: isMobileOrTouchShareTarget(),
+  });
+
+  if (mode === "download") {
+    downloadPdfFile(blob, fileName);
+    return "downloaded";
   }
 
-  downloadPdfFile(blob, fileName);
-  return "downloaded";
+  try {
+    await navigator.share(sharePayload(file, meta));
+    return "shared";
+  } catch (error) {
+    return interpretShareError(error);
+  }
 }

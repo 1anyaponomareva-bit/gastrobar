@@ -13,6 +13,7 @@ import {
   makeOrderPdfBlob,
   ORDER_PDF_FINAL_HEADING,
   ORDER_PDF_PRE_HEADING,
+  ORDER_PDF_PRE_NOTICE,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -20,6 +21,7 @@ import {
   orderPdfCompanyHeading,
   orderPdfFooterLines,
   orderPdfHeaderMeta,
+  orderPdfPreNoticeParagraphs,
   orderPdfTitle,
   setOrderPdfFonts,
   type OrderPdfInput,
@@ -146,13 +148,22 @@ async function main() {
   assert.equal(pre.warehouseName, undefined);
   assert.equal(pre.warehouseAddress, undefined);
   const preMeta = orderPdfHeaderMeta(pre);
+  const notice = orderPdfPreNoticeParagraphs();
   assert.equal(preMeta[0].startsWith("Order / Số:"), true);
   assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
+  assert.deepEqual(preMeta.slice(2, 2 + notice.length), notice);
+  assert.ok(ORDER_PDF_PRE_NOTICE.includes("Kính gửi Quý Nhà cung cấp,"));
+  assert.ok(preMeta.some((line) => line.includes("Kính gửi Quý Nhà cung cấp")));
+  assert.ok(preMeta.some((line) => line.includes("đơn đặt hàng dự kiến")));
   assert.equal(
     preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
     false,
   );
   const shortMeta = orderPdfHeaderMeta(short);
+  assert.equal(
+    shortMeta.some((line) => /Kính gửi|đơn đặt hàng dự kiến|chưa phải đơn hàng chính thức/.test(line)),
+    false,
+  );
   assert.equal(shortMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
   assert.equal(shortMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
   assert.equal(shortMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
@@ -160,6 +171,10 @@ async function main() {
   assert.ok(shortMeta.some((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:") && line.includes("Mường Thanh Viễn Triều")));
   assert.ok(shortMeta.some((line) => line.startsWith("Phone / Điện thoại:") && line.includes(ORDER_PDF_PREP_KITCHEN_PHONE)));
   const warehouseMeta = orderPdfHeaderMeta(warehouseOrder);
+  assert.equal(
+    warehouseMeta.some((line) => /Kính gửi|đơn đặt hàng dự kiến|chưa phải đơn hàng chính thức/.test(line)),
+    false,
+  );
   assert.equal(warehouseMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
   assert.equal(warehouseMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
   assert.equal(warehouseMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);

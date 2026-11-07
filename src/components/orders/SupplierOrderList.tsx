@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
+import { beginShareThenPersist, deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { errorMessage, freezeDraftPdf, getDraft, placeOrder, saveDraft } from "@/lib/orders/api";
 import {
   catalogCategories,
@@ -20,7 +20,13 @@ import {
   type PlaceDialogPhase,
   type SelectionMap,
 } from "@/lib/orders/orderList";
-import { getOrderPdfFileName, makeOrderPdfBlob, preloadOrderPdfFonts } from "@/lib/orders/orderPdf";
+import {
+  getOrderPdfFileName,
+  makeOrderPdfBlob,
+  orderPdfTitle,
+  preloadOrderPdfFonts,
+  type OrderPdfInput,
+} from "@/lib/orders/orderPdf";
 import { readOrderSelection } from "@/lib/orders/orderSelection";
 import { formatQty } from "@/lib/orders/qty";
 import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
@@ -29,6 +35,8 @@ import { OrdersEmpty } from "./LoadState";
 import { OrderProductCard } from "./OrderProductCard";
 import { useOrders } from "./OrdersShell";
 import { PlaceOrderDialog } from "./PlaceOrderDialog";
+
+type PreparedPdf = { key: string; blob: Blob | null; promise: Promise<Blob> };
 
 type Props = {
   supplier: OrderSupplier;
@@ -40,6 +48,25 @@ type Props = {
   search: string;
   resetNonce: number;
 };
+
+function primePreparedPdf(ref: { current: PreparedPdf | null }, key: string, input: OrderPdfInput | null) {
+  if (!input) {
+    ref.current = null;
+    return;
+  }
+  const promise = makeOrderPdfBlob(input).then((blob) => {
+    if (ref.current?.key === key) ref.current.blob = blob;
+    return blob;
+  });
+  ref.current = { key, blob: null, promise };
+}
+
+function takePdfBlob(ref: { current: PreparedPdf | null }, key: string, input: OrderPdfInput): Blob | Promise<Blob> {
+  const prepared = ref.current;
+  if (prepared?.key === key && prepared.blob) return prepared.blob;
+  if (prepared?.key === key) return prepared.promise;
+  return makeOrderPdfBlob(input);
+}
 
 export function SupplierOrderList({
   supplier,
@@ -73,7 +100,10 @@ export function SupplierOrderList({
   const onSelectionRef = useRef(onSelection);
   onSelectionRef.current = onSelection;
   const mergedDraft = useRef(false);
-  const preparedPdf = useRef<{ key: string; promise: Promise<Blob> } | null>(null);
+  const preparedPdf = useRef<PreparedPdf | null>(null);
+  const preparedFinalPdf = useRef<PreparedPdf | null>(null);
+  const pdfInFlight = useRef(false);
+  const placeInFlight = useRef(false);
 
   const persist = useCallback(
     async (nextSelection?: SelectionMap) => {
@@ -179,12 +209,26 @@ export function SupplierOrderList({
   const pdfKey = pdfInput ? JSON.stringify(pdfInput) : "";
 
   useEffect(() => {
-    if (!pdfInput) {
-      preparedPdf.current = null;
-      return;
-    }
-    preparedPdf.current = { key: pdfKey, promise: makeOrderPdfBlob(pdfInput) };
+    primePreparedPdf(preparedPdf, pdfKey, pdfInput);
   }, [pdfInput, pdfKey]);
+
+  const placeDialogOpen = placePhase !== "closed";
+  const finalPdfInput = useMemo(() => {
+    if (!placeDialogOpen) return null;
+    return supplierPrintPdfInput(products, selection, {
+      orderNo: draft?.orderNo || draft?.id || t("draft_label"),
+      supplierName: supplier.name,
+      orderedAt: draft?.placedAt || new Date().toISOString(),
+      ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, warehouseId)),
+      comment: comment || undefined,
+      kind: "final",
+    });
+  }, [comment, draft, placeDialogOpen, products, selection, supplier.name, t, warehouseId, warehouses]);
+  const finalPdfKey = finalPdfInput ? JSON.stringify(finalPdfInput) : "";
+
+  useEffect(() => {
+    primePreparedPdf(preparedFinalPdf, finalPdfKey, finalPdfInput);
+  }, [finalPdfInput, finalPdfKey]);
 
   const currentRevision = draft?.revision ?? 0;
   const pdfStale = sharedRevision != null && currentRevision !== sharedRevision;
@@ -217,7 +261,7 @@ export function SupplierOrderList({
   };
 
   const handlePdf = async () => {
-    if (pdfBusy) return;
+    if (pdfBusy || pdfInFlight.current) return;
     if (!pdfInput || !marked.length) {
       setActionError(t("place_need_lines"));
       return;
@@ -226,25 +270,34 @@ export function SupplierOrderList({
       window.alert(t("inapp_blocked"));
       return;
     }
-    setActionError(null);
-    setPdfBusy(true);
+    pdfInFlight.current = true;
     try {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      const saved = await persist();
-      const prepared = preparedPdf.current;
-      const blob =
-        prepared?.key === pdfKey ? await prepared.promise : await makeOrderPdfBlob(pdfInput);
-      const delivered = await deliverPdfFile(blob, getOrderPdfFileName(pdfInput));
+      const readyOrPending = takePdfBlob(preparedPdf, pdfKey, pdfInput);
+      const blob = readyOrPending instanceof Blob ? readyOrPending : await readyOrPending;
+      const fileName = getOrderPdfFileName(pdfInput);
+      const sharePromise = beginShareThenPersist(
+        () =>
+          deliverPdfFile(blob, fileName, {
+            title: orderPdfTitle(pdfInput),
+            text: fileName,
+          }),
+        () =>
+          persist().then((saved) => {
+            if (saved?.id) void freezeDraftPdf(supplier.id).catch(() => null);
+            return saved;
+          }),
+      );
+      setActionError(null);
+      setPdfBusy(true);
+      const delivered = await sharePromise;
       if (delivered !== "shared" && delivered !== "cancelled" && delivered !== "downloaded") {
         setActionError(t("error_pdf"));
-        return;
-      }
-      if (saved?.id) {
-        void freezeDraftPdf(supplier.id).catch(() => null);
       }
     } catch (err) {
       setActionError(errorMessage(err, t("error_network"), t("error_pdf")));
     } finally {
+      pdfInFlight.current = false;
       setPdfBusy(false);
     }
   };
@@ -260,17 +313,44 @@ export function SupplierOrderList({
   };
 
   const submitPlace = async () => {
+    if (placeInFlight.current) return;
     const nextPhase = reducePlaceDialog(placePhase, "submit");
     if (!shouldPlaceAfterDialog(nextPhase)) return;
     if (!warehouseId) {
       setDialogError(t("warehouse_required"));
       return;
     }
-    setPlacePhase(nextPhase);
-    setDialogError(null);
-    setActionError(null);
-    setPlaceBusy(true);
+    placeInFlight.current = true;
     try {
+      const finalPdf =
+        finalPdfInput ??
+        supplierPrintPdfInput(products, selectionRef.current, {
+          orderNo: draft?.orderNo || draft?.id || t("draft_label"),
+          supplierName: supplier.name,
+          orderedAt: draft?.placedAt || new Date().toISOString(),
+          ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, warehouseId)),
+          comment: comment || undefined,
+          kind: "final",
+        });
+      const shareKey = finalPdf ? JSON.stringify(finalPdf) : "";
+      let sharePromise: ReturnType<typeof deliverPdfFile> | null = null;
+      if (finalPdf) {
+        if (detectInAppBrowser()) {
+          window.alert(t("inapp_blocked"));
+        } else {
+          const readyOrPending = takePdfBlob(preparedFinalPdf, shareKey, finalPdf);
+          const blob = readyOrPending instanceof Blob ? readyOrPending : await readyOrPending;
+          const fileName = getOrderPdfFileName(finalPdf);
+          sharePromise = deliverPdfFile(blob, fileName, {
+            title: orderPdfTitle(finalPdf),
+            text: fileName,
+          });
+        }
+      }
+      setPlacePhase(nextPhase);
+      setDialogError(null);
+      setActionError(null);
+      setPlaceBusy(true);
       const saved = await saveDraft(supplier.id, {
         warehouseId,
         comment: comment.trim() || null,
@@ -279,27 +359,13 @@ export function SupplierOrderList({
       });
       setDraft(saved);
       if (!saved?.id) {
+        if (sharePromise) await sharePromise;
         setPlacePhase("open");
         setDialogError(t("place_need_draft"));
         return;
       }
-      const finalPdf = supplierPrintPdfInput(products, selectionRef.current, {
-        orderNo: saved.orderNo || saved.id || t("draft_label"),
-        supplierName: supplier.name,
-        orderedAt: saved.placedAt || new Date().toISOString(),
-        ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, warehouseId)),
-        comment: saved.comment || comment || undefined,
-        kind: "final",
-      });
-      if (finalPdf) {
-        if (detectInAppBrowser()) {
-          window.alert(t("inapp_blocked"));
-        } else {
-          const blob = await makeOrderPdfBlob(finalPdf);
-          await deliverPdfFile(blob, getOrderPdfFileName(finalPdf));
-        }
-      }
       const placed = await placeOrder(saved.id, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
+      if (sharePromise) await sharePromise;
       onSelectionRef.current(clearSupplierSelection(selectionRef.current, products.map((product) => product.id)));
       setPlacedId(placed.id);
       setOrderedRevision(placed.revision || saved.revision);
@@ -308,6 +374,7 @@ export function SupplierOrderList({
       setPlacePhase("open");
       setDialogError(errorMessage(err, t("error_network"), t("error_place")));
     } finally {
+      placeInFlight.current = false;
       setPlaceBusy(false);
     }
   };
