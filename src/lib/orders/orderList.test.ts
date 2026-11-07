@@ -2,14 +2,22 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
 import {
+  ALL_SUPPLIER_TAB,
+  catalogCategories,
+  filterBySupplierTab,
+  groupProductsByCategory,
   isMarkedQty,
   isProductMarked,
+  orderPackCaption,
+  orderPackUnit,
+  productDetailLine,
   reducePlaceDialog,
   reorderSubset,
   selectedFirst,
   shouldPlaceAfterDialog,
   sortCatalogProducts,
   supplierBadgeCounts,
+  supplierTabChips,
   type SelectionMap,
 } from "./orderList";
 
@@ -40,22 +48,92 @@ test("yellow selection is qty greater than zero", () => {
   assert.equal(isProductMarked("salt", selection), false);
 });
 
-test("supplier badge counts selected items of that supplier", () => {
+test("supplier tab badges count qty>0 items for that supplier, not bottom cards", () => {
   const products = [
-    { id: "beef", supplierId: "mm" },
-    { id: "salt", supplierId: "mm" },
-    { id: "oil", supplierId: "sat" },
+    { id: "beer", supplierId: "mm" },
+    { id: "butter", supplierId: "mm" },
+    { id: "cheese", supplierId: "hisina" },
     { id: "ghost", supplierId: null },
   ];
   const selection: SelectionMap = {
-    beef: { packId: null, qty: "1" },
-    salt: { packId: null, qty: "0" },
-    oil: { packId: null, qty: "3" },
+    beer: { packId: null, qty: "5" },
+    butter: { packId: null, qty: "2" },
+    cheese: { packId: null, qty: "0" },
   };
   const counts = supplierBadgeCounts(products, selection);
-  assert.equal(counts.get("mm"), 1);
-  assert.equal(counts.get("sat"), 1);
-  assert.equal(counts.has("ghost"), false);
+  assert.equal(counts.get("mm"), 2);
+  assert.equal(counts.has("hisina"), false);
+  const tabs = supplierTabChips(
+    [
+      { id: "mm", name: "MM" },
+      { id: "hisina", name: "Hisina" },
+      { id: "happy", name: "Happy Papa" },
+    ],
+    products,
+    selection,
+  );
+  assert.deepEqual(
+    tabs.map((tab) => [tab.id, tab.count]),
+    [
+      ["mm", 2],
+      ["hisina", 0],
+      ["happy", 0],
+    ],
+  );
+});
+
+test("supplier tab filters catalog to that supplier; All keeps every row", () => {
+  const products = [
+    { id: "beer", supplierId: "mm" },
+    { id: "butter", supplierId: "mm" },
+    { id: "cheese", supplierId: "hisina" },
+  ];
+  assert.deepEqual(
+    filterBySupplierTab(products, "mm").map((row) => row.id),
+    ["beer", "butter"],
+  );
+  assert.deepEqual(
+    filterBySupplierTab(products, ALL_SUPPLIER_TAB).map((row) => row.id),
+    ["beer", "butter", "cheese"],
+  );
+});
+
+test("All tab groups by category; selected yellow rows stay in their group", () => {
+  const products = [
+    { id: "beer", categoryId: "alc", categoryName: "Alcohol / Rượu", supplierId: "mm" },
+    { id: "butter", categoryId: "dairy", categoryName: "Dairy Products & Eggs / Sữa và trứng", supplierId: "mm" },
+    { id: "cheese", categoryId: "dairy", categoryName: "Dairy Products & Eggs / Sữa và trứng", supplierId: "hisina" },
+  ];
+  const selection: SelectionMap = {
+    beer: { packId: null, qty: "5" },
+    butter: { packId: null, qty: "2" },
+  };
+  const categories = catalogCategories(products);
+  const groups = groupProductsByCategory(products, categories);
+  assert.deepEqual(
+    groups.map((group) => [group.id, group.products.map((row) => row.id)]),
+    [
+      ["alc", ["beer"]],
+      ["dairy", ["butter", "cheese"]],
+    ],
+  );
+  assert.equal(isProductMarked("beer", selection), true);
+  assert.deepEqual(
+    groups[1].products.map((row) => row.id),
+    ["butter", "cheese"],
+  );
+});
+
+test("pack caption and details match Staff cards: 1 pack = N, supplier + pack SKU", () => {
+  assert.equal(orderPackCaption({ label: "pack 24 pcs", unit: "pcs", qty_base: 24 }), "1 pack = 24 pcs");
+  assert.equal(orderPackCaption({ label: "box 5 kg", unit: "kg", qty_base: 5 }), "1 box = 5 kg");
+  assert.equal(orderPackCaption({ label: "24 pcs", unit: "pcs", qty_base: 24 }), "1 pack = 24 pcs");
+  assert.equal(orderPackUnit({ label: "pack 24 pcs", unit: "pcs" }, "pcs"), "pack");
+  assert.equal(
+    productDetailLine({ brand: "Allowrie Unsalted", supplierName: "MM", showSupplier: true, packCode: "234468" }),
+    "Allowrie Unsalted · MM · #234468",
+  );
+  assert.equal(productDetailLine({ brand: null, supplierName: "MM", showSupplier: false, packCode: "259043" }), "#259043");
 });
 
 test("supplier page puts selected yellow rows first", () => {

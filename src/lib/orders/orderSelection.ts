@@ -1,6 +1,7 @@
 import type { SelectionMap, SelectionRow } from "./orderList";
 
 const STORAGE_KEY = "gf_orders_selection";
+const TAB_KEY = "gf_orders_supplier_tab";
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined";
@@ -43,4 +44,22 @@ export function writeOrderSelection(selection: SelectionMap): void {
 
 export function setSelectionRow(selection: SelectionMap, productId: string, row: SelectionRow): SelectionMap {
   return { ...selection, [productId]: row };
+}
+
+export function readOrderSupplierTab(): string {
+  if (!canUseStorage()) return "all";
+  try {
+    return window.localStorage.getItem(TAB_KEY) || "all";
+  } catch {
+    return "all";
+  }
+}
+
+export function writeOrderSupplierTab(tab: string): void {
+  if (!canUseStorage()) return;
+  try {
+    window.localStorage.setItem(TAB_KEY, tab);
+  } catch {
+    /* private mode or full */
+  }
 }

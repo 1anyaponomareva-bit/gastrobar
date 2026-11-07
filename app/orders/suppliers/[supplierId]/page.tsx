@@ -1,6 +1,6 @@
-import { SupplierOrderList } from "@/components/orders/SupplierOrderList";
+import { OrderList } from "@/components/orders/OrderList";
 
 export default async function SupplierOrderPage({ params }: { params: Promise<{ supplierId: string }> }) {
   const { supplierId } = await params;
-  return <SupplierOrderList supplierId={supplierId} />;
+  return <OrderList initialTab={supplierId} />;
 }

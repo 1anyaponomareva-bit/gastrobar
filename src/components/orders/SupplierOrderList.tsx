@@ -4,39 +4,55 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
-import { buildDraftPdf, errorMessage, getDraft, getSupplierProducts, getSuppliers, placeOrder, saveDraft } from "@/lib/orders/api";
+import { buildDraftPdf, errorMessage, getDraft, placeOrder, saveDraft } from "@/lib/orders/api";
 import {
+  catalogCategories,
   clearSupplierSelection,
   defaultPackId,
+  groupProductsByCategory,
   isProductMarked,
   packOf,
   reducePlaceDialog,
-  selectedFirst,
+  selectionDraftLines,
   shouldPlaceAfterDialog,
   type PlaceDialogPhase,
   type SelectionMap,
 } from "@/lib/orders/orderList";
-import { formatOrderLineName, getOrderPdfFileName, type OrderPdfInput } from "@/lib/orders/orderPdf";
-import { readOrderSelection, writeOrderSelection } from "@/lib/orders/orderSelection";
-import { formatQty, isPositiveQty, lineKey, parseQty } from "@/lib/orders/qty";
+import { getOrderPdfFileName, type OrderPdfInput } from "@/lib/orders/orderPdf";
+import { readOrderSelection } from "@/lib/orders/orderSelection";
+import { formatQty, parseQty } from "@/lib/orders/qty";
 import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
 import { InAppShareNotice } from "./InAppShareNotice";
-import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
+import { OrdersEmpty } from "./LoadState";
+import { OrderProductCard } from "./OrderProductCard";
 import { useOrders } from "./OrdersShell";
 import { PlaceOrderDialog } from "./PlaceOrderDialog";
-import { QtyField } from "./QtyField";
 
-export function SupplierOrderList({ supplierId }: { supplierId: string }) {
+type Props = {
+  supplier: OrderSupplier;
+  products: OrderProduct[];
+  warehouses: OrderWarehouse[];
+  defaultWarehouseId: string | null;
+  selection: SelectionMap;
+  onSelection: (next: SelectionMap) => void;
+  search: string;
+  resetNonce: number;
+};
+
+export function SupplierOrderList({
+  supplier,
+  products,
+  warehouses,
+  defaultWarehouseId,
+  selection,
+  onSelection,
+  search,
+  resetNonce,
+}: Props) {
   const { t } = useOrders();
   const router = useRouter();
-  const [supplier, setSupplier] = useState<OrderSupplier | null>(null);
-  const [products, setProducts] = useState<OrderProduct[] | null>(null);
-  const [warehouses, setWarehouses] = useState<OrderWarehouse[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [selection, setSelection] = useState<SelectionMap>({});
   const [draft, setDraft] = useState<OrderDraft | null>(null);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [warehouseId, setWarehouseId] = useState(defaultWarehouseId ?? "");
   const [comment, setComment] = useState("");
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -51,69 +67,20 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
   const saveTimer = useRef<number | null>(null);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const [catalog, saved, all] = await Promise.all([getSupplierProducts(supplierId), getDraft(supplierId), getSuppliers()]);
-      const current =
-        catalog.supplier ??
-        all.suppliers.find((row) => row.id === supplierId) ?? {
-          id: supplierId,
-          name: supplierId,
-          code: "",
-          zaloUrl: null,
-          productCount: catalog.products.length,
-          draftLineCount: 0,
-        };
-      setSupplier(current);
-      setProducts(catalog.products);
-      setWarehouses(all.warehouses);
-      setDraft(saved);
-      setWarehouseId(saved.warehouseId ?? all.defaultWarehouseId ?? "");
-      setComment(saved.comment ?? "");
-      setExpectedDelivery(saved.expectedDelivery ?? "");
-      setSharedRevision(saved.pdfRevision);
-      setOrderedRevision(saved.status === "ordered" || saved.status === "partial" || saved.status === "closed" ? saved.revision : null);
-      setPlacedId(saved.status === "draft" ? null : saved.id || null);
-      const stored = readOrderSelection();
-      const next: SelectionMap = {};
-      for (const product of catalog.products) {
-        const local = stored[product.id];
-        const line = saved.lines.find((row) => row.product_id === product.id);
-        next[product.id] = {
-          packId: local?.packId ?? line?.pack_id ?? defaultPackId(product),
-          qty: local?.qty || (line && line.qty > 0 ? formatQty(line.qty) : ""),
-        };
-      }
-      setSelection(next);
-      writeOrderSelection({ ...stored, ...next });
-    } catch (err) {
-      setProducts(null);
-      setError(errorMessage(err, t("error_network"), t("error_load")));
-    }
-  }, [supplierId, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const linesFromSelection = useCallback(() => {
-    return Object.entries(selectionRef.current)
-      .filter(([, row]) => isPositiveQty(row.qty))
-      .map(([productId, row]) => ({ product_id: productId, pack_id: row.packId, qty: parseQty(row.qty) }));
-  }, []);
+  const onSelectionRef = useRef(onSelection);
+  onSelectionRef.current = onSelection;
+  const mergedDraft = useRef(false);
 
   const persist = useCallback(
     async (nextSelection?: SelectionMap) => {
       if (nextSelection) selectionRef.current = nextSelection;
       setSaveState("saving");
       try {
-        const saved = await saveDraft(supplierId, {
+        const saved = await saveDraft(supplier.id, {
           warehouseId: warehouseId || null,
           comment: comment.trim() || null,
           expectedDelivery: expectedDelivery || null,
-          lines: linesFromSelection(),
+          lines: selectionDraftLines(products, selectionRef.current),
         });
         setDraft(saved);
         setSaveState("saved");
@@ -124,13 +91,12 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         return null;
       }
     },
-    [comment, expectedDelivery, linesFromSelection, supplierId, t, warehouseId],
+    [comment, expectedDelivery, products, supplier.id, t, warehouseId],
   );
 
   const scheduleSave = useCallback(
     (next: SelectionMap) => {
-      setSelection(next);
-      writeOrderSelection({ ...readOrderSelection(), ...next });
+      onSelectionRef.current(next);
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void persist(next);
@@ -140,15 +106,54 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
   );
 
   useEffect(() => {
+    mergedDraft.current = false;
+    let cancelled = false;
+    void getDraft(supplier.id)
+      .then((saved) => {
+        if (cancelled) return;
+        setDraft(saved);
+        setWarehouseId(saved.warehouseId ?? defaultWarehouseId ?? "");
+        setComment(saved.comment ?? "");
+        setExpectedDelivery(saved.expectedDelivery ?? "");
+        setSharedRevision(saved.pdfRevision);
+        setOrderedRevision(saved.status === "ordered" || saved.status === "partial" || saved.status === "closed" ? saved.revision : null);
+        setPlacedId(saved.status === "draft" ? null : saved.id || null);
+        const stored = readOrderSelection();
+        const next: SelectionMap = { ...stored };
+        for (const product of products) {
+          const local = stored[product.id];
+          const line = saved.lines.find((row) => row.product_id === product.id);
+          next[product.id] = {
+            packId: local?.packId ?? line?.pack_id ?? defaultPackId(product),
+            qty: local?.qty || (line && line.qty > 0 ? formatQty(line.qty) : ""),
+          };
+        }
+        mergedDraft.current = true;
+        onSelectionRef.current(next);
+      })
+      .catch((err) => {
+        if (!cancelled) setActionError(errorMessage(err, t("error_network"), t("error_load")));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultWarehouseId, products, supplier.id, t]);
+
+  useEffect(() => {
+    if (!resetNonce || !mergedDraft.current) return;
+    void persist(selectionRef.current);
+  }, [persist, resetNonce]);
+
+  useEffect(() => {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
   }, []);
 
-  const marked = useMemo(() => (products ?? []).filter((product) => isProductMarked(product.id, selection)), [products, selection]);
+  const marked = useMemo(() => products.filter((product) => isProductMarked(product.id, selection)), [products, selection]);
 
   const pdfInput = useMemo((): OrderPdfInput | null => {
-    if (!supplier || !marked.length) return null;
+    if (!marked.length) return null;
     return {
       orderNo: draft?.orderNo || draft?.id || t("draft_label"),
       revision: draft?.revision || 0,
@@ -169,7 +174,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         };
       }),
     };
-  }, [comment, draft, marked, selection, supplier, t, warehouseId, warehouses]);
+  }, [comment, draft, marked, selection, supplier.name, t, warehouseId, warehouses]);
 
   const currentRevision = draft?.revision ?? 0;
   const pdfStale = sharedRevision != null && currentRevision !== sharedRevision;
@@ -181,16 +186,15 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       const query = search.toLowerCase().trim();
       if (!query) return true;
       const packCodes = product.packs.map((item) => item.code ?? "");
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", supplier?.name ?? "", ...packCodes].some((text) =>
-        text.toLowerCase().includes(query),
+      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.categoryName ?? "", supplier.name, ...packCodes].some(
+        (text) => text.toLowerCase().includes(query),
       );
     },
-    [search, supplier],
+    [search, supplier.name],
   );
 
-  const orderedProducts = selectedFirst((products ?? []).filter(matchesSearch), selection);
-  const selectedVisible = orderedProducts.filter((product) => isProductMarked(product.id, selection));
-  const restVisible = orderedProducts.filter((product) => !isProductMarked(product.id, selection));
+  const visible = products.filter(matchesSearch);
+  const groups = groupProductsByCategory(visible, catalogCategories(products));
 
   const setQty = (product: OrderProduct, qty: string) => {
     const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
@@ -200,20 +204,6 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
   const setPack = (product: OrderProduct, packId: string) => {
     const current = selection[product.id] ?? { packId, qty: "" };
     scheduleSave({ ...selection, [product.id]: { ...current, packId } });
-  };
-
-  const handleReset = () => {
-    if (!marked.length) {
-      setSearch("");
-      return;
-    }
-    if (!window.confirm(t("reset_confirm", { supplier: supplier?.name ?? "" }))) return;
-    const cleared: SelectionMap = { ...selection };
-    for (const product of products ?? []) {
-      cleared[product.id] = { packId: selection[product.id]?.packId ?? defaultPackId(product), qty: "" };
-    }
-    setSearch("");
-    scheduleSave(cleared);
   };
 
   const handlePdf = async () => {
@@ -243,7 +233,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
           orderNo: saved.orderNo || saved.id,
           revision: pdf.revision || saved.revision || 1,
           orderedAt: saved.placedAt || new Date().toISOString(),
-          supplierName: supplier?.name ?? "",
+          supplierName: supplier.name,
         }),
       );
       if (delivered !== "shared" && delivered !== "cancelled" && delivered !== "downloaded") {
@@ -280,11 +270,11 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     setActionError(null);
     setPlaceBusy(true);
     try {
-      const saved = await saveDraft(supplierId, {
+      const saved = await saveDraft(supplier.id, {
         warehouseId,
         comment: comment.trim() || null,
         expectedDelivery: expectedDelivery || null,
-        lines: linesFromSelection(),
+        lines: selectionDraftLines(products, selectionRef.current),
       });
       setDraft(saved);
       if (!saved?.id) {
@@ -293,8 +283,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         return;
       }
       const placed = await placeOrder(saved.id, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
-      const stored = readOrderSelection();
-      writeOrderSelection(clearSupplierSelection(stored, (products ?? []).map((product) => product.id)));
+      onSelectionRef.current(clearSupplierSelection(selectionRef.current, products.map((product) => product.id)));
       setPlacedId(placed.id);
       setOrderedRevision(placed.revision || saved.revision);
       router.push(`/orders/${placed.id}`);
@@ -306,45 +295,8 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     }
   };
 
-  if (error) return <OrdersError text={error} onRetry={() => void load()} />;
-  if (!products || !supplier) return <OrdersLoading />;
-
-  const renderCard = (product: OrderProduct) => {
-    const row = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
-    const markedLine = isPositiveQty(row.qty);
-    const pack = packOf(product, row.packId);
-    const details = [product.brand].filter(Boolean);
-    return (
-      <div key={lineKey(product.id, row.packId)} className={`orders-card ${markedLine ? "marked" : ""}`}>
-        <div className="orders-name">{formatOrderLineName({ nameEn: product.nameEn, nameVn: product.nameVn })}</div>
-        {details.length ? <div className="orders-meta">{details.join(" · ")}</div> : null}
-        {product.packs.length > 1 ? (
-          <div className="orders-field" style={{ margin: "8px 0" }}>
-            <label>{t("pack_label")}</label>
-            <select className="orders-select" value={row.packId ?? ""} onChange={(event) => setPack(product, event.target.value)}>
-              {product.packs.map((item) => (
-                <option key={item.pack_id} value={item.pack_id}>
-                  {item.code ? `${item.label} · ${item.code}` : item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        <QtyField label={t("qty_label")} unit={pack?.unit || product.unit} value={row.qty} onChange={(value) => setQty(product, value)} />
-        {pack ? <div className="orders-packHint">{itemCodeHint(pack)}</div> : null}
-      </div>
-    );
-  };
-
   return (
     <div>
-      <Link href="/orders" className="orders-back">
-        ← {t("order_list")}
-      </Link>
-
-      <h2 className="orders-name" style={{ margin: "0 0 6px" }}>
-        {supplier.name}
-      </h2>
       <div className="orders-mode">
         <span>{orderNo ? t("order_meta", { orderNo, revision: currentRevision || 1 }) : t("draft_label")}</span>
         <span>{t("chosen_count", { supplier: supplier.name, marked: marked.length, count: products.length })}</span>
@@ -381,30 +333,24 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         </div>
       ) : null}
 
-      <div className="orders-searchRow">
-        <input className="orders-search" placeholder={t("search_placeholder")} value={search} onChange={(event) => setSearch(event.target.value)} />
-        <button type="button" className="orders-btn dark" onClick={handleReset}>
-          {t("reset")}
-        </button>
-      </div>
-
-      {orderedProducts.length ? (
-        <>
-          {selectedVisible.length ? (
-            <>
-              <div className="orders-category" style={{ marginTop: 0 }}>
-                {t("chosen_first")}
-              </div>
-              {selectedVisible.map(renderCard)}
-            </>
-          ) : null}
-          {restVisible.length ? (
-            <>
-              <div className="orders-category">{t("rest_title")}</div>
-              {restVisible.map(renderCard)}
-            </>
-          ) : null}
-        </>
+      {visible.length ? (
+        groups.map((group) => (
+          <div key={group.id || "uncategorized"}>
+            {group.name ? <div className="orders-category">{group.name}</div> : null}
+            {group.products.map((product) => (
+              <OrderProductCard
+                key={product.id}
+                product={product}
+                row={selection[product.id]}
+                showSupplier={false}
+                qtyLabel={t("qty_label")}
+                packLabel={t("pack_label")}
+                onQty={(qty) => setQty(product, qty)}
+                onPack={(packId) => setPack(product, packId)}
+              />
+            ))}
+          </div>
+        ))
       ) : products.length ? (
         <OrdersEmpty title={t("empty_search")} />
       ) : (
@@ -444,8 +390,4 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       />
     </div>
   );
-}
-
-function itemCodeHint(pack: { label: string; code?: string | null }): string {
-  return pack.code ? `${pack.label} · ${pack.code}` : pack.label;
 }

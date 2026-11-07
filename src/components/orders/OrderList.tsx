@@ -1,31 +1,45 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { errorMessage, getOrderCatalog } from "@/lib/orders/api";
-import { formatOrderLineName } from "@/lib/orders/orderPdf";
 import {
+  ALL_SUPPLIER_TAB,
+  catalogCategories,
+  clearQuantities,
   defaultPackId,
-  isProductMarked,
-  packOf,
+  filterByCategory,
+  filterBySupplierTab,
+  filledProductIds,
+  groupProductsByCategory,
+  productForSupplierTab,
   sortCatalogProducts,
-  supplierBadgeCounts,
+  supplierTabChips,
   type SelectionMap,
 } from "@/lib/orders/orderList";
-import { readOrderSelection, setSelectionRow, writeOrderSelection } from "@/lib/orders/orderSelection";
-import type { OrderProduct, OrderSupplier } from "@/lib/orders/types";
+import { readOrderSelection, readOrderSupplierTab, writeOrderSelection, writeOrderSupplierTab } from "@/lib/orders/orderSelection";
+import type { OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
+import { OrderProductCard } from "./OrderProductCard";
 import { useOrders } from "./OrdersShell";
-import { QtyField } from "./QtyField";
+import { SupplierOrderList } from "./SupplierOrderList";
 
-export function OrderList() {
+type Props = {
+  initialTab?: string;
+};
+
+export function OrderList({ initialTab }: Props) {
   const { t } = useOrders();
   const [products, setProducts] = useState<OrderProduct[] | null>(null);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
+  const [warehouses, setWarehouses] = useState<OrderWarehouse[]>([]);
+  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<string>(initialTab || ALL_SUPPLIER_TAB);
+  const [category, setCategory] = useState(ALL_SUPPLIER_TAB);
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState<SelectionMap>({});
   const [hydrated, setHydrated] = useState(false);
+  const [resetNonce, setResetNonce] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
@@ -33,6 +47,8 @@ export function OrderList() {
       const catalog = await getOrderCatalog();
       setProducts(sortCatalogProducts(catalog.products.map((row) => ({ ...row, sort: row.sort ?? 0 }))));
       setSuppliers(catalog.suppliers);
+      setWarehouses(catalog.warehouses);
+      setDefaultWarehouseId(catalog.defaultWarehouseId);
     } catch (err) {
       setProducts(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
@@ -48,11 +64,32 @@ export function OrderList() {
     setHydrated(true);
   }, []);
 
-  const updateSelection = (product: OrderProduct, patch: Partial<{ packId: string | null; qty: string }>) => {
-    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
-    const next = setSelectionRow(selection, product.id, { ...current, ...patch });
+  const restoredTab = useRef(false);
+  useEffect(() => {
+    if (initialTab) {
+      if (!suppliers.length || suppliers.some((row) => row.id === initialTab)) {
+        setTab(initialTab);
+        writeOrderSupplierTab(initialTab);
+      } else {
+        setTab(ALL_SUPPLIER_TAB);
+      }
+      restoredTab.current = true;
+      return;
+    }
+    if (!suppliers.length || restoredTab.current) return;
+    restoredTab.current = true;
+    const stored = readOrderSupplierTab();
+    if (stored === ALL_SUPPLIER_TAB || suppliers.some((row) => row.id === stored)) setTab(stored);
+  }, [initialTab, suppliers]);
+
+  const storeSelection = useCallback((next: SelectionMap) => {
     setSelection(next);
     writeOrderSelection(next);
+  }, []);
+
+  const updateSelection = (product: OrderProduct, patch: Partial<{ packId: string | null; qty: string }>) => {
+    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
+    storeSelection({ ...selection, [product.id]: { ...current, ...patch } });
   };
 
   const matchesSearch = useCallback(
@@ -61,25 +98,53 @@ export function OrderList() {
       if (!query) return true;
       const supplierName = suppliers.find((row) => row.id === product.supplierId)?.name ?? "";
       const packCodes = product.packs.map((item) => item.code ?? "");
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", supplierName, ...packCodes].some((text) =>
-        text.toLowerCase().includes(query),
-      );
+      return [
+        product.nameEn,
+        product.nameVn,
+        product.brand ?? "",
+        product.itemNo ?? "",
+        product.categoryName ?? "",
+        supplierName,
+        ...packCodes,
+      ].some((text) => text.toLowerCase().includes(query));
     },
     [search, suppliers],
   );
 
-  const visible = useMemo(() => (products ?? []).filter(matchesSearch), [products, matchesSearch]);
-  const badges = useMemo(() => supplierBadgeCounts(products ?? [], selection), [products, selection]);
+  const categories = useMemo(() => catalogCategories(products ?? []), [products]);
+  const tabs = useMemo(() => supplierTabChips(suppliers, products ?? [], selection), [suppliers, products, selection]);
+  const supplier = tab === ALL_SUPPLIER_TAB ? null : (suppliers.find((row) => row.id === tab) ?? null);
+  const supplierItems = useMemo(() => {
+    const scoped = filterBySupplierTab(products ?? [], tab).map((product) => productForSupplierTab(product, supplier?.id ?? null));
+    return scoped;
+  }, [products, tab, supplier]);
+
+  const allVisible = useMemo(
+    () => filterByCategory((products ?? []).filter(matchesSearch), category),
+    [products, matchesSearch, category],
+  );
+  const allGroups = useMemo(() => groupProductsByCategory(allVisible, categories), [allVisible, categories]);
+
+  const handleTabChange = (next: string) => {
+    setTab(next);
+    writeOrderSupplierTab(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleReset = () => {
-    if (!Object.values(selection).some((row) => row.qty.trim())) {
-      setSearch("");
-      return;
-    }
-    if (!window.confirm(t("reset_all_confirm"))) return;
     setSearch("");
-    setSelection({});
-    writeOrderSelection({});
+    setCategory(ALL_SUPPLIER_TAB);
+    const scope = supplier ? supplierItems : (products ?? []);
+    const filled = filledProductIds(scope, selection);
+    if (!filled.length) return;
+    const message = supplier ? t("reset_confirm", { supplier: supplier.name }) : t("reset_all_confirm");
+    if (!window.confirm(message)) return;
+    const next = clearQuantities(selection, filled, (id) => {
+      const product = scope.find((row) => row.id === id);
+      return product ? defaultPackId(product) : null;
+    });
+    storeSelection(next);
+    if (supplier) setResetNonce((value) => value + 1);
   };
 
   if (error) return <OrdersError text={error} onRetry={() => void load()} />;
@@ -88,61 +153,103 @@ export function OrderList() {
 
   return (
     <div>
+      <div className="orders-supplierTabs" role="tablist" aria-label={t("suppliers_heading")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === ALL_SUPPLIER_TAB}
+          className={`orders-supplierTab ${tab === ALL_SUPPLIER_TAB ? "active" : ""}`}
+          onClick={() => handleTabChange(ALL_SUPPLIER_TAB)}
+        >
+          {t("supplier_tab_all")}
+        </button>
+        {tabs.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === chip.id}
+            className={`orders-supplierTab ${tab === chip.id ? "active" : ""} ${chip.count ? "hasMarked" : ""}`}
+            onClick={() => handleTabChange(chip.id)}
+          >
+            {chip.label}
+            {chip.count ? <span className="orders-tabCount">{chip.count}</span> : null}
+          </button>
+        ))}
+      </div>
+
       <div className="orders-searchRow">
         <input className="orders-search" placeholder={t("search_placeholder")} value={search} onChange={(event) => setSearch(event.target.value)} />
         <button type="button" className="orders-btn dark" onClick={handleReset}>
           {t("reset")}
         </button>
       </div>
-      <div className="orders-mode">
-        <span>{t("catalog_count", { count: visible.length })}</span>
-      </div>
 
-      {visible.length ? (
-        visible.map((product) => {
-          const row = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
-          const marked = isProductMarked(product.id, selection);
-          const pack = packOf(product, row.packId);
-          const supplierName = suppliers.find((item) => item.id === product.supplierId)?.name;
-          const details = [product.brand, supplierName, product.itemNo ? `#${product.itemNo}` : null].filter(Boolean);
-          return (
-            <div key={product.id} className={`orders-card ${marked ? "marked" : ""}`}>
-              <div className="orders-name">{formatOrderLineName({ nameEn: product.nameEn, nameVn: product.nameVn })}</div>
-              {details.length ? <div className="orders-meta">{details.join(" · ")}</div> : null}
-              <QtyField
-                label={t("qty_label")}
-                unit={pack?.unit || product.unit}
-                value={row.qty}
-                onChange={(qty) => updateSelection(product, { qty })}
-              />
-              {pack ? <div className="orders-packHint">{pack.code ? `${pack.label} · ${pack.code}` : pack.label}</div> : null}
-            </div>
-          );
-        })
+      {supplier ? (
+        <SupplierOrderList
+          key={supplier.id}
+          supplier={supplier}
+          products={supplierItems}
+          warehouses={warehouses}
+          defaultWarehouseId={defaultWarehouseId}
+          selection={selection}
+          onSelection={storeSelection}
+          search={search}
+          resetNonce={resetNonce}
+        />
       ) : (
-        <OrdersEmpty title={t("empty_search")} />
-      )}
-
-      <h3 className="orders-category">{t("suppliers_heading")}</h3>
-      {suppliers.length ? (
-        suppliers.map((supplier) => {
-          const count = badges.get(supplier.id) ?? 0;
-          return (
-            <Link
-              key={supplier.id}
-              href={`/orders/suppliers/${supplier.id}`}
-              className={`orders-card orders-supplierBtn ${count ? "hasMarked" : ""}`}
+        <>
+          <div className="orders-categoryTabs" role="tablist" aria-label={t("filter_all")}>
+            <button
+              type="button"
+              className={`orders-chip ${category === ALL_SUPPLIER_TAB ? "active" : ""}`}
+              onClick={() => setCategory(ALL_SUPPLIER_TAB)}
             >
-              <div>
-                <div className="orders-name">{supplier.name}</div>
-                <div className="orders-meta">{supplier.code || ""}</div>
+              {t("category_all")}
+            </button>
+            {categories.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`orders-chip ${category === option.id ? "active" : ""}`}
+                onClick={() => setCategory(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="orders-mode">
+            <span>{t("catalog_hint")}</span>
+            <span>{t("all_items", { count: allVisible.length })}</span>
+          </div>
+
+          {allVisible.length ? (
+            allGroups.map((group) => (
+              <div key={group.id || "uncategorized"}>
+                {group.name ? <div className="orders-category">{group.name}</div> : null}
+                {group.products.map((product) => {
+                  const supplierName = suppliers.find((row) => row.id === product.supplierId)?.name;
+                  return (
+                    <OrderProductCard
+                      key={product.id}
+                      product={product}
+                      row={selection[product.id]}
+                      supplierName={supplierName}
+                      showSupplier
+                      qtyLabel={t("qty_label")}
+                      packLabel={t("pack_label")}
+                      onQty={(qty) => updateSelection(product, { qty })}
+                      onPack={(packId) => updateSelection(product, { packId })}
+                    />
+                  );
+                })}
               </div>
-              {count ? <span className="orders-count">{count}</span> : null}
-            </Link>
-          );
-        })
-      ) : (
-        <OrdersEmpty title={t("suppliers_empty")} text={t("suppliers_empty_text")} />
+            ))
+          ) : (
+            <OrdersEmpty title={t("empty_search")} />
+          )}
+        </>
       )}
     </div>
   );
