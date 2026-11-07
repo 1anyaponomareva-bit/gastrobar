@@ -2,7 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
 import { decideErpHostGate, productionErpHostEnv, readErpHostGateConfig } from "../erp/hostGate";
-import { formatOrderPdfQtyCell, getOrderPdfFileName, orderPdfLineCode, orderPdfTitle } from "./orderPdfTypes";
+import {
+  formatOrderPdfQtyCell,
+  getOrderPdfFileName,
+  ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_PREP_KITCHEN_ADDRESS,
+  ORDER_PDF_PREP_KITCHEN_PHONE,
+  ORDER_PDF_WAREHOUSE_ADDRESS,
+  orderPdfCompanyHeading,
+  orderPdfFooterLines,
+  orderPdfHeaderMeta,
+  orderPdfLineCode,
+  orderPdfTitle,
+} from "./orderPdfTypes";
 import {
   ALL_SUPPLIER_TAB,
   catalogCategories,
@@ -12,6 +24,8 @@ import {
   isProductMarked,
   orderPackCaption,
   orderPackUnit,
+  orderPdfWarehouseFields,
+  orderPdfWarehouseOf,
   productDetailLine,
   reducePlaceDialog,
   reorderSubset,
@@ -23,7 +37,7 @@ import {
   supplierTabChips,
   type SelectionMap,
 } from "./orderList";
-import type { OrderProduct } from "./types";
+import type { OrderProduct, OrderWarehouse } from "./types";
 
 test("catalog list order follows staff_sort then name", () => {
   const sorted = sortCatalogProducts([
@@ -265,6 +279,105 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   assert.doesNotMatch(fileName, /rev|_r\d/i);
   assert.doesNotMatch(orderPdfTitle({ ...input!, revision: 2 }), /rev|\br\d\b/i);
   assert.equal(supplierPrintPdfInput([beer], { beer: { packId: "p1", qty: "" } }, { orderNo: "x", supplierName: "MM" }), null);
+});
+
+test("pre-order PDF uses Prep Kitchen contact and does not place; Submit uses chosen warehouse and places", () => {
+  const warehouses: OrderWarehouse[] = [
+    {
+      id: "prep",
+      name: "Prep Kitchen / Bếp sơ chế",
+      kind: "prep_kitchen",
+      address: ORDER_PDF_PREP_KITCHEN_ADDRESS,
+      phone: ORDER_PDF_PREP_KITCHEN_PHONE,
+    },
+    {
+      id: "wh",
+      name: "Warehouse / Kho",
+      kind: "warehouse",
+      address: ORDER_PDF_WAREHOUSE_ADDRESS,
+      phone: ORDER_PDF_PREP_KITCHEN_PHONE,
+    },
+  ];
+  const beer: OrderProduct = {
+    id: "beer",
+    nameEn: "Beer Lager",
+    nameVn: "Bia Lager",
+    brand: "Saigon",
+    categoryId: null,
+    categoryName: null,
+    unit: "l",
+    itemNo: null,
+    productCode: "PROD-FALLBACK",
+    supplierId: "mm",
+    sort: 0,
+    packs: [
+      {
+        id: "p1",
+        pack_id: "p1",
+        label: "Pack 24*330 ml",
+        unit: "l",
+        qty_base: 7.92,
+        is_default: true,
+        code: "259043",
+      },
+    ],
+  };
+  const selection: SelectionMap = { beer: { packId: "p1", qty: "2" } };
+  const pre = supplierPrintPdfInput([beer], selection, {
+    orderNo: "ORD-000004",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+    ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, null)),
+    kind: "pre",
+  });
+  assert.ok(pre);
+  assert.equal(pre!.kind, "pre");
+  assert.equal(pre!.warehouseName, "Prep Kitchen / Bếp sơ chế");
+  assert.equal(pre!.warehouseAddress, ORDER_PDF_PREP_KITCHEN_ADDRESS);
+  assert.equal(pre!.warehousePhone, ORDER_PDF_PREP_KITCHEN_PHONE);
+  assert.equal(getOrderPdfFileName(pre!), "Pre_order_MM_2026-11-07.pdf");
+  assert.doesNotMatch(getOrderPdfFileName(pre!), /rev|_r\d/i);
+  assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
+  assert.doesNotMatch(orderPdfCompanyHeading(), /PREP KITCHEN|ORDER \/ ĐƠN ĐẶT HÀNG/i);
+  const preMeta = orderPdfHeaderMeta(pre!);
+  assert.ok(preMeta.some((line) => line.includes("Mường Thanh Viễn Triều")));
+  assert.ok(preMeta.includes(ORDER_PDF_PREP_KITCHEN_PHONE));
+  assert.ok(preMeta.some((line) => line.startsWith("Warehouse / Kho:")));
+  assert.equal(
+    preMeta.some((line) => /ORDER \/ ĐƠN ĐẶT HÀNG/.test(line)),
+    false,
+  );
+  assert.deepEqual(orderPdfFooterLines(), [ORDER_PDF_COMPANY_NAME]);
+  assert.equal(
+    orderPdfFooterLines().some((line) => /Mường Thanh|152 Lk 77/.test(line)),
+    false,
+  );
+  assert.equal(formatOrderPdfQtyCell(pre!.lines[0]), "2");
+  assert.doesNotMatch(formatOrderPdfQtyCell(pre!.lines[0]), /[a-zA-Z]/);
+  assert.equal(shouldPlaceAfterDialog(reducePlaceDialog("closed", "open")), false);
+  assert.equal(shouldPlaceAfterDialog(reducePlaceDialog("open", "submit")), true);
+
+  const finalPdf = supplierPrintPdfInput([beer], selection, {
+    orderNo: "ORD-000004",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+    ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, "wh")),
+    kind: "final",
+  });
+  assert.ok(finalPdf);
+  assert.equal(finalPdf!.kind, "final");
+  assert.equal(finalPdf!.warehouseName, "Warehouse / Kho");
+  assert.equal(finalPdf!.warehouseAddress, ORDER_PDF_WAREHOUSE_ADDRESS);
+  assert.ok(finalPdf!.warehouseAddress?.includes("152 Lk 77 Đường số 51"));
+  assert.ok(finalPdf!.warehouseAddress?.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"));
+  assert.equal(getOrderPdfFileName(finalPdf!), "Order_MM_2026-11-07.pdf");
+  const finalMeta = orderPdfHeaderMeta(finalPdf!);
+  assert.ok(finalMeta.includes("152 Lk 77 Đường số 51"));
+  assert.ok(finalMeta.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"));
+  assert.equal(
+    finalMeta.some((line) => line.includes("Mường Thanh Viễn Triều")),
+    false,
+  );
 });
 
 test("orders list is public; admin cookie is the only catalog editor", () => {

@@ -780,6 +780,22 @@ async function main() {
       "erp_warehouses_name_uidx",
     );
     await q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ id, name: "Event Stand 2" }), ACTOR]);
+    await q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [
+      JSON.stringify({ id, name: "Event Stand 2", address: "Stand street 1", phone: "+84 11 111 11 11" }),
+      ACTOR,
+    ]);
+    const contact = await one<{ address: string; phone: string }>("select address, phone from public.erp_warehouses where id = $1", [id]);
+    assert.equal(contact.address, "Stand street 1");
+    assert.equal(contact.phone, "+84 11 111 11 11");
+    await q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ id, name: "Event Stand 3" }), ACTOR]);
+    const kept = await one<{ name: string; address: string }>("select name, address from public.erp_warehouses where id = $1", [id]);
+    assert.equal(kept.name, "Event Stand 3");
+    assert.equal(kept.address, "Stand street 1", "name-only save keeps address");
+    const prepContact = await one<{ address: string; phone: string }>(
+      "select address, phone from public.erp_warehouses where code = 'prep-kitchen'",
+    );
+    assert.match(prepContact.address, /Mường Thanh Viễn Triều/);
+    assert.equal(prepContact.phone, "+84 98 863 15 07");
     await q("select public.erp_set_archived('warehouse', $1, true, $2)", [id, ACTOR]);
     await expectError(q("select public.erp_set_archived('warehouse', $1, true, $2)", [prep, ACTOR]), "ERP_HAS_STOCK");
     await q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ output_vat_enabled: true, default_output_vat_rate: 8 }), ACTOR]);

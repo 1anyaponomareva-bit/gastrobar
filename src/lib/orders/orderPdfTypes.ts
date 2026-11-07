@@ -13,15 +13,30 @@ export type OrderPdfLine = {
   qty: number;
 };
 
+export type OrderPdfKind = "pre" | "final";
+
 export type OrderPdfInput = {
   orderNo: string;
   revision: number;
   orderedAt: string;
   supplierName: string;
   warehouseName?: string;
+  warehouseAddress?: string;
+  warehousePhone?: string;
+  /** Cook-facing file: Pre_order_* before place, Order_* after Submit. */
+  kind?: OrderPdfKind;
   comment?: string;
   lines: OrderPdfLine[];
 };
+
+export const ORDER_PDF_COMPANY_NAME = "GASTROFOOD";
+
+export const ORDER_PDF_PREP_KITCHEN_ADDRESS =
+  "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa";
+
+export const ORDER_PDF_PREP_KITCHEN_PHONE = "+84 98 863 15 07";
+
+export const ORDER_PDF_WAREHOUSE_ADDRESS = "152 Lk 77 Đường số 51\nPhường Nam Nha Trang, Tỉnh Khánh Hòa";
 
 export type OrderPdfFonts = {
   regular: ArrayBuffer;
@@ -77,11 +92,52 @@ export function orderPdfLines(input: OrderPdfInput): OrderPdfLine[] {
 
 /** Cook-facing filename: supplier + date. Revision stays internal (DB / PDF subject). */
 export function getOrderPdfFileName(
-  input: Pick<OrderPdfInput, "supplierName" | "orderedAt"> & Partial<Pick<OrderPdfInput, "orderNo" | "revision">>,
+  input: Pick<OrderPdfInput, "supplierName" | "orderedAt"> &
+    Partial<Pick<OrderPdfInput, "orderNo" | "revision" | "kind">>,
 ): string {
   const supplier = asciiFileLabel(input.supplierName) || "Supplier";
   const date = formatOrderPdfDate(input.orderedAt).replace(/[^\d-]/g, "") || "order";
-  return `Order_${supplier}_${date}.pdf`;
+  const prefix = input.kind === "pre" ? "Pre_order" : "Order";
+  return `${prefix}_${supplier}_${date}.pdf`;
+}
+
+export function orderPdfCompanyHeading(): string {
+  return ORDER_PDF_COMPANY_NAME;
+}
+
+export function orderPdfFooterLines(): string[] {
+  return [ORDER_PDF_COMPANY_NAME];
+}
+
+export function orderPdfAddressLines(address: string): string[] {
+  return String(address ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+/** Address/phone from the chosen ERP warehouse; Prep Kitchen contact if the DTO has none. */
+export function orderPdfContactOf(
+  input: Pick<OrderPdfInput, "warehouseAddress" | "warehousePhone">,
+): { address: string; phone: string } {
+  if (input.warehouseAddress != null || input.warehousePhone != null) {
+    return {
+      address: String(input.warehouseAddress ?? "").trim(),
+      phone: String(input.warehousePhone ?? "").trim(),
+    };
+  }
+  return { address: ORDER_PDF_PREP_KITCHEN_ADDRESS, phone: ORDER_PDF_PREP_KITCHEN_PHONE };
+}
+
+export function orderPdfHeaderMeta(input: OrderPdfInput): string[] {
+  const contact = orderPdfContactOf(input);
+  const lines = [...orderPdfAddressLines(contact.address), ...(contact.phone ? [contact.phone] : [])];
+  lines.push(`Order / Số: ${input.orderNo.trim() || "—"}`, `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`);
+  const warehouse = String(input.warehouseName ?? "").trim();
+  if (warehouse) lines.push(`Warehouse / Kho: ${warehouse}`);
+  const comment = String(input.comment ?? "").replace(/\s+/g, " ").trim();
+  if (comment) lines.push(`Note / Ghi chú: ${comment}`);
+  return lines;
 }
 
 export function orderPdfTitle(input: Pick<OrderPdfInput, "supplierName"> & Partial<Pick<OrderPdfInput, "orderNo" | "revision">>): string {
@@ -114,6 +170,9 @@ export function orderPdfCacheKey(input: OrderPdfInput): string {
     orderedAt: input.orderedAt,
     supplierName: input.supplierName,
     warehouseName: input.warehouseName ?? "",
+    warehouseAddress: input.warehouseAddress ?? "",
+    warehousePhone: input.warehousePhone ?? "",
+    kind: input.kind ?? "final",
     comment: input.comment ?? "",
     lines,
   });

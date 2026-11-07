@@ -11,6 +11,8 @@ import {
   defaultPackId,
   groupProductsByCategory,
   isProductMarked,
+  orderPdfWarehouseFields,
+  orderPdfWarehouseOf,
   reducePlaceDialog,
   selectionDraftLines,
   shouldPlaceAfterDialog,
@@ -159,16 +161,19 @@ export function SupplierOrderList({
 
   const marked = useMemo(() => products.filter((product) => isProductMarked(product.id, selection)), [products, selection]);
 
+  const selectedWarehouse = useMemo(() => orderPdfWarehouseOf(warehouses, warehouseId), [warehouseId, warehouses]);
+
   const pdfInput = useMemo(
     () =>
       supplierPrintPdfInput(products, selection, {
         orderNo: draft?.orderNo || draft?.id || t("draft_label"),
         supplierName: supplier.name,
         orderedAt: draft?.placedAt || new Date().toISOString(),
-        warehouseName: warehouses.find((row) => row.id === warehouseId)?.name,
+        ...orderPdfWarehouseFields(selectedWarehouse),
         comment: comment || undefined,
+        kind: "pre",
       }),
-    [comment, draft, products, selection, supplier.name, t, warehouseId, warehouses],
+    [comment, draft, products, selection, selectedWarehouse, supplier.name, t],
   );
   const pdfKey = pdfInput ? JSON.stringify(pdfInput) : "";
 
@@ -228,13 +233,7 @@ export function SupplierOrderList({
       const prepared = preparedPdf.current;
       const blob =
         prepared?.key === pdfKey ? await prepared.promise : await makeOrderPdfBlob(pdfInput);
-      const delivered = await deliverPdfFile(
-        blob,
-        getOrderPdfFileName({
-          orderedAt: pdfInput.orderedAt,
-          supplierName: supplier.name,
-        }),
-      );
+      const delivered = await deliverPdfFile(blob, getOrderPdfFileName(pdfInput));
       if (delivered !== "shared" && delivered !== "cancelled" && delivered !== "downloaded") {
         setActionError(t("error_pdf"));
         return;
@@ -282,6 +281,22 @@ export function SupplierOrderList({
         setPlacePhase("open");
         setDialogError(t("place_need_draft"));
         return;
+      }
+      const finalPdf = supplierPrintPdfInput(products, selectionRef.current, {
+        orderNo: saved.orderNo || saved.id || t("draft_label"),
+        supplierName: supplier.name,
+        orderedAt: saved.placedAt || new Date().toISOString(),
+        ...orderPdfWarehouseFields(orderPdfWarehouseOf(warehouses, warehouseId)),
+        comment: saved.comment || comment || undefined,
+        kind: "final",
+      });
+      if (finalPdf) {
+        if (detectInAppBrowser()) {
+          window.alert(t("inapp_blocked"));
+        } else {
+          const blob = await makeOrderPdfBlob(finalPdf);
+          await deliverPdfFile(blob, getOrderPdfFileName(finalPdf));
+        }
       }
       const placed = await placeOrder(saved.id, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
       onSelectionRef.current(clearSupplierSelection(selectionRef.current, products.map((product) => product.id)));

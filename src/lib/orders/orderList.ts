@@ -1,6 +1,6 @@
-import { orderPdfLineCode, type OrderPdfInput } from "./orderPdfTypes";
+import { orderPdfLineCode, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
 import { isPositiveQty, parseQty } from "./qty";
-import type { OrderProduct, OrderProductPack } from "./types";
+import type { OrderProduct, OrderProductPack, OrderWarehouse } from "./types";
 
 export type SelectionRow = { packId: string | null; qty: string };
 
@@ -208,6 +208,27 @@ export function selectionDraftLines(
   return lines;
 }
 
+/** Selected warehouse, else Prep Kitchen (pre-order default before the place dialog). */
+export function orderPdfWarehouseOf<T extends { id?: string; kind?: string }>(
+  warehouses: T[],
+  warehouseId?: string | null,
+): T | undefined {
+  const selected = warehouseId ? warehouses.find((row) => row.id === warehouseId) : undefined;
+  if (selected) return selected;
+  return warehouses.find((row) => row.kind === "prep_kitchen");
+}
+
+export function orderPdfWarehouseFields(
+  warehouse?: Pick<OrderWarehouse, "name" | "address" | "phone"> | null,
+): Pick<OrderPdfInput, "warehouseName" | "warehouseAddress" | "warehousePhone"> {
+  if (!warehouse) return {};
+  return {
+    warehouseName: warehouse.name,
+    warehouseAddress: warehouse.address ?? "",
+    warehousePhone: warehouse.phone ?? "",
+  };
+}
+
 /** PDF of yellow (qty>0) supplier rows. Revision is unused on the cook-facing file. */
 export function supplierPrintPdfInput(
   products: OrderProduct[],
@@ -217,7 +238,10 @@ export function supplierPrintPdfInput(
     supplierName: string;
     orderedAt?: string;
     warehouseName?: string;
+    warehouseAddress?: string;
+    warehousePhone?: string;
     comment?: string;
+    kind?: OrderPdfKind;
   },
 ): OrderPdfInput | null {
   const marked = products.filter((product) => isProductMarked(product.id, selection));
@@ -228,6 +252,9 @@ export function supplierPrintPdfInput(
     orderedAt: (meta.orderedAt || new Date().toISOString()).slice(0, 10),
     supplierName: meta.supplierName,
     warehouseName: meta.warehouseName,
+    warehouseAddress: meta.warehouseAddress,
+    warehousePhone: meta.warehousePhone,
+    kind: meta.kind,
     comment: meta.comment,
     lines: marked.map((product) => {
       const row = selection[product.id];

@@ -350,6 +350,8 @@ export function WarehousesPage() {
         columns={[
           { key: "name", label: T("Название", "Name", "Tên") },
           { key: "kind", label: T("Тип", "Kind", "Loại"), kind: "select", options: warehouseKinds() },
+          { key: "address", label: T("Адрес", "Address", "Địa chỉ"), placeholder: T("Адрес доставки", "Delivery address", "Địa chỉ giao hàng") },
+          { key: "phone", label: T("Телефон", "Phone", "Điện thoại"), placeholder: "+84 …" },
         ]}
         addLabel={T("Добавить склад", "Add location", "Thêm kho")}
         emptyTitle={T("Складов пока нет", "No locations yet", "Chưa có kho")}

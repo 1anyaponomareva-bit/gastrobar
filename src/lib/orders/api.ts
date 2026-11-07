@@ -213,6 +213,8 @@ function warehouseOf(raw: Json): OrderWarehouse {
     name: str(pick(raw, "name")),
     kind: str(pick(raw, "kind")),
     isDefault: Boolean(pick(raw, "isDefault", "is_default")),
+    address: optStr(pick(raw, "address")),
+    phone: optStr(pick(raw, "phone")),
   };
 }
 

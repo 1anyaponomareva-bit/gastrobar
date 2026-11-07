@@ -10,7 +10,14 @@ import {
   formatOrderPdfQtyCell,
   getOrderPdfFileName,
   makeOrderPdfBlob,
+  ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_PREP_KITCHEN_ADDRESS,
+  ORDER_PDF_PREP_KITCHEN_PHONE,
+  ORDER_PDF_WAREHOUSE_ADDRESS,
   orderPdfCacheKey,
+  orderPdfCompanyHeading,
+  orderPdfFooterLines,
+  orderPdfHeaderMeta,
   orderPdfTitle,
   setOrderPdfFonts,
   type OrderPdfInput,
@@ -31,7 +38,10 @@ const shortOrder = (): OrderPdfInput => ({
   revision: 1,
   orderedAt: "2026-11-07T08:15:00+07:00",
   supplierName: "MM",
-  warehouseName: "Prep kitchen",
+  warehouseName: "Prep Kitchen / Bếp sơ chế",
+  warehouseAddress: ORDER_PDF_PREP_KITCHEN_ADDRESS,
+  warehousePhone: ORDER_PDF_PREP_KITCHEN_PHONE,
+  kind: "final",
   comment: "Morning order",
   lines: [
     {
@@ -103,17 +113,35 @@ async function main() {
 
   const short = shortOrder();
   const long = longOrder();
+  const pre = { ...short, kind: "pre" as const };
+  const warehouseOrder = {
+    ...short,
+    warehouseName: "Warehouse / Kho",
+    warehouseAddress: ORDER_PDF_WAREHOUSE_ADDRESS,
+    warehousePhone: ORDER_PDF_PREP_KITCHEN_PHONE,
+    kind: "final" as const,
+  };
   assert.equal(formatOrderPdfQtyCell(short.lines[0]), "2");
   assert.equal(formatOrderPdfQtyCell(short.lines[1]), "3");
   assert.equal(formatOrderPdfQtyCell(short.lines[2]), "1");
+  assert.doesNotMatch(formatOrderPdfQtyCell(short.lines[0]), /[a-zA-Z]/);
   assert.equal(getOrderPdfFileName(short), "Order_MM_2026-11-07.pdf");
+  assert.equal(getOrderPdfFileName(pre), "Pre_order_MM_2026-11-07.pdf");
   assert.equal(getOrderPdfFileName(long), "Order_Hisina_2026-11-07.pdf");
   assert.doesNotMatch(getOrderPdfFileName(short), /_r\d/);
   assert.notEqual(orderPdfCacheKey({ ...short, revision: 1 }), orderPdfCacheKey({ ...short, revision: 2 }));
+  assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
+  assert.ok(orderPdfHeaderMeta(short).some((line) => line.includes("Mường Thanh Viễn Triều")));
+  assert.ok(orderPdfHeaderMeta(warehouseOrder).includes("152 Lk 77 Đường số 51"));
+  assert.deepEqual(orderPdfFooterLines(), [ORDER_PDF_COMPANY_NAME]);
 
   const shortOut = await writeSample("order-mm-short.pdf", short);
+  const preOut = await writeSample("pre-order-mm.pdf", pre);
+  const warehouseOut = await writeSample("order-mm-warehouse.pdf", warehouseOrder);
   const longOut = await writeSample("order-long-vn.pdf", long);
   assert.equal(shortOut.pages, 1, "short sample stays on one page");
+  assert.equal(preOut.pages, 1);
+  assert.equal(warehouseOut.pages, 1);
   assert.ok(longOut.pages >= 2, `long sample must page-break, got ${longOut.pages}`);
 
   const rev2 = await makeOrderPdfBlob({ ...short, revision: 2 });
@@ -129,6 +157,8 @@ async function main() {
     JSON.stringify(
       {
         short: { file: "docs/orders/samples/order-mm-short.pdf", pages: shortOut.pages, bytes: shortOut.bytes.byteLength },
+        pre: { file: "docs/orders/samples/pre-order-mm.pdf", pages: preOut.pages, bytes: preOut.bytes.byteLength },
+        warehouse: { file: "docs/orders/samples/order-mm-warehouse.pdf", pages: warehouseOut.pages, bytes: warehouseOut.bytes.byteLength },
         long: { file: "docs/orders/samples/order-long-vn.pdf", pages: longOut.pages, bytes: longOut.bytes.byteLength },
         revisionFilename: getOrderPdfFileName(short),
       },

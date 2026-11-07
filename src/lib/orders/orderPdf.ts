@@ -2,10 +2,10 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import {
   formatOrderLineName,
-  formatOrderPdfDate,
   formatOrderPdfQtyCell,
-  getOrderPdfFileName,
-  orderPdfCacheKey,
+  orderPdfCompanyHeading,
+  orderPdfFooterLines,
+  orderPdfHeaderMeta,
   orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
@@ -15,7 +15,7 @@ import {
   type OrderPdfLine,
 } from "./orderPdfTypes";
 
-export type { OrderPdfFonts, OrderPdfInput, OrderPdfLine } from "./orderPdfTypes";
+export type { OrderPdfFonts, OrderPdfInput, OrderPdfKind, OrderPdfLine } from "./orderPdfTypes";
 export {
   asciiFileLabel,
   formatOrderLineName,
@@ -23,19 +23,21 @@ export {
   formatOrderPdfQtyCell,
   formatOrderQty,
   getOrderPdfFileName,
+  ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_PREP_KITCHEN_ADDRESS,
+  ORDER_PDF_PREP_KITCHEN_PHONE,
+  ORDER_PDF_WAREHOUSE_ADDRESS,
+  orderPdfAddressLines,
   orderPdfCacheKey,
+  orderPdfCompanyHeading,
+  orderPdfContactOf,
+  orderPdfFooterLines,
+  orderPdfHeaderMeta,
   orderPdfLineCode,
   orderPdfLines,
   orderPdfRevisionLabel,
   orderPdfTitle,
 } from "./orderPdfTypes";
-
-/** Same company block the old Staff supplier PDF printed. Not imported from staff catalog. */
-export const ORDER_PDF_COMPANY_FOOTER = [
-  "GASTROFOOD",
-  "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa",
-  "+84 98 863 15 07",
-] as const;
 
 export const ORDER_PDF_EMPTY_MESSAGE =
   "No items marked for order. / Không có mặt hàng nào được chọn để đặt.";
@@ -225,25 +227,10 @@ function drawWrappedLines(
   return lines.length * step - lineGap;
 }
 
-function documentHeading(input: OrderPdfInput): string {
-  const warehouse = String(input.warehouseName ?? "").trim();
-  const place = warehouse ? warehouse.toUpperCase() : "GASTROFOOD";
-  return `${place} — ORDER / ĐƠN ĐẶT HÀNG: ${input.supplierName.trim().toUpperCase() || "—"}`;
-}
-
-function metaLines(input: OrderPdfInput): string[] {
-  const lines = [`Order / Số: ${input.orderNo.trim() || "—"}`, `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`];
-  const warehouse = String(input.warehouseName ?? "").trim();
-  if (warehouse) lines.push(`Warehouse / Kho: ${warehouse}`);
-  const comment = String(input.comment ?? "").replace(/\s+/g, " ").trim();
-  if (comment) lines.push(`Note / Ghi chú: ${comment}`);
-  return lines;
-}
-
 function drawHeader(ctx: PdfContext, input: OrderPdfInput) {
-  const title = documentHeading(input);
+  const title = orderPdfCompanyHeading();
   const titleBlock = measureWrapped(title, ctx.fontBold, 16, CONTENT_WIDTH, 4);
-  const meta = metaLines(input);
+  const meta = orderPdfHeaderMeta(input);
   const metaBlocks = meta.map((line) => measureWrapped(line, ctx.font, 11, CONTENT_WIDTH - 24, 3));
   const metaPad = 12;
   const metaGap = 5;
@@ -366,7 +353,7 @@ function drawEmpty(ctx: PdfContext) {
 }
 
 function drawFooter(ctx: PdfContext) {
-  const blocks = ORDER_PDF_COMPANY_FOOTER.map((line, index) =>
+  const blocks = orderPdfFooterLines().map((line, index) =>
     measureWrapped(line, index === 0 ? ctx.fontBold : ctx.font, 10, CONTENT_WIDTH - 24, 3),
   );
   const height = blocks.reduce((sum, block) => sum + block.height, 0) + (blocks.length - 1) * 5 + 20;

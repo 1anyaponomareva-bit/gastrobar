@@ -279,11 +279,15 @@ async function main() {
         qty: 10,
       },
     );
+    assert.equal(snap.kind, "pre");
+    assert.match(String(snap.warehouseAddress ?? ""), /Mường Thanh Viễn Triều/);
+    assert.match(String(snap.warehousePhone ?? ""), /\+84 98 863 15 07/);
     const file1 = getOrderPdfFileName(snap);
-    assert.match(file1, /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
+    assert.match(file1, /^Pre_order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     assert.doesNotMatch(file1, /_r\d/);
     assert.doesNotMatch(orderPdfTitle(snap), /\br\d\b|rev /i);
     assert.equal(formatOrderPdfQtyCell(snap.lines[0]), "10");
+    assert.doesNotMatch(formatOrderPdfQtyCell(snap.lines[0]), /[a-zA-Z]/);
     const blob = await makeOrderPdfBlob(snap);
     const pdf = await PDFDocument.load(await blob.arrayBuffer());
     assert.equal(pdf.getSubject(), "revision=1");
@@ -306,6 +310,10 @@ async function main() {
     assert.equal(await stock(beef, prep), 0);
     const again = await j("select public.erp_order_place($1, $2)", [draft.id, ACTOR]);
     assert.equal(n(again.revision), 2, "double place does not bump revision");
+    const placedSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [draft.id])) as unknown as OrderPdfInput;
+    assert.equal(placedSnap.kind, "final");
+    assert.match(getOrderPdfFileName(placedSnap), /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
+    await makeOrderPdfBlob(placedSnap);
   });
 
   const lineId = asJson(asArr(placed.lines)[0]).id as string;
@@ -558,6 +566,64 @@ async function main() {
     await j("select public.erp_order_close_remainder($1, $2, $3, $4::jsonb, true)", [first.id, "admin leftover", ADMIN, null]);
     const closed = await j("select public.erp_order_get($1, $2, true)", [first.id, ADMIN]);
     assert.equal(closed.status, "closed");
+  });
+
+  await test("ERP warehouse address/phone seed and save; Warehouse PDF differs from Prep Kitchen", async () => {
+    const prepRow = await one<{ address: string; phone: string }>(
+      "select address, phone from public.erp_warehouses where code = 'prep-kitchen'",
+    );
+    const whRow = await one<{ address: string; phone: string }>(
+      "select address, phone from public.erp_warehouses where code = 'warehouse'",
+    );
+    assert.match(prepRow.address, /Mường Thanh Viễn Triều/);
+    assert.equal(prepRow.phone, "+84 98 863 15 07");
+    assert.match(whRow.address, /152 Lk 77 Đường số 51/);
+    assert.match(whRow.address, /Phường Nam Nha Trang, Tỉnh Khánh Hòa/);
+    assert.equal(whRow.phone, "+84 98 863 15 07");
+
+    const extra = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [
+      JSON.stringify({ name: "PDF stand", kind: "other", address: "Stand 1", phone: "+84 11" }),
+      ACTOR,
+    ]);
+    const saved = await one<{ address: string; phone: string }>(
+      "select address, phone from public.erp_warehouses where id = $1",
+      [extra],
+    );
+    assert.equal(saved.address, "Stand 1");
+    assert.equal(saved.phone, "+84 11");
+    await q("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [
+      JSON.stringify({ id: extra, name: "PDF stand 2" }),
+      ACTOR,
+    ]);
+    const kept = await one<{ name: string; address: string; phone: string }>(
+      "select name, address, phone from public.erp_warehouses where id = $1",
+      [extra],
+    );
+    assert.equal(kept.name, "PDF stand 2");
+    assert.equal(kept.address, "Stand 1", "name-only save does not wipe address");
+
+    const whDraft = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({ warehouseId: mainWh, lines: [{ product_id: beef, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const pre = await j("select public.erp_order_pdf_revision($1, $2)", [whDraft.id, ACTOR]);
+    assert.equal(pre.status, "draft", "pre-order freeze does not place");
+    const preSnap = asJson(pre.snapshot) as unknown as OrderPdfInput;
+    assert.equal(preSnap.kind, "pre");
+    assert.match(String(preSnap.warehouseAddress ?? ""), /152 Lk 77/);
+    assert.doesNotMatch(String(preSnap.warehouseAddress ?? ""), /Mường Thanh/);
+    await makeOrderPdfBlob(preSnap);
+    const placedWh = await j("select public.erp_order_place($1, $2)", [whDraft.id, ACTOR]);
+    assert.equal(placedWh.status, "ordered");
+    const finalSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [whDraft.id])) as unknown as OrderPdfInput;
+    assert.equal(finalSnap.kind, "final");
+    assert.match(String(finalSnap.warehouseAddress ?? ""), /152 Lk 77 Đường số 51/);
+    assert.match(getOrderPdfFileName(finalSnap), /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
+    const stored = asJson(await value("select public.erp_order_pdf_input($1)", [whDraft.id])) as unknown as OrderPdfInput;
+    assert.equal(stored.kind, "final", "place refreshes snapshot kind to final");
+    await makeOrderPdfBlob(finalSnap);
+    assert.equal(await stock(beef, mainWh), 0, "place does not move stock");
   });
 
   await test("PDF qty cell is the pack count only (2), not 24 l or 2 box", async () => {

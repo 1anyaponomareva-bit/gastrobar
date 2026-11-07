@@ -169,7 +169,7 @@ export async function listOrderSuppliers() {
     check(
       await erpDb()
         .from("erp_warehouses")
-        .select("id, name, kind, archived_at")
+        .select("id, name, kind, archived_at, address, phone")
         .is("archived_at", null)
         .order("sort"),
     ),
@@ -179,6 +179,8 @@ export async function listOrderSuppliers() {
     name: string;
     kind: string;
     archived_at?: string | null;
+    address?: string | null;
+    phone?: string | null;
   }>;
   const defaultWarehouseId = defaultOrderWarehouseId(warehouses, null);
   return {
@@ -187,6 +189,8 @@ export async function listOrderSuppliers() {
       id: row.id,
       name: row.name,
       kind: row.kind,
+      address: row.address ?? null,
+      phone: row.phone ?? null,
       isDefault: row.id === defaultWarehouseId,
     })),
     defaultWarehouseId,
@@ -284,6 +288,9 @@ export function asOrderPdfInput(value: unknown): OrderPdfInput {
     orderedAt: String(row.orderedAt ?? ""),
     supplierName: String(row.supplierName ?? ""),
     warehouseName: row.warehouseName == null ? undefined : String(row.warehouseName),
+    warehouseAddress: row.warehouseAddress == null ? undefined : String(row.warehouseAddress),
+    warehousePhone: row.warehousePhone == null ? undefined : String(row.warehousePhone),
+    kind: row.kind === "pre" || row.kind === "final" ? row.kind : undefined,
     comment: row.comment == null ? undefined : String(row.comment),
     lines: lines.map((line) => {
       const item = jsonObject(line, "line");

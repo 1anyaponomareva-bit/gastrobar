@@ -31,7 +31,15 @@ export type ErpLocation = {
   created_at: string;
 };
 export type ErpWarehouseKind = "warehouse" | "prep_kitchen" | "online_kitchen" | "food_truck" | "other";
-export type ErpWarehouse = Archivable & { id: string; code: string; name: string; kind: ErpWarehouseKind; sort: number };
+export type ErpWarehouse = Archivable & {
+  id: string;
+  code: string;
+  name: string;
+  kind: ErpWarehouseKind;
+  sort: number;
+  address?: string | null;
+  phone?: string | null;
+};
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
 export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
 

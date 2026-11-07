@@ -33,6 +33,8 @@ export type OrderWarehouse = {
   name: string;
   kind: string;
   isDefault?: boolean;
+  address?: string | null;
+  phone?: string | null;
 };
 
 export type OrderCategory = {
