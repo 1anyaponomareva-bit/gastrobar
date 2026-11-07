@@ -78,7 +78,7 @@ export function SupplierOrderList({
   search,
   resetNonce,
 }: Props) {
-  const { t } = useOrders();
+  const { t, lang } = useOrders();
   const router = useRouter();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [warehouseId, setWarehouseId] = useState(defaultWarehouseId ?? "");
@@ -240,7 +240,7 @@ export function SupplierOrderList({
       const query = search.toLowerCase().trim();
       if (!query) return true;
       const packCodes = product.packs.map((item) => item.code ?? "");
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.productCode ?? "", product.categoryName ?? "", supplier.name, ...packCodes].some(
+      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.productCode ?? "", product.categoryName ?? "", product.categoryNameVn ?? "", supplier.name, ...packCodes].some(
         (text) => text.toLowerCase().includes(query),
       );
     },
@@ -248,7 +248,7 @@ export function SupplierOrderList({
   );
 
   const visible = products.filter(matchesSearch);
-  const groups = groupProductsByCategory(visible, catalogCategories(products));
+  const groups = groupProductsByCategory(visible, catalogCategories(products, lang));
 
   const setQty = (product: OrderProduct, qty: string) => {
     const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };

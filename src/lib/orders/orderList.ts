@@ -1,3 +1,4 @@
+import { productDisplayName, type ProductNameLocale } from "../erp/productName";
 import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
 import { isPositiveQty, parseQty } from "./qty";
 import type { OrderProduct, OrderProductPack, OrderWarehouse } from "./types";
@@ -75,16 +76,22 @@ export function filterByCategory<T extends { categoryId: string | null }>(produc
   return products.filter((product) => product.categoryId === categoryId);
 }
 
-/** Category chips/headers in catalog order (first time a category appears). */
+/** Category chips/headers in catalog order (first time a category appears). One language from the switcher. */
 export function catalogCategories(
-  products: Array<{ categoryId: string | null; categoryName: string | null }>,
+  products: Array<{ categoryId: string | null; categoryName: string | null; categoryNameVn?: string | null }>,
+  locale: ProductNameLocale = "ru",
 ): CatalogCategory[] {
   const seen = new Map<string, CatalogCategory>();
   for (const product of products) {
     if (!product.categoryId || seen.has(product.categoryId)) continue;
+    const name = productDisplayName({
+      locale,
+      nameEn: product.categoryName,
+      nameVn: product.categoryNameVn,
+    });
     seen.set(product.categoryId, {
       id: product.categoryId,
-      name: product.categoryName?.trim() || product.categoryId,
+      name: name || product.categoryId,
     });
   }
   return [...seen.values()];

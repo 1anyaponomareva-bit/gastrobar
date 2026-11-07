@@ -150,6 +150,16 @@ async function main() {
     const beefRow = catalog.map(asJson).find((row) => row.id === beef);
     assert.equal(beefRow?.nameVn, "Thịt bò đơn");
     assert.equal(asJson(asArr(beefRow?.packs)[0]).code, "BEEF-PACK");
+    const cat = await value<string>("select public.erp_save_ref('category', $1::jsonb, $2)", [
+      JSON.stringify({ name_en: "MEAT & POULTRY", name_vn: "Thịt & gia cầm" }),
+      ACTOR,
+    ]);
+    await q("update public.erp_products set category_id = $1 where id = $2", [cat, beef]);
+    const withCat = asArr(await value("select public.erp_order_catalog_products(false)"));
+    const beefCat = withCat.map(asJson).find((row) => row.id === beef);
+    assert.equal(beefCat?.categoryName, "MEAT & POULTRY");
+    assert.equal(beefCat?.categoryNameVn, "Thịt & gia cầm");
+    assert.ok(!String(beefCat?.categoryName ?? "").includes("/"));
     await q("select public.erp_order_reorder_products(array[$1::uuid, $2::uuid])", [beef, salt]);
     const reordered = asArr(await value("select public.erp_order_catalog_products(false)"));
     const next = reordered.map((row) => asJson(row).id);

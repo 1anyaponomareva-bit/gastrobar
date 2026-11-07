@@ -18,7 +18,7 @@ import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { methodLabel } from "./losses";
-import { POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
+import { categoryLabel, POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
@@ -59,8 +59,7 @@ const UNITS: ErpUnit[] = ["kg", "l", "pcs"];
 
 const lossTitle = () => T("Потери при обработке", "Processing losses", "Hao hụt khi sơ chế");
 
-const categoryName = (category: ErpCategory | undefined) =>
-  category ? `${category.name_en}${category.name_vn && category.name_vn !== category.name_en ? ` / ${category.name_vn}` : ""}` : "—";
+const categoryName = (category: ErpCategory | undefined) => categoryLabel(category);
 
 function productSuppliers(state: ErpState, product: ErpProduct): string[] {
   const ids = new Set(state.productPacks.filter((link) => link.product_id === product.id && link.supplier_id).map((link) => link.supplier_id!));

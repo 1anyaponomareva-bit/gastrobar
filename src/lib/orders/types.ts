@@ -61,6 +61,7 @@ export type OrderProduct = {
   brand: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  categoryNameVn?: string | null;
   unit: string;
   itemNo: string | null;
   /** ERP `product_code` only — not Staff itemNo. PDF SKU fallback when pack.code is empty. */

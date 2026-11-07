@@ -240,6 +240,7 @@ function productOf(raw: Json): OrderProduct {
     brand: optStr(pick(raw, "brand")),
     categoryId: optStr(pick(raw, "categoryId", "category_id")),
     categoryName: optStr(pick(raw, "categoryName", "category_name", "category")),
+    categoryNameVn: optStr(pick(raw, "categoryNameVn", "category_name_vn", "categoryVn", "category_vn")),
     unit: str(pick(raw, "unit", "base_unit")),
     itemNo: optStr(pick(raw, "itemNo", "item_no")),
     productCode: optStr(pick(raw, "productCode", "product_code")),

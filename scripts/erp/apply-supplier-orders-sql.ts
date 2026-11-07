@@ -43,6 +43,7 @@ const FILES = [
   "20261107170000_erp_order_pdf_pack_qty.sql",
   "20261107180000_erp_warehouse_contact.sql",
   "20261107190000_erp_order_receive_flag.sql",
+  "20261107200000_erp_order_catalog_category_vn.sql",
 ];
 
 async function main() {

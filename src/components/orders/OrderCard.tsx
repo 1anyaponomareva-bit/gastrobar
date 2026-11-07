@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder } from "@/lib/orders/api";
-import { formatOrderLineName } from "@/lib/orders/orderPdf";
+import { productDisplayName } from "@/lib/erp/productName";
 import { displayRemainingQty, formatQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
@@ -11,7 +11,7 @@ import { statusClass } from "./OrderHistoryList";
 import { useOrders } from "./OrdersShell";
 
 export function OrderCard({ orderId }: { orderId: string }) {
-  const { t } = useOrders();
+  const { t, lang } = useOrders();
   const [order, setOrder] = useState<SupplierOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +61,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
       <div className="orders-category">{t("lines_title")}</div>
       {order.lines.map((line) => (
         <div key={line.id ?? `${line.product_id}-${line.pack_id}`} className="orders-card">
-          <div className="orders-name">{formatOrderLineName({ nameEn: line.nameEn, nameVn: line.nameVn })}</div>
+          <div className="orders-name">{productDisplayName({ locale: lang, nameEn: line.nameEn, nameVn: line.nameVn })}</div>
           <div className="orders-meta">
             {[line.brand, line.packLabel, line.unit].filter(Boolean).join(" · ")}
           </div>

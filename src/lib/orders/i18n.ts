@@ -1,3 +1,5 @@
+import { productDisplayName } from "../erp/productName";
+
 export type OrdersLang = "ru" | "en" | "vn";
 
 export const ORDERS_LANGS: { code: OrdersLang; label: string }[] = [
@@ -494,6 +496,5 @@ export function ordersT(lang: OrdersLang, key: string, vars?: Record<string, str
 }
 
 export function productLabel(lang: OrdersLang, nameEn: string, nameVn: string): string {
-  if (lang === "vn") return (nameVn || nameEn).trim();
-  return (nameEn || nameVn).trim();
+  return productDisplayName({ locale: lang, nameEn, nameVn });
 }

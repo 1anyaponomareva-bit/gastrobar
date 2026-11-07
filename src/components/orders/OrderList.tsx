@@ -28,7 +28,7 @@ type Props = {
 };
 
 export function OrderList({ initialTab }: Props) {
-  const { t } = useOrders();
+  const { t, lang } = useOrders();
   const [products, setProducts] = useState<OrderProduct[] | null>(null);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
   const [warehouses, setWarehouses] = useState<OrderWarehouse[]>([]);
@@ -104,6 +104,7 @@ export function OrderList({ initialTab }: Props) {
         product.brand ?? "",
         product.itemNo ?? "",
         product.categoryName ?? "",
+        product.categoryNameVn ?? "",
         supplierName,
         ...packCodes,
       ].some((text) => text.toLowerCase().includes(query));
@@ -111,7 +112,7 @@ export function OrderList({ initialTab }: Props) {
     [search, suppliers],
   );
 
-  const categories = useMemo(() => catalogCategories(products ?? []), [products]);
+  const categories = useMemo(() => catalogCategories(products ?? [], lang), [products, lang]);
   const tabs = useMemo(() => supplierTabChips(suppliers, products ?? [], selection), [suppliers, products, selection]);
   const supplier = tab === ALL_SUPPLIER_TAB ? null : (suppliers.find((row) => row.id === tab) ?? null);
   const supplierItems = useMemo(() => {

@@ -5,9 +5,11 @@ import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import { translate } from "@/lib/i18n";
 import { archiveAdmin, getAdminCatalog, reorderAdminProducts, reorderAdminSuppliers, saveAdminProduct, saveAdminSupplier } from "@/lib/orders/api";
 import { defaultPackId, reorderSubset, sortCatalogProducts } from "@/lib/orders/orderList";
+import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
 import type { OrderProduct, OrderSupplier } from "@/lib/orders/types";
 import { useDragReorder } from "@/lib/useDragReorder";
+import { useOrders } from "./OrdersShell";
 import "@/components/staff/staff-inventory.css";
 import "@/components/recipes/recipes.css";
 import "@/components/staff/staff-admin.css";
@@ -143,6 +145,7 @@ export function OrdersAdminApp() {
 }
 
 function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout: () => void; onExpired: () => void }) {
+  const { lang } = useOrders();
   const [products, setProducts] = useState<OrderProduct[]>([]);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
   const [tab, setTab] = useState<Tab>("items");
@@ -278,10 +281,7 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
           onCommit={commitProductOrder}
           render={(product) => (
             <button type="button" className={`staffAdminRow ${product.hidden ? "isHidden" : ""}`} onClick={() => setEditingProduct(product)}>
-              <b>
-                {product.nameEn}
-                {product.nameVn && product.nameVn !== product.nameEn ? ` / ${product.nameVn}` : ""}
-              </b>
+              <b>{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</b>
               <span>
                 {[
                   suppliers.find((row) => row.id === product.supplierId)?.name,

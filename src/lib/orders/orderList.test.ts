@@ -122,6 +122,25 @@ test("supplier tab filters catalog to that supplier; All keeps every row", () =>
   );
 });
 
+test("category chips follow the language switcher: RU/EN English, VN Vietnamese", () => {
+  const products = [
+    { id: "butter", categoryId: "dairy", categoryName: "Dairy Products & Eggs", categoryNameVn: "Sữa và trứng" },
+    { id: "beer", categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "" },
+  ];
+  assert.deepEqual(
+    catalogCategories(products, "ru").map((row) => row.name),
+    ["Dairy Products & Eggs", "Alcohol"],
+  );
+  assert.deepEqual(
+    catalogCategories(products, "en").map((row) => row.name),
+    ["Dairy Products & Eggs", "Alcohol"],
+  );
+  assert.deepEqual(
+    catalogCategories(products, "vn").map((row) => row.name),
+    ["Sữa và trứng", "Alcohol"],
+  );
+});
+
 test("All tab groups by category; selected yellow rows stay in their group", () => {
   const products = [
     { id: "beer", categoryId: "alc", categoryName: "Alcohol / Rượu", supplierId: "mm" },

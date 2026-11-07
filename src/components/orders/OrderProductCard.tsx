@@ -1,6 +1,6 @@
 "use client";
 
-import { formatOrderLineName } from "@/lib/orders/orderPdf";
+import { productDisplayName } from "@/lib/erp/productName";
 import {
   defaultPackId,
   isMarkedQty,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/orders/orderList";
 import type { OrderProduct } from "@/lib/orders/types";
 import { QtyField } from "./QtyField";
+import { useOrders } from "./OrdersShell";
 
 type Props = {
   product: OrderProduct;
@@ -34,6 +35,7 @@ export function OrderProductCard({
   onQty,
   onPack,
 }: Props) {
+  const { lang } = useOrders();
   const current = row ?? { packId: defaultPackId(product), qty: "" };
   const pack = packOf(product, current.packId);
   const marked = isMarkedQty(current.qty);
@@ -48,7 +50,7 @@ export function OrderProductCard({
 
   return (
     <div className={`orders-card ${marked ? "marked" : ""}`}>
-      <div className="orders-name">{formatOrderLineName({ nameEn: product.nameEn, nameVn: product.nameVn })}</div>
+      <div className="orders-name">{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</div>
       {details ? <div className="orders-meta">{details}</div> : null}
       {product.packs.length > 1 ? (
         <div className="orders-field" style={{ margin: "8px 0" }}>
