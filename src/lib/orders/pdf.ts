@@ -2,6 +2,7 @@ export {
   asciiFileLabel,
   formatOrderLineName,
   formatOrderPdfDate,
+  formatOrderPdfQtyCell,
   formatOrderQty,
   getOrderPdfFileName,
   makeOrderPdfBlob,

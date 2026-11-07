@@ -3,7 +3,7 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import {
   formatOrderLineName,
   formatOrderPdfDate,
-  formatOrderQty,
+  formatOrderPdfQtyCell,
   getOrderPdfFileName,
   orderPdfCacheKey,
   orderPdfLineCode,
@@ -20,6 +20,7 @@ export {
   asciiFileLabel,
   formatOrderLineName,
   formatOrderPdfDate,
+  formatOrderPdfQtyCell,
   formatOrderQty,
   getOrderPdfFileName,
   orderPdfCacheKey,
@@ -302,8 +303,7 @@ function drawOrderRow(ctx: PdfContext, line: OrderPdfLine, index: number) {
   const brand = String(line.brand ?? "").replace(/\s+/g, " ").trim();
   const pack = String(line.packLabel ?? "").replace(/\s+/g, " ").trim();
   const code = orderPdfLineCode(line.packCode);
-  const unit = String(line.unit ?? "").replace(/\s+/g, " ").trim();
-  const qtyText = `${formatOrderQty(line.qty)}${unit ? ` ${unit}` : ""}`;
+  const qtyText = formatOrderPdfQtyCell(line);
   const bilingual = formatOrderLineName(line);
 
   const nameLines = wrapText(nameEn || bilingual, ctx.fontBold, 11, ITEM_WIDTH);

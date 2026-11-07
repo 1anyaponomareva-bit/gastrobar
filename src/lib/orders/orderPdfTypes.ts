@@ -66,6 +66,12 @@ export function formatOrderQty(qty: number): string {
   return String(rounded);
 }
 
+/** QTY cell: ordered pack count + pack unit (`2 box`), never converted stock kg/l. */
+export function formatOrderPdfQtyCell(line: Pick<OrderPdfLine, "qty" | "unit">): string {
+  const unit = String(line.unit ?? "").replace(/\s+/g, " ").trim();
+  return `${formatOrderQty(line.qty)}${unit ? ` ${unit}` : ""}`;
+}
+
 export function orderPdfLines(input: OrderPdfInput): OrderPdfLine[] {
   return (input.lines ?? []).filter((line) => Number(line.qty) > 0);
 }

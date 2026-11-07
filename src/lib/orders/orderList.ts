@@ -238,7 +238,7 @@ export function supplierPrintPdfInput(
         brand: product.brand ?? "",
         packLabel: pack?.label ?? "",
         packCode: orderPdfLineCode(pack?.code, product.productCode),
-        unit: pack?.unit || product.unit,
+        unit: pack ? orderPackUnit(pack, product.unit) : product.unit,
         qty: parseQty(row?.qty),
       };
     }),

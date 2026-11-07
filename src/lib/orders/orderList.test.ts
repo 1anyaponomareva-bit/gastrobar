@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
-import { getOrderPdfFileName, orderPdfLineCode, orderPdfTitle } from "./orderPdfTypes";
+import { formatOrderPdfQtyCell, getOrderPdfFileName, orderPdfLineCode, orderPdfTitle } from "./orderPdfTypes";
 import {
   ALL_SUPPLIER_TAB,
   catalogCategories,
@@ -188,7 +188,7 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
         id: "p1",
         pack_id: "p1",
         label: "Pack 24*330 ml",
-        unit: "pack",
+        unit: "l",
         qty_base: 7.92,
         is_default: true,
         code: "259043",
@@ -204,6 +204,16 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
     itemNo: "STAFF-SALT",
     productCode: "SALT-1",
     packs: [{ id: "p2", pack_id: "p2", label: "1 kg", unit: "kg", qty_base: 1, is_default: true, code: null }],
+  };
+  const butter: OrderProduct = {
+    ...beer,
+    id: "butter",
+    nameEn: "Butter",
+    nameVn: "Bơ",
+    brand: "Allowrie",
+    unit: "kg",
+    productCode: "BUTTER-1",
+    packs: [{ id: "p3", pack_id: "p3", label: "box 5 kg", unit: "kg", qty_base: 5, is_default: true, code: "234468" }],
   };
   const selection: SelectionMap = {
     beer: { packId: "p1", qty: "2" },
@@ -228,13 +238,25 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
     unit: "pack",
     qty: 2,
   });
-  const saltOnly = supplierPrintPdfInput([salt], { salt: { packId: "p2", qty: "1" } }, {
+  assert.equal(formatOrderPdfQtyCell(input!.lines[0]), "2 pack");
+  assert.notEqual(formatOrderPdfQtyCell({ qty: 2, unit: beer.unit }), "2 pack");
+  const saltOnly = supplierPrintPdfInput([salt], { salt: { packId: "p2", qty: "3" } }, {
     orderNo: "ORD-1",
     supplierName: "MM",
     orderedAt: "2026-11-07",
   });
   assert.equal(saltOnly!.lines[0].packCode, "SALT-1");
   assert.equal(saltOnly!.lines[0].nameVn, "Muối");
+  assert.equal(formatOrderPdfQtyCell(saltOnly!.lines[0]), "3 kg");
+  const twoBoxes = supplierPrintPdfInput([butter], { butter: { packId: "p3", qty: "2" } }, {
+    orderNo: "ORD-2",
+    supplierName: "MM",
+    orderedAt: "2026-11-07",
+  });
+  assert.equal(twoBoxes!.lines[0].qty, 2);
+  assert.equal(twoBoxes!.lines[0].unit, "box");
+  assert.equal(formatOrderPdfQtyCell(twoBoxes!.lines[0]), "2 box");
+  assert.notEqual(formatOrderPdfQtyCell({ qty: 2 * 5, unit: "kg" }), "2 box");
   const fileName = getOrderPdfFileName(input!);
   assert.equal(fileName, "Order_MM_2026-11-07.pdf");
   assert.doesNotMatch(fileName, /rev|_r\d/i);

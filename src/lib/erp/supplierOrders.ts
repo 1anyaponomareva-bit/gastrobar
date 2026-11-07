@@ -20,6 +20,7 @@ import {
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "@/lib/orders/orderPdf";
+import { orderPackUnit } from "@/lib/orders/orderList";
 import { resolvePublicOrdersActor, type OrdersAccess } from "@/lib/orders/access";
 
 if (typeof window !== "undefined") throw new Error("erp/supplierOrders is server-only");
@@ -286,13 +287,15 @@ export function asOrderPdfInput(value: unknown): OrderPdfInput {
     comment: row.comment == null ? undefined : String(row.comment),
     lines: lines.map((line) => {
       const item = jsonObject(line, "line");
+      const packLabel = String(item.packLabel ?? "");
+      const fallbackUnit = String(item.unit ?? "");
       return {
         nameEn: String(item.nameEn ?? ""),
         nameVn: String(item.nameVn ?? ""),
         brand: String(item.brand ?? ""),
-        packLabel: String(item.packLabel ?? ""),
+        packLabel,
         packCode: item.packCode == null ? undefined : String(item.packCode),
-        unit: String(item.unit ?? ""),
+        unit: orderPackUnit({ label: packLabel, unit: fallbackUnit }, fallbackUnit),
         qty: Number(item.qty) || 0,
       };
     }),

@@ -8,6 +8,7 @@ import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
 import { PDFDocument } from "pdf-lib";
 import {
+  formatOrderPdfQtyCell,
   getOrderPdfFileName,
   makeOrderPdfBlob,
   orderPdfTitle,
@@ -258,7 +259,7 @@ async function main() {
         brand: "TestBrand",
         packLabel: "bag 1 kg",
         packCode: "BEEF-PACK",
-        unit: "kg",
+        unit: "bag",
         qty: 10,
       },
     );
@@ -266,6 +267,7 @@ async function main() {
     assert.match(file1, /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     assert.doesNotMatch(file1, /_r\d/);
     assert.doesNotMatch(orderPdfTitle(snap), /\br\d\b|rev /i);
+    assert.equal(formatOrderPdfQtyCell(snap.lines[0]), "10 bag");
     const blob = await makeOrderPdfBlob(snap);
     const pdf = await PDFDocument.load(await blob.arrayBuffer());
     assert.equal(pdf.getSubject(), "revision=1");
@@ -540,6 +542,35 @@ async function main() {
     await j("select public.erp_order_close_remainder($1, $2, $3, $4::jsonb, true)", [first.id, "admin leftover", ADMIN, null]);
     const closed = await j("select public.erp_order_get($1, $2, true)", [first.id, ADMIN]);
     assert.equal(closed.status, "closed");
+  });
+
+  await test("PDF qty is ordered packs (2 box), not converted stock liters", async () => {
+    const milk = await saveProduct({
+      type: "ingredient",
+      name_en: "Order oat milk",
+      name_vn: "Sữa yến mạch",
+      base_unit: "l",
+    });
+    await q(
+      "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default, code) values ($1, $2, 'box 12*1 L', 12, true, 'OAT-BOX')",
+      [milk, supplier],
+    );
+    const milkDraft = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({
+        warehouseId: prep,
+        lines: [{ product_id: milk, packQty: 2, qty: 2 }],
+      }),
+      ACTOR,
+    ]);
+    const pdf = await j("select public.erp_order_pdf_revision($1, $2)", [milkDraft.id, ACTOR]);
+    const line = asJson(asArr(asJson(pdf.snapshot).lines)[0]);
+    assert.equal(line.packLabel, "box 12*1 L");
+    assert.equal(line.packCode, "OAT-BOX");
+    assert.equal(line.unit, "box");
+    assert.equal(n(line.qty), 2);
+    assert.equal(formatOrderPdfQtyCell({ qty: Number(line.qty), unit: String(line.unit) }), "2 box");
+    assert.notEqual(n(line.qty), 24);
   });
 
   console.log(`\n${passed} passed (PGlite only, no production SQL)`);
