@@ -14,3 +14,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ supp
     return saveDraft((await params).supplierId, body, actor.email);
   });
 }
+
+/** Same as PUT: public kitchen actor, no gf_orders cookie. Some browsers/WAFs drop PUT. */
+export async function POST(request: Request, context: { params: Promise<{ supplierId: string }> }) {
+  return PUT(request, context);
+}

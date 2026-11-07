@@ -231,6 +231,22 @@ async function main() {
     assert.equal(n(asJson(asArr(again.lines)[0]).qty), 10);
   });
 
+  await test("public kitchen actor can save a draft without a login cookie", async () => {
+    const kitchen = "kitchen@gastrofood";
+    const saved = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({ warehouseId: prep, lines: [{ product_id: beef, qty: 1 }] }),
+      kitchen,
+    ]);
+    assert.ok(saved.id);
+    assert.equal(saved.status, "draft");
+    assert.equal(saved.author, kitchen);
+    assert.notEqual(saved.id, draft.id);
+    const again = await j("select public.erp_order_get_draft($1, $2)", [supplier, kitchen]);
+    assert.equal(again.id, saved.id);
+    assert.equal(asArr(again.lines).length, 1);
+  });
+
   await test("PDF download bumps revision, freezes OrderPdfInput, does not place", async () => {
     const first = await j("select public.erp_order_pdf_revision($1, $2)", [draft.id, ACTOR]);
     assert.equal(first.status, "draft");

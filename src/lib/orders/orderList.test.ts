@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
+import { decideErpHostGate, productionErpHostEnv, readErpHostGateConfig } from "../erp/hostGate";
 import { formatOrderPdfQtyCell, getOrderPdfFileName, orderPdfLineCode, orderPdfTitle } from "./orderPdfTypes";
 import {
   ALL_SUPPLIER_TAB,
@@ -279,4 +280,24 @@ test("orders list is public; admin cookie is the only catalog editor", () => {
   });
   assert.equal(resolvePublicOrdersActor(null, "cook@gastrofood").erpAdmin, false);
   assert.equal(resolvePublicOrdersActor(null, "cook@gastrofood").public, false);
+});
+
+test("draft save is allowed without gf_orders cookie as the kitchen actor", () => {
+  const actor = resolvePublicOrdersActor(null, null);
+  assert.equal(actor.email, KITCHEN_ORDERS_ACTOR);
+  assert.equal(actor.public, true);
+  assert.equal(actor.erpAdmin, false);
+  const cfg = readErpHostGateConfig(productionErpHostEnv({}));
+  for (const method of ["GET", "PUT", "POST"]) {
+    const result = decideErpHostGate(
+      {
+        hostHeader: "www.gastrofood.vn",
+        pathname: "/api/orders/drafts/729e2699-1db3-492b-8a14-e98286c38781",
+        search: "",
+        method,
+      },
+      cfg,
+    );
+    assert.equal(result.action, "allow", `${method} drafts must pass the gastrofood host gate`);
+  }
 });

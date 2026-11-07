@@ -96,6 +96,18 @@ function listOf<T>(data: unknown, keys: string[], map: (row: Json) => T): T[] {
   return [];
 }
 
+function isAbortError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "AbortError";
+}
+
+/** Genuine transport failure: fetch threw TypeError, not HTTP 4xx/5xx and not abort. */
+export function isOrdersNetworkError(error: unknown): boolean {
+  if (isAbortError(error)) return false;
+  if (error instanceof OrdersApiError) return error.code === "network";
+  if (error instanceof TypeError) return true;
+  return error instanceof Error && error.name === "TypeError";
+}
+
 async function request(
   path: string,
   init?: RequestInit,
@@ -111,8 +123,12 @@ async function request(
         ...(init?.headers ?? {}),
       },
     });
-  } catch {
-    throw new OrdersApiError(0, "network", "Failed to fetch");
+  } catch (error) {
+    if (isAbortError(error)) throw new OrdersApiError(0, "aborted");
+    if (error instanceof TypeError || (error instanceof Error && error.name === "TypeError")) {
+      throw new OrdersApiError(0, "network", "Failed to fetch");
+    }
+    throw new OrdersApiError(0, "server", error instanceof Error ? error.message : undefined);
   }
 
   const contentType = response.headers.get("content-type") ?? "";
@@ -124,7 +140,9 @@ async function request(
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const body = asRecord(data);
-    throw new OrdersApiError(response.status, str(body.error ?? body.code, "server"), optStr(body.detail ?? body.message) ?? undefined);
+    const code = str(body.error ?? body.code, `HTTP ${response.status}`);
+    const detail = optStr(body.detail ?? body.message) ?? (body.error || body.code ? undefined : `HTTP ${response.status}`);
+    throw new OrdersApiError(response.status, code, detail);
   }
   return { status: response.status, data, blob: null, contentType, headers: response.headers };
 }
@@ -135,9 +153,10 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function errorMessage(error: unknown, networkText: string, genericText: string): string {
+  if (isOrdersNetworkError(error)) return networkText;
   if (error instanceof OrdersApiError) {
-    if (error.status === 0 || error.code === "network") return networkText;
     if (error.detail && error.detail !== "Failed to fetch") return error.detail;
+    if (error.code && error.code !== "server" && error.code !== "network" && error.code !== "aborted") return error.code;
   }
   return genericText;
 }
@@ -513,12 +532,15 @@ export async function getDraft(supplierId: string): Promise<OrderDraft> {
   }
 }
 
+/** POST is the public /orders write; PUT stays accepted for older clients. */
+export const DRAFT_SAVE_METHOD = "POST";
+
 export async function saveDraft(
   supplierId: string,
   draft: Pick<OrderDraft, "warehouseId" | "comment" | "expectedDelivery" | "lines">,
 ): Promise<OrderDraft> {
   const data = await json(`/api/orders/drafts/${encodeURIComponent(supplierId)}`, {
-    method: "PUT",
+    method: DRAFT_SAVE_METHOD,
     body: JSON.stringify({
       warehouseId: draft.warehouseId,
       warehouse_id: draft.warehouseId,

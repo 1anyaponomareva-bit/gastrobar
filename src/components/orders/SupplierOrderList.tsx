@@ -65,6 +65,7 @@ export function SupplierOrderList({
   const [orderedRevision, setOrderedRevision] = useState<number | null>(null);
   const [placedId, setPlacedId] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
+  const persistGen = useRef(0);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const onSelectionRef = useRef(onSelection);
@@ -75,6 +76,7 @@ export function SupplierOrderList({
   const persist = useCallback(
     async (nextSelection?: SelectionMap) => {
       if (nextSelection) selectionRef.current = nextSelection;
+      const gen = ++persistGen.current;
       setSaveState("saving");
       try {
         const saved = await saveDraft(supplier.id, {
@@ -83,10 +85,13 @@ export function SupplierOrderList({
           expectedDelivery: expectedDelivery || null,
           lines: selectionDraftLines(products, selectionRef.current),
         });
+        if (gen !== persistGen.current) return saved;
         setDraft(saved);
         setSaveState("saved");
+        setActionError(null);
         return saved;
       } catch (err) {
+        if (gen !== persistGen.current) return null;
         setSaveState("error");
         setActionError(errorMessage(err, t("error_network"), t("error_save")));
         return null;
@@ -218,6 +223,8 @@ export function SupplierOrderList({
     setActionError(null);
     setPdfBusy(true);
     try {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      const saved = await persist();
       const prepared = preparedPdf.current;
       const blob =
         prepared?.key === pdfKey ? await prepared.promise : await makeOrderPdfBlob(pdfInput);
@@ -232,10 +239,9 @@ export function SupplierOrderList({
         setActionError(t("error_pdf"));
         return;
       }
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      void persist()
-        .then((saved) => (saved?.id ? freezeDraftPdf(supplier.id) : null))
-        .catch(() => null);
+      if (saved?.id) {
+        void freezeDraftPdf(supplier.id).catch(() => null);
+      }
     } catch (err) {
       setActionError(errorMessage(err, t("error_network"), t("error_pdf")));
     } finally {
@@ -349,6 +355,11 @@ export function SupplierOrderList({
 
       <div className="orders-stickyActions">
         <div className="orders-actions">
+          {saveState === "error" ? (
+            <button type="button" className="orders-btn dark block" onClick={() => void persist()} disabled={pdfBusy}>
+              {t("save_retry")}
+            </button>
+          ) : null}
           <button type="button" className="orders-btn primary block" onClick={() => void handlePdf()} disabled={pdfBusy}>
             {pdfBusy ? t("pdf_sharing") : t("pdf_print")}
           </button>
