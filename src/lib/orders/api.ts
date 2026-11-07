@@ -194,6 +194,7 @@ function snapshot(raw: Json): OrderLineSnapshot {
     qtyBase: optNum(pick(raw, "qtyBase", "qty_base")),
     packQty: optNum(pick(raw, "packQty", "pack_qty")),
     packQtyBase: optNum(pick(raw, "packQtyBase", "pack_qty_base")) ?? optNum(pick(raw, "qtyBase", "qty_base")),
+    baseUnit: optStr(pick(raw, "baseUnit", "base_unit")),
     unitPrice: pick(raw, "unitPrice", "unit_price") === null ? null : optNum(pick(raw, "unitPrice", "unit_price")),
   };
 }

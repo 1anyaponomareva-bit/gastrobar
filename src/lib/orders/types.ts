@@ -18,6 +18,8 @@ export type OrderLineSnapshot = {
   qtyBase?: number | null;
   packQty?: number | null;
   packQtyBase?: number | null;
+  /** Product accounting unit (kg, l, …), not the pack word box/pack. */
+  baseUnit?: string | null;
   unitPrice?: number | null;
 };
 

@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { displayRemainingQty, formatQty, openReceiveQty, parseQty, sumDisplayRemaining } from "./qty";
+import {
+  displayRemainingQty,
+  formatQty,
+  openReceiveQty,
+  parseDotQty,
+  parseQty,
+  receiveActualBaseQty,
+  receiveLineUnits,
+  sanitizeDotDecimal,
+  sumDisplayRemaining,
+} from "./qty";
 
 test("parseQty accepts comma decimals", () => {
   assert.equal(parseQty("1,5"), 1.5);
@@ -35,6 +45,19 @@ test("full receive and post leaves Осталось at 0", () => {
 test("closed underdelivery does not show leftover after post", () => {
   const closed = { orderedQty: 10, acceptedQty: 6, postedQty: 6, remainingQty: 0 };
   assert.equal(displayRemainingQty(closed), 0);
+});
+
+test("receive other qty accepts a dot and rejects a comma", () => {
+  assert.equal(sanitizeDotDecimal("1.5"), "1.5");
+  assert.equal(sanitizeDotDecimal("1.2.3"), "1.23");
+  assert.equal(parseDotQty("1.5"), 1.5);
+  assert.equal(parseDotQty("1,5"), 0);
+  assert.equal(parseQty("1,5"), 1.5);
+  assert.equal(receiveActualBaseQty({ mode: "as_ordered", remainingQty: 40, actualText: "" }), 40);
+  assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35.5" }), 35.5);
+  assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35,5" }), 0);
+  assert.deepEqual(receiveLineUnits("kg"), ["kg"]);
+  assert.deepEqual(receiveLineUnits("l"), ["l"]);
 });
 
 test("over-qty receive does not create leftover without a post", () => {

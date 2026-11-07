@@ -5,33 +5,31 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
-import { formatOrderLineQty, orderLineDisplayCount, orderLineDisplayUnit } from "@/lib/orders/orderList";
-import { formatQty, parseQty } from "@/lib/orders/qty";
-import type { DiscrepancyKind, OrderPhoto, ReceiveLineInput, SupplierOrder } from "@/lib/orders/types";
+import { formatOrderLineQty } from "@/lib/orders/orderList";
+import { parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
+import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 import { QtyField } from "./QtyField";
 
-const KINDS: DiscrepancyKind[] = ["none", "short", "over", "substitute", "other"];
 const MAX_PHOTO = 6 * 1024 * 1024;
 
-type LineState = Omit<ReceiveLineInput, "actualQty"> & {
-  actualText: string;
-  unit: string;
+type LineState = {
+  orderLineId: string;
+  product_id: string;
+  pack_id: string | null;
   nameEn: string;
   nameVn: string;
   packLabel: string;
+  unit: string;
   remainingQty: number;
   packQty?: number | null;
   packQtyBase?: number | null;
+  baseUnit: string;
+  mode: ReceiveMode;
+  actualText: string;
+  actualUnit: string;
 };
-
-function kindFor(actual: number, remaining: number): DiscrepancyKind {
-  if (!(actual > 0)) return "none";
-  if (actual < remaining) return "short";
-  if (actual > remaining) return "over";
-  return "none";
-}
 
 export function ReceiveForm({ orderId }: { orderId: string }) {
   const { t } = useOrders();
@@ -39,7 +37,6 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<SupplierOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lines, setLines] = useState<LineState[]>([]);
-  const [comment, setComment] = useState("");
   const [photos, setPhotos] = useState<OrderPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -54,21 +51,26 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
       setLines(
         loaded.lines
           .filter((line) => line.remainingQty > 0)
-          .map((line) => ({
-            orderLineId: line.id ?? line.product_id,
-            product_id: line.product_id,
-            pack_id: line.pack_id,
-            actualText: formatQty(orderLineDisplayCount(line.remainingQty, line)),
-            discrepancyKind: "none",
-            discrepancyNote: null,
-            unit: orderLineDisplayUnit(line),
-            nameEn: line.nameEn,
-            nameVn: line.nameVn,
-            packLabel: line.packLabel,
-            remainingQty: line.remainingQty,
-            packQty: line.packQty,
-            packQtyBase: line.packQtyBase,
-          })),
+          .map((line) => {
+            const units = receiveLineUnits(line.baseUnit);
+            const baseUnit = units[0] || line.baseUnit || "";
+            return {
+              orderLineId: line.id ?? line.product_id,
+              product_id: line.product_id,
+              pack_id: line.pack_id,
+              nameEn: line.nameEn,
+              nameVn: line.nameVn,
+              packLabel: line.packLabel,
+              unit: line.unit,
+              remainingQty: line.remainingQty,
+              packQty: line.packQty,
+              packQtyBase: line.packQtyBase,
+              baseUnit,
+              mode: "as_ordered" as const,
+              actualText: "",
+              actualUnit: baseUnit,
+            };
+          }),
       );
     } catch (err) {
       setOrder(null);
@@ -106,27 +108,30 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
 
   const submit = async () => {
     if (busy || !order) return;
-    const filled = lines.filter((line) => parseQty(line.actualText) > 0);
-    if (!filled.length) {
-      setSubmitError(t("place_need_lines"));
+    const invalidOther = lines.some((line) => line.mode === "other" && !(parseDotQty(line.actualText) > 0));
+    if (invalidOther) {
+      setSubmitError(t("receive_need_qty"));
       return;
     }
     if (!window.confirm(t("receive_confirm"))) return;
-    // TEMPORARY: receiveOrder only flags the order. It does not create a поставка.
     setSubmitError(null);
     setBusy(true);
     try {
       const saved = await receiveOrder(order.id, {
         idempotencyKey,
-        comment,
+        comment: "",
         photos,
-        lines: filled.map((line) => ({
+        lines: lines.map((line) => ({
           orderLineId: line.orderLineId,
           product_id: line.product_id,
           pack_id: line.pack_id,
-          actualQty: parseQty(line.actualText),
-          discrepancyKind: line.discrepancyKind === "none" ? kindFor(parseQty(line.actualText), line.remainingQty) : line.discrepancyKind,
-          discrepancyNote: line.discrepancyNote,
+          actualQty: receiveActualBaseQty({
+            mode: line.mode,
+            remainingQty: line.remainingQty,
+            actualText: line.actualText,
+          }),
+          discrepancyKind: line.mode === "other" ? "other" : "none",
+          discrepancyNote: null,
         })),
       });
       router.push(`/orders/${saved.id}`);
@@ -150,56 +155,64 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
         {t("receive_title")}
       </h2>
       <p className="orders-note">{t("receive_lead")}</p>
-      <div className="orders-banner warn">{t("receive_stock_hint")}</div>
       {order.clarifyReason ? <div className="orders-banner warn">{t("clarify_banner", { reason: order.clarifyReason })}</div> : null}
       {submitError ? <div className="orders-banner error">{submitError}</div> : null}
       {photoError ? <div className="orders-banner error">{photoError}</div> : null}
 
-      {lines.map((line, index) => (
-        <div key={line.orderLineId} className="orders-card">
-          <div className="orders-name">{formatOrderLineName({ nameEn: line.nameEn, nameVn: line.nameVn })}</div>
-          <div className="orders-meta">
-            {line.packLabel} · {t("qty_remaining")} {formatOrderLineQty(line.remainingQty, { orderedQty: line.remainingQty, packLabel: line.packLabel, unit: line.unit, packQty: line.packQty, packQtyBase: line.packQtyBase })}
-          </div>
-          <QtyField
-            label={t("actual_qty")}
-            unit={line.unit}
-            value={line.actualText}
-            onChange={(value) => {
-              patchLine(index, { actualText: value, discrepancyKind: kindFor(parseQty(value), line.remainingQty) });
-            }}
-          />
-          <div className="orders-field" style={{ marginTop: 8 }}>
-            <label>{t("discrepancy")}</label>
-            <select
-              className="orders-select"
-              value={line.discrepancyKind}
-              onChange={(event) => patchLine(index, { discrepancyKind: event.target.value as DiscrepancyKind })}
-            >
-              {KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {t(`discrepancy_${kind}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {line.discrepancyKind !== "none" ? (
-            <div className="orders-field" style={{ marginTop: 8 }}>
-              <label>{t("discrepancy_note")}</label>
-              <textarea
-                className="orders-textarea"
-                value={line.discrepancyNote ?? ""}
-                onChange={(event) => patchLine(index, { discrepancyNote: event.target.value || null })}
-              />
+      {lines.map((line, index) => {
+        const units = receiveLineUnits(line.baseUnit);
+        return (
+          <div key={line.orderLineId} className="orders-card">
+            <div className="orders-name">{formatOrderLineName({ nameEn: line.nameEn, nameVn: line.nameVn })}</div>
+            <div className="orders-meta">
+              {line.packLabel} · {t("qty_ordered")}{" "}
+              {formatOrderLineQty(line.remainingQty, {
+                orderedQty: line.remainingQty,
+                packLabel: line.packLabel,
+                unit: line.unit,
+                packQty: line.packQty,
+                packQtyBase: line.packQtyBase,
+              })}
             </div>
-          ) : null}
-        </div>
-      ))}
-
-      <div className="orders-field" style={{ margin: "12px 0" }}>
-        <label>{t("comment")}</label>
-        <textarea className="orders-textarea" value={comment} onChange={(event) => setComment(event.target.value)} />
-      </div>
+            <div className="orders-field" style={{ marginTop: 8 }}>
+              <label>{t("actual_qty")}</label>
+              <select
+                className="orders-select"
+                value={line.mode}
+                onChange={(event) => patchLine(index, { mode: event.target.value as ReceiveMode, actualText: "" })}
+              >
+                <option value="as_ordered">{t("discrepancy_none")}</option>
+                <option value="other">{t("discrepancy_other")}</option>
+              </select>
+            </div>
+            {line.mode === "other" ? (
+              <>
+                <div className="orders-field" style={{ marginTop: 8 }}>
+                  <label>{t("receive_unit")}</label>
+                  <select
+                    className="orders-select"
+                    value={line.actualUnit}
+                    onChange={(event) => patchLine(index, { actualUnit: event.target.value })}
+                  >
+                    {units.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <QtyField
+                  label={t("actual_qty")}
+                  unit={line.actualUnit}
+                  value={line.actualText}
+                  dotOnly
+                  onChange={(value) => patchLine(index, { actualText: value })}
+                />
+              </>
+            ) : null}
+          </div>
+        );
+      })}
 
       <div className="orders-field">
         <label>{t("invoice_photo")}</label>
@@ -221,12 +234,7 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
       ) : null}
 
       <div className="orders-stickyActions">
-        <button
-          type="button"
-          className="orders-btn primary block"
-          disabled={busy}
-          onClick={() => void submit()}
-        >
+        <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
           {busy ? t("submitting") : t("submit_receive")}
         </button>
       </div>

@@ -16,6 +16,34 @@ export function isPositiveQty(value: string | number | null | undefined): boolea
   return parseQty(value) > 0;
 }
 
+export type ReceiveMode = "as_ordered" | "other";
+
+/** Receive “other” qty: comma is not a decimal. Typing "," must not enter a number. */
+export function sanitizeDotDecimal(raw: string): string {
+  const cleaned = String(raw ?? "").replace(/[^\d.]/g, "");
+  const first = cleaned.indexOf(".");
+  if (first === -1) return cleaned;
+  return cleaned.slice(0, first + 1) + cleaned.slice(first + 1).replace(/\./g, "");
+}
+
+export function parseDotQty(value: string | number | null | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const text = String(value ?? "");
+  if (text.includes(",")) return 0;
+  const parsed = parseFloat(sanitizeDotDecimal(text));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function receiveActualBaseQty(input: { mode: ReceiveMode; remainingQty: number; actualText: string }): number {
+  if (input.mode === "as_ordered") return Math.max(0, input.remainingQty);
+  return parseDotQty(input.actualText);
+}
+
+export function receiveLineUnits(baseUnit: string | null | undefined): string[] {
+  const unit = (baseUnit ?? "").trim();
+  return unit ? [unit] : [];
+}
+
 export function lineKey(productId: string, packId: string | null | undefined): string {
   return `${productId}::${packId ?? ""}`;
 }

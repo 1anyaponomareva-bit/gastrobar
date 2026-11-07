@@ -728,6 +728,18 @@ async function main() {
       "2 box",
       "order card must not show 40 box",
     );
+    assert.equal(meatLine.baseUnit, "kg");
+    const got = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
+      placedMeat.id,
+      JSON.stringify({
+        idempotencyKey: "recv-other-kg",
+        lines: [{ orderLineId: meatLine.id, qty: 35.5 }],
+      }),
+      ACTOR,
+    ]);
+    const gotLine = asJson(asArr(got.lines)[0]);
+    assert.equal(n(gotLine.acceptedQty), 35.5, "other qty is kg as typed, not 35.5 boxes × 20");
+    assert.equal(n(gotLine.remainingQty), 4.5);
   });
 
   console.log(`\n${passed} passed (PGlite only, no production SQL)`);
