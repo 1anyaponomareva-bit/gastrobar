@@ -3079,7 +3079,11 @@ async function main() {
     await saveProduct({ id: a, type: "ingredient", name_en: "Article A", base_unit: "kg" });
     assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [a])).product_code, "ART-1");
     await saveProduct({ id: a, type: "ingredient", name_en: "Article A", base_unit: "kg", product_code: "   " });
-    assert.equal((await one<{ product_code: string | null }>("select product_code from public.erp_products where id = $1", [a])).product_code, null);
+    assert.equal(
+      (await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [a])).product_code,
+      "ART-1",
+      "empty product_code on save must not wipe the stored kitchen SKU",
+    );
   });
 
   await test("ingredient card save omits product_code and keeps pack SKU", async () => {
@@ -3100,6 +3104,40 @@ async function main() {
     });
     assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [id])).product_code, "LEGACY");
     assert.equal((await one<{ code: string }>("select code from public.erp_product_packs where product_id = $1 and archived_at is null", [id])).code, "LNU500");
+  });
+
+  await test("legacy product_code fills empty pack SKUs only", async () => {
+    const cup = await savePack({ name: "Backfill cup box", unit: "pcs", qty_base: 1000 });
+    const extra = await savePack({ name: "Backfill extra box", unit: "pcs", qty_base: 500 });
+    const id = await saveProduct({
+      type: "ingredient",
+      name_en: "Backfill cup",
+      base_unit: "pcs",
+      product_code: "LNU500",
+      packs: [
+        { pack_id: cup, label: "Backfill cup box", qty_base: 1000, is_default: true, code: "KEEP-ME" },
+        { pack_id: extra, label: "Backfill extra box", qty_base: 500, is_default: false },
+      ],
+    });
+    await q(
+      `update public.erp_product_packs k
+       set code = btrim(p.product_code)
+       from public.erp_products p
+       where k.product_id = p.id
+         and (k.code is null or btrim(k.code) = '')
+         and p.product_code is not null
+         and btrim(p.product_code) <> ''
+         and p.id = $1`,
+      [id],
+    );
+    const rows = await q<{ label: string; code: string | null }>(
+      "select label, code from public.erp_product_packs where product_id = $1 and archived_at is null order by label",
+      [id],
+    );
+    assert.deepEqual(rows, [
+      { label: "Backfill cup box", code: "KEEP-ME" },
+      { label: "Backfill extra box", code: "LNU500" },
+    ]);
   });
 
   await test("pack link code is optional, per pack, and independent of product code", async () => {
