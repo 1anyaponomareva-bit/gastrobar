@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { errorMessage, getOrder, isAuthError, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
+import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
 import { formatQty, parseQty } from "@/lib/orders/qty";
 import type { DiscrepancyKind, OrderPhoto, ReceiveLineInput, SupplierOrder } from "@/lib/orders/types";
@@ -31,7 +31,7 @@ function kindFor(actual: number, remaining: number): DiscrepancyKind {
 }
 
 export function ReceiveForm({ orderId }: { orderId: string }) {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const router = useRouter();
   const [order, setOrder] = useState<SupplierOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,14 +66,10 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
           })),
       );
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setOrder(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
     }
-  }, [orderId, setEmail, t]);
+  }, [orderId, t]);
 
   useEffect(() => {
     void load();
@@ -129,10 +125,6 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
       });
       router.push(`/orders/${saved.id}`);
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setSubmitError(errorMessage(err, t("error_network"), t("error_receive")));
     } finally {
       setBusy(false);

@@ -3,6 +3,7 @@ import type { OrderPdfInput } from "./orderPdf";
 import type {
   DiscrepancyKind,
   DraftLine,
+  OrderCatalogPayload,
   OrderCategory,
   OrderDraft,
   OrderHistoryEvent,
@@ -206,6 +207,7 @@ function packOf(raw: Json): OrderProductPack {
     qty_base: num(pick(raw, "qty_base", "qtyBase")) || 1,
     is_default: Boolean(pick(raw, "is_default", "isDefault")),
     code: optStr(pick(raw, "code", "packCode", "pack_code")),
+    supplierId: optStr(pick(raw, "supplierId", "supplier_id")),
   };
 }
 
@@ -219,6 +221,9 @@ function productOf(raw: Json): OrderProduct {
     categoryName: optStr(pick(raw, "categoryName", "category_name", "category")),
     unit: str(pick(raw, "unit", "base_unit")),
     itemNo: optStr(pick(raw, "itemNo", "item_no", "product_code", "code")),
+    supplierId: optStr(pick(raw, "supplierId", "supplier_id")),
+    sort: num(pick(raw, "sort", "staff_sort", "staffSort")),
+    hidden: Boolean(pick(raw, "hidden", "staff_hidden")),
     packs: listOf(pick(raw, "packs", "productPacks", "product_packs") ?? raw, ["packs"], packOf),
   };
 }
@@ -366,21 +371,21 @@ function queryString(query?: OrderListQuery): string {
   return text ? `?${text}` : "";
 }
 
-export async function getSession(): Promise<SessionInfo | null> {
+export async function getSession(): Promise<SessionInfo> {
   try {
     const data = asRecord(await json("/api/orders/session"));
-    const email = optStr(pick(data, "email"));
-    return email ? { email } : { email: "employee" };
+    const email = optStr(pick(data, "email")) ?? "kitchen@gastrofood";
+    return {
+      email,
+      erpAdmin: Boolean(pick(data, "erpAdmin", "erp_admin")),
+      public: pick(data, "public") === undefined ? !pick(data, "erpAdmin", "erp_admin") : Boolean(pick(data, "public")),
+    };
   } catch (error) {
-    if (isAuthError(error)) return null;
     if (isApiMissing(error)) {
-      try {
-        await json("/api/orders/suppliers");
-        return { email: "employee" };
-      } catch (inner) {
-        if (isAuthError(inner)) return null;
-        throw inner;
-      }
+      return { email: "kitchen@gastrofood", erpAdmin: false, public: true };
+    }
+    if (isAuthError(error)) {
+      return { email: "kitchen@gastrofood", erpAdmin: false, public: true };
     }
     throw error;
   }
@@ -394,12 +399,12 @@ export async function login(email: string, password: string, invite?: string): P
         body: JSON.stringify({ email, password, invite: invite?.trim() || undefined }),
       }),
     );
-    return { email: str(data.email, email) };
+    return { email: str(data.email, email), erpAdmin: Boolean(data.erpAdmin), public: false };
   } catch (error) {
     if (isApiMissing(error)) {
       try {
         const data = asRecord(await json("/api/recipes-admin/login", { method: "POST", body: JSON.stringify({ email, password }) }));
-        return { email: str(data.email, email) };
+        return { email: str(data.email, email), erpAdmin: true, public: false };
       } catch (inner) {
         if (isApiMissing(inner)) throw new OrdersApiError(404, "login_api_missing");
         throw inner;
@@ -422,6 +427,60 @@ export async function getSuppliers(): Promise<SuppliersPayload> {
   const defaultWarehouseId =
     optStr(pick(obj, "defaultWarehouseId", "default_warehouse_id")) ?? warehouses.find((row) => row.isDefault)?.id ?? warehouses[0]?.id ?? null;
   return { suppliers, warehouses, defaultWarehouseId };
+}
+
+function catalogOf(data: unknown): OrderCatalogPayload {
+  const obj = asRecord(data);
+  const suppliers = listOf(pick(obj, "suppliers") ?? data, ["suppliers"], supplierOf).filter((row) => row.id);
+  const products = listOf(pick(obj, "products") ?? data, ["products"], productOf).filter((row) => row.id);
+  const warehouses = listOf(pick(obj, "warehouses") ?? data, ["warehouses"], warehouseOf);
+  const defaultWarehouseId =
+    optStr(pick(obj, "defaultWarehouseId", "default_warehouse_id")) ?? warehouses.find((row) => row.isDefault)?.id ?? warehouses[0]?.id ?? null;
+  return { products, suppliers, warehouses, defaultWarehouseId };
+}
+
+export async function getOrderCatalog(): Promise<OrderCatalogPayload> {
+  try {
+    return catalogOf(await json("/api/orders/catalog"));
+  } catch (error) {
+    if (!isApiMissing(error)) throw error;
+    const listed = await getSuppliers();
+    return { products: [], ...listed };
+  }
+}
+
+export async function getAdminCatalog(): Promise<OrderCatalogPayload> {
+  return catalogOf(await json("/api/orders/admin/catalog"));
+}
+
+export async function reorderAdminProducts(ids: string[]): Promise<OrderProduct[]> {
+  const data = await json("/api/orders/admin/reorder", { method: "PUT", body: JSON.stringify({ products: ids }) });
+  return listOf(asRecord(data), ["products"], productOf).filter((row) => row.id);
+}
+
+export async function reorderAdminSuppliers(ids: string[]): Promise<OrderSupplier[]> {
+  const data = await json("/api/orders/admin/reorder", { method: "PUT", body: JSON.stringify({ suppliers: ids }) });
+  return listOf(asRecord(data), ["suppliers"], supplierOf).filter((row) => row.id);
+}
+
+export async function saveAdminProduct(product: Record<string, unknown>): Promise<{ id: string; products: OrderProduct[] }> {
+  const data = asRecord(await json("/api/orders/admin/product", { method: "PUT", body: JSON.stringify({ product }) }));
+  return {
+    id: str(data.id),
+    products: listOf(data, ["products"], productOf).filter((row) => row.id),
+  };
+}
+
+export async function saveAdminSupplier(value: Record<string, unknown>): Promise<{ id: string }> {
+  const data = asRecord(await json("/api/orders/admin/supplier", { method: "PUT", body: JSON.stringify({ supplier: value }) }));
+  return { id: str(data.id) };
+}
+
+export async function archiveAdmin(entity: "product" | "supplier", id: string, archived: boolean): Promise<void> {
+  await json("/api/orders/admin/archive", {
+    method: "POST",
+    body: JSON.stringify({ entity, id, archived }),
+  });
 }
 
 export async function getSupplierProducts(supplierId: string): Promise<SupplierProductsPayload> {

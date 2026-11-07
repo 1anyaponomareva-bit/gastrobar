@@ -27,7 +27,12 @@ export async function GET(request: Request) {
   const timing = new ServerTiming();
   try {
     const actor = await timing.time("auth", () => requireOrdersActor(request));
-    return timing.json({ email: actor.email, erpAdmin: actor.erpAdmin, employee: true });
+    return timing.json({
+      email: actor.email,
+      erpAdmin: actor.erpAdmin,
+      public: actor.public,
+      employee: true,
+    });
   } catch (error) {
     return timing.error(error);
   }

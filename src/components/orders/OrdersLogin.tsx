@@ -5,7 +5,7 @@ import { isApiMissing, isAuthError, login } from "@/lib/orders/api";
 import { useOrders } from "./OrdersShell";
 
 export function OrdersLogin() {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const [email, setMail] = useState("");
   const [password, setPassword] = useState("");
   const [invite, setInvite] = useState("");
@@ -17,8 +17,8 @@ export function OrdersLogin() {
     setError(null);
     setBusy(true);
     try {
-      const session = await login(email, password, invite);
-      setEmail(session.email);
+      await login(email, password, invite);
+      window.location.reload();
     } catch (err) {
       if (isApiMissing(err)) setError(t("login_api_missing"));
       else if (isAuthError(err)) setError(t("login_error_credentials"));

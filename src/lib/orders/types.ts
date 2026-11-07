@@ -49,6 +49,7 @@ export type OrderProductPack = {
   is_default: boolean;
   /** Supplier SKU for this pack; optional, ignored by older clients. */
   code?: string | null;
+  supplierId?: string | null;
 };
 
 export type OrderProduct = {
@@ -60,7 +61,17 @@ export type OrderProduct = {
   categoryName: string | null;
   unit: string;
   itemNo: string | null;
+  supplierId: string | null;
+  sort: number;
+  hidden?: boolean;
   packs: OrderProductPack[];
+};
+
+export type OrderCatalogPayload = {
+  products: OrderProduct[];
+  suppliers: OrderSupplier[];
+  warehouses: OrderWarehouse[];
+  defaultWarehouseId: string | null;
 };
 
 export type DraftLine = {
@@ -183,6 +194,8 @@ export type PdfResult = {
 
 export type SessionInfo = {
   email: string;
+  erpAdmin: boolean;
+  public: boolean;
 };
 
 export type SuppliersPayload = {

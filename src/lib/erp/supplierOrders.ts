@@ -20,13 +20,14 @@ import {
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "@/lib/orders/orderPdf";
+import { resolvePublicOrdersActor, type OrdersAccess } from "@/lib/orders/access";
 
 if (typeof window !== "undefined") throw new Error("erp/supplierOrders is server-only");
 
 export const ORDERS_COOKIE = "gf_orders";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type OrdersActor = { email: string; erpAdmin: boolean };
+export type OrdersActor = OrdersAccess;
 
 /** /orders access never implies ERP admin. Posting stock requires a separate admin session. */
 export function ordersAccessIsErpAdmin(erpAdmin: boolean): boolean {
@@ -93,18 +94,15 @@ function headerActor(request: Request | undefined): string | null {
 
 export async function resolveOrdersActor(request?: Request): Promise<OrdersActor> {
   if (erpLocalMode()) {
-    const email = headerActor(request) || LOCAL_DEV_ADMIN;
-    return { email, erpAdmin: email === LOCAL_DEV_ADMIN };
+    const header = headerActor(request);
+    if (header) return resolvePublicOrdersActor(header === LOCAL_DEV_ADMIN ? header : null, header);
+    return { email: LOCAL_DEV_ADMIN, erpAdmin: true, public: false };
   }
   const header = headerActor(request);
   const token = (await cookies()).get(ORDERS_COOKIE)?.value;
   const ordersEmail = header || parseOrdersToken(token);
   const adminEmail = await getSessionEmail();
-  if (adminEmail && (!ordersEmail || ordersEmail === adminEmail)) {
-    return { email: adminEmail, erpAdmin: true };
-  }
-  if (ordersEmail) return { email: ordersEmail, erpAdmin: adminEmail === ordersEmail };
-  throw new ErpHttpError(401, "auth");
+  return resolvePublicOrdersActor(adminEmail, ordersEmail);
 }
 
 export async function requireOrdersActor(request?: Request): Promise<OrdersActor> {
@@ -206,6 +204,45 @@ export async function rememberOrderUser(email: string) {
 
 export async function listSupplierProducts(supplierId: string) {
   return { products: await orderRpc<unknown>("erp_order_supplier_products", { p_supplier: uuid(supplierId, "supplier") }) };
+}
+
+export async function listOrderCatalog(includeHidden = false) {
+  const [products, listed] = await Promise.all([
+    orderRpc<unknown>("erp_order_catalog_products", { p_include_hidden: includeHidden }),
+    listOrderSuppliers(),
+  ]);
+  return { products, ...listed };
+}
+
+export async function reorderOrderProducts(ids: string[]) {
+  return {
+    products: await orderRpc<unknown>("erp_order_reorder_products", {
+      p_ids: ids.map((id) => uuid(id, "product")),
+    }),
+  };
+}
+
+export async function reorderOrderSuppliers(ids: string[]) {
+  return {
+    suppliers: await orderRpc<unknown>("erp_order_reorder_suppliers", {
+      p_ids: ids.map((id) => uuid(id, "supplier")),
+    }),
+  };
+}
+
+export async function saveOrderAdminProduct(product: Record<string, unknown>, actor: string) {
+  const id = await rpc<string>("erp_save_product", { p: product, p_actor: actor });
+  return { id, products: await orderRpc<unknown>("erp_order_catalog_products", { p_include_hidden: true }) };
+}
+
+export async function saveOrderAdminSupplier(value: Record<string, unknown>, actor: string) {
+  const id = await rpc<string>("erp_save_ref", { p_entity: "supplier", p: value, p_actor: actor });
+  return { id, suppliers: await listOrderSuppliers() };
+}
+
+export async function archiveOrderAdmin(entity: "product" | "supplier", id: string, archived: boolean, actor: string) {
+  await rpc("erp_set_archived", { p_entity: entity, p_id: uuid(id, entity), p_archived: archived, p_actor: actor });
+  return listOrderCatalog(true);
 }
 
 export async function getDraft(supplierId: string, actor: string) {

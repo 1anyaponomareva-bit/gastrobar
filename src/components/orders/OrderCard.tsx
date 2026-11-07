@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { errorMessage, getOrder, isAuthError } from "@/lib/orders/api";
+import { errorMessage, getOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
 import { formatQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
@@ -11,7 +11,7 @@ import { statusClass } from "./OrderHistoryList";
 import { useOrders } from "./OrdersShell";
 
 export function OrderCard({ orderId }: { orderId: string }) {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const [order, setOrder] = useState<SupplierOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,14 +20,10 @@ export function OrderCard({ orderId }: { orderId: string }) {
     try {
       setOrder(await getOrder(orderId));
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setOrder(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
     }
-  }, [orderId, setEmail, t]);
+  }, [orderId, t]);
 
   useEffect(() => {
     void load();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { errorMessage, getSuppliers, isAuthError, listOrders } from "@/lib/orders/api";
+import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
@@ -14,7 +14,7 @@ export function statusClass(status: string): string {
 }
 
 export function OrderHistoryList() {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const [orders, setOrders] = useState<SupplierOrder[] | null>(null);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +35,10 @@ export function OrderHistoryList() {
       setOrders(list);
       setSuppliers(catalog.suppliers);
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setOrders(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
     }
-  }, [setEmail, status, supplierId, t]);
+  }, [status, supplierId, t]);
 
   useEffect(() => {
     void load();

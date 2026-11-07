@@ -33,7 +33,12 @@ function loadEnv() {
   }
 }
 
-const FILES = ["20261107120000_erp_supplier_orders.sql", "20261107121500_erp_order_pdf_snapshot.sql"];
+const FILES = [
+  "20261107120000_erp_supplier_orders.sql",
+  "20261107121500_erp_order_pdf_snapshot.sql",
+  "20261107130000_erp_product_pack_code.sql",
+  "20261107140000_erp_order_list_catalog.sql",
+];
 
 async function main() {
   loadEnv();

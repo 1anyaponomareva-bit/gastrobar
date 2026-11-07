@@ -1,5 +1,5 @@
-import { SupplierList } from "@/components/orders/SupplierList";
+import { OrderList } from "@/components/orders/OrderList";
 
 export default function OrdersHomePage() {
-  return <SupplierList />;
+  return <OrderList />;
 }

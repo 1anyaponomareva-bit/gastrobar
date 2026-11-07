@@ -4,52 +4,53 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
-import { buildDraftPdf, errorMessage, getDraft, getSupplierProducts, getSuppliers, isAuthError, placeOrder, saveDraft } from "@/lib/orders/api";
+import { buildDraftPdf, errorMessage, getDraft, getSupplierProducts, getSuppliers, placeOrder, saveDraft } from "@/lib/orders/api";
+import {
+  clearSupplierSelection,
+  defaultPackId,
+  isProductMarked,
+  packOf,
+  reducePlaceDialog,
+  selectedFirst,
+  shouldPlaceAfterDialog,
+  type PlaceDialogPhase,
+  type SelectionMap,
+} from "@/lib/orders/orderList";
 import { formatOrderLineName, getOrderPdfFileName, type OrderPdfInput } from "@/lib/orders/orderPdf";
+import { readOrderSelection, writeOrderSelection } from "@/lib/orders/orderSelection";
 import { formatQty, isPositiveQty, lineKey, parseQty } from "@/lib/orders/qty";
 import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
 import { InAppShareNotice } from "./InAppShareNotice";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
+import { PlaceOrderDialog } from "./PlaceOrderDialog";
 import { QtyField } from "./QtyField";
 
-type QtyMap = Record<string, { packId: string | null; qty: string }>;
-
-function defaultPackId(product: OrderProduct): string | null {
-  return product.packs.find((pack) => pack.is_default)?.pack_id ?? product.packs[0]?.pack_id ?? null;
-}
-
-function packOf(product: OrderProduct, packId: string | null) {
-  return product.packs.find((pack) => pack.pack_id === packId) ?? product.packs[0] ?? null;
-}
-
 export function SupplierOrderList({ supplierId }: { supplierId: string }) {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const router = useRouter();
   const [supplier, setSupplier] = useState<OrderSupplier | null>(null);
-  const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
   const [products, setProducts] = useState<OrderProduct[] | null>(null);
   const [warehouses, setWarehouses] = useState<OrderWarehouse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [qtys, setQtys] = useState<QtyMap>({});
+  const [selection, setSelection] = useState<SelectionMap>({});
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [warehouseId, setWarehouseId] = useState("");
   const [comment, setComment] = useState("");
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [placeBusy, setPlaceBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [placePhase, setPlacePhase] = useState<PlaceDialogPhase>("closed");
   const [sharedRevision, setSharedRevision] = useState<number | null>(null);
   const [orderedRevision, setOrderedRevision] = useState<number | null>(null);
   const [placedId, setPlacedId] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
-  const qtysRef = useRef(qtys);
-  qtysRef.current = qtys;
-  const metaRef = useRef({ warehouseId, comment, expectedDelivery });
-  metaRef.current = { warehouseId, comment, expectedDelivery };
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
 
   const load = useCallback(async () => {
     setError(null);
@@ -66,7 +67,6 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
           draftLineCount: 0,
         };
       setSupplier(current);
-      setSuppliers(all.suppliers);
       setProducts(catalog.products);
       setWarehouses(all.warehouses);
       setDraft(saved);
@@ -76,67 +76,61 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       setSharedRevision(saved.pdfRevision);
       setOrderedRevision(saved.status === "ordered" || saved.status === "partial" || saved.status === "closed" ? saved.revision : null);
       setPlacedId(saved.status === "draft" ? null : saved.id || null);
-      const next: QtyMap = {};
+      const stored = readOrderSelection();
+      const next: SelectionMap = {};
       for (const product of catalog.products) {
+        const local = stored[product.id];
         const line = saved.lines.find((row) => row.product_id === product.id);
         next[product.id] = {
-          packId: line?.pack_id ?? defaultPackId(product),
-          qty: line && line.qty > 0 ? formatQty(line.qty) : "",
+          packId: local?.packId ?? line?.pack_id ?? defaultPackId(product),
+          qty: local?.qty || (line && line.qty > 0 ? formatQty(line.qty) : ""),
         };
       }
-      setQtys(next);
+      setSelection(next);
+      writeOrderSelection({ ...stored, ...next });
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setProducts(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
     }
-  }, [setEmail, supplierId, t]);
+  }, [supplierId, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const linesFromQtys = useCallback(() => {
-    return Object.entries(qtysRef.current)
+  const linesFromSelection = useCallback(() => {
+    return Object.entries(selectionRef.current)
       .filter(([, row]) => isPositiveQty(row.qty))
       .map(([productId, row]) => ({ product_id: productId, pack_id: row.packId, qty: parseQty(row.qty) }));
   }, []);
 
   const persist = useCallback(
-    async (nextQtys?: QtyMap) => {
-      if (nextQtys) qtysRef.current = nextQtys;
+    async (nextSelection?: SelectionMap) => {
+      if (nextSelection) selectionRef.current = nextSelection;
       setSaveState("saving");
-      setSaveError(null);
       try {
-        const meta = metaRef.current;
         const saved = await saveDraft(supplierId, {
-          warehouseId: meta.warehouseId || null,
-          comment: meta.comment.trim() || null,
-          expectedDelivery: meta.expectedDelivery || null,
-          lines: linesFromQtys(),
+          warehouseId: warehouseId || null,
+          comment: comment.trim() || null,
+          expectedDelivery: expectedDelivery || null,
+          lines: linesFromSelection(),
         });
         setDraft(saved);
         setSaveState("saved");
         return saved;
       } catch (err) {
-        if (isAuthError(err)) {
-          setEmail(null);
-          return null;
-        }
         setSaveState("error");
-        setSaveError(errorMessage(err, t("error_network"), t("error_save")));
+        setActionError(errorMessage(err, t("error_network"), t("error_save")));
         return null;
       }
     },
-    [linesFromQtys, setEmail, supplierId, t],
+    [comment, expectedDelivery, linesFromSelection, supplierId, t, warehouseId],
   );
 
   const scheduleSave = useCallback(
-    (next: QtyMap) => {
-      setQtys(next);
+    (next: SelectionMap) => {
+      setSelection(next);
+      writeOrderSelection({ ...readOrderSelection(), ...next });
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void persist(next);
@@ -151,10 +145,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     };
   }, []);
 
-  const marked = useMemo(
-    () => (products ?? []).filter((product) => isPositiveQty(qtys[product.id]?.qty)),
-    [products, qtys],
-  );
+  const marked = useMemo(() => (products ?? []).filter((product) => isProductMarked(product.id, selection)), [products, selection]);
 
   const pdfInput = useMemo((): OrderPdfInput | null => {
     if (!supplier || !marked.length) return null;
@@ -166,7 +157,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       warehouseName: warehouses.find((row) => row.id === warehouseId)?.name,
       comment: comment || undefined,
       lines: marked.map((product) => {
-        const row = qtys[product.id];
+        const row = selection[product.id];
         const pack = packOf(product, row?.packId ?? null);
         return {
           nameEn: product.nameEn,
@@ -178,7 +169,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         };
       }),
     };
-  }, [comment, draft, marked, qtys, supplier, t, warehouseId, warehouses]);
+  }, [comment, draft, marked, selection, supplier, t, warehouseId, warehouses]);
 
   const currentRevision = draft?.revision ?? 0;
   const pdfStale = sharedRevision != null && currentRevision !== sharedRevision;
@@ -197,23 +188,18 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     [search, supplier],
   );
 
-  const filtered = (products ?? []).filter(matchesSearch);
-  const categories = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const product of products ?? []) {
-      if (product.categoryId) map.set(product.categoryId, product.categoryName ?? product.categoryId);
-    }
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [products]);
+  const orderedProducts = selectedFirst((products ?? []).filter(matchesSearch), selection);
+  const selectedVisible = orderedProducts.filter((product) => isProductMarked(product.id, selection));
+  const restVisible = orderedProducts.filter((product) => !isProductMarked(product.id, selection));
 
   const setQty = (product: OrderProduct, qty: string) => {
-    const current = qtys[product.id] ?? { packId: defaultPackId(product), qty: "" };
-    scheduleSave({ ...qtys, [product.id]: { ...current, qty } });
+    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
+    scheduleSave({ ...selection, [product.id]: { ...current, qty } });
   };
 
   const setPack = (product: OrderProduct, packId: string) => {
-    const current = qtys[product.id] ?? { packId, qty: "" };
-    scheduleSave({ ...qtys, [product.id]: { ...current, packId } });
+    const current = selection[product.id] ?? { packId, qty: "" };
+    scheduleSave({ ...selection, [product.id]: { ...current, packId } });
   };
 
   const handleReset = () => {
@@ -222,9 +208,9 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       return;
     }
     if (!window.confirm(t("reset_confirm", { supplier: supplier?.name ?? "" }))) return;
-    const cleared: QtyMap = {};
+    const cleared: SelectionMap = { ...selection };
     for (const product of products ?? []) {
-      cleared[product.id] = { packId: qtys[product.id]?.packId ?? defaultPackId(product), qty: "" };
+      cleared[product.id] = { packId: selection[product.id]?.packId ?? defaultPackId(product), qty: "" };
     }
     setSearch("");
     scheduleSave(cleared);
@@ -272,37 +258,49 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
     }
   };
 
-  const handlePlace = async () => {
+  const openPlaceDialog = () => {
     if (placeBusy || orderedThisRevision) return;
     if (!marked.length) {
       setActionError(t("place_need_lines"));
       return;
     }
-    const saved = await persist();
-    if (!saved) return;
-    const no = saved.orderNo || saved.id;
-    if (!no) {
-      setActionError(t("place_need_draft"));
+    setDialogError(null);
+    setPlacePhase(reducePlaceDialog(placePhase, "open"));
+  };
+
+  const submitPlace = async () => {
+    const nextPhase = reducePlaceDialog(placePhase, "submit");
+    if (!shouldPlaceAfterDialog(nextPhase)) return;
+    if (!warehouseId) {
+      setDialogError(t("warehouse_required"));
       return;
     }
-    if (!window.confirm(t("place_confirm", { supplier: supplier?.name ?? "", orderNo: no, revision: saved.revision || 1 }))) return;
+    setPlacePhase(nextPhase);
+    setDialogError(null);
     setActionError(null);
     setPlaceBusy(true);
     try {
-      const placed = await placeOrder(saved.id || supplierId, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
-      setDraft((prev) =>
-        prev
-          ? { ...prev, id: placed.id, orderNo: placed.docNo || prev.orderNo, status: placed.status, revision: placed.revision || prev.revision, placedAt: placed.placedAt }
-          : prev,
-      );
-      setOrderedRevision(placed.revision || saved.revision);
-      setPlacedId(placed.id);
-    } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
+      const saved = await saveDraft(supplierId, {
+        warehouseId,
+        comment: comment.trim() || null,
+        expectedDelivery: expectedDelivery || null,
+        lines: linesFromSelection(),
+      });
+      setDraft(saved);
+      if (!saved?.id) {
+        setPlacePhase("open");
+        setDialogError(t("place_need_draft"));
         return;
       }
-      setActionError(errorMessage(err, t("error_network"), t("error_place")));
+      const placed = await placeOrder(saved.id, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
+      const stored = readOrderSelection();
+      writeOrderSelection(clearSupplierSelection(stored, (products ?? []).map((product) => product.id)));
+      setPlacedId(placed.id);
+      setOrderedRevision(placed.revision || saved.revision);
+      router.push(`/orders/${placed.id}`);
+    } catch (err) {
+      setPlacePhase("open");
+      setDialogError(errorMessage(err, t("error_network"), t("error_place")));
     } finally {
       setPlaceBusy(false);
     }
@@ -312,7 +310,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
   if (!products || !supplier) return <OrdersLoading />;
 
   const renderCard = (product: OrderProduct) => {
-    const row = qtys[product.id] ?? { packId: defaultPackId(product), qty: "" };
+    const row = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
     const markedLine = isPositiveQty(row.qty);
     const pack = packOf(product, row.packId);
     const details = [product.brand].filter(Boolean);
@@ -333,7 +331,7 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
           </div>
         ) : null}
         <QtyField label={t("qty_label")} unit={pack?.unit || product.unit} value={row.qty} onChange={(value) => setQty(product, value)} />
-        {pack ? <div className="orders-packHint">{t("pack_hint", { pack: pack.label })}</div> : null}
+        {pack ? <div className="orders-packHint">{itemCodeHint(pack)}</div> : null}
       </div>
     );
   };
@@ -343,27 +341,6 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       <Link href="/orders" className="orders-back">
         ← {t("order_list")}
       </Link>
-
-      {suppliers.length > 1 ? (
-        <div className="orders-chipRow">
-          {suppliers.map((row) => {
-            const count = row.id === supplier.id ? marked.length : row.draftLineCount;
-            return (
-              <button
-                key={row.id}
-                type="button"
-                className={`orders-chip ${row.id === supplier.id ? "active" : ""} ${count ? "hasMarked" : ""}`}
-                onClick={() => {
-                  if (row.id !== supplier.id) router.push(`/orders/suppliers/${row.id}`);
-                }}
-              >
-                {row.name}
-                {count ? <span className="orders-count">{count}</span> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
 
       <h2 className="orders-name" style={{ margin: "0 0 6px" }}>
         {supplier.name}
@@ -375,68 +352,9 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
 
       <InAppShareNotice />
 
-      <div className="orders-card">
-        <div className="orders-row" style={{ marginBottom: 8 }}>
-          <div className="orders-field">
-            <label>{t("warehouse")}</label>
-            <select
-              className="orders-select"
-              value={warehouseId}
-              onChange={(event) => {
-                const value = event.target.value;
-                metaRef.current = { ...metaRef.current, warehouseId: value };
-                setWarehouseId(value);
-              }}
-              onBlur={() => void persist()}
-            >
-              {warehouses.length ? (
-                warehouses.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">{t("warehouse")}</option>
-              )}
-            </select>
-          </div>
-          <div className="orders-field">
-            <label>{t("expected_delivery")}</label>
-            <input
-              className="orders-input"
-              type="date"
-              value={expectedDelivery}
-              onChange={(event) => {
-                const value = event.target.value;
-                metaRef.current = { ...metaRef.current, expectedDelivery: value };
-                setExpectedDelivery(value);
-              }}
-              onBlur={() => void persist()}
-            />
-          </div>
-        </div>
-        <div className="orders-field">
-          <label>{t("comment")}</label>
-          <textarea
-            className="orders-textarea"
-            value={comment}
-            placeholder={t("comment_placeholder")}
-            onChange={(event) => {
-              const value = event.target.value;
-              metaRef.current = { ...metaRef.current, comment: value };
-              setComment(value);
-            }}
-            onBlur={() => void persist()}
-          />
-        </div>
-        <div className="orders-mode">
-          <span>{saveState === "saving" ? t("saving") : saveState === "saved" ? t("saved") : saveState === "error" ? t("save_failed") : ""}</span>
-        </div>
-      </div>
-
-      {saveError ? (
+      {saveState === "error" ? (
         <div className="orders-banner error" role="alert">
-          {saveError}
+          {t("save_failed")}
         </div>
       ) : null}
       {actionError ? (
@@ -470,54 +388,23 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
         </button>
       </div>
 
-      {marked.length ? (
-        <div className="orders-card">
-          <div className="orders-category" style={{ marginTop: 0 }}>
-            {t("chosen_title")}
-          </div>
-          {marked.map((product) => {
-            const row = qtys[product.id];
-            const pack = packOf(product, row?.packId ?? null);
-            return (
-              <div key={`chosen-${product.id}`} style={{ padding: "8px 0", borderBottom: "1px solid var(--orders-line)" }}>
-                <div className="orders-name" style={{ fontSize: 16, margin: 0 }}>
-                  {formatOrderLineName({ nameEn: product.nameEn, nameVn: product.nameVn })}
-                </div>
-                <div className="orders-meta">
-                  {pack?.label ? `${pack.label} · ` : ""}
-                  {row?.qty} {pack?.unit || product.unit}
-                </div>
+      {orderedProducts.length ? (
+        <>
+          {selectedVisible.length ? (
+            <>
+              <div className="orders-category" style={{ marginTop: 0 }}>
+                {t("chosen_first")}
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="orders-note">{t("chosen_empty")}</p>
-      )}
-
-      {filtered.length ? (
-        categories.length ? (
-          <>
-            {categories.map((category) => {
-              const items = filtered.filter((product) => product.categoryId === category.id);
-              if (!items.length) return null;
-              return (
-                <div key={category.id}>
-                  <div className="orders-category">{category.name}</div>
-                  {items.map(renderCard)}
-                </div>
-              );
-            })}
-            {filtered.some((product) => !product.categoryId) ? (
-              <div>
-                <div className="orders-category">{supplier.name}</div>
-                {filtered.filter((product) => !product.categoryId).map(renderCard)}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          filtered.map(renderCard)
-        )
+              {selectedVisible.map(renderCard)}
+            </>
+          ) : null}
+          {restVisible.length ? (
+            <>
+              <div className="orders-category">{t("rest_title")}</div>
+              {restVisible.map(renderCard)}
+            </>
+          ) : null}
+        </>
       ) : products.length ? (
         <OrdersEmpty title={t("empty_search")} />
       ) : (
@@ -527,19 +414,38 @@ export function SupplierOrderList({ supplierId }: { supplierId: string }) {
       <div className="orders-stickyActions">
         <div className="orders-actions">
           <button type="button" className="orders-btn primary block" onClick={() => void handlePdf()} disabled={pdfBusy || !marked.length}>
-            {pdfBusy ? t("pdf_sharing") : t("pdf_share")}
+            {pdfBusy ? t("pdf_sharing") : t("pdf_print")}
             {currentRevision ? ` · ${t("pdf_revision", { revision: currentRevision })}` : ""}
           </button>
           <button
             type="button"
             className="orders-btn ok block"
-            onClick={() => void handlePlace()}
+            onClick={openPlaceDialog}
             disabled={placeBusy || !marked.length || saveState === "saving" || orderedThisRevision}
           >
             {placeBusy ? t("placing") : t("place_order")}
           </button>
         </div>
       </div>
+
+      <PlaceOrderDialog
+        open={placePhase === "open"}
+        warehouses={warehouses}
+        warehouseId={warehouseId}
+        expectedDelivery={expectedDelivery}
+        comment={comment}
+        busy={placeBusy}
+        error={dialogError}
+        onWarehouse={setWarehouseId}
+        onExpectedDelivery={setExpectedDelivery}
+        onComment={setComment}
+        onCancel={() => setPlacePhase(reducePlaceDialog(placePhase, "cancel"))}
+        onSubmit={() => void submitPlace()}
+      />
     </div>
   );
+}
+
+function itemCodeHint(pack: { label: string; code?: string | null }): string {
+  return pack.code ? `${pack.label} · ${pack.code}` : pack.label;
 }

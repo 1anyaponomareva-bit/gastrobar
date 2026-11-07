@@ -132,6 +132,21 @@ async function main() {
     [salt, supplier],
   );
 
+  await test("order list catalog is one vertical list ordered by staff_sort", async () => {
+    await q("update public.erp_products set staff_sort = 20 where id = $1", [beef]);
+    await q("update public.erp_products set staff_sort = 10 where id = $1", [salt]);
+    const catalog = asArr(await value("select public.erp_order_catalog_products(false)"));
+    const ids = catalog.map((row) => asJson(row).id);
+    assert.ok(ids.includes(salt) && ids.includes(beef));
+    assert.ok(ids.indexOf(salt) < ids.indexOf(beef), "lower staff_sort comes first");
+    const saltRow = catalog.map(asJson).find((row) => row.id === salt);
+    assert.equal(saltRow?.supplierId, supplier);
+    await q("select public.erp_order_reorder_products(array[$1::uuid, $2::uuid])", [beef, salt]);
+    const reordered = asArr(await value("select public.erp_order_catalog_products(false)"));
+    const next = reordered.map((row) => asJson(row).id);
+    assert.ok(next.indexOf(beef) < next.indexOf(salt), "admin drag persists staff_sort");
+  });
+
   await test("catalog lists ERP supplier products without Staff JSON import", async () => {
     const suppliers = asArr(await value("select public.erp_order_list_suppliers()"));
     const mm = suppliers.find((row) => asJson(row).id === supplier);

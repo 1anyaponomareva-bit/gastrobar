@@ -3,18 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { errorMessage, getSession, isAuthError, logout as apiLogout } from "@/lib/orders/api";
+import { errorMessage, getSession } from "@/lib/orders/api";
 import { ORDERS_LANGS, ordersT, readOrdersLang, writeOrdersLang, type OrdersLang } from "@/lib/orders/i18n";
-import { OrdersLogin } from "./OrdersLogin";
 import "./orders.css";
 
 type OrdersContextValue = {
   email: string;
+  erpAdmin: boolean;
+  publicAccess: boolean;
   lang: OrdersLang;
   t: (key: string, vars?: Record<string, string | number>) => string;
   setLang: (lang: OrdersLang) => void;
-  setEmail: (email: string | null) => void;
-  logout: () => void;
 };
 
 const OrdersContext = createContext<OrdersContextValue | null>(null);
@@ -34,8 +33,10 @@ function isOrdersTab(pathname: string | null): "list" | "orders" {
 export function OrdersShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [lang, setLangState] = useState<OrdersLang>("ru");
-  const [email, setEmail] = useState<string | null | undefined>(undefined);
-  const [bootError, setBootError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [erpAdmin, setErpAdmin] = useState(false);
+  const [publicAccess, setPublicAccess] = useState(true);
+  const [ready, setReady] = useState(false);
 
   const t = useCallback((key: string, vars?: Record<string, string | number>) => ordersT(lang, key, vars), [lang]);
 
@@ -47,50 +48,40 @@ export function OrdersShell({ children }: { children: ReactNode }) {
     document.documentElement.lang = lang === "vn" ? "vi" : lang;
   }, [lang]);
 
-  const loadSession = useCallback(async () => {
-    setBootError(null);
-    try {
-      const session = await getSession();
-      setEmail(session?.email ?? null);
-    } catch (error) {
-      if (isAuthError(error)) {
-        setEmail(null);
-        return;
-      }
-      setBootError(errorMessage(error, t("error_network"), t("error_load")));
-      setEmail(null);
-    }
-  }, [t]);
-
   useEffect(() => {
-    void loadSession();
-  }, [loadSession]);
+    void getSession()
+      .then((session) => {
+        setEmail(session.email);
+        setErpAdmin(session.erpAdmin);
+        setPublicAccess(session.public);
+      })
+      .catch(() => {
+        setPublicAccess(true);
+      })
+      .finally(() => setReady(true));
+  }, []);
 
   const setLang = (next: OrdersLang) => {
     setLangState(next);
     writeOrdersLang(next);
   };
 
-  const logout = () => {
-    void apiLogout();
-    setEmail(null);
-  };
-
   const ctx = useMemo<OrdersContextValue>(
     () => ({
-      email: email ?? "",
+      email,
+      erpAdmin,
+      publicAccess,
       lang,
       t,
       setLang,
-      setEmail: (value) => setEmail(value),
-      logout,
     }),
-    [email, lang, t],
+    [email, erpAdmin, lang, publicAccess, t],
   );
 
   const tab = isOrdersTab(pathname);
+  const adminPath = (pathname ?? "").startsWith("/orders/admin");
 
-  if (email === undefined) {
+  if (!ready) {
     return (
       <div className="orders-app">
         <div className="orders-loading">{t("loading")}</div>
@@ -98,25 +89,8 @@ export function OrdersShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!email) {
-    return (
-      <OrdersContext.Provider value={ctx}>
-        {bootError ? (
-          <div className="orders-app">
-            <div className="orders-main">
-              <div className="orders-banner error" role="alert">
-                {bootError}
-                <button type="button" className="orders-btn dark" style={{ marginTop: 10 }} onClick={() => void loadSession()}>
-                  {t("retry")}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <OrdersLogin />
-        )}
-      </OrdersContext.Provider>
-    );
+  if (adminPath) {
+    return <OrdersContext.Provider value={ctx}>{children}</OrdersContext.Provider>;
   }
 
   return (
@@ -137,9 +111,11 @@ export function OrdersShell({ children }: { children: ReactNode }) {
                 ))}
               </div>
             </div>
-            <button type="button" className="orders-logout" onClick={logout}>
-              {email} · {t("logout")}
-            </button>
+            <div className="orders-topMeta">
+              <Link href="/orders/admin" className="orders-adminLink">
+                {t("admin_link")}
+              </Link>
+            </div>
           </header>
           <div className="orders-main">
             <nav className="orders-tabs" aria-label="Sections">

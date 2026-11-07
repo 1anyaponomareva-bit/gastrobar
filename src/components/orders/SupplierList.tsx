@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { errorMessage, getDraft, getSuppliers, isAuthError } from "@/lib/orders/api";
+import { errorMessage, getDraft, getSuppliers } from "@/lib/orders/api";
 import type { OrderSupplier } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
 export function SupplierList() {
-  const { t, setEmail } = useOrders();
+  const { t } = useOrders();
   const [suppliers, setSuppliers] = useState<OrderSupplier[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,14 +29,10 @@ export function SupplierList() {
       );
       setSuppliers(withDrafts);
     } catch (err) {
-      if (isAuthError(err)) {
-        setEmail(null);
-        return;
-      }
       setSuppliers(null);
       setError(errorMessage(err, t("error_network"), t("error_load")));
     }
-  }, [setEmail, t]);
+  }, [t]);
 
   useEffect(() => {
     void load();

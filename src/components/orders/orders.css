@@ -6,6 +6,8 @@
   --orders-line: #e6e2da;
   --orders-accent: #e2471f;
   --orders-accent-soft: #fdeee8;
+  --orders-gold: #f2ad00;
+  --orders-gold-soft: #fffbea;
   --orders-ok: #1f7a46;
   --orders-ok-soft: #e7f4ec;
   --orders-bad: #b3261e;
@@ -146,8 +148,13 @@
 }
 
 .orders-card.marked {
-  border: 2px solid var(--orders-accent);
-  background: var(--orders-accent-soft);
+  border: 2px solid var(--orders-gold);
+  background: var(--orders-gold-soft);
+}
+
+.orders-supplierBtn.hasMarked {
+  border-color: var(--orders-gold);
+  background: #fff8e1;
 }
 
 .orders-name {
@@ -417,11 +424,59 @@
   min-width: 28px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--orders-accent);
-  color: #fff;
+  background: var(--orders-gold);
+  color: #111;
   font-size: 12px;
   font-weight: 800;
   text-align: center;
+}
+
+.orders-topMeta {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 8px;
+}
+
+.orders-adminLink {
+  color: #ffcf33;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.orders-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #0007;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+}
+
+.orders-modalCard {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 18px 18px 12px 12px;
+  padding: 16px;
+  max-height: min(90dvh, 640px);
+  overflow: auto;
+}
+
+.orders-modalCard h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+@media (min-width: 640px) {
+  .orders-modal {
+    align-items: center;
+  }
+
+  .orders-modalCard {
+    border-radius: 18px;
+  }
 }
 
 .orders-status {
