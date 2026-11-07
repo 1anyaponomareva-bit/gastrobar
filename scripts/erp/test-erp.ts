@@ -3082,6 +3082,26 @@ async function main() {
     assert.equal((await one<{ product_code: string | null }>("select product_code from public.erp_products where id = $1", [a])).product_code, null);
   });
 
+  await test("ingredient card save omits product_code and keeps pack SKU", async () => {
+    const box = await savePack({ name: "Card-hide-code box", unit: "pcs", qty_base: 1800 });
+    const id = await saveProduct({
+      type: "ingredient",
+      name_en: "Card-hide-code cup",
+      base_unit: "pcs",
+      product_code: "LEGACY",
+      packs: [{ pack_id: box, label: "Card-hide-code box", qty_base: 1800, is_default: true, code: "LNU500" }],
+    });
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Card-hide-code cup",
+      base_unit: "pcs",
+      packs: [{ pack_id: box, label: "Card-hide-code box", qty_base: 1800, is_default: true, code: "LNU500" }],
+    });
+    assert.equal((await one<{ product_code: string }>("select product_code from public.erp_products where id = $1", [id])).product_code, "LEGACY");
+    assert.equal((await one<{ code: string }>("select code from public.erp_product_packs where product_id = $1 and archived_at is null", [id])).code, "LNU500");
+  });
+
   await test("pack link code is optional, per pack, and independent of product code", async () => {
     assert.equal(productCodeFieldLabel(), "Код товара");
     const kg = await savePack({ name: "Pack-code kg", unit: "kg", qty_base: 1 });

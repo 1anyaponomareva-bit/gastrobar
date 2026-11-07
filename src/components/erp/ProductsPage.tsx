@@ -242,7 +242,6 @@ type ProductForm = {
   base_unit: ErpUnit | "";
   unit_weight_kg: number | null;
   brand: string;
-  product_code: string;
   est_unit_cost: number | null;
   shelf_life_days: number | null;
   storage_conditions: string;
@@ -256,7 +255,6 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   base_unit: product?.base_unit ?? "",
   unit_weight_kg: product?.unit_weight_kg ?? null,
   brand: product?.brand ?? "",
-  product_code: product?.product_code ?? "",
   est_unit_cost: product?.est_unit_cost ?? null,
   shelf_life_days: product?.shelf_life_days ?? null,
   storage_conditions: product?.storage_conditions ?? "",
@@ -473,9 +471,6 @@ function ProductEditor({
           }
         >
           {unit ? <NumberInput value={form.est_unit_cost} onChange={(v) => set("est_unit_cost", v)} /> : <span className="erpNoUnit">{T("Сначала выберите единицу", "Choose a unit first", "Chọn đơn vị trước")}</span>}
-        </Field>
-        <Field label={productCodeFieldLabel()}>
-          <input value={form.product_code} onChange={(e) => set("product_code", e.target.value)} autoComplete="off" spellCheck={false} />
         </Field>
       </div>
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
