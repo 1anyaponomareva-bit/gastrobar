@@ -8,9 +8,11 @@ import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
 import { PDFDocument } from "pdf-lib";
 import {
+  formatOrderPdfPackLabel,
   formatOrderPdfQtyCell,
   getOrderPdfFileName,
   makeOrderPdfBlob,
+  orderPdfCompanyHeading,
   orderPdfHeaderMeta,
   orderPdfTitle,
   setOrderPdfFonts,
@@ -280,11 +282,12 @@ async function main() {
       },
     );
     assert.equal(snap.kind, "pre");
+    assert.equal(orderPdfCompanyHeading(snap.kind), "GASTROFOOD - PRE-ORDER / ĐƠN ĐẶT TRƯỚC");
     const preMeta = orderPdfHeaderMeta(snap);
     assert.equal(preMeta[0].startsWith("Order / Số:"), true);
     assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
     assert.equal(
-      preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+      preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
       false,
     );
     const file1 = getOrderPdfFileName(snap);
@@ -317,9 +320,12 @@ async function main() {
     assert.equal(n(again.revision), 2, "double place does not bump revision");
     const placedSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [draft.id])) as unknown as OrderPdfInput;
     assert.equal(placedSnap.kind, "final");
+    assert.equal(orderPdfCompanyHeading(placedSnap.kind), "GASTROFOOD - ORDER / ĐƠN ĐẶT HÀNG");
     const placedMeta = orderPdfHeaderMeta(placedSnap);
-    assert.equal(placedMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-    assert.equal(placedMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+    assert.equal(placedMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+    assert.equal(placedMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+    assert.equal(placedMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
+    assert.ok(placedMeta.some((line) => line.startsWith("Recipient / Người nhận:") && line.includes("GASTROFOOD")));
     assert.match(getOrderPdfFileName(placedSnap), /^Order_Test-MM_\d{4}-\d{2}-\d{2}\.pdf$/);
     await makeOrderPdfBlob(placedSnap);
   });
@@ -621,7 +627,7 @@ async function main() {
     assert.equal(preSnap.kind, "pre");
     const preMeta = orderPdfHeaderMeta(preSnap);
     assert.equal(
-      preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+      preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
       false,
     );
     await makeOrderPdfBlob(preSnap);
@@ -631,9 +637,11 @@ async function main() {
     assert.equal(finalSnap.kind, "final");
     assert.match(String(finalSnap.warehouseAddress ?? ""), /152 Lk 77 Đường số 51/);
     const finalMeta = orderPdfHeaderMeta(finalSnap);
-    assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-    assert.equal(finalMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
-    assert.ok(finalMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("152 Lk 77 Đường số 51")));
+    assert.equal(finalMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+    assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+    assert.equal(finalMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
+    assert.ok(finalMeta.some((line) => line === "Recipient / Người nhận: GASTROFOOD Warehouse / Kho"));
+    assert.ok(finalMeta.some((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:") && line.includes("152 Lk 77 Đường số 51")));
     assert.equal(
       finalMeta.some((line) => /Mường Thanh/.test(line)),
       false,
@@ -667,6 +675,7 @@ async function main() {
     const pdf = await j("select public.erp_order_pdf_revision($1, $2)", [milkDraft.id, ACTOR]);
     const line = asJson(asArr(asJson(pdf.snapshot).lines)[0]);
     assert.equal(line.packLabel, "box 12*1 L");
+    assert.equal(formatOrderPdfPackLabel(String(line.packLabel)), "Box / Thùng 12*1 L");
     assert.equal(line.packCode, "OAT-BOX");
     assert.equal(line.unit, "box");
     assert.equal(n(line.qty), 2);

@@ -7,10 +7,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import {
+  formatOrderPdfPackLabel,
   formatOrderPdfQtyCell,
   getOrderPdfFileName,
   makeOrderPdfBlob,
-  ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_FINAL_HEADING,
+  ORDER_PDF_PRE_HEADING,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -131,29 +133,37 @@ async function main() {
   assert.equal(formatOrderPdfQtyCell(short.lines[1]), "3");
   assert.equal(formatOrderPdfQtyCell(short.lines[2]), "1");
   assert.doesNotMatch(formatOrderPdfQtyCell(short.lines[0]), /[a-zA-Z]/);
+  assert.equal(formatOrderPdfPackLabel(short.lines[0].packLabel), "Box / Thùng 5 kg");
+  assert.equal(formatOrderPdfPackLabel(short.lines[1].packLabel), "24 Pcs / Cái");
+  assert.equal(formatOrderPdfPackLabel("Pack 1 kg"), "Pack / Gói 1 kg");
   assert.equal(getOrderPdfFileName(short), "Order_MM_2026-11-07.pdf");
   assert.equal(getOrderPdfFileName(pre), "Pre_order_MM_2026-11-07.pdf");
   assert.equal(getOrderPdfFileName(long), "Order_Hisina_2026-11-07.pdf");
   assert.doesNotMatch(getOrderPdfFileName(short), /_r\d/);
   assert.notEqual(orderPdfCacheKey({ ...short, revision: 1 }), orderPdfCacheKey({ ...short, revision: 2 }));
-  assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
+  assert.equal(orderPdfCompanyHeading("pre"), ORDER_PDF_PRE_HEADING);
+  assert.equal(orderPdfCompanyHeading("final"), ORDER_PDF_FINAL_HEADING);
   assert.equal(pre.warehouseName, undefined);
   assert.equal(pre.warehouseAddress, undefined);
   const preMeta = orderPdfHeaderMeta(pre);
   assert.equal(preMeta[0].startsWith("Order / Số:"), true);
   assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
   assert.equal(
-    preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+    preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
     false,
   );
   const shortMeta = orderPdfHeaderMeta(short);
-  assert.equal(shortMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-  assert.equal(shortMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
-  assert.ok(shortMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("Mường Thanh Viễn Triều")));
+  assert.equal(shortMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+  assert.equal(shortMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+  assert.equal(shortMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
+  assert.ok(shortMeta.some((line) => line === "Recipient / Người nhận: GASTROFOOD Prep Kitchen / Bếp sơ chế"));
+  assert.ok(shortMeta.some((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:") && line.includes("Mường Thanh Viễn Triều")));
   assert.ok(shortMeta.some((line) => line.startsWith("Phone / Điện thoại:") && line.includes(ORDER_PDF_PREP_KITCHEN_PHONE)));
   const warehouseMeta = orderPdfHeaderMeta(warehouseOrder);
-  assert.equal(warehouseMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-  assert.equal(warehouseMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
+  assert.equal(warehouseMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+  assert.equal(warehouseMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+  assert.equal(warehouseMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
+  assert.ok(warehouseMeta.some((line) => line === "Recipient / Người nhận: GASTROFOOD Warehouse / Kho"));
   assert.ok(warehouseMeta.some((line) => line.includes("152 Lk 77 Đường số 51")));
   assert.equal(
     warehouseMeta.some((line) => /Mường Thanh|Prep Kitchen/.test(line)),
@@ -163,7 +173,7 @@ async function main() {
     orderPdfHeaderMeta(long).some((line) => /Mường Thanh/.test(line)),
     false,
   );
-  assert.deepEqual(orderPdfFooterLines(), [ORDER_PDF_COMPANY_NAME]);
+  assert.deepEqual(orderPdfFooterLines(), []);
 
   const shortOut = await writeSample("order-mm-short.pdf", short);
   const preOut = await writeSample("pre-order-mm.pdf", pre);

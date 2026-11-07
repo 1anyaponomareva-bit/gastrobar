@@ -3,9 +3,11 @@ import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
 import { decideErpHostGate, productionErpHostEnv, readErpHostGateConfig } from "../erp/hostGate";
 import {
+  formatOrderPdfPackLabel,
   formatOrderPdfQtyCell,
   getOrderPdfFileName,
-  ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_FINAL_HEADING,
+  ORDER_PDF_PRE_HEADING,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -13,6 +15,7 @@ import {
   orderPdfFooterLines,
   orderPdfHeaderMeta,
   orderPdfLineCode,
+  orderPdfRecipientValue,
   orderPdfTitle,
 } from "./orderPdfTypes";
 import {
@@ -256,6 +259,16 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   assert.equal(formatOrderPdfQtyCell(input!.lines[0]), "2");
   assert.equal(formatOrderPdfQtyCell({ qty: 2, unit: beer.unit }), "2");
   assert.doesNotMatch(formatOrderPdfQtyCell(input!.lines[0]), /[a-zA-Z]/);
+  assert.equal(formatOrderPdfPackLabel(input!.lines[0].packLabel), "Pack / Gói 24*330 ml");
+  assert.equal(formatOrderPdfPackLabel("Pack 1 kg"), "Pack / Gói 1 kg");
+  assert.equal(formatOrderPdfPackLabel("box 5 kg"), "Box / Thùng 5 kg");
+  assert.equal(formatOrderPdfPackLabel("Can 200 g"), "Can / Lon 200 g");
+  assert.equal(formatOrderPdfPackLabel("24 pcs"), "24 Pcs / Cái");
+  assert.equal(formatOrderPdfPackLabel("Piece 1"), "Piece / Cái 1");
+  assert.equal(formatOrderPdfPackLabel("bag 1 kg"), "bag 1 kg");
+  assert.equal(formatOrderPdfPackLabel("box 12*1 L"), "Box / Thùng 12*1 L");
+  assert.equal(formatOrderPdfPackLabel("Pack / Gói 1 kg"), "Pack / Gói 1 kg");
+  assert.doesNotMatch(formatOrderPdfPackLabel("Pack 1 kg"), /\bkg\b.*Gói|\/ kg/i);
   const saltOnly = supplierPrintPdfInput([salt], { salt: { packId: "p2", qty: "3" } }, {
     orderNo: "ORD-1",
     supplierName: "MM",
@@ -272,6 +285,7 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   assert.equal(twoBoxes!.lines[0].qty, 2);
   assert.equal(twoBoxes!.lines[0].unit, "box");
   assert.equal(twoBoxes!.lines[0].packLabel, "box 5 kg");
+  assert.equal(formatOrderPdfPackLabel(twoBoxes!.lines[0].packLabel), "Box / Thùng 5 kg");
   assert.equal(formatOrderPdfQtyCell(twoBoxes!.lines[0]), "2");
   assert.notEqual(formatOrderPdfQtyCell({ qty: 2 * 5, unit: "kg" }), "2");
   const fileName = getOrderPdfFileName(input!);
@@ -337,22 +351,25 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
   assert.equal(pre!.warehousePhone, undefined);
   assert.equal(getOrderPdfFileName(pre!), "Pre_order_MM_2026-11-07.pdf");
   assert.doesNotMatch(getOrderPdfFileName(pre!), /rev|_r\d/i);
-  assert.equal(orderPdfCompanyHeading(), ORDER_PDF_COMPANY_NAME);
-  assert.doesNotMatch(orderPdfCompanyHeading(), /PREP KITCHEN|ORDER \/ ĐƠN ĐẶT HÀNG/i);
+  assert.equal(orderPdfCompanyHeading("pre"), ORDER_PDF_PRE_HEADING);
+  assert.equal(orderPdfCompanyHeading("pre"), "GASTROFOOD - PRE-ORDER / ĐƠN ĐẶT TRƯỚC");
+  assert.doesNotMatch(orderPdfCompanyHeading("pre"), /PREP KITCHEN|ORDER \/ ĐƠN ĐẶT HÀNG/i);
+  assert.equal(orderPdfCompanyHeading("final"), ORDER_PDF_FINAL_HEADING);
+  assert.equal(orderPdfCompanyHeading("final"), "GASTROFOOD - ORDER / ĐƠN ĐẶT HÀNG");
+  assert.doesNotMatch(orderPdfCompanyHeading("final"), /PREP KITCHEN|PRE-ORDER/i);
   const preMeta = orderPdfHeaderMeta(pre!);
-  assert.equal(preMeta[0].startsWith("Order / Số:"), true);
-  assert.equal(preMeta[1].startsWith("Date / Ngày:"), true);
+  assert.deepEqual(preMeta, ["Order / Số: ORD-000004", "Date / Ngày: 2026-11-07"]);
   assert.equal(
-    preMeta.some((line) => /Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
+    preMeta.some((line) => /Recipient \/|Delivery address \/|Warehouse \/ Kho:|Address \/ Địa chỉ:|Phone \/|Mường Thanh|152 Lk 77/.test(line)),
     false,
   );
   assert.equal(
     preMeta.some((line) => /ORDER \/ ĐƠN ĐẶT HÀNG/.test(line)),
     false,
   );
-  assert.deepEqual(orderPdfFooterLines(), [ORDER_PDF_COMPANY_NAME]);
+  assert.deepEqual(orderPdfFooterLines(), []);
   assert.equal(
-    orderPdfFooterLines().some((line) => /Mường Thanh|152 Lk 77/.test(line)),
+    orderPdfFooterLines().some((line) => /GASTROFOOD|Mường Thanh|152 Lk 77/.test(line)),
     false,
   );
   assert.equal(formatOrderPdfQtyCell(pre!.lines[0]), "2");
@@ -377,13 +394,16 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
   const finalMeta = orderPdfHeaderMeta(finalPdf!);
   assert.equal(finalMeta[0].startsWith("Order / Số:"), true);
   assert.equal(finalMeta[1].startsWith("Date / Ngày:"), true);
-  assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-  assert.equal(finalMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 1);
-  assert.ok(finalMeta.some((line) => line.startsWith("Warehouse / Kho:") && line.includes("Warehouse / Kho")));
+  assert.equal(orderPdfRecipientValue("Warehouse / Kho"), "GASTROFOOD Warehouse / Kho");
+  assert.equal(finalMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+  assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+  assert.equal(finalMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);
+  assert.equal(finalMeta.filter((line) => line.startsWith("Address / Địa chỉ:")).length, 0);
+  assert.ok(finalMeta.some((line) => line === "Recipient / Người nhận: GASTROFOOD Warehouse / Kho"));
   assert.ok(
     finalMeta.some(
       (line) =>
-        line.startsWith("Address / Địa chỉ:") &&
+        line.startsWith("Delivery address / Địa chỉ giao hàng:") &&
         line.includes("152 Lk 77 Đường số 51") &&
         line.includes("Phường Nam Nha Trang, Tỉnh Khánh Hòa"),
     ),
@@ -402,9 +422,11 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
     kind: "final",
   });
   const prepMeta = orderPdfHeaderMeta(prepFinal!);
-  assert.equal(prepMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 1);
-  assert.ok(prepMeta.some((line) => line.startsWith("Warehouse / Kho:") && line.includes("Prep Kitchen / Bếp sơ chế")));
-  assert.ok(prepMeta.some((line) => line.startsWith("Address / Địa chỉ:") && line.includes("Mường Thanh Viễn Triều")));
+  assert.equal(orderPdfRecipientValue("Prep Kitchen / Bếp sơ chế"), "GASTROFOOD Prep Kitchen / Bếp sơ chế");
+  assert.equal(prepMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
+  assert.equal(prepMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
+  assert.ok(prepMeta.some((line) => line === "Recipient / Người nhận: GASTROFOOD Prep Kitchen / Bếp sơ chế"));
+  assert.ok(prepMeta.some((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:") && line.includes("Mường Thanh Viễn Triều")));
   assert.equal(
     prepMeta.some((line) => /152 Lk 77/.test(line)),
     false,

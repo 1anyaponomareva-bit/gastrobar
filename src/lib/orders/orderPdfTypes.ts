@@ -31,6 +31,9 @@ export type OrderPdfInput = {
 
 export const ORDER_PDF_COMPANY_NAME = "GASTROFOOD";
 
+export const ORDER_PDF_PRE_HEADING = "GASTROFOOD - PRE-ORDER / ĐƠN ĐẶT TRƯỚC";
+export const ORDER_PDF_FINAL_HEADING = "GASTROFOOD - ORDER / ĐƠN ĐẶT HÀNG";
+
 export const ORDER_PDF_PREP_KITCHEN_ADDRESS =
   "Khối 12A tòa OC3 thuộc dự án Mường Thanh Viễn Triều, Phường Bắc Nha Trang, Khánh Hòa";
 
@@ -86,6 +89,32 @@ export function formatOrderPdfQtyCell(line: Pick<OrderPdfLine, "qty" | "unit">):
   return formatOrderQty(line.qty);
 }
 
+const PACK_COUNT_WORDS: Record<string, { en: string; vn: string }> = {
+  pack: { en: "Pack", vn: "Gói" },
+  packs: { en: "Pack", vn: "Gói" },
+  box: { en: "Box", vn: "Thùng" },
+  boxes: { en: "Box", vn: "Thùng" },
+  can: { en: "Can", vn: "Lon" },
+  cans: { en: "Can", vn: "Lon" },
+  piece: { en: "Piece", vn: "Cái" },
+  pieces: { en: "Piece", vn: "Cái" },
+  pcs: { en: "Pcs", vn: "Cái" },
+  pc: { en: "Pcs", vn: "Cái" },
+};
+
+/**
+ * Bilingual count words under QTY (`Pack / Gói 1 kg`). kg/g/l/ml and numbers stay as-is.
+ * Catalog packLabel is unchanged; this is PDF display only.
+ */
+export function formatOrderPdfPackLabel(packLabel: string): string {
+  const raw = String(packLabel ?? "").replace(/\s+/g, " ").trim();
+  if (!raw) return "";
+  return raw.replace(/\b(?:packs?|boxes|box|cans?|pieces?|pcs|pc)\b(?!\s*\/)/gi, (word) => {
+    const mapped = PACK_COUNT_WORDS[word.toLowerCase()];
+    return mapped ? `${mapped.en} / ${mapped.vn}` : word;
+  });
+}
+
 export function orderPdfLines(input: OrderPdfInput): OrderPdfLine[] {
   return (input.lines ?? []).filter((line) => Number(line.qty) > 0);
 }
@@ -101,12 +130,13 @@ export function getOrderPdfFileName(
   return `${prefix}_${supplier}_${date}.pdf`;
 }
 
-export function orderPdfCompanyHeading(): string {
-  return ORDER_PDF_COMPANY_NAME;
+export function orderPdfCompanyHeading(kind: OrderPdfKind | null | undefined = "final"): string {
+  return kind === "pre" ? ORDER_PDF_PRE_HEADING : ORDER_PDF_FINAL_HEADING;
 }
 
+/** Bottom beige GASTROFOOD bar is not printed. */
 export function orderPdfFooterLines(): string[] {
-  return [ORDER_PDF_COMPANY_NAME];
+  return [];
 }
 
 export function orderPdfAddressLines(address: string): string[] {
@@ -141,15 +171,24 @@ export function orderPdfContactOf(
   };
 }
 
+/** Final PDF value after Date: company + the one selected warehouse name. */
+export function orderPdfRecipientValue(warehouseName: string): string {
+  const name = String(warehouseName ?? "").replace(/\s+/g, " ").trim();
+  if (!name) return "";
+  return `${ORDER_PDF_COMPANY_NAME} ${name}`;
+}
+
 export function orderPdfHeaderMeta(input: OrderPdfInput): string[] {
   const lines = [
     `Order / Số: ${input.orderNo.trim() || "—"}`,
     `Date / Ngày: ${formatOrderPdfDate(input.orderedAt)}`,
   ];
   const warehouse = orderPdfPrintWarehouse(input);
-  if (warehouse.warehouseName) lines.push(`Warehouse / Kho: ${warehouse.warehouseName}`);
+  if (warehouse.warehouseName) {
+    lines.push(`Recipient / Người nhận: ${orderPdfRecipientValue(warehouse.warehouseName)}`);
+  }
   const address = orderPdfAddressLines(warehouse.warehouseAddress ?? "").join(", ");
-  if (address) lines.push(`Address / Địa chỉ: ${address}`);
+  if (address) lines.push(`Delivery address / Địa chỉ giao hàng: ${address}`);
   if (warehouse.warehousePhone) lines.push(`Phone / Điện thoại: ${warehouse.warehousePhone}`);
   const comment = String(input.comment ?? "").replace(/\s+/g, " ").trim();
   if (comment) lines.push(`Note / Ghi chú: ${comment}`);

@@ -2,6 +2,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import {
   formatOrderLineName,
+  formatOrderPdfPackLabel,
   formatOrderPdfQtyCell,
   orderPdfCompanyHeading,
   orderPdfFooterLines,
@@ -21,10 +22,13 @@ export {
   asciiFileLabel,
   formatOrderLineName,
   formatOrderPdfDate,
+  formatOrderPdfPackLabel,
   formatOrderPdfQtyCell,
   formatOrderQty,
   getOrderPdfFileName,
   ORDER_PDF_COMPANY_NAME,
+  ORDER_PDF_FINAL_HEADING,
+  ORDER_PDF_PRE_HEADING,
   ORDER_PDF_PREP_KITCHEN_ADDRESS,
   ORDER_PDF_PREP_KITCHEN_PHONE,
   ORDER_PDF_WAREHOUSE_ADDRESS,
@@ -37,6 +41,7 @@ export {
   orderPdfPrintWarehouse,
   orderPdfLineCode,
   orderPdfLines,
+  orderPdfRecipientValue,
   orderPdfRevisionLabel,
   orderPdfTitle,
 } from "./orderPdfTypes";
@@ -230,7 +235,7 @@ function drawWrappedLines(
 }
 
 function drawHeader(ctx: PdfContext, input: OrderPdfInput) {
-  const title = orderPdfCompanyHeading();
+  const title = orderPdfCompanyHeading(input.kind ?? "final");
   const titleBlock = measureWrapped(title, ctx.fontBold, 16, CONTENT_WIDTH, 4);
   const meta = orderPdfHeaderMeta(input);
   const metaBlocks = meta.map((line) => measureWrapped(line, ctx.font, 11, CONTENT_WIDTH - 24, 3));
@@ -290,7 +295,7 @@ function drawOrderRow(ctx: PdfContext, line: OrderPdfLine, index: number) {
   const nameEn = String(line.nameEn ?? "").replace(/\s+/g, " ").trim();
   const nameVn = String(line.nameVn ?? "").replace(/\s+/g, " ").trim();
   const brand = String(line.brand ?? "").replace(/\s+/g, " ").trim();
-  const pack = String(line.packLabel ?? "").replace(/\s+/g, " ").trim();
+  const pack = formatOrderPdfPackLabel(String(line.packLabel ?? ""));
   const code = orderPdfLineCode(line.packCode);
   const qtyText = formatOrderPdfQtyCell(line);
   const bilingual = formatOrderLineName(line);
@@ -355,7 +360,9 @@ function drawEmpty(ctx: PdfContext) {
 }
 
 function drawFooter(ctx: PdfContext) {
-  const blocks = orderPdfFooterLines().map((line, index) =>
+  const footer = orderPdfFooterLines();
+  if (!footer.length) return;
+  const blocks = footer.map((line, index) =>
     measureWrapped(line, index === 0 ? ctx.fontBold : ctx.font, 10, CONTENT_WIDTH - 24, 3),
   );
   const height = blocks.reduce((sum, block) => sum + block.height, 0) + (blocks.length - 1) * 5 + 20;
