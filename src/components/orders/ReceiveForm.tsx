@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
-import { formatOrderLineQty } from "@/lib/orders/orderList";
+import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
 import { parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
 import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
@@ -23,6 +23,7 @@ type LineState = {
   packLabel: string;
   unit: string;
   remainingQty: number;
+  orderedQty: number;
   packQty?: number | null;
   packQtyBase?: number | null;
   baseUnit: string;
@@ -63,6 +64,7 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
               packLabel: line.packLabel,
               unit: line.unit,
               remainingQty: line.remainingQty,
+              orderedQty: line.orderedQty,
               packQty: line.packQty,
               packQtyBase: line.packQtyBase,
               baseUnit,
@@ -161,18 +163,21 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
 
       {lines.map((line, index) => {
         const units = receiveLineUnits(line.baseUnit);
+        const qtyView = {
+          orderedQty: line.orderedQty,
+          packLabel: line.packLabel,
+          unit: line.unit,
+          packQty: line.packQty,
+          packQtyBase: line.packQtyBase,
+          baseUnit: line.baseUnit,
+        };
+        const orderedHint = formatOrderLineBaseHint(qtyView);
         return (
           <div key={line.orderLineId} className="orders-card">
             <div className="orders-name">{formatOrderLineName({ nameEn: line.nameEn, nameVn: line.nameVn })}</div>
             <div className="orders-meta">
-              {line.packLabel} · {t("qty_ordered")}{" "}
-              {formatOrderLineQty(line.remainingQty, {
-                orderedQty: line.remainingQty,
-                packLabel: line.packLabel,
-                unit: line.unit,
-                packQty: line.packQty,
-                packQtyBase: line.packQtyBase,
-              })}
+              {line.packLabel} · {t("qty_ordered")} {formatOrderLineQty(line.orderedQty, qtyView, "ordered")}
+              {orderedHint ? <span> {orderedHint}</span> : null}
             </div>
             <div className="orders-field" style={{ marginTop: 8 }}>
               <label>{t("actual_qty")}</label>

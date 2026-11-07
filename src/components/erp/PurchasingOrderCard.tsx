@@ -131,9 +131,9 @@ export function PurchasingOrderCard({ id }: { id: string }) {
                   {formatOrderLineQty(line.orderedQty, line, "ordered")}
                   {formatOrderLineBaseHint(line) ? <div className="erpMuted">{formatOrderLineBaseHint(line)}</div> : null}
                 </td>
-                <td>{formatOrderLineQty(line.acceptedQty, line)}</td>
-                <td>{formatOrderLineQty(line.postedQty, line)}</td>
-                <td>{formatOrderLineQty(displayRemainingQty(line), line)}</td>
+                <td>{formatOrderLineQty(line.acceptedQty, line, "base")}</td>
+                <td>{formatOrderLineQty(line.postedQty, line, "base")}</td>
+                <td>{formatOrderLineQty(displayRemainingQty(line), line, "base")}</td>
               </tr>
             ))}
           </tbody>

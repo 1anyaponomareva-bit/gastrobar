@@ -333,28 +333,51 @@ export type OrderLineQtyView = {
   qtyBase?: number | null;
   packLabel?: string | null;
   unit: string;
+  baseUnit?: string | null;
 };
+
+export type OrderLineQtyField = "ordered" | "base";
 
 function packCoef(line: OrderLineQtyView): number | null {
   const value = Number(line.packQtyBase ?? line.qtyBase);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-/** 2 boxes of 20 kg must stay 2 box, not 40 box (base kg shown with the pack word). */
-export function orderLineDisplayCount(baseQty: number, line: OrderLineQtyView, field: "ordered" | "other" = "other"): number {
-  const coef = packCoef(line);
-  if (field === "ordered" && line.packQty != null && Number(line.packQty) > 0) return Number(line.packQty);
-  if (coef) return Math.round((baseQty / coef) * 1e6) / 1e6;
+function isPackWord(value: string): boolean {
+  return /^(box|pack|pcs|pc|btl|bottle|can|bag|gói)$/i.test(value.trim());
+}
+
+/** Product unit (kg, l), never the pack word box/pack. */
+export function orderLineBaseUnit(line: OrderLineQtyView): string {
+  const explicit = String(line.baseUnit ?? "").trim();
+  if (explicit && !isPackWord(explicit)) return explicit;
+  const unit = String(line.unit ?? "").trim();
+  if (unit && !isPackWord(unit)) return unit;
+  const match = PACK_CONTAINER.exec((line.packLabel || "").replace(/\s+/g, " ").trim());
+  const fromPack = (match?.[2] ?? "").replace(/^[\d.,*\s×x]+/iu, "").trim();
+  if (fromPack && !isPackWord(fromPack)) return fromPack;
+  return explicit || unit;
+}
+
+/** Ordered stays packs. Accepted / posted / remaining stay kg, l, … */
+export function orderLineDisplayCount(baseQty: number, line: OrderLineQtyView, field: OrderLineQtyField = "base"): number {
+  if (field === "ordered") {
+    if (line.packQty != null && Number(line.packQty) > 0) return Number(line.packQty);
+    const coef = packCoef(line);
+    if (coef) return Math.round((baseQty / coef) * 1e6) / 1e6;
+  }
   return baseQty;
 }
 
-export function orderLineDisplayUnit(line: OrderLineQtyView): string {
-  if (packCoef(line)) return orderPackUnit({ label: line.packLabel || "", unit: line.unit || "" }, line.unit || "");
-  return line.unit || "";
+export function orderLineDisplayUnit(line: OrderLineQtyView, field: OrderLineQtyField = "base"): string {
+  if (field === "ordered" && packCoef(line)) {
+    return orderPackUnit({ label: line.packLabel || "", unit: line.unit || "" }, line.unit || "");
+  }
+  return orderLineBaseUnit(line);
 }
 
-export function formatOrderLineQty(baseQty: number, line: OrderLineQtyView, field: "ordered" | "other" = "other"): string {
-  return `${formatQty(orderLineDisplayCount(baseQty, line, field))} ${orderLineDisplayUnit(line)}`.trim();
+export function formatOrderLineQty(baseQty: number, line: OrderLineQtyView, field: OrderLineQtyField = "base"): string {
+  return `${formatQty(orderLineDisplayCount(baseQty, line, field))} ${orderLineDisplayUnit(line, field)}`.trim();
 }
 
 /** Extra line under ordered packs: `= 40 kg` when one box is not 1 base unit. */
@@ -362,10 +385,8 @@ export function formatOrderLineBaseHint(line: OrderLineQtyView): string | null {
   const coef = packCoef(line);
   if (!coef || Math.abs(coef - 1) < 1e-9) return null;
   if (line.packQty == null || Number(line.packQty) <= 0) return null;
-  const match = PACK_CONTAINER.exec((line.packLabel || "").replace(/\s+/g, " ").trim());
-  const rest = match?.[2]?.trim() ?? "";
-  const baseUnit = rest.replace(/^[\d.,*\s]+/u, "").trim();
-  return `= ${formatQty(line.orderedQty)}${baseUnit ? ` ${baseUnit}` : ""}`;
+  const unit = orderLineBaseUnit(line);
+  return `= ${formatQty(line.orderedQty)}${unit ? ` ${unit}` : ""}`;
 }
 
 export function productDetailLine(input: {

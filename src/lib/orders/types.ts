@@ -126,6 +126,9 @@ export type OrderReceiptLine = {
   nameVn: string;
   packLabel: string;
   unit: string;
+  baseUnit?: string | null;
+  packQty?: number | null;
+  packQtyBase?: number | null;
   orderedQty: number;
   actualQty: number;
   discrepancyKind: DiscrepancyKind;

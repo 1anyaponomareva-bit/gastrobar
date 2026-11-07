@@ -179,7 +179,9 @@ test("ordered 2 boxes of 20 kg displays 2 box, not 40 box", () => {
   };
   assert.equal(formatOrderLineQty(40, buffalo, "ordered"), "2 box");
   assert.equal(formatOrderLineBaseHint(buffalo), "= 40 kg");
-  assert.equal(formatOrderLineQty(0, buffalo), "0 box");
+  assert.equal(formatOrderLineQty(15.5, buffalo), "15.5 kg");
+  assert.equal(formatOrderLineQty(0, buffalo), "0 kg");
+  assert.equal(formatOrderLineQty(0, buffalo, "base"), "0 kg");
   const beer = {
     orderedQty: 15.84,
     packQty: 2,
@@ -188,6 +190,7 @@ test("ordered 2 boxes of 20 kg displays 2 box, not 40 box", () => {
     unit: "l",
   };
   assert.equal(formatOrderLineQty(15.84, beer, "ordered"), "2 pack");
+  assert.equal(formatOrderLineQty(5.5, beer), "5.5 l");
   const each = {
     orderedQty: 3,
     packQty: 3,
@@ -197,6 +200,29 @@ test("ordered 2 boxes of 20 kg displays 2 box, not 40 box", () => {
   };
   assert.equal(formatOrderLineQty(3, each, "ordered"), "3 kg");
   assert.equal(formatOrderLineBaseHint(each), null);
+});
+
+test("accepted, posted and remaining show kg/l, not fractional boxes", () => {
+  const wings = {
+    orderedQty: 20,
+    packQty: 1,
+    packQtyBase: 20,
+    packLabel: "Box 20 kg",
+    unit: "Box",
+    baseUnit: "kg",
+  };
+  assert.equal(formatOrderLineQty(15.5, wings, "base"), "15.5 kg");
+  assert.equal(formatOrderLineQty(0, wings, "base"), "0 kg");
+  assert.notEqual(formatOrderLineQty(15.5, wings, "base"), "0.775 box");
+  const oil = {
+    orderedQty: 5,
+    packQty: 1,
+    packQtyBase: 5,
+    packLabel: "Can 5 l",
+    unit: "Can",
+    baseUnit: "l",
+  };
+  assert.equal(formatOrderLineQty(4.25, oil, "base"), "4.25 l");
 });
 
 test("pack caption and details match Staff cards: 1 pack = N, supplier + pack SKU", () => {

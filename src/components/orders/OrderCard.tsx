@@ -77,19 +77,19 @@ export function OrderCard({ orderId }: { orderId: string }) {
             <span>
               {t("qty_accepted")}
               <b>
-                {formatOrderLineQty(line.acceptedQty, line)}
+                {formatOrderLineQty(line.acceptedQty, line, "base")}
               </b>
             </span>
             <span>
               {t("qty_posted")}
               <b>
-                {formatOrderLineQty(line.postedQty, line)}
+                {formatOrderLineQty(line.postedQty, line, "base")}
               </b>
             </span>
             <span>
               {t("qty_remaining")}
               <b>
-                {formatOrderLineQty(displayRemainingQty(line), line)}
+                {formatOrderLineQty(displayRemainingQty(line), line, "base")}
               </b>
             </span>
           </div>

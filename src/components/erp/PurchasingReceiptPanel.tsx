@@ -168,7 +168,7 @@ export function PurchasingReceiptPanel({ documentId, required = false }: { docum
                     <div className="erpMuted">{line.packLabel}</div>
                   </td>
                   <td>{formatOrderLineQty(line.orderedQty, line, "ordered")}</td>
-                  <td>{formatOrderLineQty(line.actualQty, line)}</td>
+                  <td>{formatOrderLineQty(line.actualQty, line, "base")}</td>
                   <td>
                     {line.discrepancyKind !== "none" ? (
                       <span className="erpBadge warn">
