@@ -1,6 +1,6 @@
 /** Shared DTOs for the employee /orders app and ERP purchasing screens. */
 
-export type OrderStatus = "draft" | "ordered" | "partial" | "closed";
+export type OrderStatus = "draft" | "ordered" | "partial" | "received" | "closed";
 export type ReceiptDocStatus = "draft" | "posted" | "cancelled" | "clarify";
 export type DiscrepancyKind = "none" | "short" | "over" | "substitute" | "other";
 
@@ -158,6 +158,8 @@ export type SupplierOrder = {
   createdBy: string | null;
   placedAt: string | null;
   placedBy: string | null;
+  receivedAt: string | null;
+  receivedBy: string | null;
   expectedDelivery: string | null;
   comment: string | null;
   revision: number;

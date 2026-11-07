@@ -18,6 +18,7 @@ import {
   setOrderPdfFonts,
   type OrderPdfInput,
 } from "../../src/lib/orders/orderPdf";
+import { displayRemainingQty } from "../../src/lib/orders/qty";
 import { createTestDb } from "./testDb";
 
 const ACTOR = "cook@gastrofood";
@@ -77,9 +78,6 @@ async function saveProduct(p: Record<string, unknown>) {
 }
 async function saveDoc(p: Record<string, unknown>) {
   return value<string>("select public.erp_save_document($1::jsonb, $2)", [JSON.stringify(p), ACTOR]);
-}
-async function post(id: string) {
-  return value<Record<string, unknown>>("select public.erp_post_document($1, $2)", [id, ADMIN]);
 }
 async function stock(product: string, warehouse: string) {
   return n(
@@ -316,6 +314,21 @@ async function main() {
     assert.equal(n(placed.revision), 2);
     assert.equal(n(placed.placedRevision), 2);
     assert.equal(await stock(beef, prep), 0);
+    const placedLine = asJson(asArr(placed.lines)[0]);
+    assert.equal(n(placedLine.orderedQty), 10);
+    assert.equal(n(placedLine.acceptedQty), 0);
+    assert.equal(n(placedLine.postedQty), 0);
+    assert.equal(n(placedLine.remainingQty), 10, "receive still sees the open ordered qty");
+    assert.equal(
+      displayRemainingQty({
+        orderedQty: Number(placedLine.orderedQty),
+        acceptedQty: Number(placedLine.acceptedQty),
+        postedQty: Number(placedLine.postedQty),
+        remainingQty: Number(placedLine.remainingQty),
+      }),
+      0,
+      "table Осталось does not copy ordered qty before receive/post",
+    );
     const again = await j("select public.erp_order_place($1, $2)", [draft.id, ACTOR]);
     assert.equal(n(again.revision), 2, "double place does not bump revision");
     const placedSnap = asJson(await value("select public.erp_order_build_pdf_input($1)", [draft.id])) as unknown as OrderPdfInput;
@@ -332,7 +345,7 @@ async function main() {
 
   const lineId = asJson(asArr(placed.lines)[0]).id as string;
 
-  await test("partial delivery 10 then 6 then 4 kg: receive does not move stock", async () => {
+  await test("receive flags the order and does not create a receipt or stock", async () => {
     const rec1 = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
       placed.id,
       JSON.stringify({
@@ -344,18 +357,27 @@ async function main() {
       ACTOR,
     ]);
     assert.equal(rec1.status, "partial");
+    assert.ok(rec1.receivedAt);
     const qty1 = asJson(asArr(rec1.lines)[0]);
     assert.equal(n(qty1.orderedQty), 10);
     assert.equal(n(qty1.acceptedQty), 6);
     assert.equal(n(qty1.postedQty), 0);
     assert.equal(n(qty1.remainingQty), 4);
-    const receipt = asJson(asArr(rec1.receipts)[0]);
-    assert.equal(receipt.status, "draft");
-    assert.equal(await stock(beef, prep), 0, "receive does not move stock");
     assert.equal(
-      n(await value("select count(*) from public.erp_lots where product_id = $1", [beef])),
+      displayRemainingQty({
+        orderedQty: Number(qty1.orderedQty),
+        acceptedQty: Number(qty1.acceptedQty),
+        postedQty: Number(qty1.postedQty),
+        remainingQty: Number(qty1.remainingQty),
+      }),
       0,
+      "Осталось stays 0 without posts",
     );
+    assert.equal(asArr(rec1.receipts).length, 0);
+    assert.equal(n(await value("select count(*) from public.erp_order_receipts where order_id = $1", [placed.id])), 0);
+    assert.equal(n(await value("select count(*) from public.erp_documents where source_order_id = $1", [placed.id])), 0);
+    assert.equal(await stock(beef, prep), 0, "receive does not move stock");
+    assert.equal(n(await value("select count(*) from public.erp_lots where product_id = $1", [beef])), 0);
 
     const dup = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
       placed.id,
@@ -365,15 +387,8 @@ async function main() {
       }),
       ACTOR,
     ]);
-    assert.equal(asArr(dup.receipts).length, 1, "retry does not duplicate the receipt");
+    assert.equal(asArr(dup.receipts).length, 0, "retry does not create a receipt");
     assert.equal(n(asJson(asArr(dup.lines)[0]).acceptedQty), 6);
-
-    const docId = asJson(asArr(rec1.receipts)[0]).documentId as string;
-    const posted = asJson(await value("select public.erp_order_admin_post($1, $2, $3)", [docId, ADMIN, true]));
-    assert.equal(posted.cost_known, false, "unknown price stays unknown");
-    assert.equal(await stock(beef, prep), 6, "admin post increases stock once");
-    await expectError(post(docId), "ERP_ALREADY_POSTED");
-    assert.equal(await stock(beef, prep), 6);
 
     const rec2 = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
       placed.id,
@@ -383,16 +398,22 @@ async function main() {
       }),
       ACTOR,
     ]);
-    assert.equal(n(asJson(asArr(rec2.lines)[0]).acceptedQty), 10);
-    assert.equal(n(asJson(asArr(rec2.lines)[0]).postedQty), 6);
-    assert.equal(n(asJson(asArr(rec2.lines)[0]).remainingQty), 0);
-    assert.equal(await stock(beef, prep), 6);
-    const doc2 = asJson(asArr(rec2.receipts)[1]).documentId as string;
-    await value("select public.erp_order_admin_post($1, $2, $3)", [doc2, ADMIN, true]);
-    assert.equal(await stock(beef, prep), 10);
-    const closed = await j("select public.erp_order_get($1, $2, false)", [placed.id, ACTOR]);
-    assert.equal(closed.status, "closed");
-    assert.equal(n(asJson(asArr(closed.lines)[0]).postedQty), 10);
+    assert.equal(rec2.status, "received");
+    const qty2 = asJson(asArr(rec2.lines)[0]);
+    assert.equal(n(qty2.acceptedQty), 10);
+    assert.equal(n(qty2.postedQty), 0);
+    assert.equal(n(qty2.remainingQty), 0);
+    assert.equal(
+      displayRemainingQty({
+        orderedQty: Number(qty2.orderedQty),
+        acceptedQty: Number(qty2.acceptedQty),
+        postedQty: Number(qty2.postedQty),
+        remainingQty: Number(qty2.remainingQty),
+      }),
+      0,
+    );
+    assert.equal(asArr(rec2.receipts).length, 0);
+    assert.equal(await stock(beef, prep), 0);
   });
 
   await test("employee cannot post; /orders access is not ERP admin", async () => {
@@ -445,7 +466,7 @@ async function main() {
   const otherPlaced = await j("select public.erp_order_get($1, $2, false)", [clarifyOrder.id, OTHER]);
   const otherLineId = asJson(asArr(otherPlaced.lines)[0]).id as string;
 
-  await test("return-to-clarify edits the same receipt; permissions hide foreign orders", async () => {
+  await test("receive does not create a receipt; permissions hide foreign orders", async () => {
     await expectError(q("select public.erp_order_get($1, $2, false)", [clarifyOrder.id, ACTOR]), "ERP_FORBIDDEN");
     const rec = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
       clarifyOrder.id,
@@ -455,33 +476,13 @@ async function main() {
       }),
       OTHER,
     ]);
-    const documentId = asJson(asArr(rec.receipts)[0]).documentId as string;
-    await expectError(
-      q("select public.erp_order_return_to_clarify($1, $2, $3, false)", [documentId, "wrong photo", OTHER]),
-      "ERP_FORBIDDEN",
-    );
-    const clarified = await j("select public.erp_order_return_to_clarify($1, $2, $3, true)", [
-      documentId,
-      "qty looks high",
-      ADMIN,
-    ]);
-    assert.equal(asJson(asArr(clarified.receipts)[0]).needsClarify, true);
-    const edited = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
-      clarifyOrder.id,
-      JSON.stringify({
-        idempotencyKey: "clarify-1",
-        lines: [{ orderLineId: otherLineId, qty: 3 }],
-      }),
-      OTHER,
-    ]);
-    assert.equal(asArr(edited.receipts).length, 1, "same receipt");
-    assert.equal(asJson(asArr(edited.receipts)[0]).documentId, documentId);
-    assert.equal(asJson(asArr(edited.receipts)[0]).needsClarify, false);
-    assert.equal(n(asJson(asArr(edited.lines)[0]).acceptedQty), 3);
-    assert.equal(await stock(beef, prep), 10, "clarify edit does not post");
+    assert.equal(rec.status, "partial");
+    assert.equal(asArr(rec.receipts).length, 0);
+    assert.equal(n(asJson(asArr(rec.lines)[0]).acceptedQty), 5);
+    assert.equal(await stock(beef, prep), 0, "receive does not post stock");
   });
 
-  await test("grant lets a colleague see the order; leftover close keeps posted stock", async () => {
+  await test("grant lets a colleague see the order; leftover close does not create stock", async () => {
     await q("select public.erp_order_grant($1, $2)", [OTHER, GRANTEE]);
     const seen = await j("select public.erp_order_get($1, $2, false)", [clarifyOrder.id, GRANTEE]);
     assert.equal(seen.id, clarifyOrder.id);
@@ -493,12 +494,11 @@ async function main() {
     ]);
     assert.equal(closed.status, "closed");
     assert.equal(n(asJson(asArr(closed.lines)[0]).remainingQty), 0);
-    const receipts = asArr(closed.receipts);
-    assert.ok(receipts.length >= 1);
-    assert.equal(await stock(beef, prep), 10, "posted receipts stay after leftover close");
+    assert.equal(asArr(closed.receipts).length, 0);
+    assert.equal(await stock(beef, prep), 0, "leftover close does not create stock");
   });
 
-  await test("over-qty and substitution are discrepancies, not an auto product swap", async () => {
+  await test("over-qty marks received qty and does not swap the order product", async () => {
     const order = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
       supplier,
       JSON.stringify({ warehouseId: prep, lines: [{ product_id: beef, qty: 2 }] }),
@@ -515,15 +515,14 @@ async function main() {
       }),
       ACTOR,
     ]);
-    const rline = asJson(asArr(asJson(asArr(rec.receipts)[0]).lines)[0]);
-    assert.equal(rline.discrepancy, "substitution");
-    assert.equal(rline.product_id, salt);
+    assert.equal(asArr(rec.receipts).length, 0);
     assert.equal(asJson(asArr(rec.lines)[0]).product_id, beef, "order line product is not swapped");
     assert.equal(n(asJson(asArr(rec.lines)[0]).acceptedQty), 3);
     assert.equal(n(asJson(asArr(rec.lines)[0]).remainingQty), 0);
+    assert.equal(rec.status, "received");
   });
 
-  await test("product archived after order still receives; admin post still lands stock", async () => {
+  await test("product archived after order can still be marked received without stock", async () => {
     const lime = await saveProduct({
       type: "ingredient",
       name_en: "Order lime",
@@ -555,9 +554,9 @@ async function main() {
       JSON.stringify({ idempotencyKey: "arch-1", lines: [{ orderLineId: line, qty: 1 }] }),
       GRANTEE,
     ]);
-    const docId = asJson(asArr(rec.receipts)[0]).documentId as string;
-    await value("select public.erp_order_admin_post($1, $2, $3)", [docId, ADMIN, true]);
-    assert.equal(await stock(lime, prep), 1);
+    assert.equal(rec.status, "received");
+    assert.equal(asArr(rec.receipts).length, 0);
+    assert.equal(await stock(lime, prep), 0, "temp receive does not land stock");
   });
 
   await test("a second order to the same supplier is a new draft, not a rewrite of the placed one", async () => {

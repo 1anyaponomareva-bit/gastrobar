@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessage, listPurchasingOrders } from "@/lib/orders/api";
 import type { OrderStatus, SupplierOrder } from "@/lib/orders/types";
-import { formatQty } from "@/lib/orders/qty";
+import { formatQty, sumDisplayRemaining } from "@/lib/orders/qty";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
 
-const STATUSES: OrderStatus[] = ["ordered", "partial", "closed"];
+const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
 
 export function PurchasingOrdersPage() {
   const [orders, setOrders] = useState<SupplierOrder[] | null>(null);
@@ -59,7 +59,13 @@ export function PurchasingOrdersPage() {
           <option value="">{T("Все состояния", "All statuses", "Mọi trạng thái")}</option>
           {STATUSES.map((item) => (
             <option key={item} value={item}>
-              {item === "ordered" ? T("Заказан", "Ordered", "Đã đặt") : item === "partial" ? T("Частично", "Partial", "Một phần") : T("Закрыт", "Closed", "Đã đóng")}
+              {item === "ordered"
+                ? T("Заказан", "Ordered", "Đã đặt")
+                : item === "partial"
+                  ? T("Частично", "Partial", "Một phần")
+                  : item === "received"
+                    ? T("Получен", "Received", "Đã nhận")
+                    : T("Закрыт", "Closed", "Đã đóng")}
             </option>
           ))}
         </select>
@@ -111,7 +117,7 @@ export function PurchasingOrdersPage() {
             </thead>
             <tbody>
               {shown.map((order) => {
-                const remaining = order.lines.reduce((sum, line) => sum + line.remainingQty, 0);
+                const remaining = sumDisplayRemaining(order.lines);
                 return (
                   <tr key={order.id}>
                     <td className="main">

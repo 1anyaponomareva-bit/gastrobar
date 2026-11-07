@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder } from "@/lib/orders/api";
 import { formatOrderLineName } from "@/lib/orders/orderPdf";
-import { formatQty } from "@/lib/orders/qty";
+import { displayRemainingQty, formatQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
@@ -33,7 +33,8 @@ export function OrderCard({ orderId }: { orderId: string }) {
   if (!order) return <OrdersLoading />;
   if (!order.id) return <OrdersEmpty title={t("order_not_found")} />;
 
-  const canReceive = (order.status === "ordered" || order.status === "partial") && order.lines.some((line) => line.remainingQty > 0);
+  const canReceive =
+    (order.status === "ordered" || order.status === "partial") && order.lines.some((line) => line.remainingQty > 0);
 
   return (
     <div>
@@ -47,6 +48,11 @@ export function OrderCard({ orderId }: { orderId: string }) {
         {order.supplierName} · {order.warehouseName ?? ""}
       </div>
       <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
+      {order.receivedAt ? (
+        <div className="orders-meta" style={{ marginTop: 8 }}>
+          {t("receive_goods")} · {order.receivedBy ?? "—"} · {order.receivedAt}
+        </div>
+      ) : null}
 
       {order.clarifyReason ? <div className="orders-banner warn">{t("clarify_banner", { reason: order.clarifyReason })}</div> : null}
 
@@ -81,7 +87,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
             <span>
               {t("qty_remaining")}
               <b>
-                {formatQty(line.remainingQty)} {line.unit}
+                {formatQty(displayRemainingQty(line))} {line.unit}
               </b>
             </span>
           </div>

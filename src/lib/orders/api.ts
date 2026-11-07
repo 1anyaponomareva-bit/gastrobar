@@ -163,7 +163,7 @@ export function errorMessage(error: unknown, networkText: string, genericText: s
 
 function statusOf(value: unknown): OrderStatus {
   const raw = str(value, "draft");
-  if (raw === "ordered" || raw === "partial" || raw === "closed" || raw === "draft") return raw;
+  if (raw === "ordered" || raw === "partial" || raw === "received" || raw === "closed" || raw === "draft") return raw;
   return "draft";
 }
 
@@ -304,6 +304,7 @@ function lineDetailOf(raw: Json): OrderLineDetail {
     qty: ordered,
     acceptedQty: num(pick(raw, "acceptedQty", "accepted_qty", "receivedQty", "received_qty")),
     postedQty: num(pick(raw, "postedQty", "posted_qty", "stockQty", "stock_qty")),
+    // Open-to-receive (ordered − accepted − closed). Table «Осталось» uses displayRemainingQty, not this.
     remainingQty: optNum(pick(raw, "remainingQty", "remaining_qty")) ?? Math.max(0, ordered - num(pick(raw, "acceptedQty", "accepted_qty"))),
   };
 }
@@ -373,6 +374,8 @@ function orderOf(raw: Json): SupplierOrder {
     createdBy: optStr(pick(src, "createdBy", "created_by")),
     placedAt: optStr(pick(src, "placedAt", "placed_at")),
     placedBy: optStr(pick(src, "placedBy", "placed_by")),
+    receivedAt: optStr(pick(src, "receivedAt", "received_at")),
+    receivedBy: optStr(pick(src, "receivedBy", "received_by")),
     expectedDelivery: optStr(pick(src, "expectedDelivery", "expected_delivery")),
     comment: optStr(pick(src, "comment")),
     revision: num(pick(src, "revision")) || 0,

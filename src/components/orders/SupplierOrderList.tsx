@@ -124,7 +124,11 @@ export function SupplierOrderList({
         setComment(saved.comment ?? "");
         setExpectedDelivery(saved.expectedDelivery ?? "");
         setSharedRevision(saved.pdfRevision);
-        setOrderedRevision(saved.status === "ordered" || saved.status === "partial" || saved.status === "closed" ? saved.revision : null);
+        setOrderedRevision(
+          saved.status === "ordered" || saved.status === "partial" || saved.status === "received" || saved.status === "closed"
+            ? saved.revision
+            : null,
+        );
         setPlacedId(saved.status === "draft" ? null : saved.id || null);
         const stored = readOrderSelection();
         const next: SelectionMap = { ...stored };

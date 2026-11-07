@@ -107,6 +107,7 @@ export function ReceiveForm({ orderId }: { orderId: string }) {
       return;
     }
     if (!window.confirm(t("receive_confirm"))) return;
+    // TEMPORARY: receiveOrder only flags the order. It does not create a поставка.
     setSubmitError(null);
     setBusy(true);
     try {

@@ -7,7 +7,7 @@ import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/typ
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
-const STATUSES: OrderStatus[] = ["ordered", "partial", "closed"];
+const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
 
 export function statusClass(status: string): string {
   return `orders-status ${status}`;

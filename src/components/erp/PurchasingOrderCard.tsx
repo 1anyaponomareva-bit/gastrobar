@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { closePurchasingOrder, errorMessage, getPurchasingOrder } from "@/lib/orders/api";
-import { formatQty } from "@/lib/orders/qty";
+import { displayRemainingQty, formatQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
@@ -59,7 +59,7 @@ export function PurchasingOrderCard({ id }: { id: string }) {
   }
   if (!order) return <div className="erpLoading">{loadingText()}</div>;
 
-  const remaining = order.lines.reduce((sum, line) => sum + line.remainingQty, 0);
+  const openQty = order.lines.reduce((sum, line) => sum + line.remainingQty, 0);
 
   return (
     <>
@@ -84,9 +84,9 @@ export function PurchasingOrderCard({ id }: { id: string }) {
 
       <p className="erpHint">
         {T(
-          "Остатки увеличиваются только после проведения приёмки администратором.",
-          "Stock increases only after an admin posts the receipt.",
-          "Tồn kho chỉ tăng khi admin ghi sổ phiếu nhập.",
+          "«Товар получен» только помечает заказ. Поставка не создаётся, остаток склада не меняется.",
+          "“Goods received” only marks the order. No warehouse receipt is created, and stock does not change.",
+          "“Đã nhận hàng” chỉ đánh dấu đơn. Không tạo phiếu nhập, tồn kho không đổi.",
         )}
       </p>
 
@@ -94,6 +94,11 @@ export function PurchasingOrderCard({ id }: { id: string }) {
         <p>
           {T("Заказал", "Placed by", "Đặt bởi")} {order.placedBy ?? order.createdBy ?? "—"} · {order.placedAt ?? order.createdAt ?? "—"}
         </p>
+        {order.receivedAt ? (
+          <p>
+            {T("Товар получен", "Goods received", "Đã nhận hàng")} · {order.receivedBy ?? "—"} · {order.receivedAt}
+          </p>
+        ) : null}
         {order.expectedDelivery ? (
           <p>
             {T("Ожидаемая доставка", "Expected delivery", "Giao dự kiến")}: {order.expectedDelivery}
@@ -131,7 +136,7 @@ export function PurchasingOrderCard({ id }: { id: string }) {
                   {formatQty(line.postedQty)} {line.unit}
                 </td>
                 <td>
-                  {formatQty(line.remainingQty)} {line.unit}
+                  {formatQty(displayRemainingQty(line))} {line.unit}
                 </td>
               </tr>
             ))}
@@ -172,7 +177,7 @@ export function PurchasingOrderCard({ id }: { id: string }) {
         <Empty title={T("Истории пока нет", "No history yet", "Chưa có lịch sử")} />
       )}
 
-      {remaining > 0 && order.status !== "closed" ? (
+      {openQty > 0 && order.status !== "closed" && order.status !== "received" ? (
         <div className="erpActions">
           <button type="button" className="erpBtn" disabled={busy} onClick={() => void closeRemainder()}>
             {T("Закрыть недопоставку", "Close remaining qty", "Đóng phần còn lại")}

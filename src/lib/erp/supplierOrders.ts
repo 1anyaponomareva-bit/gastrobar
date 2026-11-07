@@ -364,6 +364,7 @@ export async function getOrder(id: string, actor: string, admin: boolean) {
   return orderRpc<unknown>("erp_order_get", { p_id: uuid(id), p_actor: actor, p_admin: admin });
 }
 
+/** TEMPORARY: flags the order received. Does not create a поставка or move stock. */
 export async function receiveOrder(id: string, payload: Record<string, unknown>, actor: string) {
   return orderRpc<unknown>("erp_order_receive", { p_id: uuid(id), p_payload: payload, p_actor: actor });
 }

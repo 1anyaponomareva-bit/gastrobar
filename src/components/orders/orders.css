@@ -571,7 +571,8 @@
   color: var(--orders-warn);
 }
 
-.orders-status.closed {
+.orders-status.closed,
+.orders-status.received {
   background: var(--orders-ok-soft);
   color: var(--orders-ok);
 }
