@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
-import { formatVietnamDate } from "@/lib/orders/datetime";
+import { formatVietnamDate, orderStatusInstant } from "@/lib/orders/datetime";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
@@ -97,11 +97,10 @@ export function OrderHistoryList() {
             <div className="orders-name">
               {order.docNo || order.id} · {order.supplierName}
             </div>
-            <div className="orders-meta">
-              {[formatVietnamDate(order.placedAt || order.createdAt) || "", order.warehouseName ?? ""].filter(Boolean).join(" · ")}
-            </div>
-            <div style={{ marginTop: 8 }}>
+            {order.warehouseName ? <div className="orders-meta">{order.warehouseName}</div> : null}
+            <div className="orders-meta" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
+              <span>{formatVietnamDate(orderStatusInstant(order)) || "—"}</span>
             </div>
           </div>
           <span className="orders-link">{t("open_order")}</span>

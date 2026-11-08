@@ -66,3 +66,16 @@ export function formatVietnamDateTime(value: string | null | undefined): string 
   const date = parseInstant(trimmed);
   return date ? joinDateTime(vietnamParts(date, true)) : "";
 }
+
+/** Date that belongs next to the status chip: received → when received, otherwise when ordered. */
+export function orderStatusInstant(order: {
+  status: string;
+  receivedAt?: string | null;
+  placedAt?: string | null;
+  createdAt?: string | null;
+}): string | null {
+  if (order.status === "received" || order.status === "partial") {
+    return order.receivedAt || order.placedAt || order.createdAt || null;
+  }
+  return order.placedAt || order.createdAt || null;
+}

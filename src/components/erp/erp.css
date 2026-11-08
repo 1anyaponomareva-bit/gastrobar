@@ -1196,6 +1196,13 @@ button.erpBack {
   white-space: nowrap;
 }
 
+.erpBadgeWhen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .erpBadge.ok {
   background: var(--erp-ok-soft);
   border-color: transparent;
