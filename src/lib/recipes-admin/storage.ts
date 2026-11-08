@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBackendUrl } from "@/lib/supabase/backend-url";
 import type { RecipeOverrides, StoredRecipes } from "@/data/recipes";
 import type { StaffCatalog } from "@/data/staffCatalog";
+import { normalizePersonName } from "@/lib/orders/person";
 
 const BUCKET = "recipes-admin";
 const PHOTOS_BUCKET = "recipes-photos";
@@ -15,6 +16,7 @@ export type RecipesAdminAccount = {
   salt: string;
   hash: string;
   createdAt: string;
+  name?: string;
 };
 
 let client: SupabaseClient | null | undefined;
@@ -124,6 +126,45 @@ export function readOrderStaff() {
 
 export function writeOrderStaff(accounts: RecipesAdminAccount[]) {
   return writeJson(ORDERS_STAFF_FILE, accounts);
+}
+
+export async function findAccountByEmail(email: string): Promise<RecipesAdminAccount | undefined> {
+  const key = email.trim().toLowerCase();
+  if (!key) return undefined;
+  try {
+    const [admins, staff] = await Promise.all([readAdmins(), readOrderStaff()]);
+    return admins.find((row) => row.email === key) ?? staff.find((row) => row.email === key);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function displayNameForEmail(email: string): Promise<string> {
+  const account = await findAccountByEmail(email);
+  return normalizePersonName(account?.name);
+}
+
+export async function saveAccountName(email: string, name: string): Promise<boolean> {
+  const key = email.trim().toLowerCase();
+  const value = normalizePersonName(name);
+  if (!key || !value) return false;
+  const admins = await readAdmins();
+  const adminIndex = admins.findIndex((row) => row.email === key);
+  if (adminIndex >= 0) {
+    const next = admins.slice();
+    next[adminIndex] = { ...admins[adminIndex], name: value };
+    await writeAdmins(next);
+    return true;
+  }
+  const staff = await readOrderStaff();
+  const staffIndex = staff.findIndex((row) => row.email === key);
+  if (staffIndex >= 0) {
+    const next = staff.slice();
+    next[staffIndex] = { ...staff[staffIndex], name: value };
+    await writeOrderStaff(next);
+    return true;
+  }
+  return false;
 }
 
 export function writeStaffCatalog(catalog: StaffCatalog) {

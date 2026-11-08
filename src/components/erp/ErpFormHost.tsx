@@ -9,15 +9,15 @@ import "./erp.css";
 
 type Notice = { ok: boolean; text: string } | null;
 
-async function fetchState(): Promise<{ status: number; data: (ErpState & { email: string }) | null; error: string | null }> {
+async function fetchState(): Promise<{ status: number; data: (ErpState & { email: string; name?: string }) | null; error: string | null }> {
   const response = await fetch("/api/erp/state", { cache: "no-store" }).catch(() => null);
   if (!response) return { status: 0, data: null, error: "network" };
   const body = await response.json().catch(() => null);
   if (!response.ok) return { status: response.status, data: null, error: body?.error ?? "server" };
-  return { status: response.status, data: body as ErpState & { email: string }, error: null };
+  return { status: response.status, data: body as ErpState & { email: string; name?: string }, error: null };
 }
 
-function withoutEmail({ email: _email, ...state }: ErpState & { email: string }): ErpState {
+function withoutEmail({ email: _email, name: _name, ...state }: ErpState & { email: string; name?: string }): ErpState {
   return state;
 }
 

@@ -6,6 +6,8 @@ import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderL
 import { displayRemainingQty } from "@/lib/orders/qty";
 import type { SupplierOrder } from "@/lib/orders/types";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
+import { formatVietnamDate, formatVietnamDateTime } from "@/lib/orders/datetime";
+import { personLabel } from "@/lib/orders/person";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
 
 export function PurchasingOrderCard({ id }: { id: string }) {
@@ -93,16 +95,18 @@ export function PurchasingOrderCard({ id }: { id: string }) {
 
       <section className="erpCard">
         <p>
-          {T("Заказал", "Placed by", "Đặt bởi")} {order.placedBy ?? order.createdBy ?? "—"} · {order.placedAt ?? order.createdAt ?? "—"}
+          {T("Заказал", "Placed by", "Đặt bởi")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
+          {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
         </p>
         {order.receivedAt ? (
           <p>
-            {T("Товар получен", "Goods received", "Đã nhận hàng")} · {order.receivedBy ?? "—"} · {order.receivedAt}
+            {T("Товар получен", "Goods received", "Đã nhận hàng")} · {personLabel(order.receivedByName, order.receivedBy)} ·{" "}
+            {formatVietnamDateTime(order.receivedAt) || "—"}
           </p>
         ) : null}
         {order.expectedDelivery ? (
           <p>
-            {T("Ожидаемая доставка", "Expected delivery", "Giao dự kiến")}: {order.expectedDelivery}
+            {T("Ожидаемая доставка", "Expected delivery", "Giao dự kiến")}: {formatVietnamDate(order.expectedDelivery) || order.expectedDelivery}
           </p>
         ) : null}
         {order.comment ? <p>{order.comment}</p> : null}
@@ -149,7 +153,9 @@ export function PurchasingOrderCard({ id }: { id: string }) {
                 {receipt.docNo || receipt.id}
               </NavLink>{" "}
               <PurchasingStatusBadge status={receipt.status} />
-              <div className="erpMuted">{receipt.createdAt} · {receipt.createdBy}</div>
+              <div className="erpMuted">
+                {formatVietnamDateTime(receipt.createdAt) || "—"} · {personLabel(receipt.createdByName, receipt.createdBy)}
+              </div>
               <NavLink href={`/erp/documents/${receipt.id}`} className="erpLink">
                 {T("Форма поставки", "Receipt form", "Form nhập hàng")}
               </NavLink>
@@ -165,7 +171,7 @@ export function PurchasingOrderCard({ id }: { id: string }) {
         <ul>
           {order.history.map((event, index) => (
             <li key={`${event.at}-${index}`}>
-              {event.at} {event.by ? `· ${event.by}` : ""} — {event.text || event.type}
+              {formatVietnamDateTime(event.at) || event.at} {event.by || event.byName ? `· ${personLabel(event.byName, event.by)}` : ""} — {event.text || event.type}
             </li>
           ))}
         </ul>

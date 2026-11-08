@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
+import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm";
 import { translate } from "@/lib/i18n";
 import { ErpFormHost } from "@/components/erp/ErpFormHost";
 import { ProductCard } from "@/components/erp/ProductsPage";
@@ -94,6 +94,7 @@ function DragList<T extends { id: string }>({
 
 export function OrdersAdminApp() {
   const [session, setSession] = useState<string | null | undefined>(undefined);
+  const [accountName, setAccountName] = useState("");
   const [invite, setInvite] = useState<string | null>(null);
   const [mode, setMode] = useState<"login" | "register">("login");
 
@@ -105,7 +106,10 @@ export function OrdersAdminApp() {
     }
     fetch("/api/recipes-admin/session", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { email?: string | null }) => setSession(data.email ?? null))
+      .then((data: { email?: string | null; name?: string | null }) => {
+        setSession(data.email ?? null);
+        setAccountName(data.name ?? "");
+      })
       .catch(() => setSession(null));
   }, []);
 
@@ -129,6 +133,8 @@ export function OrdersAdminApp() {
         <div className="main">
           {session === undefined ? (
             <div className="empty">{tAdmin("staff_loading")}</div>
+          ) : session && !accountName ? (
+            <AdminNameForm t={tAdmin} onSaved={setAccountName} />
           ) : session ? (
             <CatalogEditor email={session} onLogout={logout} onExpired={() => setSession(null)} />
           ) : (
@@ -136,7 +142,10 @@ export function OrdersAdminApp() {
               mode={mode}
               invite={invite}
               t={tAdmin}
-              onDone={setSession}
+              onDone={(email, name) => {
+                setSession(email);
+                setAccountName(name ?? "");
+              }}
               onSwitchToLogin={() => setMode("login")}
             />
           )}

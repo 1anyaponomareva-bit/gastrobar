@@ -14,7 +14,7 @@
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
  *   - Orders APIs: `/api/orders`, `/api/orders/*`
  *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
- *       `/api/recipes-admin/login` | `logout` | `register` | `session`
+ *       `/api/recipes-admin/login` | `logout` | `register` | `session` | `profile`
  *   - `/_next/*` plus favicon/icon and image/font files Next serves for the ERP UI
  *
  * Old unprefixed ERP URLs (`/stock`, `/menu`, …) GET/HEAD 307 to `/erp/…` on the
@@ -52,6 +52,7 @@ const RECIPES_ADMIN_AUTH_PATHS = [
   "/api/recipes-admin/logout",
   "/api/recipes-admin/register",
   "/api/recipes-admin/session",
+  "/api/recipes-admin/profile",
 ] as const;
 
 export type ErpHostGateConfig = {

@@ -2,11 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { isApiMissing, isAuthError, login } from "@/lib/orders/api";
+import { isValidPersonName } from "@/lib/orders/person";
 import { useOrders } from "./OrdersShell";
 
 export function OrdersLogin() {
   const { t } = useOrders();
   const [email, setMail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [invite, setInvite] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,9 +17,13 @@ export function OrdersLogin() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (invite.trim() && !isValidPersonName(name)) {
+      setError(t("login_name_help"));
+      return;
+    }
     setBusy(true);
     try {
-      await login(email, password, invite);
+      await login(email, password, invite, name);
       window.location.reload();
     } catch (err) {
       if (isApiMissing(err)) setError(t("login_api_missing"));
@@ -42,6 +48,15 @@ export function OrdersLogin() {
         {error ? (
           <div className="orders-banner error" role="alert">
             {error}
+          </div>
+        ) : null}
+        {invite.trim() ? (
+          <div className="orders-field" style={{ marginBottom: 10 }}>
+            <label htmlFor="orders-name">{t("login_name")}</label>
+            <input id="orders-name" className="orders-input" type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={80} />
+            <p className="orders-note" style={{ marginTop: 6 }}>
+              {t("login_name_help")}
+            </p>
           </div>
         ) : null}
         <div className="orders-field" style={{ marginBottom: 10 }}>

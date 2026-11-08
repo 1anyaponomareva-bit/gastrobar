@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { RECIPES_ADMIN_COOKIE, getSessionEmail, sessionCookieOptions } from "@/lib/recipes-admin/auth";
-import { readAdmins, writeAdmins } from "@/lib/recipes-admin/storage";
-import { getErpEmail } from "@/lib/erp/server";
+import { displayNameForEmail, readAdmins, writeAdmins } from "@/lib/recipes-admin/storage";
+import { getErpEmail, LOCAL_DEV_ADMIN } from "@/lib/erp/server";
+import { erpLocalMode } from "@/lib/erp/localDb";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json({ email: await getErpEmail() });
+    const email = await getErpEmail();
+    const name = !email ? "" : erpLocalMode() && email === LOCAL_DEV_ADMIN ? "Local" : await displayNameForEmail(email);
+    return NextResponse.json({ email, name });
   } catch (error) {
     console.error("[recipes-admin] session", error);
     return NextResponse.json({ error: "server" }, { status: 500 });

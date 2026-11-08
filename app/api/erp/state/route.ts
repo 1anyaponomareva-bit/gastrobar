@@ -1,5 +1,7 @@
-import { ErpHttpError, readAsAdmin, ServerTiming } from "@/lib/erp/server";
+import { ErpHttpError, LOCAL_DEV_ADMIN, readAsAdmin, ServerTiming } from "@/lib/erp/server";
 import { ALL_PARTS, loadState, type StatePart } from "@/lib/erp/stateLoader";
+import { erpLocalMode } from "@/lib/erp/localDb";
+import { displayNameForEmail } from "@/lib/recipes-admin/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +18,8 @@ export async function GET(request: Request) {
     const parts = asked ? (asked.split(",") as StatePart[]) : ALL_PARTS;
     if (parts.some((part) => !ALL_PARTS.includes(part))) throw new ErpHttpError(400, "ERP_INVALID", "parts");
     const { email, data } = await readAsAdmin(timing, () => loadState(parts));
-    return timing.json({ ...data, email });
+    const name = erpLocalMode() && email === LOCAL_DEV_ADMIN ? "Local" : await displayNameForEmail(email);
+    return timing.json({ ...data, email, name });
   } catch (error) {
     return timing.error(error);
   }

@@ -11,7 +11,7 @@ import {
   type RecipeOverrides,
   type StoredRecipes,
 } from "@/data/recipes";
-import { AdminAuthForm, adminErrorKey } from "./AdminAuthForm";
+import { AdminAuthForm, AdminNameForm, adminErrorKey } from "./AdminAuthForm";
 import { RecipeForm } from "./RecipeForm";
 import { getAssetUrl } from "@/lib/appVersion";
 import { translate } from "@/lib/i18n";
@@ -68,6 +68,7 @@ export function RecipesAdminApp() {
   const recipeLang = toStaffAppLang(lang);
   const t = useCallback((key: string) => translate(recipeLang, key), [recipeLang]);
   const [session, setSession] = useState<string | null | undefined>(undefined);
+  const [accountName, setAccountName] = useState("");
   const [invite, setInvite] = useState<string | null>(null);
   const [mode, setMode] = useState<"login" | "register">("login");
 
@@ -79,7 +80,10 @@ export function RecipesAdminApp() {
     }
     fetch("/api/recipes-admin/session", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { email?: string | null }) => setSession(data.email ?? null))
+      .then((data: { email?: string | null; name?: string | null }) => {
+        setSession(data.email ?? null);
+        setAccountName(data.name ?? "");
+      })
       .catch(() => setSession(null));
   }, []);
 
@@ -114,14 +118,19 @@ export function RecipesAdminApp() {
         </div>
 
         <div className="main">
-          {session ? (
+          {session && !accountName ? (
+            <AdminNameForm t={t} onSaved={setAccountName} />
+          ) : session ? (
             <AdminEditor email={session} lang={recipeLang} t={t} onLogout={logout} onExpired={() => setSession(null)} />
           ) : (
             <AdminAuthForm
               mode={mode}
               invite={invite}
               t={t}
-              onDone={setSession}
+              onDone={(email, name) => {
+                setSession(email);
+                setAccountName(name ?? "");
+              }}
               onSwitchToLogin={() => setMode("login")}
             />
           )}

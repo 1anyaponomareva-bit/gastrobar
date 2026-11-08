@@ -141,6 +141,7 @@ export type OrderReceipt = {
   status: ReceiptDocStatus;
   createdAt: string | null;
   createdBy: string | null;
+  createdByName: string | null;
   comment: string | null;
   clarifyReason: string | null;
   lines: OrderReceiptLine[];
@@ -150,6 +151,7 @@ export type OrderReceipt = {
 export type OrderHistoryEvent = {
   at: string;
   by: string | null;
+  byName: string | null;
   type: string;
   text: string;
 };
@@ -164,10 +166,13 @@ export type SupplierOrder = {
   warehouseName: string | null;
   createdAt: string | null;
   createdBy: string | null;
+  createdByName: string | null;
   placedAt: string | null;
   placedBy: string | null;
+  placedByName: string | null;
   receivedAt: string | null;
   receivedBy: string | null;
+  receivedByName: string | null;
   expectedDelivery: string | null;
   comment: string | null;
   revision: number;

@@ -18,6 +18,7 @@ import {
   verifyPassword,
 } from "@/lib/recipes-admin/auth";
 import { readAdmins, readOrderStaff, writeOrderStaff } from "@/lib/recipes-admin/storage";
+import { isValidPersonName, normalizePersonName } from "@/lib/orders/person";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,24 +53,29 @@ export async function POST(request: Request) {
       return timing.json({ email, erpAdmin: false, employee: true });
     }
 
+    const name = normalizePersonName(body.name);
     if (invite) {
       if (!isValidOrdersInvite(invite)) throw new ErpHttpError(403, "ERP_FORBIDDEN", "invite");
       if (password.length < 6) throw new ErpHttpError(400, "ERP_INVALID", "password");
+      if (!isValidPersonName(name)) throw new ErpHttpError(400, "ERP_INVALID", "name");
       const [staff, admins] = await Promise.all([readOrderStaff(), readAdmins()]);
       if (staff.some((account) => account.email === email) || admins.some((account) => account.email === email)) {
         throw new ErpHttpError(409, "ERP_DUPLICATE", "email");
       }
-      await writeOrderStaff([...staff, { email, ...hashPassword(password), createdAt: new Date().toISOString() }]);
-    } else {
-      if (!password) throw new ErpHttpError(401, "auth");
-      const [staff, admins] = await Promise.all([readOrderStaff(), readAdmins()]);
-      const account = staff.find((row) => row.email === email) ?? admins.find((row) => row.email === email);
-      if (!account || !verifyPassword(account, password)) throw new ErpHttpError(401, "auth");
+      await writeOrderStaff([...staff, { email, name, ...hashPassword(password), createdAt: new Date().toISOString() }]);
+      (await cookies()).set(ORDERS_COOKIE, createOrdersSessionToken(email), ordersCookieOptions);
+      await rememberOrderUser(email, name);
+      return timing.json({ email, name, erpAdmin: false, employee: true });
     }
+    if (!password) throw new ErpHttpError(401, "auth");
+    const [staff, admins] = await Promise.all([readOrderStaff(), readAdmins()]);
+    const account = staff.find((row) => row.email === email) ?? admins.find((row) => row.email === email);
+    if (!account || !verifyPassword(account, password)) throw new ErpHttpError(401, "auth");
+    const savedName = normalizePersonName(account.name);
 
     (await cookies()).set(ORDERS_COOKIE, createOrdersSessionToken(email), ordersCookieOptions);
-    await rememberOrderUser(email);
-    return timing.json({ email, erpAdmin: false, employee: true });
+    await rememberOrderUser(email, savedName || null);
+    return timing.json({ email, name: savedName, erpAdmin: false, employee: true });
   } catch (error) {
     return timing.error(error);
   }

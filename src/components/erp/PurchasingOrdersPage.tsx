@@ -5,6 +5,7 @@ import { errorMessage, listPurchasingOrders } from "@/lib/orders/api";
 import type { OrderStatus, SupplierOrder } from "@/lib/orders/types";
 import { formatQty, sumDisplayRemaining } from "@/lib/orders/qty";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
+import { formatVietnamDate } from "@/lib/orders/datetime";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
 
 const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
@@ -107,8 +108,9 @@ export function PurchasingOrdersPage() {
           <table className="erpTable stack">
             <thead>
               <tr>
-                <th>{T("Заказ", "Order", "Đơn")}</th>
+                <th>{T("Поставка", "Order", "Đơn")}</th>
                 <th>{T("Поставщик", "Supplier", "NCC")}</th>
+                <th>{T("Дата", "Date", "Ngày")}</th>
                 <th>{T("Склад", "Location", "Kho")}</th>
                 <th>{T("Статус", "Status", "TT")}</th>
                 <th>{T("Осталось", "Remaining", "Còn")}</th>
@@ -124,9 +126,9 @@ export function PurchasingOrdersPage() {
                       <NavLink href={`/erp/purchasing/orders/${order.id}`} className="erpName">
                         {order.docNo || order.id}
                       </NavLink>
-                      <div className="erpMuted">{order.placedAt || order.createdAt}</div>
                     </td>
                     <td>{order.supplierName}</td>
+                    <td>{formatVietnamDate(order.placedAt || order.createdAt) || "—"}</td>
                     <td>{order.warehouseName ?? "—"}</td>
                     <td>
                       <PurchasingStatusBadge status={order.status} />

@@ -163,6 +163,7 @@ async function main() {
     assert.equal(gate("erp.example.test", "/api/recipes-admin/logout", "POST", cfg).action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/register", "POST", cfg).action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/session", "GET", cfg).action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/profile", "POST", cfg).action, "allow");
     assert.equal(gate("www.gastrotruck.org", "/erp/stock", "GET", cfg).action, "allow");
     assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
   });

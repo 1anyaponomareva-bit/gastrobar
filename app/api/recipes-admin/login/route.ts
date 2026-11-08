@@ -7,6 +7,8 @@ import {
   verifyPassword,
 } from "@/lib/recipes-admin/auth";
 import { readAdmins } from "@/lib/recipes-admin/storage";
+import { normalizePersonName } from "@/lib/orders/person";
+import { rememberOrderUser } from "@/lib/erp/supplierOrders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +23,9 @@ export async function POST(request: Request) {
     if (!account || !verifyPassword(account, password)) {
       return NextResponse.json({ error: "credentials" }, { status: 401 });
     }
-    const response = NextResponse.json({ email });
+    const name = normalizePersonName(account.name);
+    if (name) await rememberOrderUser(email, name);
+    const response = NextResponse.json({ email, name });
     response.cookies.set(RECIPES_ADMIN_COOKIE, createSessionToken(email), sessionCookieOptions);
     return response;
   } catch (error) {

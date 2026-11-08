@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
+import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
 import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
@@ -39,7 +39,7 @@ const DOCUMENT_ACTIONS = new Set<ErpAction["action"]>(["saveDocument", "postDocu
 /** Comes back to the ERP after this long away: catalog changes from Staff or another tab are loaded. */
 const FOCUS_REFRESH_MS = 30_000;
 
-type StateResponse = ErpState & { email: string };
+type StateResponse = ErpState & { email: string; name?: string };
 
 async function fetchState(): Promise<{ status: number; data: StateResponse | null; error: string | null }> {
   const response = await fetch("/api/erp/state", { cache: "no-store" }).catch(() => null);
@@ -49,7 +49,7 @@ async function fetchState(): Promise<{ status: number; data: StateResponse | nul
   return { status: response.status, data: body as StateResponse, error: null };
 }
 
-function withoutEmail({ email: _email, ...state }: StateResponse): ErpState {
+function withoutAccount({ email: _email, name: _name, ...state }: StateResponse): ErpState {
   return state;
 }
 
@@ -107,6 +107,7 @@ function LangSwitch({ lang, onChange }: { lang: ErpLang; onChange: (lang: ErpLan
 export function ErpShell({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<ErpLang>("ru");
   const [email, setEmail] = useState<string | null | undefined>(undefined);
+  const [accountName, setAccountName] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [invite, setInvite] = useState<string | null>(null);
   const [initial, setInitial] = useState<ErpState | null>(null);
@@ -122,16 +123,22 @@ export function ErpShell({ children }: { children: ReactNode }) {
     // One request opens the ERP: the data answer also tells who is signed in (401: nobody).
     void fetchState().then(async ({ status, data }) => {
       if (data) {
-        setInitial(withoutEmail(data));
+        setInitial(withoutAccount(data));
         setEmail(data.email);
+        setAccountName(data.name ?? "");
         return;
       }
-      if (status === 401) return setEmail(null);
+      if (status === 401) {
+        setEmail(null);
+        setAccountName("");
+        return;
+      }
       // Data failed for another reason: find out about the session; the data screen shows the error.
       const session = await fetch("/api/erp/session", { cache: "no-store" })
-        .then((response) => response.json() as Promise<{ email?: string | null }>)
+        .then((response) => response.json() as Promise<{ email?: string | null; name?: string | null }>)
         .catch(() => null);
       setEmail(session?.email ?? null);
+      setAccountName(session?.name ?? "");
     });
   }, []);
 
@@ -152,6 +159,7 @@ export function ErpShell({ children }: { children: ReactNode }) {
   const expire = useCallback(() => {
     setInitial(null);
     setEmail(null);
+    setAccountName("");
   }, []);
 
   const logout = async () => {
@@ -175,9 +183,22 @@ export function ErpShell({ children }: { children: ReactNode }) {
             mode={mode}
             invite={invite}
             t={(key) => translate(lang, key)}
-            onDone={setEmail}
+            onDone={(nextEmail, nextName) => {
+              setEmail(nextEmail);
+              setAccountName(nextName ?? "");
+            }}
             onSwitchToLogin={() => setMode("login")}
           />
+        </div>
+      </div>
+    ) : !accountName ? (
+      <div className="erp">
+        <header className="erpAuthHead">
+          <span className="erpBrand">GASTROFOOD</span>
+          <LangSwitch lang={lang} onChange={changeLang} />
+        </header>
+        <div className="erpAuth recipes-app">
+          <AdminNameForm t={(key) => translate(lang, key)} onSaved={setAccountName} />
         </div>
       </div>
     ) : (
@@ -241,7 +262,7 @@ function ErpData({
     if (writes.current !== startedAt) return;
     setLoadError(null);
     hasState.current = true;
-    setState(withoutEmail(data));
+    setState(withoutAccount(data));
   }, [onExpired]);
 
   useEffect(() => {

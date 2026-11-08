@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
+import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm";
 import {
   sanitizeStaffCatalog,
   staffCategoryLabel,
@@ -119,6 +119,7 @@ function DragList<T extends { id: string }>({ list, disabled, render, onCommit }
 
 export function StaffAdminApp() {
   const [session, setSession] = useState<string | null | undefined>(undefined);
+  const [accountName, setAccountName] = useState("");
   const [invite, setInvite] = useState<string | null>(null);
   const [mode, setMode] = useState<"login" | "register">("login");
 
@@ -130,7 +131,10 @@ export function StaffAdminApp() {
     }
     fetch("/api/recipes-admin/session", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { email?: string | null }) => setSession(data.email ?? null))
+      .then((data: { email?: string | null; name?: string | null }) => {
+        setSession(data.email ?? null);
+        setAccountName(data.name ?? "");
+      })
       .catch(() => setSession(null));
   }, []);
 
@@ -158,6 +162,8 @@ export function StaffAdminApp() {
         <div className="main">
           {session === undefined ? (
             <div className="empty">{t("staff_loading")}</div>
+          ) : session && !accountName ? (
+            <AdminNameForm t={t} onSaved={setAccountName} />
           ) : session ? (
             <CatalogEditor email={session} onLogout={logout} onExpired={() => setSession(null)} />
           ) : (
@@ -165,7 +171,10 @@ export function StaffAdminApp() {
               mode={mode}
               invite={invite}
               t={t}
-              onDone={setSession}
+              onDone={(email, name) => {
+                setSession(email);
+                setAccountName(name ?? "");
+              }}
               onSwitchToLogin={() => setMode("login")}
             />
           )}

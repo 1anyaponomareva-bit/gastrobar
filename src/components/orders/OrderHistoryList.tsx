@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
+import { formatVietnamDate } from "@/lib/orders/datetime";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
@@ -97,7 +98,7 @@ export function OrderHistoryList() {
               {order.docNo || order.id} · {order.supplierName}
             </div>
             <div className="orders-meta">
-              {order.placedAt || order.createdAt || ""} · {order.warehouseName ?? ""}
+              {[formatVietnamDate(order.placedAt || order.createdAt) || "", order.warehouseName ?? ""].filter(Boolean).join(" · ")}
             </div>
             <div style={{ marginTop: 8 }}>
               <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>

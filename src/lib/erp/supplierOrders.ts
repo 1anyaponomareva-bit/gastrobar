@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { getSessionEmail } from "@/lib/recipes-admin/auth";
+import { readAdmins, readOrderStaff } from "@/lib/recipes-admin/storage";
 import {
   ErpHttpError,
   LOCAL_DEV_ADMIN,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/orders/orderPdf";
 import { orderPackUnit } from "@/lib/orders/orderList";
 import { resolvePublicOrdersActor, type OrdersAccess } from "@/lib/orders/access";
+import { normalizePersonName } from "@/lib/orders/person";
 
 if (typeof window !== "undefined") throw new Error("erp/supplierOrders is server-only");
 
@@ -198,14 +200,111 @@ export async function listOrderSuppliers() {
   };
 }
 
-export async function rememberOrderUser(email: string) {
+export async function rememberOrderUser(email: string, displayName?: string | null) {
   const value = email.trim().toLowerCase();
   if (!value.includes("@") || erpLocalMode()) return;
   try {
-    await erpDb().from("erp_order_users").upsert({ email: value, active: true }, { onConflict: "email" });
+    const row: Record<string, unknown> = { email: value, active: true };
+    const name = normalizePersonName(displayName);
+    if (name) row.display_name = name;
+    await erpDb().from("erp_order_users").upsert(row, { onConflict: "email" });
   } catch (error) {
     console.error("[orders] remember user", error);
   }
+}
+
+const ACTOR_EMAIL_KEYS = new Set([
+  "author",
+  "by",
+  "createdBy",
+  "created_by",
+  "placedBy",
+  "placed_by",
+  "postedBy",
+  "posted_by",
+  "receivedBy",
+  "received_by",
+]);
+
+function collectActorEmails(value: unknown, into: Set<string>) {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectActorEmails(item, into);
+    return;
+  }
+  const rec = value as Record<string, unknown>;
+  for (const [key, item] of Object.entries(rec)) {
+    if (ACTOR_EMAIL_KEYS.has(key) && typeof item === "string" && item.includes("@")) {
+      into.add(item.trim().toLowerCase());
+    } else if (item && typeof item === "object") {
+      collectActorEmails(item, into);
+    }
+  }
+}
+
+async function lookupDisplayNames(emails: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!emails.length) return map;
+  try {
+    const rows = check(await erpDb().from("erp_order_users").select("email, display_name").in("email", emails)) as
+      | Array<{ email?: string; display_name?: string | null }>
+      | null;
+    for (const row of rows ?? []) {
+      const email = typeof row.email === "string" ? row.email.trim().toLowerCase() : "";
+      const name = normalizePersonName(row.display_name);
+      if (email && name) map.set(email, name);
+    }
+  } catch (error) {
+    console.error("[orders] lookup names", error);
+  }
+  const missing = emails.filter((email) => !map.has(email));
+  if (!missing.length || erpLocalMode()) return map;
+  try {
+    const [admins, staff] = await Promise.all([readAdmins(), readOrderStaff()]);
+    const accounts = [...admins, ...staff];
+    for (const email of missing) {
+      const account = accounts.find((row) => row.email === email);
+      const name = normalizePersonName(account?.name);
+      if (name) map.set(email, name);
+    }
+  } catch (error) {
+    console.error("[orders] lookup account names", error);
+  }
+  return map;
+}
+
+function applyDisplayNames(value: unknown, names: Map<string, string>): unknown {
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => applyDisplayNames(item, names));
+  const rec = value as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(rec)) {
+    next[key] = item && typeof item === "object" ? applyDisplayNames(item, names) : item;
+  }
+  const setName = (emailKey: string, nameKey: string) => {
+    const email = typeof rec[emailKey] === "string" ? rec[emailKey].trim().toLowerCase() : "";
+    if (email && names.has(email)) next[nameKey] = names.get(email);
+  };
+  setName("placedBy", "placedByName");
+  setName("placed_by", "placedByName");
+  setName("receivedBy", "receivedByName");
+  setName("received_by", "receivedByName");
+  setName("createdBy", "createdByName");
+  setName("created_by", "createdByName");
+  setName("author", "createdByName");
+  setName("postedBy", "postedByName");
+  setName("posted_by", "postedByName");
+  setName("by", "byName");
+  return next;
+}
+
+async function withActorNames<T>(payload: T): Promise<T> {
+  const emails = new Set<string>();
+  collectActorEmails(payload, emails);
+  if (!emails.size) return payload;
+  const names = await lookupDisplayNames([...emails]);
+  if (!names.size) return payload;
+  return applyDisplayNames(payload, names) as T;
 }
 
 export async function listSupplierProducts(supplierId: string) {
@@ -347,36 +446,40 @@ export async function getOrderPdfSnapshot(id: string, actor: string, admin: bool
 }
 
 export async function placeOrder(id: string, actor: string) {
-  return orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor });
+  return withActorNames(await orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor }));
 }
 
 export async function listOrders(actor: string, admin: boolean, status?: string | null) {
   return {
-    orders: await orderRpc<unknown>("erp_order_list", {
-      p_actor: actor,
-      p_admin: admin,
-      p_status: status || null,
-    }),
+    orders: await withActorNames(
+      await orderRpc<unknown>("erp_order_list", {
+        p_actor: actor,
+        p_admin: admin,
+        p_status: status || null,
+      }),
+    ),
   };
 }
 
 export async function getOrder(id: string, actor: string, admin: boolean) {
-  return orderRpc<unknown>("erp_order_get", { p_id: uuid(id), p_actor: actor, p_admin: admin });
+  return withActorNames(await orderRpc<unknown>("erp_order_get", { p_id: uuid(id), p_actor: actor, p_admin: admin }));
 }
 
 /** TEMPORARY: flags the order received. Does not create a поставка or move stock. */
 export async function receiveOrder(id: string, payload: Record<string, unknown>, actor: string) {
-  return orderRpc<unknown>("erp_order_receive", { p_id: uuid(id), p_payload: payload, p_actor: actor });
+  return withActorNames(await orderRpc<unknown>("erp_order_receive", { p_id: uuid(id), p_payload: payload, p_actor: actor }));
 }
 
 export async function closeOrderRemainder(id: string, reason: string, actor: string, lines?: unknown, admin = false) {
-  return orderRpc<unknown>("erp_order_close_remainder", {
-    p_id: uuid(id),
-    p_reason: reason,
-    p_actor: actor,
-    p_lines: lines ?? null,
-    p_admin: admin,
-  });
+  return withActorNames(
+    await orderRpc<unknown>("erp_order_close_remainder", {
+      p_id: uuid(id),
+      p_reason: reason,
+      p_actor: actor,
+      p_lines: lines ?? null,
+      p_admin: admin,
+    }),
+  );
 }
 
 export async function getPurchasingReceipt(documentId: string, email: string) {

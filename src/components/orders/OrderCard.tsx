@@ -6,6 +6,8 @@ import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/o
 import { productDisplayName } from "@/lib/erp/productName";
 import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
 import { displayRemainingQty, orderCanReceive, parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
+import { formatVietnamDateTime } from "@/lib/orders/datetime";
+import { personLabel } from "@/lib/orders/person";
 import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
@@ -151,9 +153,13 @@ export function OrderCard({ orderId }: { orderId: string }) {
         {order.supplierName} · {order.warehouseName ?? ""}
       </div>
       <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
+      <div className="orders-meta" style={{ marginTop: 8 }}>
+        {t("placed_by")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
+        {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
+      </div>
       {order.receivedAt ? (
         <div className="orders-meta" style={{ marginTop: 8 }}>
-          {t("receive_goods")} · {order.receivedBy ?? "—"} · {order.receivedAt}
+          {t("receive_goods")} · {personLabel(order.receivedByName, order.receivedBy)} · {formatVietnamDateTime(order.receivedAt) || "—"}
         </div>
       ) : null}
 
@@ -273,7 +279,9 @@ export function OrderCard({ orderId }: { orderId: string }) {
         order.receipts.map((receipt) => (
           <div key={receipt.id} className="orders-card">
             <div className="orders-name">{receipt.docNo || receipt.id}</div>
-            <div className="orders-meta">{receipt.createdAt} · {receipt.createdBy}</div>
+            <div className="orders-meta">
+              {formatVietnamDateTime(receipt.createdAt) || "—"} · {personLabel(receipt.createdByName, receipt.createdBy)}
+            </div>
             <div style={{ marginTop: 8 }}>
               <span className={statusClass(receipt.status === "clarify" ? "partial" : receipt.status)}>
                 {t(`receipt_${receipt.status === "draft" ? "draft" : receipt.status}`)}

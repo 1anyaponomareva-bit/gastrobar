@@ -350,6 +350,7 @@ function receiptOf(raw: Json): OrderReceipt {
     status: receiptStatusOf(pick(raw, "status", "receiptStatus") ?? pick(document, "status")),
     createdAt: optStr(pick(raw, "createdAt", "created_at") ?? pick(document, "created_at")),
     createdBy: optStr(pick(raw, "createdBy", "created_by") ?? pick(document, "created_by")),
+    createdByName: optStr(pick(raw, "createdByName", "created_by_name") ?? pick(document, "createdByName", "created_by_name")),
     comment: optStr(pick(raw, "comment") ?? pick(document, "comment")),
     clarifyReason: optStr(pick(raw, "clarifyReason", "clarify_reason", "returnReason", "return_reason")),
     lines: listOf(pick(raw, "lines", "actuals") ?? pick(document, "lines"), ["lines"], receiptLineOf),
@@ -361,6 +362,7 @@ function historyOf(raw: Json): OrderHistoryEvent {
   return {
     at: str(pick(raw, "at", "createdAt", "created_at")),
     by: optStr(pick(raw, "by", "createdBy", "created_by")),
+    byName: optStr(pick(raw, "byName", "by_name", "createdByName", "created_by_name")),
     type: str(pick(raw, "type", "action"), "event"),
     text: str(pick(raw, "text", "message", "comment")),
   };
@@ -378,11 +380,14 @@ function orderOf(raw: Json): SupplierOrder {
     warehouseId: optStr(pick(src, "warehouseId", "warehouse_id")),
     warehouseName: optStr(pick(src, "warehouseName", "warehouse_name")),
     createdAt: optStr(pick(src, "createdAt", "created_at")),
-    createdBy: optStr(pick(src, "createdBy", "created_by")),
+    createdBy: optStr(pick(src, "createdBy", "created_by", "author")),
+    createdByName: optStr(pick(src, "createdByName", "created_by_name", "authorName")),
     placedAt: optStr(pick(src, "placedAt", "placed_at")),
     placedBy: optStr(pick(src, "placedBy", "placed_by")),
+    placedByName: optStr(pick(src, "placedByName", "placed_by_name")),
     receivedAt: optStr(pick(src, "receivedAt", "received_at")),
     receivedBy: optStr(pick(src, "receivedBy", "received_by")),
+    receivedByName: optStr(pick(src, "receivedByName", "received_by_name")),
     expectedDelivery: optStr(pick(src, "expectedDelivery", "expected_delivery")),
     comment: optStr(pick(src, "comment")),
     revision: num(pick(src, "revision")) || 0,
@@ -423,12 +428,12 @@ export async function getSession(): Promise<SessionInfo> {
   }
 }
 
-export async function login(email: string, password: string, invite?: string): Promise<SessionInfo> {
+export async function login(email: string, password: string, invite?: string, name?: string): Promise<SessionInfo> {
   try {
     const data = asRecord(
       await json("/api/orders/session", {
         method: "POST",
-        body: JSON.stringify({ email, password, invite: invite?.trim() || undefined }),
+        body: JSON.stringify({ email, password, invite: invite?.trim() || undefined, name }),
       }),
     );
     return { email: str(data.email, email), erpAdmin: Boolean(data.erpAdmin), public: false };
