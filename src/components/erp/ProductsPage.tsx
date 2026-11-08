@@ -519,7 +519,6 @@ function ProductEditor({
                 <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
                 <th>{productCodeFieldLabel()}</th>
                 {packs.length > 1 ? <th>{T("В заказе по умолчанию", "Default on order", "Mặc định trên đơn")}</th> : null}
-                <th />
               </tr>
             </thead>
             <tbody>
@@ -588,23 +587,6 @@ function ProductEditor({
                         />
                       </td>
                     ) : null}
-                    <td className="num">
-                      <button
-                        type="button"
-                        className="erpLink"
-                        onClick={() =>
-                          setPacks((prev) => {
-                            const next = prev.filter((_, i) => i !== index);
-                            if (next.length && !next.some((row) => row.is_default)) {
-                              return next.map((row, i) => ({ ...row, is_default: i === 0 }));
-                            }
-                            return next;
-                          })
-                        }
-                      >
-                        {T("Убрать", "Remove", "Xóa")}
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
