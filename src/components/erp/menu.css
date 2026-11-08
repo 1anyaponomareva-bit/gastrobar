@@ -159,6 +159,28 @@
   text-decoration: none;
 }
 
+.erpDishName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erpDishCover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--erp-soft);
+  color: var(--erp-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .erpMenuTable tfoot td {
   font-weight: 700;
   border-top: 2px solid var(--erp-line);

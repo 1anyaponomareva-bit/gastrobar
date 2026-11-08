@@ -29,7 +29,7 @@ import {
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
 import { setErpLang } from "../../src/components/erp/i18n";
-import { categoryLabel, lossPercentsText, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
+import { categoryLabel, dishInitials, lossPercentsText, posterDishMarkup, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -3004,6 +3004,16 @@ async function main() {
     assert.equal(stockValue(emptyStock), 0);
     assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: null })), null);
     assert.equal(costNumber(costInfo(emptyStock, { est_unit_cost: 1500 })), 1500);
+  });
+
+  await test("tech-card list yield initials and markup match Poster", async () => {
+    assert.equal(dishInitials("CHEESEBURGER"), "CHE");
+    assert.equal(dishInitials("CHEESE STEAKE DOG"), "CSD");
+    assert.match(posterStockQty(0.18, "kg"), /0[,.]180/);
+    assert.equal(posterDishMarkup(null, null, 180000), "—");
+    assert.equal(posterDishMarkup(0, 0, 180000), "—");
+    assert.equal(posterDishMarkup(38577.14, 237.4, 130000), "237%");
+    assert.equal(posterDishMarkup(24030, -100, 0), "-100%");
   });
 
   await test("menu list URL keeps category and other filters; card from only accepts Menu lists", async () => {

@@ -115,6 +115,29 @@ export function posterStockQty(qty: number, unit: string | null | undefined): st
   return `${posterDecimals(qty, decimals)} ${suffix}`;
 }
 
+/** Poster cover fallback: 1–3 letters from the dish name. */
+export function dishInitials(name: string): string {
+  const words = name.replace(/[^A-Za-zА-Яа-яЁё0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "•";
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words
+    .slice(0, 3)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * Poster list Наценка: no / zero cost → —; price 0 with cost → -100%; else integer %.
+ * Do not show 0% as if the dish had a real markup.
+ */
+export function posterDishMarkup(cost: number | null, markupPct: number | null, price: number | null): string {
+  if (cost == null || cost === 0) return "—";
+  if (price === 0) return "-100%";
+  if (markupPct == null) return "—";
+  return `${Math.round(markupPct)}%`;
+}
+
 export function prepsUsingProduct(state: ErpState, productId: string) {
   const active = new Set<string>();
   for (const recipe of state.recipes) {
