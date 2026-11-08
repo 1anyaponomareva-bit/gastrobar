@@ -20,7 +20,7 @@ type ActOptions = {
   onFail?: (data: Record<string, unknown>) => void;
 };
 
-type ErpContextValue = {
+export type ErpContextValue = {
   email: string;
   state: ErpState | null;
   reload: () => Promise<void>;
@@ -53,11 +53,11 @@ function withoutEmail({ email: _email, ...state }: StateResponse): ErpState {
   return state;
 }
 
-const ErpContext = createContext<ErpContextValue | null>(null);
+export const ErpContext = createContext<ErpContextValue | null>(null);
 
 export function useErp(): ErpContextValue {
   const value = useContext(ErpContext);
-  if (!value) throw new Error("useErp outside ErpShell");
+  if (!value) throw new Error("useErp outside ERP session");
   return value;
 }
 

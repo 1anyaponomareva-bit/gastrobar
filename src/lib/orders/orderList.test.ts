@@ -45,7 +45,15 @@ import {
   supplierTabChips,
   type SelectionMap,
 } from "./orderList";
+import { ORDERS_ADMIN_PATH, productEditorReturnHref } from "../erp/menuListQuery";
 import type { OrderProduct, OrderWarehouse } from "./types";
+
+test("orders admin and ERP ingredients open the same product card", () => {
+  assert.equal(ORDERS_ADMIN_PATH, "/orders/admin");
+  assert.equal(productEditorReturnHref("/orders/admin", "/erp/menu/ingredients"), "/orders/admin");
+  assert.equal(productEditorReturnHref("/erp/menu/ingredients", "/erp/menu/ingredients"), "/erp/menu/ingredients");
+  assert.equal(productEditorReturnHref("https://evil.example/orders/admin", "/erp/menu/ingredients"), "/erp/menu/ingredients");
+});
 
 test("catalog list order follows staff_sort then name", () => {
   const sorted = sortCatalogProducts([

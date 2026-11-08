@@ -24,6 +24,7 @@ import {
   menuListBackHref,
   menuListHref,
   parseMenuListSearch,
+  productEditorReturnHref,
   safeMenuListReturn,
   withMenuListReturn,
 } from "../../src/lib/erp/menuListQuery";
@@ -3034,6 +3035,8 @@ async function main() {
     assert.equal(safeMenuListReturn("//evil.example/erp/menu"), null);
     assert.equal(safeMenuListReturn("/erp/menu/ingredients/../../service"), null);
     assert.equal(withMenuListReturn("/erp/products/x", "/erp/products"), "/erp/products/x");
+    assert.equal(productEditorReturnHref("/orders/admin", "/erp/menu/ingredients"), "/orders/admin");
+    assert.equal(productEditorReturnHref("/erp/products", "/erp/menu/ingredients"), "/erp/menu/ingredients");
   });
 
   await test("ingredient category names are stored fields: EN on RU/EN, VN on VN", async () => {

@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AdminAuthForm } from "@/components/recipes/AdminAuthForm";
 import { translate } from "@/lib/i18n";
-import { archiveAdmin, getAdminCatalog, reorderAdminProducts, reorderAdminSuppliers, saveAdminProduct, saveAdminSupplier } from "@/lib/orders/api";
-import { defaultPackId, reorderSubset, sortCatalogProducts } from "@/lib/orders/orderList";
+import { ErpFormHost } from "@/components/erp/ErpFormHost";
+import { ProductCard } from "@/components/erp/ProductsPage";
+import { archiveAdmin, getAdminCatalog, reorderAdminProducts, reorderAdminSuppliers, saveAdminSupplier } from "@/lib/orders/api";
+import { ORDERS_ADMIN_PATH } from "@/lib/erp/menuListQuery";
+import { reorderSubset, sortCatalogProducts } from "@/lib/orders/orderList";
 import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
 import type { OrderProduct, OrderSupplier } from "@/lib/orders/types";
@@ -16,7 +19,6 @@ import "@/components/staff/staff-admin.css";
 
 const tAdmin = (key: string) => translate("ru", key);
 const t = (key: string) => ordersT("ru", key);
-const UNITS = ["kg", "l", "pcs"];
 
 type Tab = "items" | "suppliers";
 type Notice = { ok: boolean; text: string } | null;
@@ -211,32 +213,18 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
 
   let body: ReactNode;
   if (editingProduct) {
-    const initial = editingProduct === "new" ? null : editingProduct;
     body = (
-      <ItemForm
-        initial={initial}
-        suppliers={suppliers}
-        busy={busy}
-        onCancel={() => setEditingProduct(null)}
-        onSave={async (payload, isNew) => {
-          const ok = await guard(async () => {
-            await saveAdminProduct(payload);
-            await load();
-          }, isNew ? t("admin_item_added") : t("admin_item_saved"));
-          if (ok) setEditingProduct(null);
-        }}
-        onArchive={
-          initial
-            ? async () => {
-                const ok = await guard(async () => {
-                  await archiveAdmin("product", initial.id, true);
-                  await load();
-                }, t("admin_item_saved"));
-                if (ok) setEditingProduct(null);
-              }
-            : undefined
-        }
-      />
+      <ErpFormHost>
+        <ProductCard
+          id={editingProduct === "new" ? "new" : editingProduct.id}
+          presetType="ingredient"
+          from={ORDERS_ADMIN_PATH}
+          onClose={() => {
+            setEditingProduct(null);
+            void load();
+          }}
+        />
+      </ErpFormHost>
     );
   } else if (editingSupplier) {
     const initial = editingSupplier === "new" ? null : editingSupplier;
@@ -359,157 +347,6 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
       {notice ? <div className={notice.ok ? "adminOk" : "adminError"}>{notice.text}</div> : null}
       {body}
     </div>
-  );
-}
-
-function ItemForm({
-  initial,
-  suppliers,
-  busy,
-  onCancel,
-  onSave,
-  onArchive,
-}: {
-  initial: OrderProduct | null;
-  suppliers: OrderSupplier[];
-  busy: boolean;
-  onCancel: () => void;
-  onSave: (payload: Record<string, unknown>, isNew: boolean) => void;
-  onArchive?: () => void;
-}) {
-  const defaultPack = initial ? initial.packs.find((pack) => pack.pack_id === defaultPackId(initial)) ?? initial.packs[0] : null;
-  const [name, setName] = useState(initial?.nameEn ?? "");
-  const [nameVn, setNameVn] = useState(initial?.nameVn ?? "");
-  const [brand, setBrand] = useState(initial?.brand ?? "");
-  const [unit, setUnit] = useState(initial?.unit || "kg");
-  const [supplierId, setSupplierId] = useState(initial?.supplierId ?? suppliers[0]?.id ?? "");
-  const [packLabel, setPackLabel] = useState(defaultPack?.label ?? "");
-  const [packQty, setPackQty] = useState(String(defaultPack?.qty_base || 1));
-  const [packCode, setPackCode] = useState(defaultPack?.code ?? "");
-  const [itemNo, setItemNo] = useState(initial?.itemNo ?? "");
-  const [hidden, setHidden] = useState(Boolean(initial?.hidden));
-  const canSave = Boolean(name.trim() && unit && supplierId && packLabel.trim() && Number(packQty) > 0);
-
-  return (
-    <form
-      className="card formSection"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!canSave) return;
-        const pack = {
-          id: defaultPack?.id,
-          pack_id: defaultPack?.pack_id,
-          label: packLabel.trim(),
-          qty_base: Number(packQty),
-          is_default: true,
-          supplier_id: supplierId,
-          code: packCode.trim(),
-        };
-        const otherPacks = (initial?.packs ?? [])
-          .filter((row) => row.id !== defaultPack?.id)
-          .map((row) => ({
-            id: row.id,
-            pack_id: row.pack_id,
-            label: row.label,
-            qty_base: row.qty_base,
-            is_default: false,
-            supplier_id: row.supplierId,
-            code: row.code ?? "",
-          }));
-        onSave(
-          {
-            id: initial?.id,
-            type: "ingredient",
-            name_en: name.trim(),
-            name_vn: nameVn.trim() || name.trim(),
-            base_unit: unit,
-            brand: brand.trim(),
-            packs: [pack, ...otherPacks],
-            staff: {
-              listed: false,
-              hidden,
-              supplier_id: supplierId,
-              unit,
-              item_no: itemNo.trim(),
-            },
-          },
-          !initial,
-        );
-      }}
-    >
-      <h2 className="staffAdminTitle">{initial ? "Редактирование позиции" : "Новая позиция"}</h2>
-      <label>
-        <span>Название *</span>
-        <input value={name} onChange={(event) => setName(event.target.value)} required />
-      </label>
-      <label>
-        <span>Название VN</span>
-        <input value={nameVn} onChange={(event) => setNameVn(event.target.value)} />
-      </label>
-      <div className="formGrid staffAdminGrid">
-        <label>
-          <span>Поставщик *</span>
-          <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}>
-            {suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Единица *</span>
-          <select value={unit} onChange={(event) => setUnit(event.target.value)}>
-            {UNITS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="formGrid staffAdminGrid">
-        <label>
-          <span>Фасовка *</span>
-          <input value={packLabel} onChange={(event) => setPackLabel(event.target.value)} required />
-        </label>
-        <label>
-          <span>Кол-во в базе</span>
-          <input inputMode="decimal" value={packQty} onChange={(event) => setPackQty(event.target.value)} />
-        </label>
-      </div>
-      <label>
-        <span>SKU код фасовки</span>
-        <input value={packCode} onChange={(event) => setPackCode(event.target.value)} />
-      </label>
-      <div className="formGrid staffAdminGrid">
-        <label>
-          <span>Бренд</span>
-          <input value={brand} onChange={(event) => setBrand(event.target.value)} />
-        </label>
-        <label>
-          <span>Артикул</span>
-          <input value={itemNo} onChange={(event) => setItemNo(event.target.value)} />
-        </label>
-      </div>
-      <label className="staffAdminCheck">
-        <input type="checkbox" checked={hidden} onChange={(event) => setHidden(event.target.checked)} />
-        <span>Скрыть у сотрудников</span>
-      </label>
-      <div className="adminActions">
-        <button type="submit" className="dark" disabled={busy || !canSave}>
-          {busy ? "Сохраняю…" : "Сохранить"}
-        </button>
-        <button type="button" className="white" disabled={busy} onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
-      {onArchive ? (
-        <button type="button" className="white danger staffAdminDelete" disabled={busy} onClick={onArchive}>
-          🗑 В архив
-        </button>
-      ) : null}
-    </form>
   );
 }
 

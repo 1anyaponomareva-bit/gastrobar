@@ -90,6 +90,15 @@ export function menuListBackHref(from: string | null | undefined, fallback: stri
   return safeMenuListReturn(from) ?? fallback;
 }
 
+/** Orders admin and Menu ingredients open the same product card; Back must return to the list that opened it. */
+export const ORDERS_ADMIN_PATH = "/orders/admin";
+
+export function productEditorReturnHref(from: string | null | undefined, fallback: string): string {
+  const trimmed = (from ?? "").trim();
+  if (trimmed === ORDERS_ADMIN_PATH) return ORDERS_ADMIN_PATH;
+  return menuListBackHref(from, fallback);
+}
+
 /** Puts the current list URL on a card link as `from`. */
 export function withMenuListReturn(href: string, listHref: string): string {
   const from = safeMenuListReturn(listHref);
