@@ -29,6 +29,14 @@ const ENTITY_PART: Record<string, StatePart> = {
 };
 /** Posting and cancelling move lots and may update product costs. */
 const STOCK_PARTS: StatePart[] = ["stock", "products"];
+const FINANCE_PARTS: StatePart[] = [
+  "financeAccounts",
+  "financeCategories",
+  "financeTransactions",
+  "financeShifts",
+  "financeEmployees",
+  "financePayroll",
+];
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -198,6 +206,57 @@ export async function POST(request: Request) {
           document: await freshDocument(id),
           patch: await fresh(STOCK_PARTS),
         });
+      }
+      case "saveFinanceAccount": {
+        const id = await rpc("erp_save_finance_account", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "deleteFinanceAccount":
+        await rpc("erp_delete_finance_account", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(FINANCE_PARTS) });
+      case "restoreFinanceAccount":
+        await rpc("erp_restore_finance_account", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(FINANCE_PARTS) });
+      case "saveFinanceCategory": {
+        const id = await rpc("erp_save_finance_category", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "deleteFinanceCategory":
+        await rpc("erp_delete_finance_category", {
+          p_id: uuid(a.id),
+          p_move_to: a.moveToId ? uuid(a.moveToId) : null,
+          p_actor: actor,
+        });
+        return timing.json({ ok: true, patch: await fresh(FINANCE_PARTS) });
+      case "saveFinanceTransaction": {
+        const id = await rpc("erp_save_finance_transaction", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "deleteFinanceTransaction":
+        await rpc("erp_delete_finance_transaction", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(FINANCE_PARTS) });
+      case "restoreFinanceTransaction":
+        await rpc("erp_restore_finance_transaction", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(FINANCE_PARTS) });
+      case "saveFinanceShift": {
+        const id = await rpc("erp_save_finance_shift", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "closeFinanceShift": {
+        const id = await rpc("erp_close_finance_shift", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "saveFinanceEmployee": {
+        const id = await rpc("erp_save_finance_employee", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "saveFinancePayroll": {
+        const id = await rpc("erp_save_finance_payroll", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "payFinancePayroll": {
+        const id = await rpc("erp_pay_finance_payroll", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
       }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");

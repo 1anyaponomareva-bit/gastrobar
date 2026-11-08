@@ -6,12 +6,14 @@ import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
 import { ERP_LANGS, LANG_STORAGE_KEY, readStoredLang, setErpLang, type ErpLang } from "./i18n";
+import { activeFinanceHref, financeNavItems } from "./financeNav";
 import { activeMenuHref, menuNavItems } from "./menuNav";
 import { activeStockHref, stockNavItems } from "./stockNav";
 import { ErpHrefProvider, useInternalPathname } from "./erpHref";
 import { Empty, errorText, loadingText, NavLink, T } from "./ui";
 import "./erp.css";
 import "./menu.css";
+import "./finance.css";
 
 type Notice = { ok: boolean; text: string } | null;
 
@@ -61,12 +63,13 @@ export function useErp(): ErpContextValue {
   return value;
 }
 
-type Section = "home" | "stock" | "menu" | "service";
+type Section = "home" | "stock" | "menu" | "finance" | "service";
 
 export function sectionOf(pathname: string | null): Section {
   const path = pathname ?? "/erp";
   if (path.startsWith("/erp/products") || path.startsWith("/erp/preps") || path.startsWith("/erp/menu")) return "menu";
   if (path.startsWith("/erp/stock") || path.startsWith("/erp/documents") || path.startsWith("/erp/purchasing")) return "stock";
+  if (path.startsWith("/erp/finance")) return "finance";
   if (path.startsWith("/erp/service")) return "service";
   return "home";
 }
@@ -75,6 +78,7 @@ const ICONS: Record<Section, ReactNode> = {
   home: <path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
   stock: <path d="M3 9.5 12 4l9 5.5V20H3zM7 20v-6h10v6M7 17h10" />,
   menu: <path d="M6 3v8a2 2 0 0 0 2 2v8M10 3v8a2 2 0 0 1-2 2M8 3v6M17 21V3c-2 1-3 4-3 8h3" />,
+  finance: <path d="M4 6h16v12H4zM4 10h16M8 14h3" />,
   service: (
     <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2.2-1.3L14.4 3h-4l-.4 2.4a7.5 7.5 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.5 7.5 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3z" />
   ),
@@ -90,6 +94,7 @@ const navItems = (): { section: Section; href: string; label: string; short: str
   { section: "home", href: "/erp", label: T("Главная", "Home", "Trang chủ"), short: T("Главная", "Home", "Trang chủ") },
   { section: "stock", href: "/erp/stock", label: T("Склад", "Stock", "Kho"), short: T("Склад", "Stock", "Kho") },
   { section: "menu", href: "/erp/menu", label: T("Меню", "Menu", "Thực đơn"), short: T("Меню", "Menu", "Thực đơn") },
+  { section: "finance", href: "/erp/finance", label: T("Финансы", "Finance", "Tài chính"), short: T("Финансы", "Finance", "Tài chính") },
 ];
 
 function LangSwitch({ lang, onChange }: { lang: ErpLang; onChange: (lang: ErpLang) => void }) {
@@ -238,8 +243,10 @@ function ErpData({
   const section = sectionOf(pathname);
   const stockActive = activeStockHref(pathname);
   const menuActive = activeMenuHref(pathname);
+  const financeActive = activeFinanceHref(pathname);
   const [stockOpen, setStockOpen] = useState(section === "stock");
   const [menuOpen, setMenuOpen] = useState(section === "menu");
+  const [financeOpen, setFinanceOpen] = useState(section === "finance");
   const [state, setState] = useState<ErpState | null>(initial);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -291,6 +298,7 @@ function ErpData({
   useEffect(() => {
     setStockOpen(section === "stock");
     setMenuOpen(section === "menu");
+    setFinanceOpen(section === "finance");
   }, [section]);
 
   const act = useCallback(
@@ -341,12 +349,12 @@ function ErpData({
           </div>
           <nav className="erpSideNav">
             {items.map((item) => {
-              if (item.section === "stock" || item.section === "menu") {
-                const open = item.section === "stock" ? stockOpen : menuOpen;
-                const setOpen = item.section === "stock" ? setStockOpen : setMenuOpen;
-                const subId = item.section === "stock" ? "erp-stock-sub" : "erp-menu-sub";
-                const subs = item.section === "stock" ? stockNavItems() : menuNavItems();
-                const activeSub = item.section === "stock" ? stockActive : menuActive;
+              if (item.section === "stock" || item.section === "menu" || item.section === "finance") {
+                const open = item.section === "stock" ? stockOpen : item.section === "menu" ? menuOpen : financeOpen;
+                const setOpen = item.section === "stock" ? setStockOpen : item.section === "menu" ? setMenuOpen : setFinanceOpen;
+                const subId = item.section === "stock" ? "erp-stock-sub" : item.section === "menu" ? "erp-menu-sub" : "erp-finance-sub";
+                const subs = item.section === "stock" ? stockNavItems() : item.section === "menu" ? menuNavItems() : financeNavItems();
+                const activeSub = item.section === "stock" ? stockActive : item.section === "menu" ? menuActive : financeActive;
                 return (
                   <div key={item.href} className={`erpSideGroup ${open ? "open" : ""}`}>
                     <NavLink

@@ -64,6 +64,12 @@ export function ErpHome() {
           text={T("Food Cost, упаковка и маржа по каналам", "Food cost, packaging and margin per channel", "Food cost, bao bì, biên LN")}
           icon={svg(<path d="M7 3v8M5 3v4a2 2 0 004 0V3M7 11v10M17 3c-2 0-3 3-3 6s1 3 3 3v9" />)}
         />
+        <QuickTile
+          href="/erp/finance"
+          title={T("Финансы", "Finance", "Tài chính")}
+          text={T("Транзакции, счета, кассовые смены, P&L и Cash flow", "Transactions, accounts, cash shifts, P&L and Cash flow", "Giao dịch, tài khoản, ca quỹ, P&L và Cash flow")}
+          icon={svg(<path d="M4 6h16v12H4zM4 10h16M8 14h3" />)}
+        />
       </div>
 
       {toCheck ? (

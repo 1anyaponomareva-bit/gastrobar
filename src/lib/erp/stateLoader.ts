@@ -1,10 +1,39 @@
+import type {
+  FinanceAccount,
+  FinanceCategory,
+  FinanceEmployee,
+  FinancePayroll,
+  FinanceShift,
+  FinanceTransaction,
+} from "./finance";
 import type { ErpDish, ErpDocument, ErpLocation, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
 import { check, erpDb } from "./server";
 
 /** Parts of the ERP screen data that can be loaded on their own. */
 export type StatePart = keyof ErpState;
 
-export const ALL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "locations", "channels", "products", "packs", "productPacks", "stock", "recipes", "dishes", "writeoffReasons", "costSources"];
+export const ALL_PARTS: StatePart[] = [
+  "settings",
+  "categories",
+  "suppliers",
+  "warehouses",
+  "locations",
+  "channels",
+  "products",
+  "packs",
+  "productPacks",
+  "stock",
+  "recipes",
+  "dishes",
+  "writeoffReasons",
+  "costSources",
+  "financeAccounts",
+  "financeCategories",
+  "financeTransactions",
+  "financeShifts",
+  "financeEmployees",
+  "financePayroll",
+];
 
 /** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
 export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
@@ -20,6 +49,18 @@ function isMissingLoadState(code: string, message: string) {
 
 function markLoadStateMissing() {
   loadStateRpcMissingUntil = Date.now() + LOAD_STATE_RETRY_MS;
+}
+
+function optionalTable<T>(result: { data: unknown; error: { code?: string; message?: string } | null }, fallback: T): T {
+  if (result.error) {
+    const code = result.error.code ?? "";
+    const message = result.error.message ?? "";
+    if (["PGRST205", "PGRST202", "42P01", "42883"].includes(code) || /does not exist|could not find/i.test(message)) {
+      return fallback;
+    }
+    check(result);
+  }
+  return (result.data ?? fallback) as T;
 }
 
 async function loadStateRpc(parts: StatePart[]): Promise<Partial<ErpState> | null> {
@@ -106,6 +147,27 @@ async function loadPart(part: StatePart): Promise<unknown> {
       }
       return (result.data ?? []) as ErpProductCostQuote[];
     }
+    case "financeAccounts":
+      return optionalTable(await db.from("erp_finance_accounts").select("*").order("sort"), [] as FinanceAccount[]);
+    case "financeCategories":
+      return optionalTable(await db.from("erp_finance_categories").select("*").order("sort"), [] as FinanceCategory[]);
+    case "financeTransactions":
+      return optionalTable(
+        await db.from("erp_finance_transactions").select("*").order("occurred_at", { ascending: false }).limit(10000),
+        [] as FinanceTransaction[],
+      );
+    case "financeShifts":
+      return optionalTable(
+        await db.from("erp_finance_shifts").select("*").order("opened_at", { ascending: false }).limit(2000),
+        [] as FinanceShift[],
+      );
+    case "financeEmployees":
+      return optionalTable(await db.from("erp_finance_employees").select("*").order("name"), [] as FinanceEmployee[]);
+    case "financePayroll":
+      return optionalTable(
+        await db.from("erp_finance_payroll").select("*").order("period_end", { ascending: false }).limit(2000),
+        [] as FinancePayroll[],
+      );
     case "dishes": {
       const [dishes, lines, prices] = await Promise.all([
         db.from("erp_dishes").select("*").order("name_en"),
@@ -156,6 +218,19 @@ export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial
     }
     if (parts.includes("locations") && batched.locations === undefined) {
       batched.locations = (await loadPart("locations")) as ErpLocation[];
+    }
+    const financeParts = [
+      "financeAccounts",
+      "financeCategories",
+      "financeTransactions",
+      "financeShifts",
+      "financeEmployees",
+      "financePayroll",
+    ] as const;
+    for (const part of financeParts) {
+      if (parts.includes(part) && batched[part] === undefined) {
+        (batched as Record<string, unknown>)[part] = await loadPart(part);
+      }
     }
     return batched;
   }

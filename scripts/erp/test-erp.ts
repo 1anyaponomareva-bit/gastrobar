@@ -56,6 +56,17 @@ import {
   type ErpHostGateConfig,
 } from "../../src/lib/erp/hostGate";
 import { publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
+import {
+  accountBalance,
+  buildCashflow,
+  buildPnl,
+  dealDate,
+  monthRange,
+  roundMoney,
+  type FinanceAccount,
+  type FinanceCategory,
+  type FinanceTransaction,
+} from "../../src/lib/erp/finance";
 
 const ACTOR = "test@gastrofood";
 let db: PGlite;
@@ -356,6 +367,12 @@ async function main() {
       "writeoffReasons",
       "costSources",
       "locations",
+      "financeAccounts",
+      "financeCategories",
+      "financeTransactions",
+      "financeShifts",
+      "financeEmployees",
+      "financePayroll",
     ]) {
       assert.ok(key in full, key);
     }
@@ -3282,6 +3299,153 @@ async function main() {
     const byLabel = Object.fromEntries(item!.packs.map((pack) => [pack.label, pack.code]));
     assert.equal(byLabel["Pack-code bag"], "B");
     assert.equal(byLabel["Pack-code kg"] ?? null, null);
+  });
+
+  await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {
+    const cash: FinanceAccount = {
+      id: "cash",
+      code: "cash_drawer",
+      name: "Drawer",
+      kind: "cash",
+      currency: "VND",
+      opening_balance: 1_000_000,
+      location_id: null,
+      is_system: true,
+      system_role: "cash_drawer",
+      sort: 1,
+      archived_at: null,
+      deleted_at: null,
+    };
+    const bank: FinanceAccount = { ...cash, id: "bank", code: "acquiring", name: "Bank", kind: "card", system_role: "acquiring", opening_balance: 0 };
+    const rent: FinanceCategory = {
+      id: "rent",
+      code: "rent",
+      name: "Rent",
+      parent_id: null,
+      allow_income: false,
+      allow_expense: true,
+      show_on_pos: false,
+      show_in_pnl: true,
+      pnl_block: "opex",
+      is_system: false,
+      sort: 1,
+      deleted_at: null,
+    };
+    const sales: FinanceCategory = { ...rent, id: "sales", code: "cash_shifts", name: "Sales", allow_income: true, allow_expense: false, pnl_block: "revenue" };
+    const tx = (partial: Partial<FinanceTransaction> & Pick<FinanceTransaction, "id" | "type" | "amount" | "account_id" | "occurred_at">): FinanceTransaction => ({
+      to_account_id: null,
+      category_id: null,
+      deal_at: null,
+      comment: null,
+      source: "manual",
+      source_id: null,
+      auto_kind: null,
+      shift_id: null,
+      user_name: null,
+      created_by: null,
+      created_at: partial.occurred_at,
+      deleted_at: null,
+      deleted_with_account_id: null,
+      ...partial,
+    });
+    const prepaid = tx({
+      id: "1",
+      type: "expense",
+      amount: 400_000,
+      account_id: "cash",
+      category_id: "rent",
+      occurred_at: "2026-10-10T10:00:00+07:00",
+      deal_at: "2026-11-10",
+    });
+    const sale = tx({
+      id: "2",
+      type: "income",
+      amount: 900_000,
+      account_id: "cash",
+      category_id: "sales",
+      occurred_at: "2026-11-05T18:00:00+07:00",
+    });
+    assert.equal(dealDate(prepaid), "2026-11-10");
+    assert.equal(monthRange("2026-11").from, "2026-11-01");
+    assert.equal(accountBalance(cash, [prepaid, sale]), 1_500_000);
+    const pnl = buildPnl([prepaid, sale], [rent, sales], "2026-11-01", "2026-12-01");
+    assert.equal(pnl.revenue, 900_000);
+    assert.equal(pnl.opex, 400_000);
+    assert.equal(pnl.net, 500_000);
+    const flowNov = buildCashflow([cash, bank], [prepaid, sale], [rent, sales], "2026-11-01", "2026-12-01");
+    assert.equal(flowNov.income, 900_000);
+    assert.equal(flowNov.expense, 0);
+    const flowOct = buildCashflow([cash, bank], [prepaid, sale], [rent, sales], "2026-10-01", "2026-11-01");
+    assert.equal(flowOct.expense, 400_000);
+    assert.equal(roundMoney(10.1), 10.1);
+  });
+
+  await test("poster finance SQL: system accounts, income/expense/transfer, locked auto tx, shift adjustment", async () => {
+    const accounts = await q<{ id: string; code: string }>("select id, code from public.erp_finance_accounts where deleted_at is null order by sort");
+    assert.deepEqual(accounts.map((row) => row.code), ["cash_drawer", "acquiring", "safe"]);
+    const cash = accounts[0].id;
+    const bank = accounts[1].id;
+    const cats = await q<{ id: string; code: string }>("select id, code from public.erp_finance_categories where deleted_at is null");
+    const byCode = Object.fromEntries(cats.map((row) => [row.code, row.id]));
+    const incomeId = await value<string>("select public.erp_save_finance_transaction($1::jsonb, $2)", [
+      JSON.stringify({ type: "income", amount: 100000, account_id: cash, category_id: byCode.revenue, occurred_at: "2026-11-01T09:00:00+07:00" }),
+      ACTOR,
+    ]);
+    const expenseId = await value<string>("select public.erp_save_finance_transaction($1::jsonb, $2)", [
+      JSON.stringify({ type: "expense", amount: 25000, account_id: cash, category_id: byCode.rent, occurred_at: "2026-11-01T10:00:00+07:00" }),
+      ACTOR,
+    ]);
+    await value<string>("select public.erp_save_finance_transaction($1::jsonb, $2)", [
+      JSON.stringify({ type: "transfer", amount: 10000, account_id: cash, to_account_id: bank, occurred_at: "2026-11-01T11:00:00+07:00" }),
+      ACTOR,
+    ]);
+    const opening = Number(await value<string>("select opening_balance from public.erp_finance_accounts where id = $1", [cash]));
+    const delta = Number(
+      await value<string>(
+        `select coalesce(sum(case
+          when type = 'income' and account_id = $1 then amount
+          when type = 'expense' and account_id = $1 then -amount
+          when type = 'transfer' and account_id = $1 then -amount
+          when type = 'transfer' and to_account_id = $1 then amount
+          else 0 end), 0)
+         from public.erp_finance_transactions where deleted_at is null`,
+        [cash],
+      ),
+    );
+    assert.equal(opening + delta, 65000);
+    await expectError(q("select public.erp_delete_finance_account($1, $2)", [cash, ACTOR]), "ERP_FINANCE_SYSTEM");
+    const extra = await value<string>("select public.erp_save_finance_account($1::jsonb, $2)", [
+      JSON.stringify({ name: "Vietcombank", kind: "bank", opening_balance: 0 }),
+      ACTOR,
+    ]);
+    await q("select public.erp_delete_finance_account($1, $2)", [extra, ACTOR]);
+    assert.ok(await value<string>("select deleted_at from public.erp_finance_accounts where id = $1", [extra]));
+    await q("select public.erp_restore_finance_account($1, $2)", [extra, ACTOR]);
+    assert.equal(await value<string>("select deleted_at from public.erp_finance_accounts where id = $1", [extra]), null);
+
+    const shiftId = await value<string>("select public.erp_save_finance_shift($1::jsonb, $2)", [
+      JSON.stringify({ account_id: cash, opening_cash: 0, opened_at: "2026-11-02T08:00:00+07:00" }),
+      ACTOR,
+    ]);
+    await q("select public.erp_close_finance_shift($1::jsonb, $2)", [
+      JSON.stringify({ id: shiftId, sales_cash: 50000, sales_card: 20000, collection_sum: 30000, actual_cash: 15000, closed_at: "2026-11-02T22:00:00+07:00" }),
+      ACTOR,
+    ]);
+    const auto = await q<{ auto_kind: string; type: string; amount: string }>(
+      "select auto_kind, type, amount::text from public.erp_finance_transactions where source_id = $1 and deleted_at is null order by auto_kind",
+      [shiftId],
+    );
+    const kinds = Object.fromEntries(auto.map((row) => [row.auto_kind, { type: row.type, amount: Number(row.amount) }]));
+    assert.equal(kinds.sales_cash?.type, "income");
+    assert.equal(kinds.sales_cash?.amount, 50000);
+    assert.equal(kinds.sales_card?.amount, 20000);
+    assert.equal(kinds.collection?.type, "transfer");
+    assert.equal(kinds.collection?.amount, 30000);
+    const salesTx = await value<string>("select id from public.erp_finance_transactions where source_id = $1 and auto_kind = 'sales_cash'", [shiftId]);
+    await expectError(q("select public.erp_delete_finance_transaction($1, $2)", [salesTx, ACTOR]), "ERP_FINANCE_LOCKED");
+    await q("select public.erp_delete_finance_transaction($1, $2)", [incomeId, ACTOR]);
+    await q("select public.erp_restore_finance_transaction($1, $2)", [incomeId, ACTOR]);
+    assert.ok(expenseId);
   });
 
   console.log(`\n${passed} checks passed`);

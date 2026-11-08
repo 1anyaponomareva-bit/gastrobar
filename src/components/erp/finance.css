@@ -1,0 +1,65 @@
+.erpFinance .erpMoneyIn {
+  color: #15803d;
+  font-variant-numeric: tabular-nums;
+}
+
+.erpFinance .erpMoneyOut {
+  color: #b91c1c;
+  font-variant-numeric: tabular-nums;
+}
+
+.erpFinance .erpMoneyZero {
+  color: var(--erp-muted);
+}
+
+.erpFinanceIndent {
+  display: inline-block;
+}
+
+.erpPnlHead td,
+.erpPnlTotal td {
+  font-weight: 650;
+  background: #f8fafc;
+}
+
+.erpFinancePeriod {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 12px;
+}
+
+.erpFinancePeriod input[type="month"] {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  background: var(--erp-card);
+}
+
+.erpFinanceTotals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.erpFinanceTotals div {
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.erpFinanceTotals span {
+  display: block;
+  color: var(--erp-muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.erpFinanceTotals strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}

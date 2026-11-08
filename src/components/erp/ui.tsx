@@ -116,6 +116,31 @@ export function errorText(code: string, detail?: string): string {
       "The 14-day trash period has expired.",
       "Hết hạn 14 ngày trong thùng rác.",
     ),
+    ERP_FINANCE_SYSTEM: T(
+      "Базовый счёт или категорию Poster нельзя удалить",
+      "A Poster system account or category cannot be deleted",
+      "Không xóa được tài khoản/nhóm mặc định của Poster",
+    ),
+    ERP_FINANCE_LOCKED: T(
+      "Эту транзакцию нельзя изменить здесь — она создана автоматически",
+      "This transaction cannot be edited here — it was created automatically",
+      "Không sửa được giao dịch tự động",
+    ),
+    ERP_FINANCE_SHIFT_CLOSED: T(
+      "Закрытую кассовую смену сначала нужно править через показатели смены",
+      "A closed cash shift is edited through the shift totals",
+      "Ca đã đóng chỉ sửa được qua chỉ số ca",
+    ),
+    ERP_FINANCE_TRASH_EXPIRED: T(
+      "Срок хранения в корзине истёк (30 дней).",
+      "The 30-day trash period has expired.",
+      "Hết hạn 30 ngày trong thùng rác.",
+    ),
+    ERP_SAME_ACCOUNT: T(
+      "Для перевода укажите два разных счёта",
+      "A transfer needs two different accounts",
+      "Chuyển khoản cần hai tài khoản khác nhau",
+    ),
     ERP_UNIT_LOCKED: T(
       "Единицу учёта нельзя изменить после первого использования",
       "The unit cannot change once the product is used",

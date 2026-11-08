@@ -1,6 +1,22 @@
 import type { ErpProductType, ErpUnit, LossMethod, LossPcts } from "./costing";
+import type {
+  FinanceAccount,
+  FinanceCategory,
+  FinanceEmployee,
+  FinancePayroll,
+  FinanceShift,
+  FinanceTransaction,
+} from "./finance";
 export type { MenuPriceSource, ProductCostQuote } from "./costing";
 export type { StaffMergeResult } from "./staffMerge";
+export type {
+  FinanceAccount as ErpFinanceAccount,
+  FinanceCategory as ErpFinanceCategory,
+  FinanceEmployee as ErpFinanceEmployee,
+  FinancePayroll as ErpFinancePayroll,
+  FinanceShift as ErpFinanceShift,
+  FinanceTransaction as ErpFinanceTransaction,
+} from "./finance";
 
 export type ErpSettings = {
   input_vat_enabled: boolean;
@@ -219,6 +235,12 @@ export type ErpState = {
   writeoffReasons: ErpWriteoffReason[];
   /** Optional: loaded with `?parts=costSources` or the full state after the menu migration. */
   costSources?: ErpProductCostQuote[];
+  financeAccounts?: FinanceAccount[];
+  financeCategories?: FinanceCategory[];
+  financeTransactions?: FinanceTransaction[];
+  financeShifts?: FinanceShift[];
+  financeEmployees?: FinanceEmployee[];
+  financePayroll?: FinancePayroll[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
@@ -382,4 +404,17 @@ export type ErpAction =
   | { action: "importRecipes" }
   | { action: "previewCount"; preview: Record<string, unknown> }
   | { action: "refreshCount"; id: string }
-  | { action: "reopenCount"; id: string; reason: string; cascade?: boolean };
+  | { action: "reopenCount"; id: string; reason: string; cascade?: boolean }
+  | { action: "saveFinanceAccount"; value: Record<string, unknown> }
+  | { action: "deleteFinanceAccount"; id: string }
+  | { action: "restoreFinanceAccount"; id: string }
+  | { action: "saveFinanceCategory"; value: Record<string, unknown> }
+  | { action: "deleteFinanceCategory"; id: string; moveToId?: string | null }
+  | { action: "saveFinanceTransaction"; value: Record<string, unknown> }
+  | { action: "deleteFinanceTransaction"; id: string }
+  | { action: "restoreFinanceTransaction"; id: string }
+  | { action: "saveFinanceShift"; value: Record<string, unknown> }
+  | { action: "closeFinanceShift"; value: Record<string, unknown> }
+  | { action: "saveFinanceEmployee"; value: Record<string, unknown> }
+  | { action: "saveFinancePayroll"; value: Record<string, unknown> }
+  | { action: "payFinancePayroll"; value: Record<string, unknown> };
