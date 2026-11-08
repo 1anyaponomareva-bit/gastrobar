@@ -504,9 +504,9 @@ function ProductEditor({
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
       <p className="erpHint">
         {T(
-          "Выберите фасовку из справочника с той же единицей. Новую фасовку можно создать в разделе «Фасовки».",
-          "Pick a pack from the catalog with the same unit. Create new packs in Packs.",
-          "Chọn quy cách cùng đơn vị. Tạo mới trong mục Quy cách.",
+          "Коробка, пачка, канистра — как товар покупают. Если фасовок несколько, отметьте какая подставляется в заказе.",
+          "Box, pack, can — how the goods are bought. If there are several, mark which one is pre-filled on the order.",
+          "Thùng, gói, can — cách mua hàng. Nếu có nhiều quy cách, chọn quy cách mặc định trên đơn.",
         )}
       </p>
       {packs.length ? (
@@ -518,7 +518,7 @@ function ProductEditor({
                 <th>{T("Количество", "Quantity", "Số lượng")}</th>
                 <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
                 <th>{productCodeFieldLabel()}</th>
-                <th>{T("Основная", "Default", "Mặc định")}</th>
+                {packs.length > 1 ? <th>{T("В заказе по умолчанию", "Default on order", "Mặc định trên đơn")}</th> : null}
                 <th />
               </tr>
             </thead>
@@ -577,17 +577,32 @@ function ProductEditor({
                         data-testid="pack-code"
                       />
                     </td>
-                    <td data-label={T("Основная", "Default", "Mặc định")}>
-                      <input
-                        type="radio"
-                        name="defaultPack"
-                        checked={pack.is_default}
-                        onChange={() => setPacks((prev) => prev.map((p, i) => ({ ...p, is_default: i === index })))}
-                      />
-                    </td>
+                    {packs.length > 1 ? (
+                      <td data-label={T("В заказе по умолчанию", "Default on order", "Mặc định trên đơn")}>
+                        <input
+                          type="radio"
+                          name="defaultPack"
+                          checked={pack.is_default}
+                          onChange={() => setPacks((prev) => prev.map((p, i) => ({ ...p, is_default: i === index })))}
+                          aria-label={T("Подставлять эту фасовку в заказе", "Pre-fill this pack on the order", "Điền sẵn quy cách này trên đơn")}
+                        />
+                      </td>
+                    ) : null}
                     <td className="num">
-                      <button type="button" className="erpIconBtn" aria-label={T("Убрать", "Remove", "Xóa")} onClick={() => setPacks((prev) => prev.filter((_, i) => i !== index))}>
-                        ×
+                      <button
+                        type="button"
+                        className="erpLink"
+                        onClick={() =>
+                          setPacks((prev) => {
+                            const next = prev.filter((_, i) => i !== index);
+                            if (next.length && !next.some((row) => row.is_default)) {
+                              return next.map((row, i) => ({ ...row, is_default: i === 0 }));
+                            }
+                            return next;
+                          })
+                        }
+                      >
+                        {T("Убрать", "Remove", "Xóa")}
                       </button>
                     </td>
                   </tr>
@@ -596,7 +611,9 @@ function ProductEditor({
             </tbody>
           </table>
         </div>
-      ) : null}
+      ) : (
+        <p className="erpHint">{T("Фасовок пока нет. Добавьте коробку, пачку или канистру.", "No packs yet. Add a box, pack or can.", "Chưa có quy cách. Thêm thùng, gói hoặc can.")}</p>
+      )}
       <div className="erpActions">
         <button
           type="button"
@@ -782,19 +799,13 @@ function ProductEditor({
         </section>
       ) : null}
 
-      {isNew ? (
+      {goodsMode && isNew ? (
         <details className="erpMore erpCard">
           <summary>{T("Закупка и хранение (необязательно)", "Purchasing and storage (optional)", "Mua hàng và bảo quản (không bắt buộc)")}</summary>
           <h2>{T("Закупка и упаковки", "Purchasing & packs", "Mua hàng và quy cách")}</h2>
           {purchasing}
           <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
           {storage}
-          {showLosses ? (
-            <>
-              <h2>{lossTitle()}</h2>
-              {losses}
-            </>
-          ) : null}
         </details>
       ) : (
         <>
