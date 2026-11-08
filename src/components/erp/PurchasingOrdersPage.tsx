@@ -126,15 +126,15 @@ export function PurchasingOrdersPage() {
                         {order.docNo || order.id}
                       </NavLink>
                     </td>
-                    <td>{order.supplierName}</td>
-                    <td>{order.warehouseName ?? "—"}</td>
-                    <td>
+                    <td data-label={T("Поставщик", "Supplier", "NCC")}>{order.supplierName}</td>
+                    <td data-label={T("Склад", "Location", "Kho")}>{order.warehouseName ?? "—"}</td>
+                    <td data-label={T("Статус", "Status", "TT")}>
                       <span className="erpBadgeWhen">
                         <PurchasingStatusBadge status={order.status} />
                         <span className="erpMuted">{formatVietnamDate(orderStatusInstant(order)) || "—"}</span>
                       </span>
                     </td>
-                    <td>{formatQty(remaining)}</td>
+                    <td data-label={T("Осталось", "Remaining", "Còn")}>{remaining > 0 ? formatQty(remaining) : ""}</td>
                     <td>
                       <NavLink href={`/erp/purchasing/orders/${order.id}`} className="erpLink">
                         {T("Открыть", "Open", "Mở")}
