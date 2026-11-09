@@ -386,12 +386,44 @@ export function supplierPrintPdfInput(
 }
 
 const PACK_CONTAINER = /^(box|pack|pcs|pc|btl|bottle|can|bag)\s+(.+)$/i;
+const STOCK_UNIT = /^(kg|g|l|ml|pcs|pc)$/i;
 
 function containerWord(value: string): string {
   const head = value.toLowerCase();
   if (head === "pc") return "pcs";
   if (head === "bottle") return "btl";
   return head;
+}
+
+function isPackWord(value: string): boolean {
+  return /^(box|pack|pcs|pc|btl|bottle|can|bag|gói)$/i.test(value.trim());
+}
+
+function isStockUnit(value: string): boolean {
+  return STOCK_UNIT.test(value.trim());
+}
+
+/** box/pack/kg/l/pcs — never a numeric pack SKU or the first word of «1 kg». */
+function isQtyUnit(value: string): boolean {
+  const text = value.trim();
+  return Boolean(text) && (isPackWord(text) || isStockUnit(text));
+}
+
+function normalizeQtyUnit(value: string): string {
+  const text = value.trim();
+  if (/^pc$/i.test(text)) return "pcs";
+  if (/^bottle$/i.test(text)) return "btl";
+  return text.toLowerCase();
+}
+
+/** Trailing stock unit in a pack label (`1 kg`, `500 g`, `24 pcs`). */
+function stockUnitFromLabel(label: string): string {
+  const normalized = (label || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  const match = PACK_CONTAINER.exec(normalized);
+  const rest = match?.[2] ?? normalized;
+  const found = rest.match(/\b(kg|g|ml|l|pcs|pc)\b/i);
+  return found ? normalizeQtyUnit(found[1]) : "";
 }
 
 function compactQty(value: number): string {
@@ -405,19 +437,29 @@ export function orderPackCaption(pack: { label: string; unit: string; qty_base: 
   if (/^1\s+\S+\s*=/.test(label)) return label;
   const match = PACK_CONTAINER.exec(label);
   if (match) return `1 ${containerWord(match[1])} = ${match[2].trim()}`;
-  if (pack.qty_base > 0 && pack.unit) {
+  const unit = isQtyUnit(pack.unit) ? normalizeQtyUnit(pack.unit) : stockUnitFromLabel(label);
+  if (pack.qty_base > 0 && unit) {
     const compact = label.toLowerCase().replace(/\s+/g, "");
-    if (Math.abs(pack.qty_base - 1) < 1e-9 && compact === `1${pack.unit.toLowerCase()}`) return null;
-    return `1 pack = ${compactQty(pack.qty_base)} ${pack.unit}`;
+    if (Math.abs(pack.qty_base - 1) < 1e-9 && compact === `1${unit}`) return null;
+    return `1 pack = ${compactQty(pack.qty_base)} ${unit}`;
   }
   return label || null;
 }
 
-/** Qty-field suffix: box/pack when the pack name starts with a container, else the pack unit. */
+/**
+ * Qty-field / Ordered suffix. Same rule as PDF `erp_order_pdf_qty_unit`:
+ * container word from the pack name (box/pack), else the stock unit (kg, l, pcs).
+ * Never the pack SKU or the leading number of «1 kg».
+ */
 export function orderPackUnit(pack: { label: string; unit: string }, productUnit: string): string {
-  const match = PACK_CONTAINER.exec(pack.label.replace(/\s+/g, " ").trim());
+  const label = pack.label.replace(/\s+/g, " ").trim();
+  const match = PACK_CONTAINER.exec(label);
   if (match) return containerWord(match[1]);
-  return pack.unit || productUnit;
+  const packUnit = (pack.unit || "").trim();
+  if (isQtyUnit(packUnit)) return normalizeQtyUnit(packUnit);
+  const product = (productUnit || "").trim();
+  if (isQtyUnit(product)) return normalizeQtyUnit(product);
+  return stockUnitFromLabel(label);
 }
 
 export type OrderLineQtyView = {
@@ -437,20 +479,13 @@ function packCoef(line: OrderLineQtyView): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function isPackWord(value: string): boolean {
-  return /^(box|pack|pcs|pc|btl|bottle|can|bag|gói)$/i.test(value.trim());
-}
-
-/** Product unit (kg, l), never the pack word box/pack. */
+/** Product unit (kg, l), never the pack word box/pack and never a pack SKU. */
 export function orderLineBaseUnit(line: OrderLineQtyView): string {
   const explicit = String(line.baseUnit ?? "").trim();
-  if (explicit && !isPackWord(explicit)) return explicit;
+  if (explicit && isStockUnit(explicit)) return normalizeQtyUnit(explicit);
   const unit = String(line.unit ?? "").trim();
-  if (unit && !isPackWord(unit)) return unit;
-  const match = PACK_CONTAINER.exec((line.packLabel || "").replace(/\s+/g, " ").trim());
-  const fromPack = (match?.[2] ?? "").replace(/^[\d.,*\s×x]+/iu, "").trim();
-  if (fromPack && !isPackWord(fromPack)) return fromPack;
-  return explicit || unit;
+  if (unit && isStockUnit(unit)) return normalizeQtyUnit(unit);
+  return stockUnitFromLabel(line.packLabel || "");
 }
 
 /** Ordered stays packs. Accepted / posted / remaining stay kg, l, … */
@@ -465,7 +500,7 @@ export function orderLineDisplayCount(baseQty: number, line: OrderLineQtyView, f
 
 export function orderLineDisplayUnit(line: OrderLineQtyView, field: OrderLineQtyField = "base"): string {
   if (field === "ordered" && packCoef(line)) {
-    return orderPackUnit({ label: line.packLabel || "", unit: line.unit || "" }, line.unit || "");
+    return orderPackUnit({ label: line.packLabel || "", unit: line.unit || "" }, orderLineBaseUnit(line));
   }
   return orderLineBaseUnit(line);
 }

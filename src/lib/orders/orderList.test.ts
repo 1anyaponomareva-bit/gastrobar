@@ -33,6 +33,7 @@ import {
   ORDER_PDF_TAP_STEPS,
   formatOrderLineBaseHint,
   formatOrderLineQty,
+  orderLineBaseUnit,
   orderPackCaption,
   orderPackUnit,
   orderPdfWarehouseFields,
@@ -52,6 +53,7 @@ import {
   type SelectionMap,
 } from "./orderList";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref } from "../erp/menuListQuery";
+import { displayRemainingQty, receiveLineUnits } from "./qty";
 import type { OrderProduct, OrderWarehouse } from "./types";
 
 test("orders admin and ERP ingredients open the same product card", () => {
@@ -331,6 +333,80 @@ test("ordered 2 boxes of 20 kg displays 2 box, not 40 box", () => {
   assert.equal(formatOrderLineBaseHint(each), null);
 });
 
+test("ordered qty uses stock unit, never pack SKU or the leading number of 1 kg", () => {
+  const cucumber = {
+    orderedQty: 3,
+    packQty: 3,
+    packQtyBase: 1,
+    packLabel: "1 kg",
+    unit: "1",
+    baseUnit: "kg",
+  };
+  assert.equal(formatOrderLineQty(3, cucumber, "ordered"), "3 kg");
+  assert.notEqual(formatOrderLineQty(3, cucumber, "ordered"), "3 1");
+  assert.notEqual(formatOrderLineQty(3, cucumber, "ordered"), "3 1 kg");
+  assert.equal(formatOrderLineQty(0, cucumber, "base"), "0 kg");
+  assert.equal(
+    formatOrderLineQty(
+      displayRemainingQty({ orderedQty: 3, acceptedQty: 0, postedQty: 0, remainingQty: 3 }),
+      cucumber,
+      "base",
+    ),
+    "0 kg",
+  );
+  assert.equal(orderLineBaseUnit(cucumber), "kg");
+  assert.deepEqual(receiveLineUnits(orderLineBaseUnit(cucumber)), ["kg"]);
+  const printUnit = orderPackUnit({ label: "1 kg", unit: "1" }, "kg");
+  assert.equal(printUnit, "kg");
+  assert.equal(`${formatOrderPdfQtyCell({ qty: 3, unit: printUnit })} ${printUnit}`, "3 kg");
+  assert.equal(orderPackUnit({ label: "1 kg", unit: "1" }, "1"), "kg");
+  assert.equal(orderPackCaption({ label: "1 kg", unit: "1", qty_base: 1 }), null);
+
+  const cucumberNoBase = { ...cucumber, baseUnit: undefined };
+  assert.equal(formatOrderLineQty(3, cucumberNoBase, "ordered"), "3 kg");
+  assert.equal(orderLineBaseUnit(cucumberNoBase), "kg");
+
+  const halfKg = {
+    orderedQty: 1,
+    packQty: 2,
+    packQtyBase: 0.5,
+    packLabel: "0.5 kg",
+    unit: "0.5",
+    baseUnit: "kg",
+  };
+  assert.match(formatOrderLineQty(1, halfKg, "ordered"), /\bkg\b/);
+  assert.doesNotMatch(formatOrderLineQty(1, halfKg, "ordered"), /0\.5$/);
+  assert.notEqual(formatOrderLineQty(1, halfKg, "ordered"), "2 0.5");
+  assert.equal(formatOrderLineQty(1, halfKg, "base"), "1 kg");
+
+  const grams = {
+    orderedQty: 1,
+    packQty: 2,
+    packQtyBase: 0.5,
+    packLabel: "500 g",
+    unit: "500",
+    baseUnit: "kg",
+  };
+  assert.match(formatOrderLineQty(1, grams, "ordered"), /\b(kg|g)\b/);
+  assert.doesNotMatch(formatOrderLineQty(1, grams, "ordered"), /\b500\b/);
+  assert.notEqual(formatOrderLineQty(1, grams, "ordered"), "2 500");
+  assert.equal(formatOrderLineQty(1, grams, "base"), "1 kg");
+
+  const pcsSku = {
+    orderedQty: 24,
+    packQty: 2,
+    packQtyBase: 12,
+    packLabel: "12 pcs",
+    unit: "99",
+    baseUnit: "pcs",
+  };
+  assert.match(formatOrderLineQty(24, pcsSku, "ordered"), /\bpcs\b/);
+  assert.doesNotMatch(formatOrderLineQty(24, pcsSku, "ordered"), /\b99\b/);
+  assert.notEqual(formatOrderLineQty(24, pcsSku, "ordered"), "2 99");
+  assert.equal(formatOrderLineQty(24, pcsSku, "base"), "24 pcs");
+  assert.equal(orderPackUnit({ label: "1 kg", unit: "kg" }, "kg"), "kg");
+});
+
 test("accepted, posted and remaining show kg/l, not fractional boxes", () => {
   const wings = {
     orderedQty: 20,
@@ -520,7 +596,9 @@ test("print PDF uses pack SKU then product_code, bilingual names, and no revisio
   });
   assert.equal(saltOnly!.lines[0].packCode, "SALT-1");
   assert.equal(saltOnly!.lines[0].nameVn, "Muối");
+  assert.equal(saltOnly!.lines[0].unit, "kg");
   assert.equal(formatOrderPdfQtyCell(saltOnly!.lines[0]), "3");
+  assert.equal(`${formatOrderPdfQtyCell(saltOnly!.lines[0])} ${saltOnly!.lines[0].unit}`, "3 kg");
   const twoBoxes = supplierPrintPdfInput([butter], { butter: { packId: "p3", qty: "2" } }, {
     orderNo: "ORD-2",
     supplierName: "MM",

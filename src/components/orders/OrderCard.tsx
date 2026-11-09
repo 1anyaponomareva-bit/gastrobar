@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, getOrder, getSuppliers, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
-import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
+import { formatOrderLineBaseHint, formatOrderLineQty, orderLineBaseUnit } from "@/lib/orders/orderList";
 import { displayRemainingQty, orderCanReceive, parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
 import { formatVietnamDateTime } from "@/lib/orders/datetime";
 import { personLabel } from "@/lib/orders/person";
@@ -32,8 +32,8 @@ function receiveLinesOf(order: SupplierOrder): LineMode[] {
   return order.lines
     .filter((line) => line.remainingQty > 0)
     .map((line) => {
-      const units = receiveLineUnits(line.baseUnit);
-      const baseUnit = units[0] || line.baseUnit || "";
+      const stockUnit = orderLineBaseUnit(line);
+      const baseUnit = receiveLineUnits(stockUnit)[0] || stockUnit;
       return {
         orderLineId: line.id ?? line.product_id,
         product_id: line.product_id,
