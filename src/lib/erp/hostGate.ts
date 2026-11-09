@@ -11,10 +11,10 @@
  *   - Stub: `/` (rewritten to `/coming-soon`)
  *   - ERP pages: `/erp`, `/erp/*`
  *   - Employee orders: `/orders`, `/orders/*` (not `/erp`, not a redirect to Staff)
+ *   - Tech cards: `/recipes`, `/recipes/*` (VN look; gastrotruck.org/recipes stays old)
  *   - ERP APIs: `/api/erp`, `/api/erp/*` (same-origin relative fetch stays here)
  *   - Orders APIs: `/api/orders`, `/api/orders/*`
- *   - Auth ERP actually uses (confirmed in ErpShell + AdminAuthForm):
- *       `/api/recipes-admin/login` | `logout` | `register` | `session` | `profile`
+ *   - Recipes APIs: `/api/recipes`, `/api/recipes/*`, `/api/recipes-admin`, `/api/recipes-admin/*`
  *   - `/_next/*` plus favicon/icon and image/font files Next serves for the ERP UI
  *
  * Old unprefixed ERP URLs (`/stock`, `/menu`, …) GET/HEAD 307 to `/erp/…` on the
@@ -46,14 +46,6 @@ import {
 export const LEGACY_PUBLIC_HOSTS = ["www.gastrotruck.org", "gastrotruck.org"] as const;
 export const LEGACY_PUBLIC_ORIGIN = "https://www.gastrotruck.org";
 export { CANONICAL_ERP_HOST, CANONICAL_ERP_ORIGIN, ERP_WWW_HOST };
-
-const RECIPES_ADMIN_AUTH_PATHS = [
-  "/api/recipes-admin/login",
-  "/api/recipes-admin/logout",
-  "/api/recipes-admin/register",
-  "/api/recipes-admin/session",
-  "/api/recipes-admin/profile",
-] as const;
 
 export type ErpHostGateConfig = {
   /** A: new ERP hostname(s). Empty = no new-host gate and no redirect target. */
@@ -150,10 +142,6 @@ export function isWwwErpHost(hostname: string, config: ErpHostGateConfig): boole
   return Boolean(canonical && host === `www.${canonical}`);
 }
 
-function pathExact(pathname: string, exact: string): boolean {
-  return pathname === exact || pathname === `${exact}/`;
-}
-
 function pathUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -170,8 +158,12 @@ export function isOrdersApiPath(pathname: string): boolean {
   return pathUnder(pathname, "/api/orders");
 }
 
-function isRecipesAdminAuthPath(pathname: string): boolean {
-  return RECIPES_ADMIN_AUTH_PATHS.some((path) => pathExact(pathname, path));
+export function isRecipesPagePath(pathname: string): boolean {
+  return pathUnder(pathname, "/recipes");
+}
+
+export function isRecipesApiPath(pathname: string): boolean {
+  return pathUnder(pathname, "/api/recipes") || pathUnder(pathname, "/api/recipes-admin");
 }
 
 function isNextOrStaticPath(pathname: string): boolean {
@@ -196,7 +188,8 @@ export function isErpHostAllowedPath(pathname: string): boolean {
     isErpApiPath(pathname) ||
     isOrdersPagePath(pathname) ||
     isOrdersApiPath(pathname) ||
-    isRecipesAdminAuthPath(pathname) ||
+    isRecipesPagePath(pathname) ||
+    isRecipesApiPath(pathname) ||
     isNextOrStaticPath(pathname)
   );
 }
@@ -232,12 +225,12 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
       isNextOrStaticPath(pathname) ||
       isErpApiPath(pathname) ||
       isOrdersApiPath(pathname) ||
-      isRecipesAdminAuthPath(pathname)
+      isRecipesApiPath(pathname)
     ) {
       return { action: "allow" };
     }
 
-    if (isErpPublicPagePath(pathname) || isOrdersPagePath(pathname)) {
+    if (isErpPublicPagePath(pathname) || isOrdersPagePath(pathname) || isRecipesPagePath(pathname)) {
       return { action: "allow" };
     }
 

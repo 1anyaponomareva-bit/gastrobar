@@ -1,0 +1,1259 @@
+.cards-app {
+  --cards-bg: #f6f5f2;
+  --cards-card: #ffffff;
+  --cards-text: #1d1d1b;
+  --cards-muted: #6b675f;
+  --cards-line: #e6e2da;
+  --cards-accent: #e2471f;
+  --cards-gold: #f2ad00;
+  --gold: #f2ad00;
+  --black: #1d1d1b;
+  --bg: #f6f5f2;
+  --card: #fff;
+  --red: #b3261e;
+  --muted: #6b675f;
+  --line: #e6e2da;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+  background: var(--cards-bg);
+  color: var(--cards-text);
+  font-family: var(--font-staff, var(--font-montserrat), system-ui, sans-serif);
+}
+
+.cards-app *,
+.cards-app *::before,
+.cards-app *::after {
+  box-sizing: border-box;
+}
+
+.cards-app button,
+.cards-app input,
+.cards-app textarea,
+.cards-app select,
+.cards-app h1,
+.cards-app h2,
+.cards-app h3 {
+  font-family: inherit;
+}
+
+.cards-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  min-height: 100dvh;
+}
+
+.cards-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #1d1d1b;
+  color: #fff;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 12px
+    max(12px, env(safe-area-inset-left, 0px));
+}
+
+.cards-topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cards-brand {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 15px;
+}
+
+.cards-brand small {
+  margin-left: 8px;
+  color: var(--cards-accent);
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+
+.cards-lang {
+  display: flex;
+  gap: 4px;
+}
+
+.cards-lang button {
+  border: 1px solid #ffffff33;
+  background: transparent;
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 36px;
+}
+
+.cards-lang button.active {
+  background: var(--cards-accent);
+  border-color: var(--cards-accent);
+  color: #fff;
+}
+
+.cards-topMeta {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 8px;
+}
+
+.cards-adminLink {
+  color: #ffcf33;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.cards-main {
+  padding: 12px max(12px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+}
+
+.cards-loading,
+.cards-app .empty {
+  text-align: center;
+  color: var(--cards-muted);
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 16px;
+  margin-top: 8px;
+}
+
+.cards-app button:not(.statusBox) {
+  border: 0;
+  border-radius: 13px;
+  padding: 13px 8px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cards-app .dark {
+  background: #1d1d1b;
+  color: #fff;
+}
+
+.cards-app .white {
+  background: #eee;
+  color: #111;
+}
+
+.cards-app .gold {
+  background: var(--cards-gold);
+  color: #111;
+}
+
+.cards-app .danger {
+  background: #fff;
+  color: var(--red);
+}
+
+.cards-app .card {
+  background: var(--cards-card);
+  border: 1px solid var(--cards-line);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px #0000000a;
+}
+
+.cards-app .search {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  padding: 13px;
+  font-size: 16px;
+  outline: 0;
+  color: var(--cards-text);
+  margin-bottom: 12px;
+}
+
+.cards-app .sectionPicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  background: #e6e2da;
+  border-radius: 16px;
+}
+
+.cards-app .sectionPicker .sectionBtn {
+  background: transparent;
+  color: #555;
+  padding: 12px 8px;
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+.cards-app .sectionPicker .sectionBtn.active {
+  background: #111;
+  color: var(--cards-gold);
+}
+
+@media (min-width: 768px) and (orientation: landscape) {
+  .cards-top {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cards-top::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    background: #1d1d1b;
+    z-index: 0;
+  }
+
+  .cards-top > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+
+.cards-app .adminAuth {
+  display: grid;
+  gap: 12px;
+  max-width: 420px;
+  margin: 8px auto;
+}
+
+.cards-app .adminAuth h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cards-app .adminAuth label {
+  display: grid;
+  gap: 4px;
+}
+
+.cards-app .adminAuth label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cards-app .adminAuth input,
+.cards-app .adminTable input {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 11px;
+  background: #fff;
+  font-size: 17px;
+}
+
+.cards-app .adminTable input {
+  width: 92px;
+  height: 42px;
+  padding: 0 8px;
+  text-align: right;
+  font-weight: 900;
+}
+
+.cards-app .adminTable input.invalid {
+  border-color: var(--red);
+  background: #ffecec;
+}
+
+.cards-app .adminTable td {
+  vertical-align: middle;
+}
+
+.cards-app .adminTable tr.changed td {
+  background: #fff8e1;
+}
+
+.cards-app .adminQty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cards-app .adminQty small {
+  width: 26px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.cards-app button.adminLink:not(.statusBox) {
+  background: none;
+  border: 0;
+  color: #555;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.cards-app .adminError,
+.cards-app .adminOk {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cards-app .adminError {
+  background: #ffecec;
+  color: var(--red);
+}
+
+.cards-app .adminOk {
+  background: #e6f7ee;
+  color: #00793b;
+}
+
+.cards-app .adminBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: #555;
+  word-break: break-all;
+}
+
+.cards-app .adminBar button:not(.statusBox) {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid #ddd;
+}
+
+.cards-app .adminRecipes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cards-app button.adminRecipeBtn:not(.statusBox) {
+  position: relative;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: 14px;
+}
+
+.cards-app button.adminRecipeBtn.active:not(.statusBox) {
+  background: var(--black);
+  color: var(--gold);
+  border-color: var(--black);
+}
+
+.cards-app .adminDot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.cards-app .adminActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cards-app .adminActions button:not(.statusBox) {
+  padding: 14px;
+  border: 1px solid #ddd;
+}
+
+.cards-app .adminActions button:disabled {
+  opacity: 0.45;
+}
+
+.cards-app .adminEditor > .adminOk,
+.cards-app .adminEditor > .adminError {
+  margin-top: 12px;
+}
+
+.cards-app .recipesLangRow {
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.cards-app .adminEntry {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid #ffffff33;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cards-app .adminOpenCard {
+  display: block;
+  margin: 14px 0 24px;
+  text-align: center;
+  color: #555;
+  font-weight: 700;
+}
+
+.cards-app button.adminRecipeBtn.isHidden:not(.statusBox) {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.cards-app button.adminNewBtn:not(.statusBox) {
+  background: #00a651;
+  border-color: #00a651;
+  color: #fff;
+}
+
+.cards-app .adminRecipeActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cards-app .adminRecipeActions button:not(.statusBox) {
+  padding: 10px 8px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.cards-app .adminRecipeActions button.danger:not(.statusBox) {
+  border-color: #f2a0a0;
+  background: #fff;
+  color: var(--red);
+}
+
+.cards-app .adminImport {
+  display: grid;
+  gap: 12px;
+}
+
+.cards-app .adminImport h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cards-app .adminImport p {
+  margin: 0;
+  color: #555;
+  line-height: 1.4;
+}
+
+.cards-app .adminFilePick input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.cards-app .adminFilePick span {
+  display: block;
+  padding: 18px;
+  border: 2px dashed #bbb;
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cards-app .adminImportPreview {
+  max-height: 320px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f4f4f4;
+}
+
+.cards-app .adminBusy {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff3cd;
+  color: #6b4c00;
+  font-weight: 700;
+}
+
+.cards-app .recipeForm .formLangs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 6px 0;
+  background: var(--bg);
+}
+
+.cards-app .formSection {
+  display: grid;
+  gap: 10px;
+}
+
+.cards-app .formSection label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cards-app .formSection label span,
+.cards-app .formRow.head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cards-app .formSection input,
+.cards-app .formSection select,
+.cards-app .formSection textarea {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.cards-app .formSection textarea {
+  height: auto;
+  padding: 8px 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.cards-app .formGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.cards-app .formGrid.two {
+  grid-template-columns: 140px 1fr;
+}
+
+.cards-app .formGrid.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cards-app .formGrid.yield {
+  grid-template-columns: 1fr 90px;
+}
+
+.cards-app .formMain {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #ffcf33;
+  border-radius: 12px;
+  background: #fffbea;
+}
+
+.cards-app .formMain > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cards-app .formMainChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cards-app button.formMainChip:not(.statusBox) {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cards-app button.formMainChip.active:not(.statusBox) {
+  border-color: #e0a800;
+  background: #ffcf33;
+  color: #111;
+}
+
+.cards-app button.formMainChip:disabled:not(.statusBox) {
+  opacity: 0.4;
+}
+
+.cards-app .formRow {
+  display: grid;
+  gap: 6px;
+  align-items: center;
+}
+
+.cards-app .formRow > * {
+  min-width: 0;
+}
+
+.cards-app .formRow select {
+  padding: 0 4px;
+}
+
+.cards-app .formRow.fact {
+  grid-template-columns: 64px 1fr 1fr 36px;
+}
+
+.cards-app .formRow.ingredient {
+  grid-template-columns: 32px 1fr 70px 90px 36px;
+  border-radius: 12px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.cards-app .formRow.ingredient.dragging {
+  position: relative;
+  z-index: 2;
+  background: #fff7d6;
+  box-shadow: 0 6px 18px #0002;
+}
+
+.cards-app button.formDrag:not(.statusBox) {
+  width: 32px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #f1f1f1;
+  color: #777;
+  font-size: 20px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cards-app .formRow.ingredient.dragging button.formDrag:not(.statusBox) {
+  background: #ffcf33;
+  color: #111;
+  cursor: grabbing;
+}
+
+.cards-app button.formRemove:not(.statusBox) {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #f2a0a0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--red);
+}
+
+.cards-app button.formAdd:not(.statusBox) {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px dashed #999;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+}
+
+.cards-app button.formAdd.standalone:not(.statusBox) {
+  margin-top: 10px;
+}
+
+.cards-app .formStep {
+  margin-bottom: 10px;
+}
+
+.cards-app .formStepHead {
+  display: grid;
+  grid-template-columns: 34px 1fr 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.cards-app .formPhoto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cards-app .formPhoto img {
+  width: 160px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.cards-app .formPhoto.small img {
+  width: 120px;
+  height: 76px;
+}
+
+.cards-app .formPhoto button:not(.statusBox) {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.cards-app .formActions {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 14px;
+  background: var(--bg);
+}
+
+@media (max-width: 520px) {
+  .cards-app .formRow.ingredient {
+    grid-template-columns: 30px 1fr 58px 64px 32px;
+  }
+
+  .cards-app .formRow.fact {
+    grid-template-columns: 56px 1fr 1fr 32px;
+  }
+
+  .cards-app .formGrid.two {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cards-app .adminRecipeActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cards-app .recipesTitle {
+  text-align: center;
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: -6px;
+}
+
+.cards-app .recipeList {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cards-app button.recipeItem:not(.statusBox) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--cards-card);
+  border: 1px solid var(--cards-line);
+  border-radius: 18px;
+  text-align: left;
+  font-weight: 400;
+  box-shadow: 0 2px 8px #0000000a;
+}
+
+.cards-app .recipeThumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #f4f4f4;
+}
+
+.cards-app .recipeThumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.cards-app .recipeItemText {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cards-app .recipeItemText b {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.cards-app .recipeItemText span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cards-app .recipeItemText .exampleBadge {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #8a6100;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.cards-app .recipeArrow {
+  color: #bbb;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.cards-app button.recipeBack:not(.statusBox) {
+  padding: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.cards-app .exampleNotice {
+  background: #fff3cd;
+  border: 1px solid #f2ad00;
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: #6b4c00;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.cards-app .tcHeader {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.cards-app .tcTitleRow {
+  display: flex;
+  align-items: stretch;
+}
+
+.cards-app .tcTitle {
+  flex: 1;
+  min-width: 0;
+  background: var(--black);
+  padding: 14px 16px;
+}
+
+.cards-app .tcTitle h1 {
+  margin: 0;
+  color: var(--gold);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.cards-app .tcTitle span {
+  display: block;
+  margin-top: 4px;
+  color: #bbb;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cards-app .tcKind {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: #00a651;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.cards-app .tcMeta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cards-app .tcMeta div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+}
+
+.cards-app .tcMeta div + div {
+  border-left: 1px solid var(--line);
+}
+
+.cards-app .tcMeta small,
+.cards-app .tcFact small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cards-app .tcMeta b {
+  font-size: 15px;
+}
+
+.cards-app .recipePhoto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 18px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+.cards-app .tcFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cards-app .tcFact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+}
+
+.cards-app .tcFact > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.cards-app .tcFact b {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.cards-app .tcFactIcon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.cards-app .recipeScale {
+  border: 2px solid #ffcf33;
+}
+
+.cards-app .recipeScale label {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.cards-app .recipeScale label small {
+  font-size: 11px;
+  font-weight: 900;
+  color: #777;
+  text-transform: uppercase;
+}
+
+.cards-app .recipeScale label b {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cards-app .recipeScale label i {
+  color: #888;
+  font-size: 13px;
+}
+
+.cards-app .scaleInputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.cards-app .scaleInputs span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cards-app .scaleInputs input {
+  width: 100%;
+  min-width: 0;
+  height: 56px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.cards-app .scaleInputs small {
+  min-width: 26px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cards-app .scaleYield {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  color: #555;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.cards-app button.scaleReset:not(.statusBox) {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+}
+
+.cards-app .tcTable tr.tcMain td {
+  background: #fff7d6;
+}
+
+.cards-app .tcSection {
+  margin: 18px 0 8px;
+  padding: 8px 14px;
+  background: var(--black);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.cards-app .tcTableWrap {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cards-app .tcTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+.cards-app .tcTable th {
+  padding: 8px 10px;
+  background: #f4f4f4;
+  color: #555;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.cards-app .tcTable td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.cards-app .tcTable .tcName {
+  text-align: left;
+  width: 100%;
+}
+
+.cards-app .tcTable td.tcName b,
+.cards-app .tcTable td.tcName i,
+.cards-app .tcTable td.tcName small {
+  display: block;
+}
+
+.cards-app .tcTable td.tcName i {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cards-app .tcTable td.tcName small {
+  color: var(--muted);
+}
+
+.cards-app .tcTable .tcNum {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.cards-app .tcTable .tcQty {
+  text-align: right;
+  white-space: nowrap;
+  color: #555;
+}
+
+.cards-app .tcTable .tcQty.net {
+  color: var(--black);
+  font-weight: 900;
+}
+
+.cards-app .tcTable tfoot td {
+  background: #fff3cd;
+  font-weight: 900;
+  border-top: 2px solid var(--gold);
+}
+
+.cards-app .tcTable tfoot .tcQty {
+  color: var(--black);
+  font-size: 18px;
+}
+
+.cards-app .tcStepsNote {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff3cd;
+  color: #6b4c00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cards-app .tcSteps {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .cards-app .tcSteps {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cards-app .tcStep {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 10px 12px 12px;
+}
+
+.cards-app .tcStep header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cards-app .tcStepNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--gold);
+  color: var(--black);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cards-app .tcStepTitle b,
+.cards-app .tcStepTitle i {
+  display: block;
+}
+
+.cards-app .tcStepTitle b {
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cards-app .tcStepTitle i {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cards-app .tcStepPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  background: #f4f4f4;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.cards-app .tcStep ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.cards-app .tcStep li + li {
+  margin-top: 5px;
+}
+
+.cards-app .tcStorage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.cards-app .tcStorageRule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+}
+
+.cards-app .tcStorageRule.freezer {
+  background: #eaf4ff;
+  border-color: #9cc8f2;
+}
+
+.cards-app .tcStorageRule.no-refreeze {
+  background: #ffecec;
+  border-color: #f2a0a0;
+}
+
+.cards-app .tcStorageRule > span:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.cards-app .tcStorageRule b {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.cards-app .tcStorageRule small {
+  color: #555;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cards-app .tcStorageIcon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+

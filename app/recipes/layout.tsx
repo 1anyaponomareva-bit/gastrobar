@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { StaffToolBodyLayout } from "@/components/staff/StaffToolBodyLayout";
-
-export const viewport: Viewport = {
-  themeColor: "#12121a",
-};
+import { isGastrofoodRecipesHost } from "@/lib/recipes/vnHost";
 
 export const metadata: Metadata = {
   title: "Recipes — GASTROFOOD",
@@ -19,6 +16,10 @@ export const metadata: Metadata = {
     telephone: false,
   },
 };
+
+export async function generateViewport(): Promise<Viewport> {
+  return { themeColor: (await isGastrofoodRecipesHost()) ? "#1d1d1b" : "#12121a" };
+}
 
 export default function RecipesLayout({
   children,

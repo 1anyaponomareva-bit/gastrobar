@@ -192,8 +192,12 @@ async function main() {
       assert.equal(api.status, 404);
       assert.equal(api.body.error, "not_found");
     }
-    const recipesApi = gate("erp.example.test", "/api/recipes-admin/recipes", "POST");
-    assert.equal(recipesApi.action, "json");
+    assert.equal(gate("erp.example.test", "/recipes", "GET").action, "allow");
+    assert.equal(gate("erp.example.test", "/recipes/admin", "GET").action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes/overrides", "GET").action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/recipes", "POST").action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/import", "POST").action, "allow");
+    assert.equal(gate("erp.example.test", "/api/recipes-admin/overrides", "PUT").action, "allow");
     const writePage = gate("erp.example.test", "/staff", "POST");
     assert.equal(writePage.action, "json");
     if (writePage.action === "json") assert.equal(writePage.status, 403);
@@ -212,6 +216,12 @@ async function main() {
     assert.equal(isErpHostAllowedPath("/api/orders/catalog"), true);
     assert.equal(isErpHostAllowedPath("/api/orders/admin/catalog"), true);
     assert.equal(isErpHostAllowedPath("/api/orders/drafts/729e2699-1db3-492b-8a14-e98286c38781"), true);
+    assert.equal(isErpHostAllowedPath("/recipes"), true);
+    assert.equal(isErpHostAllowedPath("/recipes/admin"), true);
+    assert.equal(isErpHostAllowedPath("/api/recipes/overrides"), true);
+    assert.equal(isErpHostAllowedPath("/api/recipes-admin/recipes"), true);
+    assert.equal(gate("www.gastrotruck.org", "/recipes", "GET").action, "allow");
+    assert.equal(gate("www.gastrotruck.org", "/recipes/admin", "GET").action, "allow");
     assert.equal(gate("erp.example.test", "/orders", "GET").action, "allow");
     assert.equal(gate("erp.example.test", "/api/orders/session", "POST").action, "allow");
     assert.equal(gate("erp.example.test", "/api/orders/drafts/729e2699-1db3-492b-8a14-e98286c38781", "PUT").action, "allow");
