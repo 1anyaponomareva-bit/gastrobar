@@ -164,35 +164,35 @@ export function CardsApp() {
   }
 
   return (
-    <CardsChrome badge="RECIPES" adminHref="/recipes/admin" adminLabel={t("recipes_admin_entry")}>
+    <CardsChrome badge="RECIPES" adminHref="/recipes/admin" adminLabel={`🔐 ${t("recipes_admin_entry")}`}>
       {opened ? (
         <RecipeDetail key={opened.id} recipe={opened} lang={recipeLang} t={t} onBack={() => openRecipe(null)} />
       ) : (
         <>
-          <div className="sectionPicker" role="tablist">
+          <nav className="orders-tabs" aria-label="Sections">
             {(["dish", "prep"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 role="tab"
                 aria-selected={kind === option}
-                className={`sectionBtn ${kind === option ? "active" : ""}`}
+                className={`orders-tab ${kind === option ? "active" : ""}`}
                 onClick={() => setKind(option)}
               >
                 {t(option === "dish" ? "recipes_tab_dish" : "recipes_tab_prep")}
               </button>
             ))}
-          </div>
+          </nav>
 
           <input
-            className="search"
+            className="orders-search"
             placeholder={t("recipes_search")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
 
           {!visible.length ? (
-            <div className="empty">{t("recipes_empty")}</div>
+            <div className="orders-empty">{t("recipes_empty")}</div>
           ) : (
             <div className="recipeList">
               {visible.map((recipe) => (
@@ -253,7 +253,7 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
 
   return (
     <div className="recipeDetail">
-      <button type="button" className="dark recipeBack" onClick={onBack}>
+      <button type="button" className="orders-btn dark recipeBack" onClick={onBack}>
         {t("recipes_back")}
       </button>
 

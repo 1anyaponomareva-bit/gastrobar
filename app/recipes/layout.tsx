@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { StaffToolBodyLayout } from "@/components/staff/StaffToolBodyLayout";
 import { isGastrofoodRecipesHost } from "@/lib/recipes/vnHost";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Recipes — GASTROFOOD",
   description: "Internal staff app: tech cards and recipes for GastroFood.",

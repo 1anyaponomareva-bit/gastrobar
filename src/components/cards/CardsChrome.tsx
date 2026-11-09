@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
+import "@/components/orders/orders.css";
 import "./cards.css";
 
 const LANGS = [
@@ -27,15 +28,15 @@ export function CardsChrome({
   const staffLang = toStaffAppLang(lang);
 
   return (
-    <div className="cards-app">
-      <div className="cards-shell">
-        <header className="cards-top">
-          <div className="cards-topRow">
-            <div className="cards-brand">
+    <div className="orders-app">
+      <div className="orders-shell">
+        <header className="orders-top">
+          <div className="orders-topRow">
+            <div className="orders-brand">
               GASTROFOOD
               <small>{badge}</small>
             </div>
-            <div className="cards-lang" role="group" aria-label="Language">
+            <div className="orders-lang" role="group" aria-label="Language">
               {LANGS.map((item) => (
                 <button
                   key={item.code}
@@ -49,14 +50,14 @@ export function CardsChrome({
             </div>
           </div>
           {adminHref && adminLabel ? (
-            <div className="cards-topMeta">
-              <Link href={adminHref} className="cards-adminLink">
+            <div className="orders-topMeta">
+              <Link href={adminHref} className="orders-adminLink">
                 {adminLabel}
               </Link>
             </div>
           ) : null}
         </header>
-        <div className="cards-main">{children}</div>
+        <div className="orders-main cards-app">{children}</div>
       </div>
     </div>
   );
@@ -64,8 +65,8 @@ export function CardsChrome({
 
 export function CardsLoading({ text }: { text: string }) {
   return (
-    <div className="cards-app">
-      <div className="cards-loading">{text}</div>
+    <div className="orders-app">
+      <div className="orders-loading">{text}</div>
     </div>
   );
 }

@@ -5,10 +5,13 @@ import {
   ERP_HOST_GATE_NO_STORE,
   hostnameOf,
   isNamedErpHost,
+  isRecipesPagePath,
   productionErpHostEnv,
   readErpHostGateConfig,
 } from "@/lib/erp/hostGate";
 import { GASTROFOOD_STUB_PATH } from "@/lib/erp/publicPath";
+
+const GASTROFOOD_RECIPES_HEADER = "x-gastrofood-recipes";
 
 export const runtime = "edge";
 
@@ -78,7 +81,11 @@ export function middleware(request: NextRequest) {
     return withMenuPeriod(NextResponse.rewrite(url), period);
   }
 
-  return withMenuPeriod(NextResponse.next(), period);
+  const requestHeaders = new Headers(request.headers);
+  if (isNamedErpHost(hostnameOf(host), config) && isRecipesPagePath(request.nextUrl.pathname)) {
+    requestHeaders.set(GASTROFOOD_RECIPES_HEADER, "1");
+  }
+  return withMenuPeriod(NextResponse.next({ request: { headers: requestHeaders } }), period);
 }
 
 /** Не гоняем статику и оптимизацию картинок через middleware — стабильная выдача `public/*.png` и т.п. */

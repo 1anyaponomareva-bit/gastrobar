@@ -14,11 +14,6 @@
   --muted: #6b675f;
   --line: #e6e2da;
   box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 100dvh;
-  background: var(--cards-bg);
-  color: var(--cards-text);
-  font-family: var(--font-staff, var(--font-montserrat), system-ui, sans-serif);
 }
 
 .cards-app *,
@@ -37,83 +32,17 @@
   font-family: inherit;
 }
 
-.cards-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  min-height: 100dvh;
-}
-
-.cards-top {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: #1d1d1b;
-  color: #fff;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 12px
-    max(12px, env(safe-area-inset-left, 0px));
-}
-
-.cards-topRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.cards-brand {
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  font-size: 15px;
-}
-
-.cards-brand small {
-  margin-left: 8px;
-  color: var(--cards-accent);
-  letter-spacing: 0.12em;
-  font-size: 11px;
-}
-
-.cards-lang {
-  display: flex;
-  gap: 4px;
-}
-
-.cards-lang button {
-  border: 1px solid #ffffff33;
+.orders-app .cards-app {
+  min-height: 0;
   background: transparent;
-  color: #fff;
-  border-radius: 999px;
-  padding: 7px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  min-height: 36px;
 }
 
-.cards-lang button.active {
-  background: var(--cards-accent);
-  border-color: var(--cards-accent);
-  color: #fff;
+.orders-tabs button.orders-tab {
+  border: 0;
+  width: 100%;
+  cursor: pointer;
 }
 
-.cards-topMeta {
-  display: flex;
-  justify-content: flex-start;
-  padding-top: 8px;
-}
-
-.cards-adminLink {
-  color: #ffcf33;
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.cards-main {
-  padding: 12px max(12px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px))
-    max(12px, env(safe-area-inset-left, 0px));
-}
-
-.cards-loading,
 .cards-app .empty {
   text-align: center;
   color: var(--cards-muted);
@@ -123,7 +52,7 @@
   margin-top: 8px;
 }
 
-.cards-app button:not(.statusBox) {
+.cards-app button:not(.statusBox):not(.orders-tab) {
   border: 0;
   border-radius: 13px;
   padding: 13px 8px;
@@ -173,51 +102,9 @@
   margin-bottom: 12px;
 }
 
-.cards-app .sectionPicker {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
+.cards-app .orders-search {
   margin-bottom: 12px;
-  background: #e6e2da;
-  border-radius: 16px;
 }
-
-.cards-app .sectionPicker .sectionBtn {
-  background: transparent;
-  color: #555;
-  padding: 12px 8px;
-  border-radius: 12px;
-  min-height: 44px;
-}
-
-.cards-app .sectionPicker .sectionBtn.active {
-  background: #111;
-  color: var(--cards-gold);
-}
-
-@media (min-width: 768px) and (orientation: landscape) {
-  .cards-top {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .cards-top::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 50%;
-    width: 100vw;
-    transform: translateX(-50%);
-    background: #1d1d1b;
-    z-index: 0;
-  }
-
-  .cards-top > * {
-    position: relative;
-    z-index: 1;
-  }
-}
-
 
 .cards-app .adminAuth {
   display: grid;
