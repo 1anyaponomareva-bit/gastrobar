@@ -2846,6 +2846,11 @@ button.erpBack {
     gap: 8px;
   }
 
+  .erpTable.stack td.erpPackRowDel::before,
+  .erpTable.stack td.erpPackActs::before {
+    content: none;
+  }
+
   .erpTable.stack td.erpPackRowDel .erpPackDelete,
   .erpTable.stack td.erpPackActs .erpPackDelete {
     width: auto;

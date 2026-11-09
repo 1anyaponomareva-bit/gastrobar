@@ -588,7 +588,7 @@ function ProductEditor({
                         />
                       </td>
                     ) : null}
-                    <td className="erpPackRowDel" data-label={T("Удалить", "Delete", "Xóa")}>
+                    <td className="erpPackRowDel">
                       <button
                         type="button"
                         className="erpBtn erpPackDelete"
