@@ -307,6 +307,62 @@ async function withActorNames<T>(payload: T): Promise<T> {
   return applyDisplayNames(payload, names) as T;
 }
 
+function collectOrderSupplierIds(value: unknown, into: Set<string>) {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectOrderSupplierIds(item, into);
+    return;
+  }
+  const rec = value as Record<string, unknown>;
+  const supplierId = rec.supplierId ?? rec.supplier_id;
+  if (typeof supplierId === "string" && UUID.test(supplierId) && typeof rec.status === "string") {
+    into.add(supplierId);
+  }
+  for (const item of Object.values(rec)) {
+    if (item && typeof item === "object") collectOrderSupplierIds(item, into);
+  }
+}
+
+function applySupplierZalo(value: unknown, urls: Map<string, string | null>): unknown {
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => applySupplierZalo(item, urls));
+  const rec = value as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(rec)) {
+    next[key] = item && typeof item === "object" ? applySupplierZalo(item, urls) : item;
+  }
+  const supplierId =
+    typeof rec.supplierId === "string" ? rec.supplierId : typeof rec.supplier_id === "string" ? rec.supplier_id : "";
+  if (supplierId && urls.has(supplierId) && typeof rec.status === "string") {
+    next.zaloUrl = urls.get(supplierId) ?? null;
+  }
+  return next;
+}
+
+async function withSupplierZalo<T>(payload: T): Promise<T> {
+  const ids = new Set<string>();
+  collectOrderSupplierIds(payload, ids);
+  if (!ids.size) return payload;
+  try {
+    const rows = check(await erpDb().from("erp_suppliers").select("id, zalo_url").in("id", [...ids])) as
+      | Array<{ id?: string; zalo_url?: string | null }>
+      | null;
+    const urls = new Map<string, string | null>();
+    for (const row of rows ?? []) {
+      if (typeof row.id === "string") urls.set(row.id, typeof row.zalo_url === "string" ? row.zalo_url.trim() || null : null);
+    }
+    if (!urls.size) return payload;
+    return applySupplierZalo(payload, urls) as T;
+  } catch (error) {
+    console.error("[orders] lookup zalo", error);
+    return payload;
+  }
+}
+
+async function withOrderPayload<T>(payload: T): Promise<T> {
+  return withSupplierZalo(await withActorNames(payload));
+}
+
 export async function listSupplierProducts(supplierId: string) {
   return { products: await orderRpc<unknown>("erp_order_supplier_products", { p_supplier: uuid(supplierId, "supplier") }) };
 }
@@ -446,12 +502,12 @@ export async function getOrderPdfSnapshot(id: string, actor: string, admin: bool
 }
 
 export async function placeOrder(id: string, actor: string) {
-  return withActorNames(await orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor }));
+  return withOrderPayload(await orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor }));
 }
 
 export async function listOrders(actor: string, admin: boolean, status?: string | null) {
   return {
-    orders: await withActorNames(
+    orders: await withOrderPayload(
       await orderRpc<unknown>("erp_order_list", {
         p_actor: actor,
         p_admin: admin,
@@ -462,16 +518,16 @@ export async function listOrders(actor: string, admin: boolean, status?: string 
 }
 
 export async function getOrder(id: string, actor: string, admin: boolean) {
-  return withActorNames(await orderRpc<unknown>("erp_order_get", { p_id: uuid(id), p_actor: actor, p_admin: admin }));
+  return withOrderPayload(await orderRpc<unknown>("erp_order_get", { p_id: uuid(id), p_actor: actor, p_admin: admin }));
 }
 
 /** TEMPORARY: flags the order received. Does not create a поставка or move stock. */
 export async function receiveOrder(id: string, payload: Record<string, unknown>, actor: string) {
-  return withActorNames(await orderRpc<unknown>("erp_order_receive", { p_id: uuid(id), p_payload: payload, p_actor: actor }));
+  return withOrderPayload(await orderRpc<unknown>("erp_order_receive", { p_id: uuid(id), p_payload: payload, p_actor: actor }));
 }
 
 export async function closeOrderRemainder(id: string, reason: string, actor: string, lines?: unknown, admin = false) {
-  return withActorNames(
+  return withOrderPayload(
     await orderRpc<unknown>("erp_order_close_remainder", {
       p_id: uuid(id),
       p_reason: reason,

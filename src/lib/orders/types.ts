@@ -162,6 +162,7 @@ export type SupplierOrder = {
   status: OrderStatus;
   supplierId: string;
   supplierName: string;
+  zaloUrl: string | null;
   warehouseId: string | null;
   warehouseName: string | null;
   createdAt: string | null;

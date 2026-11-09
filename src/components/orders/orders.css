@@ -423,6 +423,16 @@
 .orders-btn.zalo {
   background: #0068ff;
   color: #fff;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.orders-zaloWrap {
+  margin-top: 10px;
+}
+
+.orders-banner .orders-btn.zalo {
+  width: 100%;
 }
 
 .orders-field label {

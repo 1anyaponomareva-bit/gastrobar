@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { errorMessage, getOrder, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
+import { errorMessage, getOrder, getSuppliers, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
 import { formatOrderLineBaseHint, formatOrderLineQty } from "@/lib/orders/orderList";
 import { displayRemainingQty, orderCanReceive, parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
@@ -11,6 +11,7 @@ import { personLabel } from "@/lib/orders/person";
 import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
+import { OrderZaloButton } from "./OrderZaloButton";
 import { useOrders } from "./OrdersShell";
 import { QtyField } from "./QtyField";
 
@@ -49,6 +50,7 @@ function receiveLinesOf(order: SupplierOrder): LineMode[] {
 export function OrderCard({ orderId }: { orderId: string }) {
   const { t, lang } = useOrders();
   const [order, setOrder] = useState<SupplierOrder | null>(null);
+  const [supplierZaloUrl, setSupplierZaloUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receiveLines, setReceiveLines] = useState<LineMode[]>([]);
   const [photos, setPhotos] = useState<OrderPhoto[]>([]);
@@ -74,7 +76,32 @@ export function OrderCard({ orderId }: { orderId: string }) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!order?.supplierId) {
+      setSupplierZaloUrl(null);
+      return;
+    }
+    if (order.zaloUrl) {
+      setSupplierZaloUrl(order.zaloUrl);
+      return;
+    }
+    let cancelled = false;
+    void getSuppliers()
+      .then((catalog) => {
+        if (!cancelled) {
+          setSupplierZaloUrl(catalog.suppliers.find((row) => row.id === order.supplierId)?.zaloUrl ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierZaloUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order]);
+
   const canReceive = order ? orderCanReceive(order) && receiveLines.length > 0 : false;
+  const zaloUrl = order?.zaloUrl ?? supplierZaloUrl;
 
   const patchLine = (index: number, patch: Partial<LineMode>) => {
     setReceiveLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -157,6 +184,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
         {t("placed_by")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
         {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
       </div>
+      <OrderZaloButton status={order.status} zaloUrl={zaloUrl} label={t("open_zalo")} className="orders-zaloWrap" />
       {order.receivedAt ? (
         <div className="orders-meta" style={{ marginTop: 8 }}>
           {t("receive_goods")} · {personLabel(order.receivedByName, order.receivedBy)} · {formatVietnamDateTime(order.receivedAt) || "—"}
@@ -317,9 +345,12 @@ export function OrderCard({ orderId }: { orderId: string }) {
 
       {canReceive ? (
         <div className="orders-stickyActions">
-          <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
-            {busy ? t("submitting") : t("receive_goods")}
-          </button>
+          <div className="orders-actions">
+            <OrderZaloButton status={order.status} zaloUrl={zaloUrl} label={t("open_zalo")} />
+            <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
+              {busy ? t("submitting") : t("receive_goods")}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

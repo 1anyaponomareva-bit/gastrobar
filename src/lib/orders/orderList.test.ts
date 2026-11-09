@@ -44,8 +44,10 @@ import {
   shouldPlaceAfterDialog,
   sortCatalogProducts,
   supplierBadgeCounts,
+  shouldShowOrderZalo,
   supplierPrintPdfInput,
   supplierTabChips,
+  supplierZaloHref,
   UNCATEGORIZED_CATEGORY_TAB,
   type SelectionMap,
 } from "./orderList";
@@ -380,6 +382,36 @@ test("supplier page puts selected yellow rows first", () => {
 test("order PDF tap shares before the draft save", () => {
   assert.deepEqual(ORDER_PDF_TAP_STEPS, ["share", "save-draft"]);
   assert.equal(ORDER_PDF_TAP_STEPS[0], "share");
+});
+
+test("Zalo href is the stored group link, never a blank or contacts search", () => {
+  const group = "https://zalo.me/g/65gr4g33gucqyijbhtgi";
+  assert.equal(supplierZaloHref({ zaloUrl: group }), group);
+  assert.equal(supplierZaloHref({ zalo_url: "https://zalo.me/0988631507" }), "https://zalo.me/0988631507");
+  assert.equal(supplierZaloHref(group), group);
+  assert.equal(supplierZaloHref({ zaloUrl: "  https://zalo.me/g/abc  " }), "https://zalo.me/g/abc");
+  assert.equal(supplierZaloHref({ zaloUrl: "https://www.zalo.me/g/abc" }), "https://www.zalo.me/g/abc");
+  assert.equal(supplierZaloHref({ zaloUrl: "" }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: null }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: "https://zalo.me/" }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: "http://zalo.me/g/abc" }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: "javascript:alert(1)" }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: "https://example.com/g/abc" }), null);
+  assert.equal(supplierZaloHref({ zaloUrl: "zalo://conversation/abc" }), null);
+});
+
+test("Zalo button shows only for placed orders that have a group URL", () => {
+  const group = "https://zalo.me/g/65gr4g33gucqyijbhtgi";
+  assert.equal(shouldShowOrderZalo("ordered", { zaloUrl: group }), true);
+  assert.equal(shouldShowOrderZalo("partial", group), true);
+  assert.equal(shouldShowOrderZalo("received", { zalo_url: group }), true);
+  assert.equal(shouldShowOrderZalo("closed", group), true);
+  assert.equal(shouldShowOrderZalo("draft", group), false);
+  assert.equal(shouldShowOrderZalo("ordered", { zaloUrl: "" }), false);
+  assert.equal(shouldShowOrderZalo("ordered", { zaloUrl: null }), false);
+  assert.equal(shouldShowOrderZalo("ordered", "https://example.com"), false);
+  assert.equal(shouldShowOrderZalo("", group), false);
+  assert.equal(shouldShowOrderZalo(null, group), false);
 });
 
 test("place happens only after dialog submit, not the button click", () => {

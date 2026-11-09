@@ -1,7 +1,7 @@
 import { productDisplayName, type ProductNameLocale } from "../erp/productName";
 import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
 import { formatQty, isPositiveQty, parseQty } from "./qty";
-import type { OrderProduct, OrderProductPack, OrderWarehouse } from "./types";
+import type { OrderProduct, OrderProductPack, OrderStatus, OrderWarehouse } from "./types";
 
 export type SelectionRow = { packId: string | null; qty: string };
 
@@ -205,6 +205,47 @@ export function reducePlaceDialog(phase: PlaceDialogPhase, action: "open" | "can
 
 export function shouldPlaceAfterDialog(phase: PlaceDialogPhase): boolean {
   return phase === "submitted";
+}
+
+/** Placed supplier orders: after Order, including later receive/close. Not draft/pre-order. */
+export const PLACED_ORDER_STATUSES: readonly OrderStatus[] = ["ordered", "partial", "received", "closed"];
+
+export function isPlacedOrderStatus(status: string | null | undefined): boolean {
+  return status === "ordered" || status === "partial" || status === "received" || status === "closed";
+}
+
+type ZaloSource = {
+  zaloUrl?: string | null;
+  zalo_url?: string | null;
+};
+
+function zaloRaw(source: ZaloSource | string | null | undefined): string {
+  if (typeof source === "string" || source == null) return String(source ?? "").trim();
+  return String(source.zaloUrl ?? source.zalo_url ?? "").trim();
+}
+
+/** Deeplink into the stored Zalo group/chat. Rejects blank, non-https, and non-zalo.me hosts. */
+export function supplierZaloHref(source: ZaloSource | string | null | undefined): string | null {
+  const raw = zaloRaw(source);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:") return null;
+    const host = url.hostname.toLowerCase();
+    if (host !== "zalo.me" && host !== "www.zalo.me") return null;
+    if (!url.pathname || url.pathname === "/") return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+/** Show the open-in-Zalo control only for a placed order that has a real group URL. */
+export function shouldShowOrderZalo(
+  status: string | null | undefined,
+  source: ZaloSource | string | null | undefined,
+): boolean {
+  return isPlacedOrderStatus(status) && Boolean(supplierZaloHref(source));
 }
 
 export function defaultPackId(product: Pick<OrderProduct, "packs">): string | null {

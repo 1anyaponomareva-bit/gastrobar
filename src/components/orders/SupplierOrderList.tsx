@@ -33,6 +33,7 @@ import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/
 import { InAppShareNotice } from "./InAppShareNotice";
 import { OrdersEmpty } from "./LoadState";
 import { OrderProductCard } from "./OrderProductCard";
+import { OrderZaloButton } from "./OrderZaloButton";
 import { useOrders } from "./OrdersShell";
 import { PlaceOrderDialog } from "./PlaceOrderDialog";
 
@@ -410,6 +411,7 @@ export function SupplierOrderList({
               </Link>
             </>
           ) : null}
+          <OrderZaloButton status="ordered" zaloUrl={supplier.zaloUrl} label={t("open_zalo")} className="orders-zaloWrap" />
         </div>
       ) : null}
 
@@ -450,6 +452,9 @@ export function SupplierOrderList({
           >
             {placeBusy ? t("placing") : t("place_order")}
           </button>
+          {orderedThisRevision ? (
+            <OrderZaloButton status="ordered" zaloUrl={supplier.zaloUrl} label={t("open_zalo")} />
+          ) : null}
         </div>
       </div>
 

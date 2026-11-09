@@ -377,6 +377,7 @@ function orderOf(raw: Json): SupplierOrder {
     status: statusOf(pick(src, "status")),
     supplierId: str(pick(src, "supplierId", "supplier_id")),
     supplierName: str(pick(src, "supplierName", "supplier_name", "supplier")),
+    zaloUrl: optStr(pick(src, "zaloUrl", "zalo_url")),
     warehouseId: optStr(pick(src, "warehouseId", "warehouse_id")),
     warehouseName: optStr(pick(src, "warehouseName", "warehouse_name")),
     createdAt: optStr(pick(src, "createdAt", "created_at")),
