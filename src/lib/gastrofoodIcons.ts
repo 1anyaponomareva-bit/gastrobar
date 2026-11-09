@@ -1,12 +1,14 @@
-/** Cache-bust so browsers pick up the black-G / red-F tab icon. */
-export const GASTROFOOD_ICON_VERSION = "20261109gf";
+/** Cache-bust so browsers pick up the theme-adaptive GASTROFOOD tab icon. */
+export const GASTROFOOD_ICON_VERSION = "20261109theme";
 
+export const GASTROFOOD_FAVICON_SVG = `/gastrofood/favicon.svg?v=${GASTROFOOD_ICON_VERSION}`;
 export const GASTROFOOD_FAVICON_32 = `/gastrofood/favicon-32.png?v=${GASTROFOOD_ICON_VERSION}`;
 export const GASTROFOOD_ICON_192 = `/gastrofood/icon-192.png?v=${GASTROFOOD_ICON_VERSION}`;
 export const GASTROFOOD_APPLE_TOUCH = `/gastrofood/apple-touch-icon.png?v=${GASTROFOOD_ICON_VERSION}`;
 
 export const gastrofoodMetadataIcons = {
   icon: [
+    { url: GASTROFOOD_FAVICON_SVG, type: "image/svg+xml", sizes: "any" },
     { url: GASTROFOOD_FAVICON_32, type: "image/png", sizes: "32x32" },
     { url: GASTROFOOD_ICON_192, type: "image/png", sizes: "192x192" },
   ],

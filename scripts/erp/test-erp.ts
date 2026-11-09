@@ -205,6 +205,11 @@ async function main() {
     assert.equal(proxy.action, "json");
     assert.equal(isErpHostAllowedPath("/_next/static/chunks/app.js"), true);
     assert.equal(isErpHostAllowedPath("/favicon.ico"), true);
+    assert.equal(isErpHostAllowedPath("/icon.svg"), true);
+    assert.equal(isErpHostAllowedPath("/gastrofood/favicon.svg"), true);
+    assert.equal(isErpHostAllowedPath("/gastrofood/favicon-32.png"), true);
+    assert.equal(isErpHostAllowedPath("/erp/icon.svg"), true);
+    assert.equal(isErpHostAllowedPath("/coming-soon/icon.svg"), true);
     assert.equal(isErpHostAllowedPath("/"), true);
     assert.equal(isErpHostAllowedPath("/coming-soon"), true);
     assert.equal(isErpHostAllowedPath("/coming-soon/icon"), true);

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .g { fill: #000000; }
+    @media (prefers-color-scheme: dark) { .g { fill: #ffffff; } }
+  </style>
+  <g transform="translate(0.9678 23.6306) scale(0.021802 -0.021802)">
+    <path class="g" d="M420 -16Q335 -16 263.5 10.5Q192 37 139.5 86Q87 135 58 202Q29 269 29 350Q29 431 58 498Q87 565 140 614Q193 663 265.5 689.5Q338 716 425 716Q529 716 610.5 681Q692 646 745 581L594 448Q528 525 437 525Q359 525 313 478Q267 431 267 350Q267 271 312.5 223Q358 175 434 175Q456 175 477 179Q498 183 520 192L520 369L725 369L725 73Q661 30 579 7Q497 -16 420 -16Z"/>
+    <path fill="#FA181A" transform="translate(724 0)" d="M57 0L57 700L626 700L626 522L293 522L293 402L585 402L585 224L293 224L293 0Z"/>
+  </g>
+</svg>

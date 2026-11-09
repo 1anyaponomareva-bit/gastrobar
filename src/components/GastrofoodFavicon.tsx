@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
-import { GASTROFOOD_APPLE_TOUCH, GASTROFOOD_FAVICON_32, GASTROFOOD_ICON_192 } from "@/lib/gastrofoodIcons";
+import {
+  GASTROFOOD_APPLE_TOUCH,
+  GASTROFOOD_FAVICON_32,
+  GASTROFOOD_FAVICON_SVG,
+  GASTROFOOD_ICON_192,
+} from "@/lib/gastrofoodIcons";
 
 const ICONS = [
+  { rel: "icon", type: "image/svg+xml", sizes: "any", href: GASTROFOOD_FAVICON_SVG },
   { rel: "icon", type: "image/png", sizes: "32x32", href: GASTROFOOD_FAVICON_32 },
   { rel: "icon", type: "image/png", sizes: "192x192", href: GASTROFOOD_ICON_192 },
   { rel: "apple-touch-icon", sizes: "180x180", href: GASTROFOOD_APPLE_TOUCH },
 ] as const;
 
-/** Tab icon: large black G and red F on a transparent background. */
+/** Tab icon: SVG G follows Chrome light/dark; PNG fallback stays black G + red F. */
 export function GastrofoodFavicon() {
   useEffect(() => {
     document
