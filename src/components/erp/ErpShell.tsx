@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { GastrofoodFavicon } from "@/components/GastrofoodFavicon";
 import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm";
 import type { ErpAction, ErpState } from "@/lib/erp/types";
 import { translate } from "@/lib/i18n";
@@ -219,7 +220,12 @@ export function ErpShell({ children }: { children: ReactNode }) {
       </ErpData>
     );
 
-  return <ErpHrefProvider>{body}</ErpHrefProvider>;
+  return (
+    <ErpHrefProvider>
+      <GastrofoodFavicon />
+      {body}
+    </ErpHrefProvider>
+  );
 }
 
 function ErpData({

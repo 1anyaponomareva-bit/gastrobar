@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { StaffToolBodyLayout } from "@/components/staff/StaffToolBodyLayout";
+import { gastrofoodMetadataIcons } from "@/lib/gastrofoodIcons";
 import { isGastrofoodRecipesHost } from "@/lib/recipes/vnHost";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  icons: gastrofoodMetadataIcons,
 };
 
 export async function generateViewport(): Promise<Viewport> {

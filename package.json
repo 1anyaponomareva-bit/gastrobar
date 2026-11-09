@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "icons": "node scripts/generate-png-icons.mjs",
+    "icons:gastrofood": "node scripts/generate-gastrofood-icons.mjs",
     "clean": "node scripts/clean-next.mjs",
-    "prebuild": "node scripts/generate-png-icons.mjs && node scripts/sync-food-public.mjs",
+    "prebuild": "node scripts/generate-png-icons.mjs && node scripts/generate-gastrofood-icons.mjs && node scripts/sync-food-public.mjs",
     "dev:rebuild": "npm run clean && npm run dev",
     "dev:quick": "node scripts/dev-with-ip.js",
     "dev:turbo": "node scripts/dev-turbo.js",

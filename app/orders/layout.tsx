@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { StaffToolBodyLayout } from "@/components/staff/StaffToolBodyLayout";
 import { OrdersShell } from "@/components/orders/OrdersShell";
+import { gastrofoodMetadataIcons } from "@/lib/gastrofoodIcons";
 
 export const viewport: Viewport = {
   themeColor: "#1d1d1b",
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Orders",
   },
+  icons: gastrofoodMetadataIcons,
 };
 
 export default function OrdersLayout({ children }: { children: ReactNode }) {

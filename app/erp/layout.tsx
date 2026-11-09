@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ErpShell } from "@/components/erp/ErpShell";
+import { gastrofoodMetadataIcons } from "@/lib/gastrofoodIcons";
 
 export const metadata: Metadata = {
   title: "GASTROFOOD ERP",
   robots: { index: false, follow: false },
+  icons: gastrofoodMetadataIcons,
 };
 
 /**

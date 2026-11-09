@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { GastrofoodFavicon } from "@/components/GastrofoodFavicon";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import "@/components/orders/orders.css";
@@ -29,6 +30,7 @@ export function CardsChrome({
 
   return (
     <div className="orders-app">
+      <GastrofoodFavicon />
       <div className="orders-shell">
         <header className="orders-top">
           <div className="orders-topRow">
@@ -66,6 +68,7 @@ export function CardsChrome({
 export function CardsLoading({ text }: { text: string }) {
   return (
     <div className="orders-app">
+      <GastrofoodFavicon />
       <div className="orders-loading">{text}</div>
     </div>
   );

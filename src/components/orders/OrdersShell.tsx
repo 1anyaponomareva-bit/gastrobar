@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { GastrofoodFavicon } from "@/components/GastrofoodFavicon";
 import { errorMessage, getSession } from "@/lib/orders/api";
 import { ORDERS_LANGS, ordersT, readOrdersLang, writeOrdersLang, type OrdersLang } from "@/lib/orders/i18n";
 import "./orders.css";
@@ -84,17 +85,24 @@ export function OrdersShell({ children }: { children: ReactNode }) {
   if (!ready) {
     return (
       <div className="orders-app">
+        <GastrofoodFavicon />
         <div className="orders-loading">{t("loading")}</div>
       </div>
     );
   }
 
   if (adminPath) {
-    return <OrdersContext.Provider value={ctx}>{children}</OrdersContext.Provider>;
+    return (
+      <OrdersContext.Provider value={ctx}>
+        <GastrofoodFavicon />
+        {children}
+      </OrdersContext.Provider>
+    );
   }
 
   return (
     <OrdersContext.Provider value={ctx}>
+      <GastrofoodFavicon />
       <div className="orders-app">
         <div className="orders-shell">
           <header className="orders-top">

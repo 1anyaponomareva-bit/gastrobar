@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import { GASTROFOOD_APPLE_TOUCH, GASTROFOOD_FAVICON_32, GASTROFOOD_ICON_192 } from "@/lib/gastrofoodIcons";
 
 const ICONS = [
-  { rel: "icon", type: "image/png", sizes: "32x32", href: "/gastrofood/favicon-32.png" },
-  { rel: "apple-touch-icon", sizes: "180x180", href: "/gastrofood/apple-touch-icon.png" },
+  { rel: "icon", type: "image/png", sizes: "32x32", href: GASTROFOOD_FAVICON_32 },
+  { rel: "icon", type: "image/png", sizes: "192x192", href: GASTROFOOD_ICON_192 },
+  { rel: "apple-touch-icon", sizes: "180x180", href: GASTROFOOD_APPLE_TOUCH },
 ] as const;
 
-/** Replaces the gastrotruck.org GASTROBAR tab icon while the stub is on screen. */
+/** Tab icon: GASTROFOOD logo on white. */
 export function GastrofoodFavicon() {
   useEffect(() => {
     document
