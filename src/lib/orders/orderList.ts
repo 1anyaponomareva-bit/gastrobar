@@ -11,9 +11,27 @@ export type PlaceDialogPhase = "closed" | "open" | "submitted";
 
 export type CatalogSortable = {
   id: string;
-  sort: number;
-  nameEn: string;
+  nameEn?: string | null;
+  nameVn?: string | null;
 };
+
+/** Mixed RU / Latin / VN names on Order List. UI locale picks the primary collation. */
+export const CATALOG_NAME_LOCALES: Record<ProductNameLocale, string[]> = {
+  ru: ["ru", "en", "vi"],
+  en: ["en", "ru", "vi"],
+  vn: ["vi", "en", "ru"],
+};
+
+export function compareCatalogNames(a: string, b: string, locale: ProductNameLocale = "ru"): number {
+  return a.localeCompare(b, CATALOG_NAME_LOCALES[locale], { sensitivity: "base", numeric: true });
+}
+
+export function catalogItemName(
+  product: { nameEn?: string | null; nameVn?: string | null },
+  locale: ProductNameLocale = "ru",
+): string {
+  return productDisplayName({ locale, nameEn: product.nameEn, nameVn: product.nameVn });
+}
 
 export const ALL_SUPPLIER_TAB = "all";
 
@@ -23,10 +41,10 @@ export type CategoryGroup<T> = { id: string; name: string; products: T[] };
 
 export type SupplierTabChip = { id: string; label: string; count: number };
 
-/** Employee Order List order: ERP `staff_sort`, then name. */
-export function sortCatalogProducts<T extends CatalogSortable>(products: T[]): T[] {
+/** Employee and admin Order List: A–Z by the language-switcher name. Ignores `staff_sort`. */
+export function sortCatalogProducts<T extends CatalogSortable>(products: T[], locale: ProductNameLocale = "ru"): T[] {
   return [...products].sort(
-    (a, b) => a.sort - b.sort || a.nameEn.localeCompare(b.nameEn, undefined, { sensitivity: "base" }) || a.id.localeCompare(b.id),
+    (a, b) => compareCatalogNames(catalogItemName(a, locale), catalogItemName(b, locale), locale) || a.id.localeCompare(b.id),
   );
 }
 
@@ -76,7 +94,7 @@ export function filterByCategory<T extends { categoryId: string | null }>(produc
   return products.filter((product) => product.categoryId === categoryId);
 }
 
-/** Category chips/headers in catalog order (first time a category appears). One language from the switcher. */
+/** Category chips/headers A–Z by the language-switcher name. */
 export function catalogCategories(
   products: Array<{ categoryId: string | null; categoryName: string | null; categoryNameVn?: string | null }>,
   locale: ProductNameLocale = "ru",
@@ -94,22 +112,39 @@ export function catalogCategories(
       name: name || product.categoryId,
     });
   }
-  return [...seen.values()];
+  return [...seen.values()].sort((a, b) => compareCatalogNames(a.name, b.name, locale) || a.id.localeCompare(b.id));
 }
 
-/** Staff All/supplier lists stay grouped by category; selected yellow rows are not pulled to the top. */
-export function groupProductsByCategory<T extends { categoryId: string | null }>(
+export type GroupProductsOptions = {
+  locale?: ProductNameLocale;
+  uncategorizedName?: string;
+};
+
+/** Category sections A–Z, items A–Z inside each, uncategorized last. Yellow rows stay in their group. */
+export function groupProductsByCategory<T extends { id: string; categoryId: string | null } & CatalogSortable>(
   products: T[],
   categories: CatalogCategory[],
+  options: GroupProductsOptions = {},
 ): CategoryGroup<T>[] {
+  const locale = options.locale ?? "ru";
+  const uncategorizedName = options.uncategorizedName ?? "";
   const groups: CategoryGroup<T>[] = [];
-  for (const category of categories) {
-    const list = products.filter((product) => product.categoryId === category.id);
+  const orderedCategories = [...categories].sort(
+    (a, b) => compareCatalogNames(a.name, b.name, locale) || a.id.localeCompare(b.id),
+  );
+  for (const category of orderedCategories) {
+    const list = sortCatalogProducts(
+      products.filter((product) => product.categoryId === category.id),
+      locale,
+    );
     if (list.length) groups.push({ id: category.id, name: category.name, products: list });
   }
-  const known = new Set(categories.map((category) => category.id));
-  const rest = products.filter((product) => !product.categoryId || !known.has(product.categoryId));
-  if (rest.length) groups.push({ id: "", name: "", products: rest });
+  const known = new Set(orderedCategories.map((category) => category.id));
+  const rest = sortCatalogProducts(
+    products.filter((product) => !product.categoryId || !known.has(product.categoryId)),
+    locale,
+  );
+  if (rest.length) groups.push({ id: "", name: uncategorizedName, products: rest });
   return groups;
 }
 

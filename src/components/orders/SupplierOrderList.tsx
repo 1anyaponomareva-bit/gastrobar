@@ -248,7 +248,10 @@ export function SupplierOrderList({
   );
 
   const visible = products.filter(matchesSearch);
-  const groups = groupProductsByCategory(visible, catalogCategories(products, lang));
+  const groups = groupProductsByCategory(visible, catalogCategories(products, lang), {
+    locale: lang,
+    uncategorizedName: t("category_none"),
+  });
 
   const setQty = (product: OrderProduct, qty: string) => {
     const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };

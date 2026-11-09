@@ -1,17 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminAuthForm, AdminNameForm } from "@/components/recipes/AdminAuthForm";
 import { translate } from "@/lib/i18n";
 import { ErpFormHost } from "@/components/erp/ErpFormHost";
 import { ProductCard } from "@/components/erp/ProductsPage";
-import { archiveAdmin, getAdminCatalog, reorderAdminProducts, reorderAdminSuppliers, saveAdminSupplier } from "@/lib/orders/api";
+import { archiveAdmin, getAdminCatalog, saveAdminSupplier } from "@/lib/orders/api";
 import { ORDERS_ADMIN_PATH } from "@/lib/erp/menuListQuery";
-import { reorderSubset, sortCatalogProducts } from "@/lib/orders/orderList";
+import { catalogCategories, compareCatalogNames, groupProductsByCategory, sortCatalogProducts } from "@/lib/orders/orderList";
 import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
 import type { OrderProduct, OrderSupplier } from "@/lib/orders/types";
-import { useDragReorder } from "@/lib/useDragReorder";
 import { useOrders } from "./OrdersShell";
 import "@/components/staff/staff-inventory.css";
 import "@/components/recipes/recipes.css";
@@ -22,75 +21,6 @@ const t = (key: string) => ordersT("ru", key);
 
 type Tab = "items" | "suppliers";
 type Notice = { ok: boolean; text: string } | null;
-
-function DragList<T extends { id: string }>({
-  list,
-  disabled,
-  render,
-  onCommit,
-}: {
-  list: T[];
-  disabled: boolean;
-  render: (entry: T) => ReactNode;
-  onCommit: (ids: string[]) => Promise<boolean>;
-}) {
-  const listKey = list.map((entry) => entry.id).join("|");
-  const [order, setOrder] = useState(() => list.map((entry) => entry.id));
-  const orderRef = useRef(order);
-  const moved = useRef(false);
-
-  const resetOrder = useCallback(() => {
-    orderRef.current = listKey ? listKey.split("|") : [];
-    setOrder(orderRef.current);
-  }, [listKey]);
-
-  useEffect(resetOrder, [resetOrder]);
-
-  const drag = useDragReorder(
-    (from, to) => {
-      const next = [...orderRef.current];
-      const [entry] = next.splice(from, 1);
-      next.splice(to, 0, entry);
-      orderRef.current = next;
-      moved.current = true;
-      setOrder(next);
-    },
-    {
-      onEnd: () => {
-        if (moved.current) {
-          void onCommit(orderRef.current).then((saved) => {
-            if (!saved) resetOrder();
-          });
-        }
-        moved.current = false;
-      },
-    },
-  );
-
-  const byId = new Map(list.map((entry) => [entry.id, entry]));
-  return (
-    <>
-      {order.map((id, index) => {
-        const entry = byId.get(id);
-        if (!entry) return null;
-        return (
-          <div
-            key={id}
-            ref={(element) => {
-              drag.rowRefs.current[index] = element;
-            }}
-            className={`staffAdminDragRow ${drag.dragIndex === index ? "dragging" : ""}`}
-          >
-            <button type="button" className="staffAdminHandle" aria-label="Перетащить" disabled={disabled} {...drag.handleProps(index)}>
-              ⠿
-            </button>
-            {render(entry)}
-          </div>
-        );
-      })}
-    </>
-  );
-}
 
 export function OrdersAdminApp() {
   const [session, setSession] = useState<string | null | undefined>(undefined);
@@ -168,7 +98,7 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
 
   const load = useCallback(async () => {
     const catalog = await getAdminCatalog();
-    setProducts(sortCatalogProducts(catalog.products.map((row) => ({ ...row, sort: row.sort ?? 0 }))));
+    setProducts(catalog.products);
     setSuppliers(catalog.suppliers);
   }, []);
 
@@ -196,29 +126,31 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
     }
   };
 
-  const commitProductOrder = (ids: string[]) =>
-    guard(async () => {
-      const next = reorderSubset(
-        products.map((row) => row.id),
-        ids,
-      );
-      setProducts(await reorderAdminProducts(next));
-    }, t("admin_saved"));
-
-  const commitSupplierOrder = (ids: string[]) =>
-    guard(async () => {
-      const next = reorderSubset(
-        suppliers.map((row) => row.id),
-        ids,
-      );
-      setSuppliers(await reorderAdminSuppliers(next));
-    }, t("admin_saved"));
-
-  const visible = products.filter((product) => {
+  const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return true;
-    return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? ""].some((text) => text.toLowerCase().includes(query));
-  });
+    const filtered = query
+      ? products.filter((product) =>
+          [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.categoryName ?? "", product.categoryNameVn ?? ""].some((text) =>
+            text.toLowerCase().includes(query),
+          ),
+        )
+      : products;
+    return sortCatalogProducts(filtered, lang);
+  }, [products, search, lang]);
+
+  const groups = useMemo(
+    () =>
+      groupProductsByCategory(visible, catalogCategories(visible, lang), {
+        locale: lang,
+        uncategorizedName: ordersT(lang, "category_none"),
+      }),
+    [visible, lang],
+  );
+
+  const sortedSuppliers = useMemo(
+    () => [...suppliers].sort((a, b) => compareCatalogNames(a.name, b.name) || a.id.localeCompare(b.id)),
+    [suppliers],
+  );
 
   let body: ReactNode;
   if (editingProduct) {
@@ -272,25 +204,26 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
         <div className="mode">
           <span>{t("admin_order_hint")}</span>
         </div>
-        <DragList
-          list={visible}
-          disabled={busy}
-          onCommit={commitProductOrder}
-          render={(product) => (
-            <button type="button" className={`staffAdminRow ${product.hidden ? "isHidden" : ""}`} onClick={() => setEditingProduct(product)}>
-              <b>{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</b>
-              <span>
-                {[
-                  suppliers.find((row) => row.id === product.supplierId)?.name,
-                  product.unit,
-                  product.hidden ? t("admin_hidden") : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </button>
-          )}
-        />
+        {groups.map((group) => (
+          <div key={group.id || "uncategorized"}>
+            {group.name ? <div className="category">{group.name}</div> : null}
+            {group.products.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                className={`staffAdminRow ${product.hidden ? "isHidden" : ""}`}
+                onClick={() => setEditingProduct(product)}
+              >
+                <b>{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</b>
+                <span>
+                  {[suppliers.find((row) => row.id === product.supplierId)?.name, product.unit, product.hidden ? t("admin_hidden") : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </button>
+            ))}
+          </div>
+        ))}
         {!visible.length ? <div className="empty">Ничего не найдено</div> : null}
       </>
     );
@@ -301,22 +234,17 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
           {t("admin_add_supplier")}
         </button>
         <div className="mode">
-          <span>{t("admin_order_hint")}</span>
+          <span>{t("admin_suppliers_hint")}</span>
         </div>
-        <DragList
-          list={suppliers}
-          disabled={busy}
-          onCommit={commitSupplierOrder}
-          render={(supplier) => (
-            <button type="button" className="staffAdminRow" onClick={() => setEditingSupplier(supplier)}>
-              <b>{supplier.name}</b>
-              <span>
-                {supplier.productCount} поз.
-                {supplier.zaloUrl ? " · Zalo ✓" : ""}
-              </span>
-            </button>
-          )}
-        />
+        {sortedSuppliers.map((supplier) => (
+          <button key={supplier.id} type="button" className="staffAdminRow" onClick={() => setEditingSupplier(supplier)}>
+            <b>{supplier.name}</b>
+            <span>
+              {supplier.productCount} поз.
+              {supplier.zaloUrl ? " · Zalo ✓" : ""}
+            </span>
+          </button>
+        ))}
       </>
     );
   }

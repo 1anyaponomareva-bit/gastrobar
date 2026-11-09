@@ -55,15 +55,45 @@ test("orders admin and ERP ingredients open the same product card", () => {
   assert.equal(productEditorReturnHref("https://evil.example/orders/admin", "/erp/menu/ingredients"), "/erp/menu/ingredients");
 });
 
-test("catalog list order follows staff_sort then name", () => {
+test("catalog list order is A–Z by name and ignores staff_sort", () => {
   const sorted = sortCatalogProducts([
-    { id: "b", sort: 2, nameEn: "Beef" },
-    { id: "a", sort: 0, nameEn: "Salt" },
+    { id: "b", sort: 0, nameEn: "Beef" },
+    { id: "a", sort: 99, nameEn: "Salt" },
     { id: "c", sort: 0, nameEn: "Apple" },
   ]);
   assert.deepEqual(
     sorted.map((row) => row.id),
-    ["c", "a", "b"],
+    ["c", "b", "a"],
+  );
+});
+
+test("catalog names sort Russian and Latin together", () => {
+  const sorted = sortCatalogProducts(
+    [
+      { id: "3", nameEn: "Яблоко" },
+      { id: "2", nameEn: "Banana" },
+      { id: "1", nameEn: "Авокадо" },
+    ],
+    "ru",
+  );
+  assert.deepEqual(
+    sorted.map((row) => row.nameEn),
+    ["Авокадо", "Яблоко", "Banana"],
+  );
+});
+
+test("Vietnamese locale sorts by nameVn", () => {
+  const sorted = sortCatalogProducts(
+    [
+      { id: "beef", nameEn: "Beef", nameVn: "Thịt bò" },
+      { id: "salt", nameEn: "Salt", nameVn: "Muối" },
+      { id: "apple", nameEn: "Apple", nameVn: "Táo" },
+    ],
+    "vn",
+  );
+  assert.deepEqual(
+    sorted.map((row) => row.id),
+    ["salt", "apple", "beef"],
   );
 });
 
@@ -139,15 +169,40 @@ test("category chips follow the language switcher: RU/EN English, VN Vietnamese"
   ];
   assert.deepEqual(
     catalogCategories(products, "ru").map((row) => row.name),
-    ["Dairy Products & Eggs", "Alcohol"],
+    ["Alcohol", "Dairy Products & Eggs"],
   );
   assert.deepEqual(
     catalogCategories(products, "en").map((row) => row.name),
-    ["Dairy Products & Eggs", "Alcohol"],
+    ["Alcohol", "Dairy Products & Eggs"],
   );
   assert.deepEqual(
     catalogCategories(products, "vn").map((row) => row.name),
-    ["Sữa và trứng", "Alcohol"],
+    ["Alcohol", "Sữa và trứng"],
+  );
+});
+
+test("categories A–Z, items A–Z within category, uncategorized last", () => {
+  const products = [
+    { id: "salt", nameEn: "Salt", nameVn: "Muối", categoryId: null, categoryName: null },
+    { id: "cheese", nameEn: "Cheese", nameVn: "Phô mai", categoryId: "dairy", categoryName: "Dairy", categoryNameVn: "Sữa" },
+    { id: "beer", nameEn: "Beer", nameVn: "Bia", categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "Rượu" },
+    { id: "butter", nameEn: "Butter", nameVn: "Bơ", categoryId: "dairy", categoryName: "Dairy", categoryNameVn: "Sữa" },
+    { id: "wine", nameEn: "Wine", nameVn: "Rượu vang", categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "Rượu" },
+    { id: "ghost", nameEn: "Unknown", nameVn: "", categoryId: null, categoryName: null },
+  ];
+  const categories = catalogCategories(products, "en");
+  assert.deepEqual(
+    categories.map((row) => row.name),
+    ["Alcohol", "Dairy"],
+  );
+  const groups = groupProductsByCategory(products, categories, { locale: "en", uncategorizedName: "Uncategorized" });
+  assert.deepEqual(
+    groups.map((group) => [group.id, group.name, group.products.map((row) => row.id)]),
+    [
+      ["alc", "Alcohol", ["beer", "wine"]],
+      ["dairy", "Dairy", ["butter", "cheese"]],
+      ["", "Uncategorized", ["salt", "ghost"]],
+    ],
   );
 });
 

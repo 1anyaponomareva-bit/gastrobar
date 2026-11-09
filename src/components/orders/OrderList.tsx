@@ -45,7 +45,7 @@ export function OrderList({ initialTab }: Props) {
     setError(null);
     try {
       const catalog = await getOrderCatalog();
-      setProducts(sortCatalogProducts(catalog.products.map((row) => ({ ...row, sort: row.sort ?? 0 }))));
+      setProducts(catalog.products);
       setSuppliers(catalog.suppliers);
       setWarehouses(catalog.warehouses);
       setDefaultWarehouseId(catalog.defaultWarehouseId);
@@ -112,19 +112,23 @@ export function OrderList({ initialTab }: Props) {
     [search, suppliers],
   );
 
-  const categories = useMemo(() => catalogCategories(products ?? [], lang), [products, lang]);
-  const tabs = useMemo(() => supplierTabChips(suppliers, products ?? [], selection), [suppliers, products, selection]);
+  const sortedProducts = useMemo(() => sortCatalogProducts(products ?? [], lang), [products, lang]);
+  const categories = useMemo(() => catalogCategories(sortedProducts, lang), [sortedProducts, lang]);
+  const tabs = useMemo(() => supplierTabChips(suppliers, sortedProducts, selection), [suppliers, sortedProducts, selection]);
   const supplier = tab === ALL_SUPPLIER_TAB ? null : (suppliers.find((row) => row.id === tab) ?? null);
   const supplierItems = useMemo(() => {
-    const scoped = filterBySupplierTab(products ?? [], tab).map((product) => productForSupplierTab(product, supplier?.id ?? null));
+    const scoped = filterBySupplierTab(sortedProducts, tab).map((product) => productForSupplierTab(product, supplier?.id ?? null));
     return scoped;
-  }, [products, tab, supplier]);
+  }, [sortedProducts, tab, supplier]);
 
   const allVisible = useMemo(
-    () => filterByCategory((products ?? []).filter(matchesSearch), category),
-    [products, matchesSearch, category],
+    () => filterByCategory(sortedProducts.filter(matchesSearch), category),
+    [sortedProducts, matchesSearch, category],
   );
-  const allGroups = useMemo(() => groupProductsByCategory(allVisible, categories), [allVisible, categories]);
+  const allGroups = useMemo(
+    () => groupProductsByCategory(allVisible, categories, { locale: lang, uncategorizedName: t("category_none") }),
+    [allVisible, categories, lang, t],
+  );
 
   const handleTabChange = (next: string) => {
     setTab(next);
@@ -135,7 +139,7 @@ export function OrderList({ initialTab }: Props) {
   const handleReset = () => {
     setSearch("");
     setCategory(ALL_SUPPLIER_TAB);
-    const scope = supplier ? supplierItems : (products ?? []);
+    const scope = supplier ? supplierItems : sortedProducts;
     const filled = filledProductIds(scope, selection);
     if (!filled.length) return;
     const message = supplier ? t("reset_confirm", { supplier: supplier.name }) : t("reset_all_confirm");
