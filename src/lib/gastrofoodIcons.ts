@@ -1,5 +1,5 @@
-/** Cache-bust so browsers pick up the transparent GASTROFOOD logo. */
-export const GASTROFOOD_ICON_VERSION = "20261109b";
+/** Cache-bust so browsers pick up the black-G / red-F tab icon. */
+export const GASTROFOOD_ICON_VERSION = "20261109gf";
 
 export const GASTROFOOD_FAVICON_32 = `/gastrofood/favicon-32.png?v=${GASTROFOOD_ICON_VERSION}`;
 export const GASTROFOOD_ICON_192 = `/gastrofood/icon-192.png?v=${GASTROFOOD_ICON_VERSION}`;

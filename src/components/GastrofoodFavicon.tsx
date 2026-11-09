@@ -9,7 +9,7 @@ const ICONS = [
   { rel: "apple-touch-icon", sizes: "180x180", href: GASTROFOOD_APPLE_TOUCH },
 ] as const;
 
-/** Tab icon: GASTROFOOD lockup on a transparent background. */
+/** Tab icon: large black G and red F on a transparent background. */
 export function GastrofoodFavicon() {
   useEffect(() => {
     document
