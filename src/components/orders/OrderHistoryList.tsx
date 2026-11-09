@@ -6,7 +6,8 @@ import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
 import { formatVietnamDate, orderStatusInstant } from "@/lib/orders/datetime";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
-import { OrderZaloButton } from "./OrderZaloButton";
+import { OrderHeading } from "./OrderHeading";
+import { OrderZaloOpenRow } from "./OrderZaloButton";
 import { useOrders } from "./OrdersShell";
 
 const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
@@ -96,20 +97,22 @@ export function OrderHistoryList() {
         const zaloUrl = order.zaloUrl ?? suppliers.find((row) => row.id === order.supplierId)?.zaloUrl ?? null;
         return (
           <div key={order.id} className="orders-card">
+            <OrderZaloOpenRow
+              status={order.status}
+              zaloUrl={zaloUrl}
+              zaloLabel={t("open_zalo")}
+              openLabel={t("open_half")}
+              openHref={`/orders/${order.id}`}
+            />
             <Link href={`/orders/${order.id}`} className="orders-supplierBtn">
               <div>
-                <div className="orders-name">
-                  {order.docNo || order.id} · {order.supplierName}
-                </div>
-                {order.warehouseName ? <div className="orders-meta">{order.warehouseName}</div> : null}
+                <OrderHeading supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
                 <div className="orders-meta" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
                   <span>{formatVietnamDate(orderStatusInstant(order)) || "—"}</span>
                 </div>
               </div>
-              <span className="orders-link">{t("open_order")}</span>
             </Link>
-            <OrderZaloButton status={order.status} zaloUrl={zaloUrl} label={t("open_zalo")} className="orders-zaloWrap" />
           </div>
         );
       })}

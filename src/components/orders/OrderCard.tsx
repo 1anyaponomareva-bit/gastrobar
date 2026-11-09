@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { errorMessage, getOrder, getSuppliers, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
 import { formatOrderLineBaseHint, formatOrderLineQty, orderLineBaseUnit } from "@/lib/orders/orderList";
@@ -11,9 +12,27 @@ import { personLabel } from "@/lib/orders/person";
 import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { statusClass } from "./OrderHistoryList";
-import { OrderZaloButton } from "./OrderZaloButton";
+import { OrderHeading } from "./OrderHeading";
+import { OrderZaloOpenRow } from "./OrderZaloButton";
 import { useOrders } from "./OrdersShell";
 import { QtyField } from "./QtyField";
+
+function pdfFileNameFromDisposition(header: string | null): string {
+  if (!header) return "Order.pdf";
+  const star = /filename\*=(?:UTF-8''|utf-8'')([^;]+)/i.exec(header);
+  if (star?.[1]) {
+    try {
+      return decodeURIComponent(star[1].replace(/["']/g, "").trim()) || "Order.pdf";
+    } catch {
+      /* fall through */
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header);
+  if (quoted?.[1]) return quoted[1];
+  const plain = /filename=([^;]+)/i.exec(header);
+  if (plain?.[1]) return plain[1].replace(/["']/g, "").trim() || "Order.pdf";
+  return "Order.pdf";
+}
 
 const MAX_PHOTO = 6 * 1024 * 1024;
 
@@ -57,6 +76,8 @@ export function OrderCard({ orderId }: { orderId: string }) {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
 
   const load = useCallback(async () => {
@@ -102,6 +123,33 @@ export function OrderCard({ orderId }: { orderId: string }) {
 
   const canReceive = order ? orderCanReceive(order) && receiveLines.length > 0 : false;
   const zaloUrl = order?.zaloUrl ?? supplierZaloUrl;
+
+  const openOrderPdf = async () => {
+    if (pdfBusy || !order?.id) return;
+    if (detectInAppBrowser()) {
+      window.alert(t("inapp_blocked"));
+      return;
+    }
+    setPdfBusy(true);
+    setPdfError(null);
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(order.id)}/pdf`, {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!res.ok || !contentType.includes("pdf")) throw new Error("pdf");
+      const blob = await res.blob();
+      const delivered = await deliverPdfFile(blob, pdfFileNameFromDisposition(res.headers.get("content-disposition")));
+      if (delivered !== "shared" && delivered !== "cancelled" && delivered !== "downloaded") {
+        setPdfError(t("error_pdf"));
+      }
+    } catch {
+      setPdfError(t("error_pdf"));
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   const patchLine = (index: number, patch: Partial<LineMode>) => {
     setReceiveLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -173,18 +221,20 @@ export function OrderCard({ orderId }: { orderId: string }) {
       <Link href="/orders/history" className="orders-back">
         ← {t("orders_section")}
       </Link>
-      <h2 className="orders-name" style={{ margin: "0 0 8px" }}>
-        {order.docNo || order.id}
-      </h2>
-      <div className="orders-meta" style={{ marginBottom: 12 }}>
-        {order.supplierName} · {order.warehouseName ?? ""}
-      </div>
+      <OrderZaloOpenRow
+        status={order.status}
+        zaloUrl={zaloUrl}
+        zaloLabel={t("open_zalo")}
+        openLabel={pdfBusy ? t("pdf_sharing") : t("open_half")}
+        onOpen={() => void openOrderPdf()}
+        openBusy={pdfBusy}
+      />
+      <OrderHeading as="h2" supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
       <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
       <div className="orders-meta" style={{ marginTop: 8 }}>
         {t("placed_by")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
         {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
       </div>
-      <OrderZaloButton status={order.status} zaloUrl={zaloUrl} label={t("open_zalo")} className="orders-zaloWrap" />
       {order.receivedAt ? (
         <div className="orders-meta" style={{ marginTop: 8 }}>
           {t("receive_goods")} · {personLabel(order.receivedByName, order.receivedBy)} · {formatVietnamDateTime(order.receivedAt) || "—"}
@@ -195,6 +245,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
 
       <p className="orders-note">{t("stock_note")}</p>
       {submitError ? <div className="orders-banner error">{submitError}</div> : null}
+      {pdfError ? <div className="orders-banner error">{pdfError}</div> : null}
       {photoError ? <div className="orders-banner error">{photoError}</div> : null}
 
       <div className="orders-category">{t("lines_title")}</div>
