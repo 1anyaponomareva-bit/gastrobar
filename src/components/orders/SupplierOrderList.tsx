@@ -452,9 +452,6 @@ export function SupplierOrderList({
           >
             {placeBusy ? t("placing") : t("place_order")}
           </button>
-          {orderedThisRevision ? (
-            <OrderZaloButton status="ordered" zaloUrl={supplier.zaloUrl} label={t("open_zalo")} />
-          ) : null}
         </div>
       </div>
 

@@ -346,7 +346,6 @@ export function OrderCard({ orderId }: { orderId: string }) {
       {canReceive ? (
         <div className="orders-stickyActions">
           <div className="orders-actions">
-            <OrderZaloButton status={order.status} zaloUrl={zaloUrl} label={t("open_zalo")} />
             <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
               {busy ? t("submitting") : t("receive_goods")}
             </button>
