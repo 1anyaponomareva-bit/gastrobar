@@ -2809,7 +2809,42 @@ button.erpBack {
 }
 
 .erpPackTable {
-  min-width: 560px;
+  min-width: 640px;
+}
+
+.erpPackUse,
+.erpPackUseZero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  border-radius: 8px;
+}
+
+.erpPackUse {
+  font-weight: 600;
+  color: var(--erp-accent);
+  text-decoration: none;
+}
+
+.erpPackUse:hover {
+  background: var(--erp-accent-soft);
+}
+
+.erpPackUseZero {
+  color: var(--erp-muted);
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .erpTable.stack .erpPackUse,
+  .erpTable.stack .erpPackUseZero {
+    flex: none;
+  }
 }
 
 @media (max-width: 760px) {

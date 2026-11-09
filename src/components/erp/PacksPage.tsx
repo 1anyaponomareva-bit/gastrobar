@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useErpRouter } from "./erpHref";
-import type { ErpUnit } from "@/lib/erp/costing";
-import type { ErpPack } from "@/lib/erp/types";
+import { productTitle, type ErpUnit } from "@/lib/erp/costing";
+import { defaultPackId, packUsageCountMap, productsUsingPack } from "@/lib/erp/packs";
+import type { ErpPack, ErpProduct, ErpState } from "@/lib/erp/types";
 import { downloadXlsx } from "@/lib/erp/xlsx";
 import { useErp } from "./ErpShell";
 import { ConditionFilters, DropMenu, matches, MultiSelect, type CondField, type Condition } from "./filters";
+import { categoryLabel } from "./menuFields";
 import { StockMobileNav } from "./stockNav";
 import {
   Empty,
@@ -26,23 +28,27 @@ import {
 const STORE_KEY = "gastrofood-erp-packs";
 const UNITS: ErpUnit[] = ["kg", "l", "pcs"];
 
-type ColumnId = "no" | "name" | "unit" | "qty";
-type SortKey = "name" | "unit" | "qty";
+type ColumnId = "no" | "name" | "unit" | "qty" | "use";
+type SortKey = "name" | "unit" | "qty" | "use";
 type Saved = { units: string[]; conditions: Condition[]; hidden: ColumnId[]; sort: SortKey; desc: boolean };
 
 const initial: Saved = { units: [], conditions: [], hidden: ["no"], sort: "name", desc: false };
 const DEFAULT_HIDDEN: ColumnId[] = ["no"];
+
+const ingredientsLabel = () => T("Ингредиенты", "Ingredients", "Nguyên liệu");
 
 const columns = (): { id: ColumnId; label: string; num?: boolean; sort?: SortKey }[] => [
   { id: "no", label: "№" },
   { id: "name", label: T("Название", "Name", "Tên"), sort: "name" },
   { id: "unit", label: T("Ед. измерения", "Unit", "Đơn vị"), sort: "unit" },
   { id: "qty", label: T("Количество", "Quantity", "Số lượng"), num: true, sort: "qty" },
+  { id: "use", label: ingredientsLabel(), num: true, sort: "use" },
 ];
 
 const condFields = (): CondField[] => [
   { id: "name", label: T("Название", "Name", "Tên"), kind: "text" },
   { id: "qty", label: T("Количество", "Quantity", "Số lượng"), kind: "number" },
+  { id: "use", label: ingredientsLabel(), kind: "number" },
 ];
 
 const unitOptions = () => UNITS.map((id) => ({ id, label: packUnitLabel(id) }));
@@ -55,7 +61,7 @@ function readSaved(): Saved {
       units: Array.isArray(raw.units) ? raw.units.map(String) : [],
       conditions: Array.isArray(raw.conditions) ? raw.conditions : [],
       hidden: Array.isArray(raw.hidden) ? (raw.hidden as ColumnId[]) : DEFAULT_HIDDEN,
-      sort: raw.sort === "unit" || raw.sort === "qty" ? raw.sort : "name",
+      sort: raw.sort === "unit" || raw.sort === "qty" || raw.sort === "use" ? raw.sort : "name",
       desc: Boolean(raw.desc),
     };
   } catch {
@@ -100,6 +106,7 @@ export function PacksPage() {
 
   if (!state) return null;
   const packs = state.packs;
+  const usage = packUsageCountMap(state.productPacks, state.products);
   const q = query.trim().toLowerCase();
   const unitFilter = new Set(filters.units);
   const fields = condFields();
@@ -111,13 +118,15 @@ export function PacksPage() {
     return filters.conditions.every((cond) => {
       const field = fields.find((f) => f.id === cond.field);
       if (!field) return true;
-      return matches(cond, field.kind, field.id === "name" ? pack.name : pack.qty_base);
+      const value = field.id === "name" ? pack.name : field.id === "use" ? (usage.get(pack.id) ?? 0) : pack.qty_base;
+      return matches(cond, field.kind, value);
     });
   });
 
   const rows = [...filtered].sort((a, b) => {
     const dir = filters.desc ? -1 : 1;
     if (filters.sort === "qty") return (a.qty_base - b.qty_base) * dir;
+    if (filters.sort === "use") return ((usage.get(a.id) ?? 0) - (usage.get(b.id) ?? 0)) * dir || a.name.localeCompare(b.name);
     if (filters.sort === "unit") return a.unit.localeCompare(b.unit) * dir || a.name.localeCompare(b.name);
     return a.name.localeCompare(b.name) * dir || a.qty_base - b.qty_base;
   });
@@ -134,6 +143,8 @@ export function PacksPage() {
         return packUnitLabel(pack.unit);
       case "qty":
         return pack.qty_base;
+      case "use":
+        return usage.get(pack.id) ?? 0;
     }
   };
 
@@ -145,6 +156,7 @@ export function PacksPage() {
       rows.map((pack, index) =>
         shownCols.map((c) => {
           if (c.id === "qty") return Number(pack.qty_base);
+          if (c.id === "use") return usage.get(pack.id) ?? 0;
           return String(cell(pack, c.id, index));
         }),
       ),
@@ -289,6 +301,8 @@ export function PacksPage() {
                         <strong className="erpPackName">{packText(pack.name)}</strong>
                       ) : c.id === "qty" ? (
                         packQtyText(Number(pack.qty_base), pack.unit)
+                      ) : c.id === "use" ? (
+                        <PackUseCount packId={pack.id} count={usage.get(pack.id) ?? 0} />
                       ) : (
                         cell(pack, c.id, index)
                       )}
@@ -308,6 +322,111 @@ export function PacksPage() {
           </tbody>
         </table>
       </div>
+    </>
+  );
+}
+
+function PackUseCount({ packId, count }: { packId: string; count: number }) {
+  if (count <= 0) {
+    return (
+      <span className="erpPackUseZero" data-testid="pack-use-count">
+        {count}
+      </span>
+    );
+  }
+  return (
+    <NavLink
+      href={`/erp/stock/packs/${packId}/ingredients`}
+      className="erpPackUse"
+      data-testid="pack-use-count"
+      aria-label={`${ingredientsLabel()}: ${count}`}
+    >
+      {count}
+    </NavLink>
+  );
+}
+
+function defaultPackName(state: ErpState, product: ErpProduct): string {
+  const id = defaultPackId(state.productPacks, product.id);
+  if (!id) return "—";
+  const pack = state.packs.find((item) => item.id === id);
+  if (pack) return packText(pack.name);
+  const link = state.productPacks.find((item) => item.product_id === product.id && item.pack_id === id);
+  return packText(link?.label || "—");
+}
+
+export function PackIngredientsPage({ id }: { id: string }) {
+  const { state } = useErp();
+  const router = useErpRouter();
+  if (!state) return null;
+  const pack = state.packs.find((item) => item.id === id);
+  if (!pack) {
+    return (
+      <Empty
+        kind="error"
+        title={T("Фасовка не найдена", "Pack not found", "Không tìm thấy quy cách")}
+        action={
+          <NavLink href="/erp/stock/packs" className="erpBtn">
+            {T("К списку фасовок", "Back to packs", "Về danh sách")}
+          </NavLink>
+        }
+      />
+    );
+  }
+  const rows = productsUsingPack(pack.id, state.productPacks, state.products);
+  const cats = new Map(state.categories.map((c) => [c.id, c]));
+
+  return (
+    <>
+      <NavLink href="/erp/stock/packs" className="erpBack">
+        ← {T("Фасовки", "Packs", "Quy cách")}
+      </NavLink>
+      <PageHead
+        title={packText(pack.name)}
+        sub={`${ingredientsLabel()}: ${rows.length}`}
+      />
+      <StockMobileNav active="/erp/stock/packs" />
+      {!rows.length ? (
+        <Empty title={T("Нет ингредиентов", "No ingredients", "Không có nguyên liệu")} />
+      ) : (
+        <div className="erpTableWrap">
+          <table className="erpTable stack" data-testid="pack-ingredients-table">
+            <thead>
+              <tr>
+                <th>{T("Название", "Name", "Tên")}</th>
+                <th>{T("Категория", "Category", "Nhóm")}</th>
+                <th>{T("Фасовка по умолчанию", "Default pack", "Quy cách mặc định")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((product) => {
+                const href = `/erp/products/${product.id}`;
+                return (
+                  <tr
+                    key={product.id}
+                    className="clickable"
+                    data-testid="pack-ingredient-row"
+                    onClick={(e) => {
+                      if (!(e.target as HTMLElement).closest("a")) router.push(href);
+                    }}
+                  >
+                    <td className="main">
+                      <NavLink href={href} className="erpName">
+                        {productTitle(product)}
+                      </NavLink>
+                      {product.brand ? <span className="erpCellSub">{product.brand}</span> : null}
+                    </td>
+                    <td data-label={T("Категория", "Category", "Nhóm")}>
+                      {categoryLabel(product.category_id ? cats.get(product.category_id) : undefined)}
+                    </td>
+                    <td data-label={T("Фасовка по умолчанию", "Default pack", "Quy cách mặc định")}>{defaultPackName(state, product)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

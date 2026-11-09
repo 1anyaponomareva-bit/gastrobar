@@ -37,7 +37,17 @@ import {
   documentSupplierIds,
   receiptMatchesSupplier,
 } from "../../src/lib/erp/docSupplier";
-import { basePrice, formatPackLabel, packPrice, packToBase, parsePackLabel, type PackWords } from "../../src/lib/erp/packs";
+import {
+  basePrice,
+  formatPackLabel,
+  packPrice,
+  packToBase,
+  packUsageCount,
+  packUsageCountMap,
+  parsePackLabel,
+  productsUsingPack,
+  type PackWords,
+} from "../../src/lib/erp/packs";
 import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
 import { packSupplierIds, packSupplierLabel, supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
@@ -1047,6 +1057,32 @@ async function main() {
       const total = (parsed.count ?? 1) * parsed.size * toBase[parsed.unit];
       assert.ok(Math.abs(total - n(pack.qty_base)!) < 1e-6, `${pack.label} vs ${pack.qty_base}`);
     }
+  });
+
+  await test("pack usage counts distinct live products, not archived links", async () => {
+    const links = [
+      { pack_id: "p1", product_id: "a", archived_at: null },
+      { pack_id: "p1", product_id: "b", archived_at: null },
+      { pack_id: "p1", product_id: "c", archived_at: "2026-01-01T00:00:00Z" },
+      { pack_id: "p1", product_id: "d", archived_at: null },
+      { pack_id: "p1", product_id: "a", archived_at: null },
+      { pack_id: "p2", product_id: "a", archived_at: null },
+    ];
+    const products = [
+      { id: "a", name_en: "Salt", archived_at: null },
+      { id: "b", name_en: "Flour", archived_at: null },
+      { id: "c", name_en: "Dropped", archived_at: null },
+      { id: "d", name_en: "Archived", archived_at: "2026-01-01T00:00:00Z" },
+    ];
+    const counts = packUsageCountMap(links, products);
+    assert.equal(counts.get("p1") ?? 0, 2, "two live products; archived link and archived product omitted");
+    assert.equal(packUsageCount("p1", links, products), 2);
+    assert.equal(packUsageCount("p2", links, products), 1);
+    assert.equal(packUsageCount("unused", links, products), 0);
+    assert.deepEqual(
+      productsUsingPack("p1", links, products).map((row) => row.id),
+      ["b", "a"],
+    );
   });
 
   await test("receipt location: Prep by default, explicit wins, never Warehouse, none without Prep", async () => {
@@ -3364,6 +3400,74 @@ async function main() {
       n(await value("select count(*) from public.erp_product_packs where product_id = $1 and archived_at is null", [id])),
       0,
       "every pack on the card can be removed",
+    );
+  });
+
+  await test("pack usage matches the product card: N live links, unused 0, omitted and archived not counted", async () => {
+    const used = await savePack({ name: "Use-count box", unit: "kg", qty_base: 5 });
+    const idle = await savePack({ name: "Use-count idle", unit: "kg", qty_base: 1 });
+    const first = await saveProduct({
+      type: "ingredient",
+      name_en: "Use-count first",
+      base_unit: "kg",
+      packs: [{ pack_id: used, label: "Use-count box", qty_base: 5, is_default: true }],
+    });
+    const second = await saveProduct({
+      type: "ingredient",
+      name_en: "Use-count second",
+      base_unit: "kg",
+      packs: [{ pack_id: used, label: "Use-count box", qty_base: 5, is_default: true }],
+    });
+    const dropped = await saveProduct({
+      type: "ingredient",
+      name_en: "Use-count dropped",
+      base_unit: "kg",
+      packs: [{ pack_id: used, label: "Use-count box", qty_base: 5, is_default: true }],
+    });
+    const droppedLink = await value<string>(
+      "select id from public.erp_product_packs where product_id = $1 and pack_id = $2 and archived_at is null",
+      [dropped, used],
+    );
+    await saveProduct({
+      id: dropped,
+      type: "ingredient",
+      name_en: "Use-count dropped",
+      base_unit: "kg",
+      packs: [],
+    });
+    const hidden = await saveProduct({
+      type: "ingredient",
+      name_en: "Use-count archived",
+      base_unit: "kg",
+      packs: [{ pack_id: used, label: "Use-count box", qty_base: 5, is_default: true }],
+    });
+    await q("select public.erp_set_archived('product', $1, true, $2)", [hidden, ACTOR]);
+
+    const liveCount = async (packId: string) =>
+      n(
+        await value(
+          `select count(distinct k.product_id)
+           from public.erp_product_packs k
+           join public.erp_products p on p.id = k.product_id
+           where k.pack_id = $1 and k.archived_at is null and p.archived_at is null`,
+          [packId],
+        ),
+      );
+    assert.equal(await liveCount(used), 2);
+    assert.equal(await liveCount(idle), 0);
+    assert.equal(await value("select archived_at is not null from public.erp_product_packs where id = $1", [droppedLink]), true);
+
+    const payload = await value<{ products: { id: string; archived_at: string | null; name_en: string }[]; productPacks: { pack_id: string; product_id: string; archived_at: string | null }[] }>(
+      "select public.erp_load_state($1)",
+      ["products,productPacks"],
+    );
+    assert.equal(packUsageCount(used, payload.productPacks, payload.products), 2);
+    assert.equal(packUsageCount(idle, payload.productPacks, payload.products), 0);
+    assert.deepEqual(
+      productsUsingPack(used, payload.productPacks, payload.products)
+        .map((row) => row.id)
+        .sort(),
+      [first, second].sort(),
     );
   });
 

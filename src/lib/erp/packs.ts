@@ -4,7 +4,7 @@
  * parsePackLabel remains for the Staff import coefficient, not for screen labels.
  */
 import type { ErpUnit } from "./costing";
-import type { ErpDocumentLine, ErpPack, ErpProductPack } from "./types";
+import type { ErpDocumentLine, ErpPack, ErpProduct, ErpProductPack } from "./types";
 
 export type PackContainer = "box" | "pack" | "pcs" | "btl" | "can" | "bag";
 export type PackUnit = "g" | "kg" | "ml" | "l" | "pcs";
@@ -81,6 +81,46 @@ export function compatiblePacks(packs: ErpPack[], unit: ErpUnit | string | null 
 
 export function defaultPackId(links: ErpProductPack[], productId: string): string | null {
   return links.find((link) => link.product_id === productId && link.is_default && !link.archived_at)?.pack_id ?? null;
+}
+
+type PackUsageLink = Pick<ErpProductPack, "pack_id" | "product_id"> & { archived_at?: string | null };
+type PackUsageProduct = Pick<ErpProduct, "id"> & { archived_at?: string | null; name_en?: string };
+
+function liveProductIds(products: PackUsageProduct[]): Set<string> {
+  return new Set(products.filter((product) => !product.archived_at).map((product) => product.id));
+}
+
+/** Distinct live products linked to each pack. Archived products and archived product_packs are omitted — same as the product card. */
+export function packUsageCountMap(productPacks: PackUsageLink[], products: PackUsageProduct[]): Map<string, number> {
+  const live = liveProductIds(products);
+  const ids = new Map<string, Set<string>>();
+  for (const link of productPacks) {
+    if (link.archived_at || !link.pack_id || !live.has(link.product_id)) continue;
+    let set = ids.get(link.pack_id);
+    if (!set) {
+      set = new Set();
+      ids.set(link.pack_id, set);
+    }
+    set.add(link.product_id);
+  }
+  const counts = new Map<string, number>();
+  for (const [packId, set] of ids) counts.set(packId, set.size);
+  return counts;
+}
+
+export function packUsageCount(packId: string, productPacks: PackUsageLink[], products: PackUsageProduct[]): number {
+  return packUsageCountMap(productPacks, products).get(packId) ?? 0;
+}
+
+/** Live catalog products that currently have this pack on the card. One row per product even if several suppliers share the pack. */
+export function productsUsingPack<T extends PackUsageProduct>(packId: string, productPacks: PackUsageLink[], products: T[]): T[] {
+  const live = liveProductIds(products);
+  const ids = new Set<string>();
+  for (const link of productPacks) {
+    if (link.archived_at || link.pack_id !== packId || !live.has(link.product_id)) continue;
+    ids.add(link.product_id);
+  }
+  return products.filter((product) => ids.has(product.id)).sort((a, b) => (a.name_en ?? "").localeCompare(b.name_en ?? "") || a.id.localeCompare(b.id));
 }
 
 export function packCoefficient(line: Pick<ErpDocumentLine, "pack_qty_base" | "pack_id">, pack: Pick<ErpPack, "qty_base"> | null | undefined): number | null {
