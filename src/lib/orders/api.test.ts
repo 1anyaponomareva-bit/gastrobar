@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DRAFT_SAVE_METHOD, errorMessage, isOrdersNetworkError, OrdersApiError } from "./api";
+import { DRAFT_SAVE_METHOD, errorMessage, isOrdersNetworkError, OrdersApiError, receiveErrorMessage } from "./api";
 
 test("draft save uses POST so public /orders does not depend on PUT", () => {
   assert.equal(DRAFT_SAVE_METHOD, "POST");
@@ -30,4 +30,16 @@ test("error mapping says offline only for genuine fetch TypeError", () => {
   const abortedDom = Object.assign(new Error("The user aborted a request."), { name: "AbortError" });
   assert.equal(isOrdersNetworkError(abortedDom), false);
   assert.equal(errorMessage(abortedDom, offline, generic), generic);
+});
+
+test("receive errors stay in RU/EN/VN copy, not raw Postgres", () => {
+  const network = "offline";
+  const generic = "Получение не подтверждено. Форма сохранена на экране.";
+  assert.equal(
+    receiveErrorMessage(new OrdersApiError(400, "ERP_INVALID", 'invalid input syntax for type uuid: "1"'), network, generic),
+    generic,
+  );
+  assert.equal(receiveErrorMessage(new OrdersApiError(400, "ERP_INVALID_QTY", "Water"), network, generic), generic);
+  assert.equal(receiveErrorMessage(new OrdersApiError(400, "ERP_EMPTY_DOCUMENT"), network, generic), generic);
+  assert.equal(receiveErrorMessage(new TypeError("Failed to fetch"), network, generic), network);
 });

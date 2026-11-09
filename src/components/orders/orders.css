@@ -613,6 +613,16 @@
   padding: 18px 0 calc(10px + env(safe-area-inset-bottom, 0px));
 }
 
+.orders-orderDetail.hasReceive {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
+.orders-receiveBtn {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
 .orders-supplierBtn {
   display: flex;
   align-items: center;
@@ -694,8 +704,8 @@
 }
 
 .orders-status.ordered {
-  background: #e8f0ff;
-  color: #1a4b9c;
+  background: var(--orders-ok-soft);
+  color: var(--orders-ok);
 }
 
 .orders-status.partial {
@@ -705,12 +715,13 @@
 
 .orders-status.closed,
 .orders-status.received {
-  background: var(--orders-ok-soft);
-  color: var(--orders-ok);
+  background: #ececec;
+  color: var(--orders-muted);
 }
 
 .orders-status.draft {
   background: #eee;
+  color: var(--orders-muted);
 }
 
 .orders-qtyGrid {

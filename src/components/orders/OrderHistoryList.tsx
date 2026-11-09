@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
 import { formatVietnamDate, orderStatusInstant } from "@/lib/orders/datetime";
+import { orderStatusClass, sortOrdersForHistory } from "@/lib/orders/orderList";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { OrderHeading } from "./OrderHeading";
@@ -13,7 +14,7 @@ import { useOrders } from "./OrdersShell";
 const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
 
 export function statusClass(status: string): string {
-  return `orders-status ${status}`;
+  return orderStatusClass(status);
 }
 
 export function OrderHistoryList() {
@@ -49,12 +50,13 @@ export function OrderHistoryList() {
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (orders ?? []).filter((order) => {
+    const filtered = (orders ?? []).filter((order) => {
       if (supplierId && order.supplierId !== supplierId) return false;
       if (status && order.status !== status) return false;
       if (!q) return true;
       return `${order.docNo} ${order.supplierName} ${order.comment ?? ""}`.toLowerCase().includes(q);
     });
+    return sortOrdersForHistory(filtered);
   }, [orders, query, status, supplierId]);
 
   return (
@@ -108,7 +110,7 @@ export function OrderHistoryList() {
               <div>
                 <OrderHeading supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
                 <div className="orders-meta" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
+                  <span className={orderStatusClass(order.status)}>{t(`status_${order.status}`)}</span>
                   <span>{formatVietnamDate(orderStatusInstant(order)) || "—"}</span>
                 </div>
               </div>

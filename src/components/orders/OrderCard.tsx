@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
-import { errorMessage, getOrder, getSuppliers, newIdempotencyKey, receiveOrder } from "@/lib/orders/api";
+import { errorMessage, getOrder, getSuppliers, newIdempotencyKey, receiveErrorMessage, receiveOrder } from "@/lib/orders/api";
 import { productDisplayName } from "@/lib/erp/productName";
-import { formatOrderLineBaseHint, formatOrderLineQty, orderLineBaseUnit } from "@/lib/orders/orderList";
+import {
+  formatOrderLineBaseHint,
+  formatOrderLineQty,
+  orderStatusClass,
+  receiveFormLines,
+  type ReceiveFormLine,
+} from "@/lib/orders/orderList";
 import { displayRemainingQty, orderCanReceive, parseDotQty, receiveActualBaseQty, receiveLineUnits, type ReceiveMode } from "@/lib/orders/qty";
 import { formatVietnamDateTime } from "@/lib/orders/datetime";
 import { personLabel } from "@/lib/orders/person";
-import type { OrderPhoto, SupplierOrder } from "@/lib/orders/types";
+import type { DiscrepancyKind, OrderPhoto, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
-import { statusClass } from "./OrderHistoryList";
 import { OrderHeading } from "./OrderHeading";
 import { OrderZaloOpenRow } from "./OrderZaloButton";
 import { useOrders } from "./OrdersShell";
@@ -36,35 +41,7 @@ function pdfFileNameFromDisposition(header: string | null): string {
 
 const MAX_PHOTO = 6 * 1024 * 1024;
 
-type LineMode = {
-  orderLineId: string;
-  product_id: string;
-  pack_id: string | null;
-  remainingQty: number;
-  baseUnit: string;
-  mode: ReceiveMode;
-  actualText: string;
-  actualUnit: string;
-};
-
-function receiveLinesOf(order: SupplierOrder): LineMode[] {
-  return order.lines
-    .filter((line) => line.remainingQty > 0)
-    .map((line) => {
-      const stockUnit = orderLineBaseUnit(line);
-      const baseUnit = receiveLineUnits(stockUnit)[0] || stockUnit;
-      return {
-        orderLineId: line.id ?? line.product_id,
-        product_id: line.product_id,
-        pack_id: line.pack_id,
-        remainingQty: line.remainingQty,
-        baseUnit,
-        mode: "as_ordered" as const,
-        actualText: "",
-        actualUnit: baseUnit,
-      };
-    });
-}
+type LineMode = ReceiveFormLine;
 
 export function OrderCard({ orderId }: { orderId: string }) {
   const { t, lang } = useOrders();
@@ -85,7 +62,11 @@ export function OrderCard({ orderId }: { orderId: string }) {
     try {
       const loaded = await getOrder(orderId);
       setOrder(loaded);
-      setReceiveLines(orderCanReceive(loaded) ? receiveLinesOf(loaded) : []);
+      try {
+        setReceiveLines(orderCanReceive(loaded) ? receiveFormLines(loaded) : []);
+      } catch {
+        setReceiveLines([]);
+      }
       setIdempotencyKey(newIdempotencyKey());
     } catch (err) {
       setOrder(null);
@@ -121,7 +102,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
     };
   }, [order]);
 
-  const canReceive = order ? orderCanReceive(order) && receiveLines.length > 0 : false;
+  const canReceive = order ? orderCanReceive(order) : false;
   const zaloUrl = order?.zaloUrl ?? supplierZaloUrl;
 
   const openOrderPdf = async () => {
@@ -185,28 +166,29 @@ export function OrderCard({ orderId }: { orderId: string }) {
     setSubmitError(null);
     setBusy(true);
     try {
+      const lines = receiveLines.map((line) => ({
+        orderLineId: line.orderLineId,
+        product_id: line.product_id,
+        pack_id: line.pack_id,
+        actualQty: receiveActualBaseQty({
+          mode: line.mode,
+          remainingQty: line.remainingQty,
+          actualText: line.actualText,
+        }),
+        discrepancyKind: (line.mode === "other" ? "other" : "none") as DiscrepancyKind,
+        discrepancyNote: null,
+      }));
       const saved = await receiveOrder(order.id, {
         idempotencyKey,
         comment: "",
         photos,
-        lines: receiveLines.map((line) => ({
-          orderLineId: line.orderLineId,
-          product_id: line.product_id,
-          pack_id: line.pack_id,
-          actualQty: receiveActualBaseQty({
-            mode: line.mode,
-            remainingQty: line.remainingQty,
-            actualText: line.actualText,
-          }),
-          discrepancyKind: line.mode === "other" ? "other" : "none",
-          discrepancyNote: null,
-        })),
+        lines,
       });
       setOrder(saved);
       setReceiveLines([]);
       setPhotos([]);
     } catch (err) {
-      setSubmitError(errorMessage(err, t("error_network"), t("error_receive")));
+      setSubmitError(receiveErrorMessage(err, t("error_network"), t("error_receive")));
     } finally {
       setBusy(false);
     }
@@ -217,7 +199,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
   if (!order.id) return <OrdersEmpty title={t("order_not_found")} />;
 
   return (
-    <div>
+    <div className={canReceive ? "orders-orderDetail hasReceive" : "orders-orderDetail"}>
       <Link href="/orders/history" className="orders-back">
         ← {t("orders_section")}
       </Link>
@@ -230,7 +212,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
         openBusy={pdfBusy}
       />
       <OrderHeading as="h2" supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
-      <span className={statusClass(order.status)}>{t(`status_${order.status}`)}</span>
+      <span className={orderStatusClass(order.status)}>{t(`status_${order.status}`)}</span>
       <div className="orders-meta" style={{ marginTop: 8 }}>
         {t("placed_by")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
         {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
@@ -362,7 +344,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
               {formatVietnamDateTime(receipt.createdAt) || "—"} · {personLabel(receipt.createdByName, receipt.createdBy)}
             </div>
             <div style={{ marginTop: 8 }}>
-              <span className={statusClass(receipt.status === "clarify" ? "partial" : receipt.status)}>
+              <span className={orderStatusClass(receipt.status === "clarify" ? "partial" : receipt.status)}>
                 {t(`receipt_${receipt.status === "draft" ? "draft" : receipt.status}`)}
               </span>
             </div>
@@ -397,7 +379,7 @@ export function OrderCard({ orderId }: { orderId: string }) {
       {canReceive ? (
         <div className="orders-stickyActions">
           <div className="orders-actions">
-            <button type="button" className="orders-btn primary block" disabled={busy} onClick={() => void submit()}>
+            <button type="button" className="orders-btn primary block orders-receiveBtn" disabled={busy} onClick={() => void submit()}>
               {busy ? t("submitting") : t("receive_goods")}
             </button>
           </div>

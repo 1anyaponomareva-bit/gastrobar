@@ -161,6 +161,24 @@ export function errorMessage(error: unknown, networkText: string, genericText: s
   return genericText;
 }
 
+function isEngineNoise(text: string): boolean {
+  return /invalid input syntax|22P02|permission denied|column |relation |function |null value|ERP_|order_line_id|warehouse|idempotency/i.test(
+    text,
+  );
+}
+
+/** Kitchen receive: never show a raw Postgres / ERP token. Samsung showed those as the error. */
+export function receiveErrorMessage(error: unknown, networkText: string, genericText: string): string {
+  if (isOrdersNetworkError(error)) return networkText;
+  if (error instanceof OrdersApiError) {
+    if (error.code && /^ERP_/.test(error.code)) return genericText;
+    const detail = error.detail || error.code || "";
+    if (isEngineNoise(detail)) return genericText;
+  }
+  const mapped = errorMessage(error, networkText, genericText);
+  return isEngineNoise(mapped) ? genericText : mapped;
+}
+
 function statusOf(value: unknown): OrderStatus {
   const raw = str(value, "draft");
   if (raw === "ordered" || raw === "partial" || raw === "received" || raw === "closed" || raw === "draft") return raw;
@@ -628,35 +646,62 @@ export async function getOrder(id: string): Promise<SupplierOrder> {
   return orderOf(asRecord(data));
 }
 
+function finiteReceiveQty(value: unknown): number {
+  const n = parseQty(value as string | number | null | undefined);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function receivePayloadJson(input: ReceiveInput): string {
+  const lines = (input.lines ?? []).map((line) => {
+    const actualQty = finiteReceiveQty(line.actualQty);
+    return {
+      orderLineId: String(line.orderLineId ?? "").trim(),
+      order_line_id: String(line.orderLineId ?? "").trim(),
+      product_id: String(line.product_id ?? "").trim(),
+      pack_id: line.pack_id ?? null,
+      actualQty,
+      actual_qty: actualQty,
+      qty: actualQty,
+      discrepancyKind: line.discrepancyKind,
+      discrepancy_kind: line.discrepancyKind,
+      discrepancyNote: line.discrepancyNote,
+      discrepancy_note: line.discrepancyNote,
+    };
+  });
+  const photos = (input.photos ?? []).map((photo) => ({
+    fileName: photo.fileName,
+    mimeType: photo.mimeType,
+    dataUrl: photo.dataUrl,
+    name: photo.fileName,
+    type: photo.mimeType,
+    data: photo.dataUrl,
+  }));
+  const body = {
+    idempotencyKey: input.idempotencyKey,
+    idempotency_key: input.idempotencyKey,
+    comment: input.comment ?? "",
+    photos,
+    lines,
+  };
+  try {
+    const text = JSON.stringify(body);
+    if (text.length > 400_000) return JSON.stringify({ ...body, photos: [] });
+    return text;
+  } catch {
+    return JSON.stringify({
+      idempotencyKey: input.idempotencyKey,
+      idempotency_key: input.idempotencyKey,
+      comment: "",
+      photos: [],
+      lines,
+    });
+  }
+}
+
 export async function receiveOrder(id: string, input: ReceiveInput): Promise<SupplierOrder> {
   const data = await json(`/api/orders/${encodeURIComponent(id)}/receive`, {
     method: "POST",
-    body: JSON.stringify({
-      idempotencyKey: input.idempotencyKey,
-      idempotency_key: input.idempotencyKey,
-      comment: input.comment,
-      photos: input.photos.map((photo) => ({
-        fileName: photo.fileName,
-        mimeType: photo.mimeType,
-        dataUrl: photo.dataUrl,
-        name: photo.fileName,
-        type: photo.mimeType,
-        data: photo.dataUrl,
-      })),
-      lines: input.lines.map((line) => ({
-        orderLineId: line.orderLineId,
-        order_line_id: line.orderLineId,
-        product_id: line.product_id,
-        pack_id: line.pack_id,
-        actualQty: line.actualQty,
-        actual_qty: line.actualQty,
-        qty: line.actualQty,
-        discrepancyKind: line.discrepancyKind,
-        discrepancy_kind: line.discrepancyKind,
-        discrepancyNote: line.discrepancyNote,
-        discrepancy_note: line.discrepancyNote,
-      })),
-    }),
+    body: receivePayloadJson(input),
   });
   return orderOf(asRecord(data));
 }

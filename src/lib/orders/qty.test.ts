@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   displayRemainingQty,
   formatQty,
+  lineOpenReceiveQty,
   openReceiveQty,
   orderCanReceive,
   parseDotQty,
@@ -48,17 +49,31 @@ test("closed underdelivery does not show leftover after post", () => {
   assert.equal(displayRemainingQty(closed), 0);
 });
 
-test("receive other qty accepts a dot and rejects a comma", () => {
+test("receive other qty accepts a dot or a Samsung locale comma", () => {
   assert.equal(sanitizeDotDecimal("1.5"), "1.5");
   assert.equal(sanitizeDotDecimal("1.2.3"), "1.23");
   assert.equal(parseDotQty("1.5"), 1.5);
-  assert.equal(parseDotQty("1,5"), 0);
+  assert.equal(parseDotQty("1,5"), 1.5);
   assert.equal(parseQty("1,5"), 1.5);
   assert.equal(receiveActualBaseQty({ mode: "as_ordered", remainingQty: 40, actualText: "" }), 40);
+  assert.equal(receiveActualBaseQty({ mode: "as_ordered", remainingQty: "1,5", actualText: "" }), 1.5);
+  assert.equal(receiveActualBaseQty({ mode: "as_ordered", remainingQty: undefined, actualText: "" }), 0);
   assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35.5" }), 35.5);
-  assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35,5" }), 0);
+  assert.equal(receiveActualBaseQty({ mode: "other", remainingQty: 40, actualText: "35,5" }), 35.5);
   assert.deepEqual(receiveLineUnits("kg"), ["kg"]);
   assert.deepEqual(receiveLineUnits("l"), ["l"]);
+  assert.deepEqual(receiveLineUnits("1"), []);
+  assert.deepEqual(receiveLineUnits(""), []);
+  assert.deepEqual(receiveLineUnits(undefined), []);
+});
+
+test("receive does not throw when line.unit is 1 / qty is missing / as_ordered", () => {
+  assert.equal(lineOpenReceiveQty({ remainingQty: 1, orderedQty: 1, acceptedQty: 0 }), 1);
+  assert.equal(lineOpenReceiveQty({ remainingQty: "1,0", orderedQty: 1, acceptedQty: 0 }), 1);
+  assert.equal(lineOpenReceiveQty({ remainingQty: undefined, orderedQty: 3, acceptedQty: 0 }), 3);
+  assert.equal(lineOpenReceiveQty({ remainingQty: "", orderedQty: "2", acceptedQty: "0" }), 2);
+  assert.equal(lineOpenReceiveQty({}), 0);
+  assert.equal(receiveActualBaseQty({ mode: "as_ordered", remainingQty: "1", actualText: "" }), 1);
 });
 
 test("Товар получен is one step on the order; leftover kg does not ask again", () => {

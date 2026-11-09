@@ -1,7 +1,7 @@
 import { productDisplayName, type ProductNameLocale } from "../erp/productName";
 import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
-import { formatQty, isPositiveQty, parseQty } from "./qty";
-import type { OrderProduct, OrderProductPack, OrderStatus, OrderWarehouse } from "./types";
+import { formatQty, isPositiveQty, lineOpenReceiveQty, parseQty, receiveLineUnits, type ReceiveMode } from "./qty";
+import type { OrderLineDetail, OrderProduct, OrderProductPack, OrderStatus, OrderWarehouse } from "./types";
 
 export type SelectionRow = { packId: string | null; qty: string };
 
@@ -209,6 +209,98 @@ export function shouldPlaceAfterDialog(phase: PlaceDialogPhase): boolean {
 
 /** Placed supplier orders: after Order, including later receive/close. Not draft/pre-order. */
 export const PLACED_ORDER_STATUSES: readonly OrderStatus[] = ["ordered", "partial", "received", "closed"];
+
+/** Received/closed sit at the bottom of Заказы. Draft/ordered/partial stay on top. */
+export function isHistoryDoneStatus(status: string | null | undefined): boolean {
+  return status === "received" || status === "closed";
+}
+
+/** CSS class for the status pill. Ordered is green, received/closed are gray (see orders.css). */
+export function orderStatusClass(status: string): string {
+  return `orders-status ${status}`;
+}
+
+type HistorySortable = {
+  status: string;
+  receivedAt?: string | null;
+  placedAt?: string | null;
+  createdAt?: string | null;
+  id?: string;
+};
+
+function historyInstantMs(order: HistorySortable): number {
+  const raw = (isHistoryDoneStatus(order.status) ? order.receivedAt : null) || order.placedAt || order.createdAt || "";
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/** Open orders first (newest first), received/closed at the bottom (newest first). */
+export function sortOrdersForHistory<T extends HistorySortable>(orders: T[]): T[] {
+  return [...orders].sort((a, b) => {
+    const done = Number(isHistoryDoneStatus(a.status)) - Number(isHistoryDoneStatus(b.status));
+    if (done) return done;
+    return historyInstantMs(b) - historyInstantMs(a) || String(a.id ?? "").localeCompare(String(b.id ?? ""));
+  });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function asUuid(value: unknown): string {
+  const text = String(value ?? "").trim();
+  return UUID_RE.test(text) ? text : "";
+}
+
+export type ReceiveFormLine = {
+  orderLineId: string;
+  product_id: string;
+  pack_id: string | null;
+  remainingQty: number;
+  baseUnit: string;
+  mode: ReceiveMode;
+  actualText: string;
+  actualUnit: string;
+};
+
+/**
+ * Kitchen receive rows. Must not throw on missing qty, unit `"1"`, or empty lines
+ * (Samsung Internet showed a raw Postgres error on SANNA / Water).
+ */
+export function receiveFormLines(order: { lines?: Array<Partial<OrderLineDetail>> | null }): ReceiveFormLine[] {
+  const lines = Array.isArray(order.lines) ? order.lines : [];
+  const result: ReceiveFormLine[] = [];
+  for (const line of lines) {
+    try {
+      const remaining = lineOpenReceiveQty(line);
+      const ordered = parseQty(line.orderedQty);
+      const qty = remaining > 0 ? remaining : ordered;
+      if (!(qty > 0)) continue;
+      const stockUnit = orderLineBaseUnit({
+        orderedQty: ordered,
+        packQty: line.packQty,
+        packQtyBase: line.packQtyBase,
+        qtyBase: line.qtyBase,
+        packLabel: line.packLabel ?? "",
+        unit: line.unit ?? "",
+        baseUnit: line.baseUnit,
+      });
+      const units = receiveLineUnits(stockUnit);
+      const baseUnit = units[0] || "";
+      result.push({
+        orderLineId: asUuid(line.id) || asUuid(line.product_id),
+        product_id: String(line.product_id ?? ""),
+        pack_id: line.pack_id ?? null,
+        remainingQty: qty,
+        baseUnit,
+        mode: "as_ordered",
+        actualText: "",
+        actualUnit: baseUnit,
+      });
+    } catch {
+      /* skip a bad row rather than crash receive */
+    }
+  }
+  return result;
+}
 
 export function isPlacedOrderStatus(status: string | null | undefined): boolean {
   return status === "ordered" || status === "partial" || status === "received" || status === "closed";
@@ -506,7 +598,11 @@ export function orderLineDisplayUnit(line: OrderLineQtyView, field: OrderLineQty
 }
 
 export function formatOrderLineQty(baseQty: number, line: OrderLineQtyView, field: OrderLineQtyField = "base"): string {
-  return `${formatQty(orderLineDisplayCount(baseQty, line, field))} ${orderLineDisplayUnit(line, field)}`.trim();
+  try {
+    return `${formatQty(orderLineDisplayCount(baseQty, line, field))} ${orderLineDisplayUnit(line, field)}`.trim();
+  } catch {
+    return formatQty(baseQty);
+  }
 }
 
 /** Extra line under ordered packs: `= 40 kg` when one box is not 1 base unit. */

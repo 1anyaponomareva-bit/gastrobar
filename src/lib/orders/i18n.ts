@@ -111,7 +111,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     receive_lead: "Проверьте каждую позицию. Можно принять часть заказа.",
     actual_qty: "Факт",
     receive_unit: "Единица",
-    receive_need_qty: "Если выбрано «Другое», введите количество через точку.",
+    receive_need_qty: "Если выбрано «Другое», введите количество через точку или запятую.",
     discrepancy: "Расхождение",
     discrepancy_none: "Как заказано",
     discrepancy_short: "Недовоз",
@@ -269,7 +269,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     receive_lead: "Check every line. Partial deliveries are allowed.",
     actual_qty: "Actual",
     receive_unit: "Unit",
-    receive_need_qty: "If you choose Other, enter the quantity with a dot.",
+    receive_need_qty: "If you choose Other, enter the quantity with a dot or a comma.",
     discrepancy: "Discrepancy",
     discrepancy_none: "As ordered",
     discrepancy_short: "Short",
@@ -425,7 +425,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     receive_lead: "Kiểm tra từng dòng. Được nhận một phần.",
     actual_qty: "Thực nhận",
     receive_unit: "Đơn vị",
-    receive_need_qty: "Nếu chọn Khác, nhập số lượng với dấu chấm.",
+    receive_need_qty: "Nếu chọn Khác, nhập số lượng với dấu chấm hoặc dấu phẩy.",
     discrepancy: "Chênh lệch",
     discrepancy_none: "Đúng đơn",
     discrepancy_short: "Thiếu",
@@ -513,7 +513,7 @@ export function ordersT(lang: OrdersLang, key: string, vars?: Record<string, str
   let text = TABLE[lang][key] ?? TABLE.en[key] ?? key;
   if (vars) {
     for (const [name, value] of Object.entries(vars)) {
-      text = text.replaceAll(`{${name}}`, String(value));
+      text = text.split(`{${name}}`).join(String(value));
     }
   }
   return text;

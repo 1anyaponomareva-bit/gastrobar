@@ -43,11 +43,10 @@ export function QtyField({ label, value, unit, disabled, dotOnly, onChange }: Pr
             onChange(next);
           }}
           onChange={(event) => {
-            const next = event.target.value;
-            if (dotOnly && next.includes(",")) return;
-            const value = dotOnly ? sanitizeDotDecimal(next) : next;
-            setText(value);
-            onChange(value);
+            const raw = event.target.value;
+            const next = dotOnly ? sanitizeDotDecimal(raw.replace(/,/g, ".")) : raw;
+            setText(next);
+            onChange(next);
           }}
         />
         {unit ? <span className="orders-unit">{unit}</span> : null}

@@ -26,22 +26,39 @@ export function sanitizeDotDecimal(raw: string): string {
   return cleaned.slice(0, first + 1) + cleaned.slice(first + 1).replace(/\./g, "");
 }
 
+/** Dot or comma decimal. Samsung locale keyboards send "1,5". Never throws. */
 export function parseDotQty(value: string | number | null | undefined): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  const text = String(value ?? "");
-  if (text.includes(",")) return 0;
-  const parsed = parseFloat(sanitizeDotDecimal(text));
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseQty(value);
 }
 
-export function receiveActualBaseQty(input: { mode: ReceiveMode; remainingQty: number; actualText: string }): number {
-  if (input.mode === "as_ordered") return Math.max(0, input.remainingQty);
-  return parseDotQty(input.actualText);
+export function receiveActualBaseQty(input: { mode: ReceiveMode; remainingQty: unknown; actualText: unknown }): number {
+  if (input.mode === "as_ordered") return Math.max(0, parseQty(input.remainingQty as string | number | null | undefined));
+  return parseDotQty(input.actualText as string | number | null | undefined);
 }
 
 export function receiveLineUnits(baseUnit: string | null | undefined): string[] {
-  const unit = (baseUnit ?? "").trim();
-  return unit ? [unit] : [];
+  const unit = String(baseUnit ?? "").trim();
+  if (!unit || /^\d+([.,]\d+)?$/.test(unit)) return [];
+  return [unit];
+}
+
+/** Open qty for «Товар получен». Missing / comma / leftover `"1"` must not throw. */
+export function lineOpenReceiveQty(line: {
+  remainingQty?: unknown;
+  orderedQty?: unknown;
+  acceptedQty?: unknown;
+}): number {
+  const remainingRaw = line.remainingQty;
+  if (remainingRaw != null && remainingRaw !== "") {
+    const remaining = parseQty(remainingRaw as string | number | null | undefined);
+    if (Number.isFinite(remaining)) return Math.max(0, remaining);
+  }
+  return Math.max(
+    0,
+    parseQty(line.orderedQty as string | number | null | undefined) -
+      parseQty(line.acceptedQty as string | number | null | undefined),
+  );
 }
 
 /** One «Товар получен» finishes the employee receive. Do not open the form again. */
@@ -62,7 +79,7 @@ export type QtyProgress = {
 };
 
 function finiteQty(value: number | null | undefined): number {
-  const n = Number(value);
+  const n = parseQty(value);
   return Number.isFinite(n) ? n : 0;
 }
 

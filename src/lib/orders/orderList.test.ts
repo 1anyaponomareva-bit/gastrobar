@@ -33,17 +33,21 @@ import {
   ORDER_PDF_TAP_STEPS,
   formatOrderLineBaseHint,
   formatOrderLineQty,
+  isHistoryDoneStatus,
   orderLineBaseUnit,
   orderPackCaption,
   orderPackUnit,
   orderPdfWarehouseFields,
   orderPdfWarehouseOf,
+  orderStatusClass,
   productDetailLine,
+  receiveFormLines,
   reducePlaceDialog,
   reorderSubset,
   selectedFirst,
   shouldPlaceAfterDialog,
   sortCatalogProducts,
+  sortOrdersForHistory,
   supplierBadgeCounts,
   shouldShowOrderZalo,
   supplierPrintPdfInput,
@@ -802,4 +806,80 @@ test("draft save is allowed without gf_orders cookie as the kitchen actor", () =
     );
     assert.equal(result.action, "allow", `${method} drafts must pass the gastrofood host gate`);
   }
+});
+
+test("history list puts received/closed after ordered, newest first in each group", () => {
+  const sorted = sortOrdersForHistory([
+    { id: "old-received", status: "received", receivedAt: "2026-11-01T10:00:00Z", placedAt: "2026-11-01T09:00:00Z" },
+    { id: "new-ordered", status: "ordered", placedAt: "2026-11-09T15:00:00Z" },
+    { id: "old-ordered", status: "ordered", placedAt: "2026-11-08T10:00:00Z" },
+    { id: "new-received", status: "received", receivedAt: "2026-11-09T12:00:00Z", placedAt: "2026-11-07T10:00:00Z" },
+    { id: "closed", status: "closed", receivedAt: "2026-11-08T18:00:00Z", placedAt: "2026-11-08T11:00:00Z" },
+    { id: "draft", status: "draft", createdAt: "2026-11-09T16:00:00Z" },
+    { id: "partial", status: "partial", placedAt: "2026-11-09T08:00:00Z" },
+  ]);
+  assert.deepEqual(
+    sorted.map((row) => row.id),
+    ["draft", "new-ordered", "partial", "old-ordered", "new-received", "closed", "old-received"],
+  );
+  assert.equal(isHistoryDoneStatus("received"), true);
+  assert.equal(isHistoryDoneStatus("closed"), true);
+  assert.equal(isHistoryDoneStatus("ordered"), false);
+  assert.equal(isHistoryDoneStatus("draft"), false);
+});
+
+test("ordered status pill is green; received/closed are gray", () => {
+  assert.equal(orderStatusClass("ordered"), "orders-status ordered");
+  assert.equal(orderStatusClass("received"), "orders-status received");
+  assert.equal(orderStatusClass("closed"), "orders-status closed");
+  assert.equal(orderStatusClass("draft"), "orders-status draft");
+  assert.equal(orderStatusClass("partial"), "orders-status partial");
+});
+
+test("receive form lines survive unit 1, missing qty, and as_ordered leftover", () => {
+  const waterId = "11111111-1111-4111-8111-111111111111";
+  const lineId = "22222222-2222-4222-8222-222222222222";
+  const rows = receiveFormLines({
+    lines: [
+      {
+        id: lineId,
+        product_id: waterId,
+        pack_id: null,
+        nameEn: "Water",
+        nameVn: "",
+        brand: null,
+        packLabel: "1",
+        unit: "1",
+        qty: 1,
+        orderedQty: 1,
+        acceptedQty: 0,
+        postedQty: 0,
+        remainingQty: 1,
+        packQty: 1,
+        packQtyBase: 1,
+        baseUnit: "l",
+      },
+      {
+        product_id: waterId,
+        pack_id: null,
+        nameEn: "Broken",
+        nameVn: "",
+        brand: null,
+        packLabel: "",
+        unit: "1",
+        qty: 0,
+        orderedQty: undefined as unknown as number,
+        acceptedQty: 0,
+        postedQty: 0,
+        remainingQty: undefined as unknown as number,
+      },
+    ],
+  });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].orderLineId, lineId);
+  assert.equal(rows[0].mode, "as_ordered");
+  assert.equal(rows[0].remainingQty, 1);
+  assert.notEqual(rows[0].baseUnit, "1");
+  assert.doesNotThrow(() => receiveFormLines({ lines: null }));
+  assert.deepEqual(receiveFormLines({}), []);
 });

@@ -743,6 +743,51 @@ async function main() {
     assert.equal(got.status, "received");
   });
 
+  await test("receive closes SANNA-like rows without throwing on comma qty or missing line id", async () => {
+    const water = await saveProduct({
+      type: "ingredient",
+      name_en: "Water",
+      name_vn: "Nước",
+      base_unit: "l",
+    });
+    await q(
+      "insert into public.erp_product_packs (product_id, supplier_id, label, qty_base, is_default) values ($1, $2, '1', 1, true)",
+      [water, supplier],
+    );
+    const draft = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({ warehouseId: prep, lines: [{ product_id: water, packQty: 1, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const placed = await j("select public.erp_order_place($1, $2)", [draft.id, ACTOR]);
+    const rec = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
+      placed.id,
+      JSON.stringify({
+        idempotencyKey: "sanna-samsung",
+        lines: [{ product_id: water, qty: "1,0", unit: "1" }],
+      }),
+      ACTOR,
+    ]);
+    assert.equal(rec.status, "received");
+    assert.equal(asArr(rec.receipts).length, 0);
+    assert.equal(await stock(water, prep), 0, "kitchen receive still does not create stock");
+
+    const draft2 = await j("select public.erp_order_save_draft($1, $2::jsonb, $3)", [
+      supplier,
+      JSON.stringify({ warehouseId: prep, lines: [{ product_id: water, packQty: 1, qty: 1 }] }),
+      ACTOR,
+    ]);
+    const placed2 = await j("select public.erp_order_place($1, $2)", [draft2.id, ACTOR]);
+    await q("update public.erp_supplier_orders set warehouse_id = null where id = $1", [placed2.id]);
+    const empty = await j("select public.erp_order_receive($1, $2::jsonb, $3)", [
+      placed2.id,
+      JSON.stringify({ idempotencyKey: "empty-lines", lines: [] }),
+      ACTOR,
+    ]);
+    assert.equal(empty.status, "received", "empty payload still marks the order received");
+    assert.equal(asArr(empty.receipts).length, 0);
+  });
+
   console.log(`\n${passed} passed (PGlite only, no production SQL)`);
 }
 

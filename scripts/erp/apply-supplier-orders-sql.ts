@@ -46,6 +46,7 @@ const FILES = [
   "20261107200000_erp_order_catalog_category_vn.sql",
   "20261107210000_erp_order_line_base_unit.sql",
   "20261107220000_erp_order_receive_once.sql",
+  "20261109120000_erp_order_receive_samsung.sql",
 ];
 
 async function main() {
