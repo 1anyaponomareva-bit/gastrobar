@@ -203,14 +203,6 @@ export function OrderCard({ orderId }: { orderId: string }) {
       <Link href="/orders/history" className="orders-back">
         ← {t("orders_section")}
       </Link>
-      <OrderZaloOpenRow
-        status={order.status}
-        zaloUrl={zaloUrl}
-        zaloLabel={t("open_zalo")}
-        openLabel={pdfBusy ? t("pdf_sharing") : t("open_half")}
-        onOpen={() => void openOrderPdf()}
-        openBusy={pdfBusy}
-      />
       <OrderHeading as="h2" supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
       <span className={orderStatusClass(order.status)}>{t(`status_${order.status}`)}</span>
       <div className="orders-meta" style={{ marginTop: 8 }}>
@@ -229,6 +221,15 @@ export function OrderCard({ orderId }: { orderId: string }) {
       {submitError ? <div className="orders-banner error">{submitError}</div> : null}
       {pdfError ? <div className="orders-banner error">{pdfError}</div> : null}
       {photoError ? <div className="orders-banner error">{photoError}</div> : null}
+
+      <OrderZaloOpenRow
+        status={order.status}
+        zaloUrl={zaloUrl}
+        zaloLabel={t("open_zalo")}
+        openLabel={pdfBusy ? t("pdf_sharing") : t("open_half")}
+        onOpen={() => void openOrderPdf()}
+        openBusy={pdfBusy}
+      />
 
       <div className="orders-category">{t("lines_title")}</div>
       {order.lines.map((line) => {

@@ -27,7 +27,8 @@ import {
   preloadOrderPdfFonts,
   type OrderPdfInput,
 } from "@/lib/orders/orderPdf";
-import { readOrderSelection } from "@/lib/orders/orderSelection";
+import { needsPlaceActorName, resolvePlaceDisplayName } from "@/lib/orders/person";
+import { readOrderSelection, readStoredPlacerName, writeStoredPlacerName } from "@/lib/orders/orderSelection";
 import { formatQty } from "@/lib/orders/qty";
 import type { OrderDraft, OrderProduct, OrderSupplier, OrderWarehouse } from "@/lib/orders/types";
 import { InAppShareNotice } from "./InAppShareNotice";
@@ -81,7 +82,7 @@ export function SupplierOrderList({
   category = ALL_CATEGORY_TAB,
   resetNonce,
 }: Props) {
-  const { t } = useOrders();
+  const { t, publicAccess, email, displayName } = useOrders();
   const router = useRouter();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [warehouseId, setWarehouseId] = useState(defaultWarehouseId ?? "");
@@ -93,6 +94,7 @@ export function SupplierOrderList({
   const [actionError, setActionError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [placePhase, setPlacePhase] = useState<PlaceDialogPhase>("closed");
+  const [placerName, setPlacerName] = useState("");
   const [sharedRevision, setSharedRevision] = useState<number | null>(null);
   const [orderedRevision, setOrderedRevision] = useState<number | null>(null);
   const [placedId, setPlacedId] = useState<string | null>(null);
@@ -107,6 +109,16 @@ export function SupplierOrderList({
   const preparedFinalPdf = useRef<PreparedPdf | null>(null);
   const pdfInFlight = useRef(false);
   const placeInFlight = useRef(false);
+
+  const askName = needsPlaceActorName({ public: publicAccess, email, name: displayName });
+
+  useEffect(() => {
+    if (displayName) {
+      setPlacerName(displayName);
+      return;
+    }
+    setPlacerName(readStoredPlacerName());
+  }, [displayName]);
 
   const persist = useCallback(
     async (nextSelection?: SelectionMap) => {
@@ -318,6 +330,11 @@ export function SupplierOrderList({
     if (placeInFlight.current) return;
     const nextPhase = reducePlaceDialog(placePhase, "submit");
     if (!shouldPlaceAfterDialog(nextPhase)) return;
+    const actorName = resolvePlaceDisplayName({ sessionName: displayName, enteredName: placerName });
+    if (askName && !actorName) {
+      setDialogError(t("placer_name_required"));
+      return;
+    }
     if (!warehouseId) {
       setDialogError(t("warehouse_required"));
       return;
@@ -366,7 +383,12 @@ export function SupplierOrderList({
         setDialogError(t("place_need_draft"));
         return;
       }
-      const placed = await placeOrder(saved.id, { comment: saved.comment, expectedDelivery: saved.expectedDelivery });
+      if (actorName) writeStoredPlacerName(actorName);
+      const placed = await placeOrder(saved.id, {
+        comment: saved.comment,
+        expectedDelivery: saved.expectedDelivery,
+        name: actorName,
+      });
       if (sharePromise) await sharePromise;
       onSelectionRef.current(clearSupplierSelection(selectionRef.current, products.map((product) => product.id)));
       setPlacedId(placed.id);
@@ -374,7 +396,8 @@ export function SupplierOrderList({
       router.push(`/orders/${placed.id}`);
     } catch (err) {
       setPlacePhase("open");
-      setDialogError(errorMessage(err, t("error_network"), t("error_place")));
+      const message = errorMessage(err, t("error_network"), t("error_place"));
+      setDialogError(message === "name" ? t("placer_name_required") : message);
     } finally {
       placeInFlight.current = false;
       setPlaceBusy(false);
@@ -467,11 +490,14 @@ export function SupplierOrderList({
         warehouseId={warehouseId}
         expectedDelivery={expectedDelivery}
         comment={comment}
+        askName={askName}
+        placerName={placerName}
         busy={placeBusy}
         error={dialogError}
         onWarehouse={setWarehouseId}
         onExpectedDelivery={setExpectedDelivery}
         onComment={setComment}
+        onPlacerName={setPlacerName}
         onCancel={() => setPlacePhase(reducePlaceDialog(placePhase, "cancel"))}
         onSubmit={() => void submitPlace()}
       />

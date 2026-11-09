@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMessage, getSuppliers, listOrders } from "@/lib/orders/api";
-import { formatVietnamDate, orderStatusInstant } from "@/lib/orders/datetime";
+import { formatVietnamDateTime } from "@/lib/orders/datetime";
 import { orderStatusClass, sortOrdersForHistory } from "@/lib/orders/orderList";
+import { personLabel } from "@/lib/orders/person";
 import type { OrderStatus, OrderSupplier, SupplierOrder } from "@/lib/orders/types";
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { OrderHeading } from "./OrderHeading";
@@ -54,7 +55,7 @@ export function OrderHistoryList() {
       if (supplierId && order.supplierId !== supplierId) return false;
       if (status && order.status !== status) return false;
       if (!q) return true;
-      return `${order.docNo} ${order.supplierName} ${order.comment ?? ""}`.toLowerCase().includes(q);
+      return `${order.docNo} ${order.supplierName} ${order.comment ?? ""} ${order.placedByName ?? ""}`.toLowerCase().includes(q);
     });
     return sortOrdersForHistory(filtered);
   }, [orders, query, status, supplierId]);
@@ -99,6 +100,18 @@ export function OrderHistoryList() {
         const zaloUrl = order.zaloUrl ?? suppliers.find((row) => row.id === order.supplierId)?.zaloUrl ?? null;
         return (
           <div key={order.id} className="orders-card">
+            <Link href={`/orders/${order.id}`} className="orders-supplierBtn">
+              <div>
+                <OrderHeading supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
+                <div className="orders-meta" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span className={orderStatusClass(order.status)}>{t(`status_${order.status}`)}</span>
+                </div>
+                <div className="orders-meta" style={{ marginTop: 8 }}>
+                  {t("placed_by")} {personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy)} ·{" "}
+                  {formatVietnamDateTime(order.placedAt ?? order.createdAt) || "—"}
+                </div>
+              </div>
+            </Link>
             <OrderZaloOpenRow
               status={order.status}
               zaloUrl={zaloUrl}
@@ -106,15 +119,6 @@ export function OrderHistoryList() {
               openLabel={t("open_half")}
               openHref={`/orders/${order.id}`}
             />
-            <Link href={`/orders/${order.id}`} className="orders-supplierBtn">
-              <div>
-                <OrderHeading supplierName={order.supplierName} docNo={order.docNo || order.id} warehouseName={order.warehouseName} />
-                <div className="orders-meta" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span className={orderStatusClass(order.status)}>{t(`status_${order.status}`)}</span>
-                  <span>{formatVietnamDate(orderStatusInstant(order)) || "—"}</span>
-                </div>
-              </div>
-            </Link>
           </div>
         );
       })}

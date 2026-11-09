@@ -23,8 +23,8 @@ import {
   type OrderPdfInput,
 } from "@/lib/orders/orderPdf";
 import { orderPackUnit } from "@/lib/orders/orderList";
-import { resolvePublicOrdersActor, type OrdersAccess } from "@/lib/orders/access";
-import { normalizePersonName } from "@/lib/orders/person";
+import { isKitchenPublicActor, resolvePublicOrdersActor, type OrdersAccess } from "@/lib/orders/access";
+import { isValidPersonName, normalizePersonName } from "@/lib/orders/person";
 
 if (typeof window !== "undefined") throw new Error("erp/supplierOrders is server-only");
 
@@ -202,7 +202,7 @@ export async function listOrderSuppliers() {
 
 export async function rememberOrderUser(email: string, displayName?: string | null) {
   const value = email.trim().toLowerCase();
-  if (!value.includes("@") || erpLocalMode()) return;
+  if (!value.includes("@") || erpLocalMode() || isKitchenPublicActor(value)) return;
   try {
     const row: Record<string, unknown> = { email: value, active: true };
     const name = normalizePersonName(displayName);
@@ -211,6 +211,13 @@ export async function rememberOrderUser(email: string, displayName?: string | nu
   } catch (error) {
     console.error("[orders] remember user", error);
   }
+}
+
+export async function actorDisplayName(email: string): Promise<string | null> {
+  const value = email.trim().toLowerCase();
+  if (!value.includes("@") || isKitchenPublicActor(value)) return null;
+  const names = await lookupDisplayNames([value]);
+  return names.get(value) ?? null;
 }
 
 const ACTOR_EMAIL_KEYS = new Set([
@@ -235,7 +242,8 @@ function collectActorEmails(value: unknown, into: Set<string>) {
   const rec = value as Record<string, unknown>;
   for (const [key, item] of Object.entries(rec)) {
     if (ACTOR_EMAIL_KEYS.has(key) && typeof item === "string" && item.includes("@")) {
-      into.add(item.trim().toLowerCase());
+      const email = item.trim().toLowerCase();
+      if (!isKitchenPublicActor(email)) into.add(email);
     } else if (item && typeof item === "object") {
       collectActorEmails(item, into);
     }
@@ -282,8 +290,11 @@ function applyDisplayNames(value: unknown, names: Map<string, string>): unknown 
     next[key] = item && typeof item === "object" ? applyDisplayNames(item, names) : item;
   }
   const setName = (emailKey: string, nameKey: string) => {
+    const existing = normalizePersonName(typeof next[nameKey] === "string" ? next[nameKey] : "");
+    if (existing) return;
     const email = typeof rec[emailKey] === "string" ? rec[emailKey].trim().toLowerCase() : "";
-    if (email && names.has(email)) next[nameKey] = names.get(email);
+    if (!email || isKitchenPublicActor(email) || !names.has(email)) return;
+    next[nameKey] = names.get(email);
   };
   setName("placedBy", "placedByName");
   setName("placed_by", "placedByName");
@@ -501,8 +512,34 @@ export async function getOrderPdfSnapshot(id: string, actor: string, admin: bool
   return asOrderPdfInput(await orderRpc<unknown>("erp_order_pdf_input", { p_id: uuid(id) }));
 }
 
-export async function placeOrder(id: string, actor: string) {
-  return withOrderPayload(await orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor }));
+async function stampPlacedByName(id: string, name: string) {
+  if (erpLocalMode()) return;
+  try {
+    check(await erpDb().from("erp_supplier_orders").update({ placed_by_name: name }).eq("id", uuid(id)));
+  } catch (error) {
+    console.error("[orders] placed_by_name", error);
+  }
+}
+
+export async function placeOrder(id: string, actor: string, displayName?: string | null) {
+  const email = actor.trim().toLowerCase();
+  let name = isValidPersonName(displayName) ? normalizePersonName(displayName) : "";
+  if (!name && !isKitchenPublicActor(email)) {
+    name = (await lookupDisplayNames([email])).get(email) ?? "";
+    if (!isValidPersonName(name)) name = "";
+  }
+  if (isKitchenPublicActor(email) && !name) {
+    throw new ErpHttpError(400, "ERP_INVALID", "name");
+  }
+  const placed = await orderRpc<unknown>("erp_order_place", { p_id: uuid(id), p_actor: actor });
+  if (name) {
+    await stampPlacedByName(id, name);
+    if (!isKitchenPublicActor(email)) await rememberOrderUser(email, name);
+    if (placed && typeof placed === "object" && !Array.isArray(placed)) {
+      (placed as Record<string, unknown>).placedByName = name;
+    }
+  }
+  return withOrderPayload(placed);
 }
 
 export async function listOrders(actor: string, admin: boolean, status?: string | null) {

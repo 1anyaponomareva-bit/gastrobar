@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolvePublicOrdersActor, KITCHEN_ORDERS_ACTOR } from "./access";
+import { needsPlaceActorName, personLabel, resolvePlaceDisplayName } from "./person";
 import { decideErpHostGate, productionErpHostEnv, readErpHostGateConfig } from "../erp/hostGate";
 import {
   formatOrderPdfPackLabel,
@@ -786,6 +787,27 @@ test("orders list is public; admin cookie is the only catalog editor", () => {
   });
   assert.equal(resolvePublicOrdersActor(null, "cook@gastrofood").erpAdmin, false);
   assert.equal(resolvePublicOrdersActor(null, "cook@gastrofood").public, false);
+});
+
+test("public place-order without a name is blocked; named users keep their name", () => {
+  assert.equal(needsPlaceActorName({ public: true, email: KITCHEN_ORDERS_ACTOR, name: null }), true);
+  assert.equal(resolvePlaceDisplayName({ sessionName: null, enteredName: "" }), null);
+  assert.equal(resolvePlaceDisplayName({ sessionName: null, enteredName: "kitchen" }), null);
+  assert.equal(resolvePlaceDisplayName({ sessionName: null, enteredName: "Анна" }), "Анна");
+  assert.equal(needsPlaceActorName({ public: false, email: "anna@gastrofood", name: "Анна" }), false);
+  assert.equal(personLabel("Анна", KITCHEN_ORDERS_ACTOR), "Анна");
+  assert.equal(personLabel(null, KITCHEN_ORDERS_ACTOR), "—");
+});
+
+test("collapsed history card shows placer name, not kitchen local-part", () => {
+  const order = {
+    placedByName: "Анна",
+    placedBy: KITCHEN_ORDERS_ACTOR,
+    createdByName: null,
+    createdBy: KITCHEN_ORDERS_ACTOR,
+  };
+  assert.equal(personLabel(order.placedByName, order.placedBy, order.createdByName, order.createdBy), "Анна");
+  assert.equal(personLabel(null, KITCHEN_ORDERS_ACTOR, null, KITCHEN_ORDERS_ACTOR), "—");
 });
 
 test("draft save is allowed without gf_orders cookie as the kitchen actor", () => {

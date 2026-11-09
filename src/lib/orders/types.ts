@@ -216,6 +216,7 @@ export type SessionInfo = {
   email: string;
   erpAdmin: boolean;
   public: boolean;
+  name: string | null;
 };
 
 export type SuppliersPayload = {

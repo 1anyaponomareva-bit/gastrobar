@@ -12,6 +12,7 @@ type OrdersContextValue = {
   email: string;
   erpAdmin: boolean;
   publicAccess: boolean;
+  displayName: string | null;
   lang: OrdersLang;
   t: (key: string, vars?: Record<string, string | number>) => string;
   setLang: (lang: OrdersLang) => void;
@@ -37,6 +38,7 @@ export function OrdersShell({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState("");
   const [erpAdmin, setErpAdmin] = useState(false);
   const [publicAccess, setPublicAccess] = useState(true);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   const t = useCallback((key: string, vars?: Record<string, string | number>) => ordersT(lang, key, vars), [lang]);
@@ -55,9 +57,11 @@ export function OrdersShell({ children }: { children: ReactNode }) {
         setEmail(session.email);
         setErpAdmin(session.erpAdmin);
         setPublicAccess(session.public);
+        setDisplayName(session.name);
       })
       .catch(() => {
         setPublicAccess(true);
+        setDisplayName(null);
       })
       .finally(() => setReady(true));
   }, []);
@@ -72,11 +76,12 @@ export function OrdersShell({ children }: { children: ReactNode }) {
       email,
       erpAdmin,
       publicAccess,
+      displayName,
       lang,
       t,
       setLang,
     }),
-    [email, erpAdmin, lang, publicAccess, t],
+    [displayName, email, erpAdmin, lang, publicAccess, t],
   );
 
   const tab = isOrdersTab(pathname);

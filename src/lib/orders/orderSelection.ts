@@ -2,6 +2,7 @@ import type { SelectionMap, SelectionRow } from "./orderList";
 
 const STORAGE_KEY = "gf_orders_selection";
 const TAB_KEY = "gf_orders_supplier_tab";
+const PLACER_KEY = "gf_orders_placer_name";
 
 function canUseStorage(): boolean {
   return typeof window !== "undefined";
@@ -59,6 +60,26 @@ export function writeOrderSupplierTab(tab: string): void {
   if (!canUseStorage()) return;
   try {
     window.localStorage.setItem(TAB_KEY, tab);
+  } catch {
+    /* private mode or full */
+  }
+}
+
+export function readStoredPlacerName(): string {
+  if (!canUseStorage()) return "";
+  try {
+    return window.localStorage.getItem(PLACER_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function writeStoredPlacerName(name: string): void {
+  if (!canUseStorage()) return;
+  try {
+    const value = name.trim();
+    if (value) window.localStorage.setItem(PLACER_KEY, value);
+    else window.localStorage.removeItem(PLACER_KEY);
   } catch {
     /* private mode or full */
   }

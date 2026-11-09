@@ -435,13 +435,14 @@ export async function getSession(): Promise<SessionInfo> {
       email,
       erpAdmin: Boolean(pick(data, "erpAdmin", "erp_admin")),
       public: pick(data, "public") === undefined ? !pick(data, "erpAdmin", "erp_admin") : Boolean(pick(data, "public")),
+      name: optStr(pick(data, "name", "displayName", "display_name")),
     };
   } catch (error) {
     if (isApiMissing(error)) {
-      return { email: "kitchen@gastrofood", erpAdmin: false, public: true };
+      return { email: "kitchen@gastrofood", erpAdmin: false, public: true, name: null };
     }
     if (isAuthError(error)) {
-      return { email: "kitchen@gastrofood", erpAdmin: false, public: true };
+      return { email: "kitchen@gastrofood", erpAdmin: false, public: true, name: null };
     }
     throw error;
   }
@@ -455,12 +456,22 @@ export async function login(email: string, password: string, invite?: string, na
         body: JSON.stringify({ email, password, invite: invite?.trim() || undefined, name }),
       }),
     );
-    return { email: str(data.email, email), erpAdmin: Boolean(data.erpAdmin), public: false };
+    return {
+      email: str(data.email, email),
+      erpAdmin: Boolean(data.erpAdmin),
+      public: false,
+      name: optStr(pick(data, "name", "displayName", "display_name")),
+    };
   } catch (error) {
     if (isApiMissing(error)) {
       try {
         const data = asRecord(await json("/api/recipes-admin/login", { method: "POST", body: JSON.stringify({ email, password }) }));
-        return { email: str(data.email, email), erpAdmin: true, public: false };
+        return {
+          email: str(data.email, email),
+          erpAdmin: true,
+          public: false,
+          name: optStr(pick(data, "name", "displayName", "display_name")),
+        };
       } catch (inner) {
         if (isApiMissing(inner)) throw new OrdersApiError(404, "login_api_missing");
         throw inner;
@@ -624,13 +635,18 @@ export async function buildDraftPdf(orderId: string, fallback?: OrderPdfInput): 
   throw new OrdersApiError(422, "pdf", "PDF_MODULE_UNAVAILABLE");
 }
 
-export async function placeOrder(id: string, extra?: { comment?: string | null; expectedDelivery?: string | null }): Promise<SupplierOrder> {
+export async function placeOrder(
+  id: string,
+  extra?: { comment?: string | null; expectedDelivery?: string | null; name?: string | null },
+): Promise<SupplierOrder> {
   const data = await json(`/api/orders/${encodeURIComponent(id)}/place`, {
     method: "POST",
     body: JSON.stringify({
       comment: extra?.comment ?? null,
       expectedDelivery: extra?.expectedDelivery ?? null,
       expected_delivery: extra?.expectedDelivery ?? null,
+      name: extra?.name ?? null,
+      placedByName: extra?.name ?? null,
     }),
   });
   return orderOf(asRecord(data));

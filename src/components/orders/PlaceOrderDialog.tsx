@@ -9,11 +9,14 @@ type Props = {
   warehouseId: string;
   expectedDelivery: string;
   comment: string;
+  askName?: boolean;
+  placerName?: string;
   busy: boolean;
   error: string | null;
   onWarehouse: (value: string) => void;
   onExpectedDelivery: (value: string) => void;
   onComment: (value: string) => void;
+  onPlacerName?: (value: string) => void;
   onCancel: () => void;
   onSubmit: () => void;
 };
@@ -24,11 +27,14 @@ export function PlaceOrderDialog({
   warehouseId,
   expectedDelivery,
   comment,
+  askName = false,
+  placerName = "",
   busy,
   error,
   onWarehouse,
   onExpectedDelivery,
   onComment,
+  onPlacerName,
   onCancel,
   onSubmit,
 }: Props) {
@@ -41,6 +47,25 @@ export function PlaceOrderDialog({
         {error ? (
           <div className="orders-banner error" role="alert">
             {error}
+          </div>
+        ) : null}
+        {askName ? (
+          <div className="orders-field" style={{ marginBottom: 10 }}>
+            <label htmlFor="orders-placer-name">{t("placer_name")}</label>
+            <input
+              id="orders-placer-name"
+              className="orders-input"
+              type="text"
+              autoComplete="name"
+              value={placerName}
+              required
+              minLength={2}
+              maxLength={80}
+              onChange={(event) => onPlacerName?.(event.target.value)}
+            />
+            <p className="orders-note" style={{ marginTop: 6 }}>
+              {t("placer_name_help")}
+            </p>
           </div>
         ) : null}
         <div className="orders-field" style={{ marginBottom: 10 }}>
