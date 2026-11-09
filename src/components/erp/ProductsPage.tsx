@@ -519,6 +519,7 @@ function ProductEditor({
                 <th>{T("Поставщик", "Supplier", "Nhà cung cấp")}</th>
                 <th>{productCodeFieldLabel()}</th>
                 {packs.length > 1 ? <th>{T("В заказе по умолчанию", "Default on order", "Mặc định trên đơn")}</th> : null}
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -587,6 +588,35 @@ function ProductEditor({
                         />
                       </td>
                     ) : null}
+                    <td className="erpPackRowDel" data-label={T("Удалить", "Delete", "Xóa")}>
+                      <button
+                        type="button"
+                        className="erpBtn erpPackDelete"
+                        onClick={() => {
+                          const label = pack.label.trim() || T("эту фасовку", "this pack", "quy cách này");
+                          if (
+                            pack.id &&
+                            !window.confirm(
+                              T(
+                                `Удалить фасовку «${label}»? После сохранения она исчезнет из заказов. Старые поставки сохранятся.`,
+                                `Delete pack “${label}”? After you save, it leaves new orders. Old deliveries keep it.`,
+                                `Xóa quy cách “${label}”? Sau khi lưu sẽ không còn trên đơn mới. Phiếu cũ giữ nguyên.`,
+                              ),
+                            )
+                          )
+                            return;
+                          setPacks((prev) => {
+                            const next = prev.filter((_, i) => i !== index);
+                            if (next.length && !next.some((row) => row.is_default)) {
+                              return next.map((row, i) => ({ ...row, is_default: i === 0 }));
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        {T("Удалить", "Delete", "Xóa")}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

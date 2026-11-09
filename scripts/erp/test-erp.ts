@@ -3311,6 +3311,57 @@ async function main() {
     assert.equal(byLabel["Pack-code kg"] ?? null, null);
   });
 
+  await test("a wrong product pack can be dropped on the next save", async () => {
+    const box = await savePack({ name: "Keep box", unit: "kg", qty_base: 5 });
+    const wrong = await savePack({ name: "Wrong box", unit: "kg", qty_base: 1 });
+    const id = await saveProduct({
+      type: "ingredient",
+      name_en: "Drop pack item",
+      base_unit: "kg",
+      packs: [
+        { pack_id: box, label: "Keep box", qty_base: 5, is_default: true },
+        { pack_id: wrong, label: "Wrong box", qty_base: 1, is_default: false },
+      ],
+    });
+    const before = await q<{ id: string; label: string }>(
+      "select id, label from public.erp_product_packs where product_id = $1 and archived_at is null order by label",
+      [id],
+    );
+    assert.equal(before.length, 2);
+    const keep = before.find((row) => row.label === "Keep box")!;
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Drop pack item",
+      base_unit: "kg",
+      packs: [{ id: keep.id, pack_id: box, label: "Keep box", qty_base: 5, is_default: true }],
+    });
+    const after = await q<{ label: string; archived: boolean }>(
+      "select label, (archived_at is not null) archived from public.erp_product_packs where product_id = $1 order by label",
+      [id],
+    );
+    assert.deepEqual(
+      after,
+      [
+        { label: "Keep box", archived: false },
+        { label: "Wrong box", archived: true },
+      ],
+      "omitted pack is archived, the remaining one stays",
+    );
+    await saveProduct({
+      id,
+      type: "ingredient",
+      name_en: "Drop pack item",
+      base_unit: "kg",
+      packs: [],
+    });
+    assert.equal(
+      n(await value("select count(*) from public.erp_product_packs where product_id = $1 and archived_at is null", [id])),
+      0,
+      "every pack on the card can be removed",
+    );
+  });
+
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {
     const cash: FinanceAccount = {
       id: "cash",

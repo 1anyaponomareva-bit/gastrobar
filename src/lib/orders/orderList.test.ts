@@ -498,6 +498,10 @@ test("pre-order PDF omits warehouse/address; final PDF has one labeled warehouse
     false,
   );
   assert.equal(orderPdfRecipientValue("Warehouse / Kho"), "GASTROFOOD Warehouse / Kho");
+  assert.equal(orderPdfRecipientValue("Gastrofood"), "GASTROFOOD");
+  assert.equal(orderPdfRecipientValue("GASTROFOOD"), "GASTROFOOD");
+  assert.equal(orderPdfRecipientValue("GASTROFOOD Warehouse / Kho"), "GASTROFOOD Warehouse / Kho");
+  assert.equal(orderPdfRecipientValue("gastrofood Prep Kitchen / Bếp sơ chế"), "GASTROFOOD Prep Kitchen / Bếp sơ chế");
   assert.equal(finalMeta.filter((line) => line.startsWith("Recipient / Người nhận:")).length, 1);
   assert.equal(finalMeta.filter((line) => line.startsWith("Warehouse / Kho:")).length, 0);
   assert.equal(finalMeta.filter((line) => line.startsWith("Delivery address / Địa chỉ giao hàng:")).length, 1);

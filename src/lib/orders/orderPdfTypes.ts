@@ -188,7 +188,9 @@ export function orderPdfContactOf(
 export function orderPdfRecipientValue(warehouseName: string): string {
   const name = String(warehouseName ?? "").replace(/\s+/g, " ").trim();
   if (!name) return "";
-  return `${ORDER_PDF_COMPANY_NAME} ${name}`;
+  const rest = name.replace(new RegExp(`^${ORDER_PDF_COMPANY_NAME}\\s+`, "i"), "").trim();
+  if (!rest || rest.toLowerCase() === ORDER_PDF_COMPANY_NAME.toLowerCase()) return ORDER_PDF_COMPANY_NAME;
+  return `${ORDER_PDF_COMPANY_NAME} ${rest}`;
 }
 
 export function orderPdfHeaderMeta(input: OrderPdfInput): string[] {

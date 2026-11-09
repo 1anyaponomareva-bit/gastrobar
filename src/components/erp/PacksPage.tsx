@@ -298,31 +298,9 @@ export function PacksPage() {
                     <NavLink href={`/erp/stock/packs/${pack.id}`} className="erpRcLink" aria-label={T("Открыть", "Open", "Mở")}>
                       <Arrow />
                     </NavLink>
-                    <DropMenu
-                      align="right"
-                      fixed
-                      trigger={({ open, toggle }) => (
-                        <button type="button" className="erpRcDots" aria-label={T("Действия", "Actions", "Thao tác")} aria-expanded={open} onClick={toggle}>
-                          ⋮
-                        </button>
-                      )}
-                    >
-                      {(close) => (
-                        <div className="erpDropList">
-                          <button
-                            type="button"
-                            className="erpDropAction erpDanger"
-                            disabled={busy}
-                            onClick={() => {
-                              close();
-                              void remove(pack);
-                            }}
-                          >
-                            {T("Удалить", "Delete", "Xóa")}
-                          </button>
-                        </div>
-                      )}
-                    </DropMenu>
+                    <button type="button" className="erpBtn erpPackDelete" disabled={busy} onClick={() => void remove(pack)}>
+                      {T("Удалить", "Delete", "Xóa")}
+                    </button>
                   </td>
                 </tr>
               ))

@@ -2823,9 +2823,33 @@ button.erpBack {
 }
 
 .erpPackTable .erpPackActs {
-  width: 88px;
+  width: auto;
   text-align: right;
   white-space: nowrap;
+}
+
+.erpPackDelete {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+}
+
+.erpPackRowDel {
+  width: 1%;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .erpTable.stack td.erpPackRowDel,
+  .erpTable.stack td.erpPackActs {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .erpTable.stack td.erpPackRowDel .erpPackDelete,
+  .erpTable.stack td.erpPackActs .erpPackDelete {
+    width: auto;
+  }
 }
 
 .erpPackTable .erpPackActs .erpDrop {
