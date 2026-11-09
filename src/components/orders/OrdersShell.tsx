@@ -134,7 +134,7 @@ export function OrdersShell({ children }: { children: ReactNode }) {
                 {t("orders_section")}
               </Link>
             </nav>
-            {children}
+            <div className="orders-stage">{children}</div>
           </div>
         </div>
       </div>

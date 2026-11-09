@@ -6,10 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { beginShareThenPersist, deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { errorMessage, freezeDraftPdf, getDraft, placeOrder, saveDraft } from "@/lib/orders/api";
 import {
-  catalogCategories,
+  ALL_CATEGORY_TAB,
   clearSupplierSelection,
   defaultPackId,
-  groupProductsByCategory,
+  filterByCategory,
   isProductMarked,
   orderPdfWarehouseFields,
   orderPdfWarehouseOf,
@@ -46,6 +46,7 @@ type Props = {
   selection: SelectionMap;
   onSelection: (next: SelectionMap) => void;
   search: string;
+  category?: string;
   resetNonce: number;
 };
 
@@ -76,9 +77,10 @@ export function SupplierOrderList({
   selection,
   onSelection,
   search,
+  category = ALL_CATEGORY_TAB,
   resetNonce,
 }: Props) {
-  const { t, lang } = useOrders();
+  const { t } = useOrders();
   const router = useRouter();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [warehouseId, setWarehouseId] = useState(defaultWarehouseId ?? "");
@@ -247,11 +249,7 @@ export function SupplierOrderList({
     [search, supplier.name],
   );
 
-  const visible = products.filter(matchesSearch);
-  const groups = groupProductsByCategory(visible, catalogCategories(products, lang), {
-    locale: lang,
-    uncategorizedName: t("category_none"),
-  });
+  const visible = filterByCategory(products.filter(matchesSearch), category);
 
   const setQty = (product: OrderProduct, qty: string) => {
     const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
@@ -416,22 +414,17 @@ export function SupplierOrderList({
       ) : null}
 
       {visible.length ? (
-        groups.map((group) => (
-          <div key={group.id || "uncategorized"}>
-            {group.name ? <div className="orders-category">{group.name}</div> : null}
-            {group.products.map((product) => (
-              <OrderProductCard
-                key={product.id}
-                product={product}
-                row={selection[product.id]}
-                showSupplier={false}
-                qtyLabel={t("qty_label")}
-                packLabel={t("pack_label")}
-                onQty={(qty) => setQty(product, qty)}
-                onPack={(packId) => setPack(product, packId)}
-              />
-            ))}
-          </div>
+        visible.map((product) => (
+          <OrderProductCard
+            key={product.id}
+            product={product}
+            row={selection[product.id]}
+            showSupplier={false}
+            qtyLabel={t("qty_label")}
+            packLabel={t("pack_label")}
+            onQty={(qty) => setQty(product, qty)}
+            onPack={(packId) => setPack(product, packId)}
+          />
         ))
       ) : products.length ? (
         <OrdersEmpty title={t("empty_search")} />

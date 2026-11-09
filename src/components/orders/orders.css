@@ -18,6 +18,10 @@
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
   min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--orders-bg);
   color: var(--orders-text);
   font-family: var(--font-staff, var(--font-montserrat), system-ui, sans-serif);
@@ -38,13 +42,18 @@
 
 .orders-shell {
   max-width: 760px;
+  width: 100%;
   margin: 0 auto;
-  min-height: 100dvh;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .orders-top {
-  position: sticky;
-  top: 0;
+  position: relative;
+  flex-shrink: 0;
   z-index: 20;
   background: #1d1d1b;
   color: #fff;
@@ -104,7 +113,12 @@
 }
 
 .orders-main {
-  padding: 12px max(12px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px))
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px max(12px, env(safe-area-inset-right, 0px)) 0
     max(12px, env(safe-area-inset-left, 0px));
 }
 
@@ -116,6 +130,43 @@
   margin-bottom: 12px;
   background: #e6e2da;
   border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.orders-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.orders-stage > * {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+.orders-stage > .orders-catalog,
+.orders-catalog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.orders-catalogChrome {
+  flex-shrink: 0;
+  background: var(--orders-bg);
+}
+
+.orders-catalogBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
 }
 
 .orders-tabs a,
@@ -145,6 +196,8 @@
   padding: 0 0 5px;
   margin-bottom: 6px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .orders-supplierTabs::-webkit-scrollbar {
@@ -195,8 +248,15 @@
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 10px 0 5px;
+  overflow-y: hidden;
+  padding: 4px 0 8px;
+  margin: 0 -4px;
+  padding-left: 4px;
+  padding-right: 4px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
 }
 
 .orders-categoryTabs::-webkit-scrollbar {
@@ -204,9 +264,16 @@
 }
 
 .orders-categoryTabs .orders-chip {
-  padding: 7px 11px;
-  font-size: 12px;
-  min-height: 34px;
+  padding: 10px 16px;
+  font-size: 14px;
+  min-height: 40px;
+  flex-shrink: 0;
+}
+
+.orders-categoryTabs .orders-chip.active {
+  background: #111;
+  color: var(--orders-gold);
+  border-color: #111;
 }
 
 .orders-card {

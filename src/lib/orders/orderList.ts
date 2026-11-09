@@ -34,6 +34,8 @@ export function catalogItemName(
 }
 
 export const ALL_SUPPLIER_TAB = "all";
+export const ALL_CATEGORY_TAB = ALL_SUPPLIER_TAB;
+export const UNCATEGORIZED_CATEGORY_TAB = "uncategorized";
 
 export type CatalogCategory = { id: string; name: string };
 
@@ -90,7 +92,8 @@ export function filterBySupplierTab<T extends { supplierId: string | null }>(pro
 }
 
 export function filterByCategory<T extends { categoryId: string | null }>(products: T[], categoryId: string): T[] {
-  if (!categoryId || categoryId === ALL_SUPPLIER_TAB) return products;
+  if (!categoryId || categoryId === ALL_CATEGORY_TAB) return products;
+  if (categoryId === UNCATEGORIZED_CATEGORY_TAB) return products.filter((product) => !product.categoryId);
   return products.filter((product) => product.categoryId === categoryId);
 }
 
@@ -113,6 +116,21 @@ export function catalogCategories(
     });
   }
   return [...seen.values()].sort((a, b) => compareCatalogNames(a.name, b.name, locale) || a.id.localeCompare(b.id));
+}
+
+export type CategoryChipLabels = { all: string; uncategorized: string };
+
+/** Chip bar: All, named categories A–Z, Uncategorized last when any item has no category. */
+export function catalogCategoryChips(
+  products: Array<{ categoryId: string | null; categoryName: string | null; categoryNameVn?: string | null }>,
+  locale: ProductNameLocale = "ru",
+  labels: CategoryChipLabels,
+): CatalogCategory[] {
+  const chips: CatalogCategory[] = [{ id: ALL_CATEGORY_TAB, name: labels.all }, ...catalogCategories(products, locale)];
+  if (products.some((product) => !product.categoryId)) {
+    chips.push({ id: UNCATEGORIZED_CATEGORY_TAB, name: labels.uncategorized });
+  }
+  return chips;
 }
 
 export type GroupProductsOptions = {

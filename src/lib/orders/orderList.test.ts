@@ -21,8 +21,11 @@ import {
   orderPdfTitle,
 } from "./orderPdfTypes";
 import {
+  ALL_CATEGORY_TAB,
   ALL_SUPPLIER_TAB,
   catalogCategories,
+  catalogCategoryChips,
+  filterByCategory,
   filterBySupplierTab,
   groupProductsByCategory,
   isMarkedQty,
@@ -43,6 +46,7 @@ import {
   supplierBadgeCounts,
   supplierPrintPdfInput,
   supplierTabChips,
+  UNCATEGORIZED_CATEGORY_TAB,
   type SelectionMap,
 } from "./orderList";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref } from "../erp/menuListQuery";
@@ -203,6 +207,66 @@ test("categories A–Z, items A–Z within category, uncategorized last", () => 
       ["dairy", "Dairy", ["butter", "cheese"]],
       ["", "Uncategorized", ["salt", "ghost"]],
     ],
+  );
+});
+
+test("category chips are All, A–Z names, Uncategorized last; filter isolates one category", () => {
+  const products = [
+    { id: "salt", nameEn: "Salt", nameVn: "Muối", categoryId: null, categoryName: null },
+    { id: "cheese", nameEn: "Cheese", nameVn: "Phô mai", categoryId: "dairy", categoryName: "Dairy", categoryNameVn: "Sữa" },
+    { id: "beer", nameEn: "Beer", nameVn: "Bia", categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "Rượu" },
+    { id: "butter", nameEn: "Butter", nameVn: "Bơ", categoryId: "dairy", categoryName: "Dairy", categoryNameVn: "Sữa" },
+    { id: "wine", nameEn: "Wine", nameVn: "Rượu vang", categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "Rượu" },
+    { id: "ghost", nameEn: "Unknown", nameVn: "", categoryId: null, categoryName: null },
+  ];
+  const chips = catalogCategoryChips(products, "en", { all: "All", uncategorized: "Uncategorized" });
+  assert.deepEqual(
+    chips.map((row) => [row.id, row.name]),
+    [
+      [ALL_CATEGORY_TAB, "All"],
+      ["alc", "Alcohol"],
+      ["dairy", "Dairy"],
+      [UNCATEGORIZED_CATEGORY_TAB, "Uncategorized"],
+    ],
+  );
+  assert.deepEqual(
+    catalogCategoryChips(products, "vn", { all: "Tất cả", uncategorized: "Không phân loại" }).map((row) => row.name),
+    ["Tất cả", "Rượu", "Sữa", "Không phân loại"],
+  );
+  assert.deepEqual(
+    filterByCategory(products, ALL_CATEGORY_TAB).map((row) => row.id),
+    ["salt", "cheese", "beer", "butter", "wine", "ghost"],
+  );
+  assert.deepEqual(
+    sortCatalogProducts(filterByCategory(products, "alc"), "en").map((row) => row.id),
+    ["beer", "wine"],
+  );
+  assert.deepEqual(
+    sortCatalogProducts(filterByCategory(products, "dairy"), "en").map((row) => row.id),
+    ["butter", "cheese"],
+  );
+  assert.deepEqual(
+    sortCatalogProducts(filterByCategory(products, UNCATEGORIZED_CATEGORY_TAB), "en").map((row) => row.id),
+    ["salt", "ghost"],
+  );
+  assert.equal(
+    filterByCategory(products, "dairy").some((row) => row.categoryId !== "dairy"),
+    false,
+  );
+});
+
+test("category chips omit Uncategorized when every item has a category", () => {
+  const chips = catalogCategoryChips(
+    [
+      { categoryId: "alc", categoryName: "Alcohol", categoryNameVn: "Rượu" },
+      { categoryId: "dairy", categoryName: "Dairy", categoryNameVn: "Sữa" },
+    ],
+    "en",
+    { all: "All", uncategorized: "Uncategorized" },
+  );
+  assert.deepEqual(
+    chips.map((row) => row.id),
+    [ALL_CATEGORY_TAB, "alc", "dairy"],
   );
 });
 
