@@ -17,6 +17,7 @@ import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
+import { DropMenu } from "./filters";
 import { methodLabel } from "./losses";
 import { categoryLabel, POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
@@ -588,33 +589,56 @@ function ProductEditor({
                       </td>
                     ) : null}
                     <td className="erpPackRowDel">
-                      <button
-                        type="button"
-                        className="erpBtn erpPackDelete"
-                        onClick={() => {
-                          const label = pack.label.trim() || T("эту фасовку", "this pack", "quy cách này");
-                          if (
-                            pack.id &&
-                            !window.confirm(
-                              T(
-                                `Удалить фасовку «${label}»? После сохранения она исчезнет из заказов. Старые поставки сохранятся.`,
-                                `Delete pack “${label}”? After you save, it leaves new orders. Old deliveries keep it.`,
-                                `Xóa quy cách “${label}”? Sau khi lưu sẽ không còn trên đơn mới. Phiếu cũ giữ nguyên.`,
-                              ),
-                            )
-                          )
-                            return;
-                          setPacks((prev) => {
-                            const next = prev.filter((_, i) => i !== index);
-                            if (next.length && !next.some((row) => row.is_default)) {
-                              return next.map((row, i) => ({ ...row, is_default: i === 0 }));
-                            }
-                            return next;
-                          });
-                        }}
+                      <DropMenu
+                        align="right"
+                        fixed
+                        trigger={({ open, toggle }) => (
+                          <button
+                            type="button"
+                            className="erpPackDots"
+                            aria-label={T("Действия", "Actions", "Thao tác")}
+                            aria-expanded={open}
+                            onClick={toggle}
+                            data-testid="product-pack-row-menu"
+                          >
+                            ⋮
+                          </button>
+                        )}
                       >
-                        {T("Удалить", "Delete", "Xóa")}
-                      </button>
+                        {(close) => (
+                          <div className="erpDropList">
+                            <button
+                              type="button"
+                              className="erpDropAction erpDanger"
+                              data-testid="product-pack-delete"
+                              onClick={() => {
+                                close();
+                                const label = pack.label.trim() || T("эту фасовку", "this pack", "quy cách này");
+                                if (
+                                  pack.id &&
+                                  !window.confirm(
+                                    T(
+                                      `Удалить фасовку «${label}»? После сохранения она исчезнет из заказов. Старые поставки сохранятся.`,
+                                      `Delete pack “${label}”? After you save, it leaves new orders. Old deliveries keep it.`,
+                                      `Xóa quy cách “${label}”? Sau khi lưu sẽ không còn trên đơn mới. Phiếu cũ giữ nguyên.`,
+                                    ),
+                                  )
+                                )
+                                  return;
+                                setPacks((prev) => {
+                                  const next = prev.filter((_, i) => i !== index);
+                                  if (next.length && !next.some((row) => row.is_default)) {
+                                    return next.map((row, i) => ({ ...row, is_default: i === 0 }));
+                                  }
+                                  return next;
+                                });
+                              }}
+                            >
+                              {T("Удалить", "Delete", "Xóa")}
+                            </button>
+                          </div>
+                        )}
+                      </DropMenu>
                     </td>
                   </tr>
                 );

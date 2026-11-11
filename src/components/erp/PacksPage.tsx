@@ -69,12 +69,6 @@ function readSaved(): Saved {
   }
 }
 
-const Arrow = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-    <path d="M9 6l6 6-6 6" />
-  </svg>
-);
-
 function sortMark(active: boolean, desc: boolean) {
   if (!active) return "";
   return desc ? " ↓" : " ↑";
@@ -316,12 +310,42 @@ export function PacksPage() {
                     </td>
                   ))}
                   <td className="erpPackActs">
-                    <NavLink href={`/erp/stock/packs/${pack.id}`} className="erpRcLink" aria-label={T("Открыть", "Open", "Mở")}>
-                      <Arrow />
+                    <NavLink href={`/erp/stock/packs/${pack.id}`} className="erpBtn primary erpPackOpen" data-testid="pack-open">
+                      {T("Открыть", "Open", "Mở")}
                     </NavLink>
-                    <button type="button" className="erpBtn erpPackDelete" disabled={busy} onClick={() => void remove(pack)}>
-                      {T("Удалить", "Delete", "Xóa")}
-                    </button>
+                    <DropMenu
+                      align="right"
+                      fixed
+                      trigger={({ open, toggle }) => (
+                        <button
+                          type="button"
+                          className="erpPackDots"
+                          aria-label={T("Действия", "Actions", "Thao tác")}
+                          aria-expanded={open}
+                          onClick={toggle}
+                          data-testid="pack-row-menu"
+                        >
+                          ⋮
+                        </button>
+                      )}
+                    >
+                      {(close) => (
+                        <div className="erpDropList">
+                          <button
+                            type="button"
+                            className="erpDropAction erpDanger"
+                            disabled={busy}
+                            data-testid="pack-row-delete"
+                            onClick={() => {
+                              close();
+                              void remove(pack);
+                            }}
+                          >
+                            {T("Удалить", "Delete", "Xóa")}
+                          </button>
+                        </div>
+                      )}
+                    </DropMenu>
                   </td>
                 </tr>
               ))

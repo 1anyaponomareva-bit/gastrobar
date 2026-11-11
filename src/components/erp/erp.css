@@ -2847,26 +2847,39 @@ button.erpBack {
   }
 }
 
-@media (max-width: 760px) {
-  .erpPackTable {
-    min-width: 0;
-  }
-
-  .erpTable.stack td.erpPackActs {
-    justify-content: flex-end;
-  }
-}
-
 .erpPackTable .erpPackActs {
   width: auto;
   text-align: right;
   white-space: nowrap;
 }
 
-.erpPackDelete {
+.erpPackOpen {
   min-height: 44px;
   min-width: 44px;
-  padding: 8px 12px;
+  padding: 8px 14px;
+}
+
+.erpPackDots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--erp-accent);
+  cursor: pointer;
+}
+
+.erpPackDots:hover {
+  background: var(--erp-accent-soft);
 }
 
 .erpPackRowDel {
@@ -2874,10 +2887,29 @@ button.erpBack {
   white-space: nowrap;
 }
 
+.erpPackTable .erpPackActs .erpDrop,
+.erpPackRowDel .erpDrop {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.erpPackActs .erpDropAction,
+.erpPackRowDel .erpDropAction {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+
 @media (max-width: 760px) {
+  .erpPackTable {
+    min-width: 0;
+  }
+
   .erpTable.stack td.erpPackRowDel,
   .erpTable.stack td.erpPackActs {
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
@@ -2886,15 +2918,12 @@ button.erpBack {
     content: none;
   }
 
-  .erpTable.stack td.erpPackRowDel .erpPackDelete,
-  .erpTable.stack td.erpPackActs .erpPackDelete {
+  .erpTable.stack td.erpPackActs .erpPackOpen,
+  .erpTable.stack td.erpPackActs .erpPackDots,
+  .erpTable.stack td.erpPackRowDel .erpPackDots {
     width: auto;
+    flex: none;
   }
-}
-
-.erpPackTable .erpPackActs .erpDrop {
-  display: inline-block;
-  vertical-align: middle;
 }
 
 .erpPackCols {
