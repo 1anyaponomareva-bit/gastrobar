@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Pager, usePageSize } from "./Pager";
 import {
   accountBalance,
   cashDate,
@@ -42,6 +43,8 @@ export function FinanceTransactionsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [type, setType] = useState<"" | FinanceTxType>("");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const { from, to } = monthRange(month);
   const live = liveTransactions(transactions).filter((row) => cashDate(row) >= from && cashDate(row) < to);
   const rows = live.filter((row) => {
@@ -51,6 +54,10 @@ export function FinanceTransactionsPage() {
     const hay = `${categoryPath(categories, row.category_id)} ${row.comment ?? ""}`.toLowerCase();
     return !query.trim() || hay.includes(query.trim().toLowerCase());
   });
+  useEffect(() => setPage(0), [month, accountId, categoryId, type, query, pageSize]);
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = rows.slice(current * pageSize, current * pageSize + pageSize);
   const income = rows.filter((row) => row.type === "income").reduce((n, row) => n + row.amount, 0);
   const expense = rows.filter((row) => row.type === "expense" || row.type === "transfer").reduce((n, row) => n + row.amount, 0);
   const accountName = (id: string | null) => accounts.find((item) => item.id === id)?.name ?? "—";
@@ -152,7 +159,7 @@ export function FinanceTransactionsPage() {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row) => (
+                  pageRows.map((row) => (
                     <tr key={row.id}>
                       <td>{formatVietnamDateTime(row.occurred_at)}</td>
                       <td>
@@ -199,6 +206,9 @@ export function FinanceTransactionsPage() {
             </table>
           </div>
         )}
+        {rows.length ? (
+          <Pager total={rows.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+        ) : null}
       </section>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useErpRouter } from "./erpHref";
+import { Pager, usePageSize } from "./Pager";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { defaultPackId, packDisplayName, packNameSubtitle, packUsageCountMap, productsUsingPack } from "@/lib/erp/packs";
 import type { ErpPack, ErpProduct, ErpState } from "@/lib/erp/types";
@@ -80,6 +81,10 @@ export function PacksPage() {
   const [saved, setSaved] = useState<Saved | null>(null);
   const filters = saved ?? initial;
   const [draftHidden, setDraftHidden] = useState<ColumnId[] | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
+
+  useEffect(() => setPage(0), [query, pageSize, filters.units, filters.conditions, filters.sort, filters.desc]);
 
   const persist = (patch: Partial<Saved>) =>
     setSaved((prev) => {
@@ -125,6 +130,9 @@ export function PacksPage() {
     if (filters.sort === "unit") return a.unit.localeCompare(b.unit) * dir || a.name.localeCompare(b.name);
     return a.name.localeCompare(b.name) * dir || a.qty_base - b.qty_base;
   });
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = rows.slice(current * pageSize, current * pageSize + pageSize);
 
   const toggleSort = (key: SortKey) => persist(filters.sort === key ? { desc: !filters.desc } : { sort: key, desc: false });
 
@@ -291,7 +299,7 @@ export function PacksPage() {
                 </td>
               </tr>
             ) : (
-              rows.map((pack, index) => (
+              pageRows.map((pack, index) => (
                 <tr key={pack.id} data-testid="pack-row">
                   {shownCols.map((c) => (
                     <td key={c.id} className={c.id === "name" ? "main" : c.num ? "num" : undefined} data-label={c.label}>
@@ -305,7 +313,7 @@ export function PacksPage() {
                       ) : c.id === "use" ? (
                         <PackUseCount packId={pack.id} count={usage.get(pack.id) ?? 0} />
                       ) : (
-                        cell(pack, c.id, index)
+                        cell(pack, c.id, current * pageSize + index)
                       )}
                     </td>
                   ))}
@@ -353,6 +361,9 @@ export function PacksPage() {
           </tbody>
         </table>
       </div>
+      {rows.length ? (
+        <Pager total={rows.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+      ) : null}
     </>
   );
 }
@@ -389,6 +400,9 @@ function defaultPackName(state: ErpState, product: ErpProduct): string {
 export function PackIngredientsPage({ id }: { id: string }) {
   const { state } = useErp();
   const router = useErpRouter();
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
+  useEffect(() => setPage(0), [id, pageSize]);
   if (!state) return null;
   const pack = state.packs.find((item) => item.id === id);
   if (!pack) {
@@ -406,6 +420,9 @@ export function PackIngredientsPage({ id }: { id: string }) {
   }
   const rows = productsUsingPack(pack.id, state.productPacks, state.products);
   const cats = new Map(state.categories.map((c) => [c.id, c]));
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = rows.slice(current * pageSize, current * pageSize + pageSize);
 
   return (
     <>
@@ -430,7 +447,7 @@ export function PackIngredientsPage({ id }: { id: string }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((product) => {
+              {pageRows.map((product) => {
                 const href = `/erp/products/${product.id}`;
                 return (
                   <tr
@@ -458,6 +475,9 @@ export function PackIngredientsPage({ id }: { id: string }) {
           </table>
         </div>
       )}
+      {rows.length ? (
+        <Pager total={rows.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+      ) : null}
     </>
   );
 }

@@ -6,7 +6,7 @@ import { fetchCountList } from "@/lib/erp/inventoryUi";
 import { StatusBadge, docHref } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
-import { Pager, PAGE } from "./StockBalances";
+import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, dateTimeText, Empty, errorText, loadingText, NavLink, PageHead, T, today, vnd, warehouseName } from "./ui";
 
@@ -184,6 +184,7 @@ export function InventoryPage() {
   const [saved, setSaved] = useState<Saved | null>(null);
   const [query, setQuery] = useState("");
   const [page, setPageNo] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
 
   useEffect(() => setSaved(readSaved()), []);
   useEffect(() => {
@@ -222,14 +223,14 @@ export function InventoryPage() {
     });
   }, [rows, search, filters, state, from, to]);
 
-  useEffect(() => setPageNo(0), [query, filters.warehouses, filters.types, filters.statuses, filters.extras, from, to]);
+  useEffect(() => setPageNo(0), [query, pageSize, filters.warehouses, filters.types, filters.statuses, filters.extras, from, to]);
 
   if (!state) return null;
   const set = (patch: Partial<Saved>) => setSaved((prev) => ({ ...(prev ?? initial), ...patch }));
   const shown = columns().filter((c) => !filters.hidden.includes(c.id));
-  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(page, pages - 1);
-  const pageRows = list.slice(current * PAGE, current * PAGE + PAGE);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
   const anyFilter = Boolean(query || filters.warehouses.length || filters.extras.length);
 
   const toggleSort = (key: SortKey) => set(filters.sort === key ? { desc: !filters.desc } : { sort: key, desc: key === "postedAt" || key === "result" });
@@ -598,9 +599,9 @@ export function InventoryPage() {
                 </tbody>
               </table>
             </div>
-            {pages > 1 ? (
+            {list.length ? (
               <div className="erpNoPrint">
-                <Pager total={list.length} page={current} pages={pages} onPage={setPageNo} />
+                <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPageNo} onPageSize={setPageSize} />
               </div>
             ) : null}
             {data?.logic === "documents-fallback" ? (

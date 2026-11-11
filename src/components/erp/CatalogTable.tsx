@@ -8,7 +8,7 @@ import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
 import { POSTER_VENUES, POSTER_WORKSHOPS } from "./menuFields";
 import { MenuMobileNav } from "./menuNav";
-import { Pager, PAGE } from "./StockBalances";
+import { Pager, usePageSize } from "./Pager";
 import { NavLink, PageHead, T, today } from "./ui";
 
 export function notImplemented(what?: string) {
@@ -227,6 +227,7 @@ export function CatalogTable<Row extends { id: string }>({
   );
   const [saved, setSaved] = useState<Saved | null>(null);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -257,11 +258,11 @@ export function CatalogTable<Row extends { id: string }>({
     });
   }, [rows, sortCol, filters.desc]);
 
-  useEffect(() => setPage(0), [query, rows.length, filters.sort, filters.desc]);
+  useEffect(() => setPage(0), [query, rows.length, filters.sort, filters.desc, pageSize]);
 
-  const pages = Math.max(1, Math.ceil(sorted.length / PAGE));
+  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const current = Math.min(page, pages - 1);
-  const pageRows = sorted.slice(current * PAGE, current * PAGE + PAGE);
+  const pageRows = sorted.slice(current * pageSize, current * pageSize + pageSize);
   const allOnPage = pageRows.length > 0 && pageRows.every((row) => selected.has(row.id));
 
   const toggleSort = (id: string) => {
@@ -534,9 +535,9 @@ export function CatalogTable<Row extends { id: string }>({
             {footer && sorted.length ? <tfoot>{footer(shown)}</tfoot> : null}
           </table>
         </div>
-        {pages > 1 ? (
+        {sorted.length ? (
           <div className="erpNoPrint">
-            <Pager total={sorted.length} page={current} pages={pages} onPage={setPage} />
+            <Pager total={sorted.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
           </div>
         ) : null}
         {note ? <div className="erpMenuNote erpNoPrint">{note}</div> : null}

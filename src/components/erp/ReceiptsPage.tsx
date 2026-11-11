@@ -7,7 +7,7 @@ import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { docHref, StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
-import { Pager, PAGE } from "./StockBalances";
+import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, docLabel, Empty, errorText, loadingText, NavLink, packText, PageHead, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
 
@@ -258,6 +258,7 @@ export function ReceiptsPage() {
   const [saved, setSaved] = useState<Saved | null>(null);
   const [query, setQuery] = useState("");
   const [page, setPageNo] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [printDoc, setPrintDoc] = useState<string | null>(null);
 
@@ -299,7 +300,7 @@ export function ReceiptsPage() {
     });
   }, [rows, search, filters]);
 
-  useEffect(() => setPageNo(0), [query, filters.suppliers, filters.warehouses, filters.categories, filters.posting, filters.employees, filters.cancelled, filters.extras, from, to]);
+  useEffect(() => setPageNo(0), [query, pageSize, filters.suppliers, filters.warehouses, filters.categories, filters.posting, filters.employees, filters.cancelled, filters.extras, from, to]);
 
   useEffect(() => {
     if (!printDoc) return;
@@ -316,9 +317,9 @@ export function ReceiptsPage() {
   const set = (patch: Partial<Saved>) => setSaved((prev) => ({ ...(prev ?? initial), ...patch }));
   const shown = columns().filter((c) => !filters.hidden.includes(c.id));
   const amountAt = shown.findIndex((c) => c.id === "amount");
-  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(page, pages - 1);
-  const pageRows = list.slice(current * PAGE, current * PAGE + PAGE);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
   const total = list.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   const incomplete = list.some((row) => row.doc.status === "posted" && row.doc.cost_known === false);
   const anyFilter = Boolean(query || filters.suppliers.length || filters.warehouses.length || filters.categories.length || filters.extras.length);
@@ -828,9 +829,9 @@ export function ReceiptsPage() {
                 ) : null}
               </table>
             </div>
-            {pages > 1 ? (
+            {list.length ? (
               <div className="erpNoPrint">
-                <Pager total={list.length} page={current} pages={pages} onPage={setPageNo} />
+                <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPageNo} onPageSize={setPageSize} />
               </div>
             ) : null}
             <p className="erpScope erpRcNote erpNoPrint">

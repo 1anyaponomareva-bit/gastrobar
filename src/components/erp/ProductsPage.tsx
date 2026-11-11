@@ -1,7 +1,8 @@
 "use client";
 
 import { useErpRouter } from "./erpHref";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Pager, usePageSize } from "./Pager";
 import {
   buildCostContext,
   costLine,
@@ -76,7 +77,10 @@ export function ProductsPage() {
   const [category, setCategory] = useState("");
   const [supplier, setSupplier] = useState("");
   const [archived, setArchived] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  useEffect(() => setPage(0), [query, type, category, supplier, archived, pageSize]);
   if (!state || !ctx) return null;
 
   const categories = new Map(state.categories.map((c) => [c.id, c]));
@@ -90,6 +94,9 @@ export function ProductsPage() {
       return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q);
     })
     .sort((a, b) => a.name_en.localeCompare(b.name_en));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
   const reset = () => {
     setQuery("");
     setType("");
@@ -185,7 +192,7 @@ export function ProductsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {list.map((p) => {
+                    {pageRows.map((p) => {
                       const cost = p.base_unit ? costLine(ctx, p.id, 1) : null;
                       return (
                         <tr
@@ -224,6 +231,9 @@ export function ProductsPage() {
                   </tbody>
                 </table>
               </div>
+              {list.length ? (
+                <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+              ) : null}
             </>
           )}
         </>

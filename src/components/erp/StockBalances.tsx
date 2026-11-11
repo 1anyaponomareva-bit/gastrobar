@@ -7,10 +7,10 @@ import type { ErpCategory, ErpProduct, ErpProductReceipt, ErpState } from "@/lib
 import { useErp } from "./ErpShell";
 import { ConditionFilters, DropMenu, matches, MultiSelect, type CondField, type Condition } from "./filters";
 import { StockMobileNav } from "./stockNav";
+import { Pager, usePageSize } from "./Pager";
 import { costSourceLabel, dateText, Empty, errorText, loadingText, NavLink, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
 
 const STORE_KEY = "gastrofood-erp-balances";
-export const PAGE = 100;
 
 type ColumnId = "type" | "category" | "qty" | "cost" | "value";
 type SortKey = "name" | ColumnId;
@@ -129,6 +129,7 @@ export function StockPage() {
   const [saved, setSaved] = useState<Saved | null>(null);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const [open, setOpen] = useState<Set<string>>(new Set());
 
   useEffect(() => setSaved(readSaved()), []);
@@ -160,15 +161,15 @@ export function StockPage() {
     });
   }, [rows, search, filters]);
 
-  useEffect(() => setPage(0), [query, filters.warehouses, filters.types, filters.categories, filters.conditions]);
+  useEffect(() => setPage(0), [query, pageSize, filters.warehouses, filters.types, filters.categories, filters.conditions]);
 
   if (!state) return null;
   const set = (patch: Partial<Saved>) => setSaved((prev) => ({ ...(prev ?? initial), ...patch }));
   const activeWarehouses = state.warehouses.filter((w) => !w.archived_at);
   const shownColumns = columns().filter((c) => !filters.hidden.includes(c.id));
-  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(page, pages - 1);
-  const pageRows = list.slice(current * PAGE, current * PAGE + PAGE);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
   const chosenWarehouses = activeWarehouses.filter((w) => filters.warehouses.includes(w.id));
   const filtered = chosenWarehouses.length > 0 && chosenWarehouses.length < activeWarehouses.length;
   const chosenNames = chosenWarehouses.map((w) => w.name).join(", ");
@@ -362,7 +363,9 @@ export function StockPage() {
             )}
           </p>
 
-          {list.length ? <Pager total={list.length} page={current} pages={pages} onPage={setPage} /> : null}
+          {list.length ? (
+            <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} showSize={false} />
+          ) : null}
 
           <div className="erpTableWrap erpScrollX">
             <table className="erpTable erpBalances">
@@ -438,36 +441,12 @@ export function StockPage() {
             </table>
           </div>
 
-          {pages > 1 ? <Pager total={list.length} page={current} pages={pages} onPage={setPage} /> : null}
+          {list.length ? (
+            <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+          ) : null}
         </section>
       )}
     </>
-  );
-}
-
-export function Pager({ total, page, pages, onPage }: { total: number; page: number; pages: number; onPage: (page: number) => void }) {
-  const from = total ? page * PAGE + 1 : 0;
-  const to = Math.min(total, (page + 1) * PAGE);
-  const btn = (label: string, target: number, disabled: boolean, text: string) => (
-    <button type="button" className="erpPagerBtn" aria-label={label} disabled={disabled} onClick={() => onPage(target)}>
-      {text}
-    </button>
-  );
-  return (
-    <div className="erpPager">
-      <span>
-        {from}–{to} {T("из", "of", "/")} {total}
-      </span>
-      <span className="erpPagerBtns">
-        {btn(T("Первая страница", "First page", "Trang đầu"), 0, page === 0, "«")}
-        {btn(T("Предыдущая страница", "Previous page", "Trang trước"), page - 1, page === 0, "‹")}
-        <span>
-          {T("Стр.", "Page", "Trang")} {page + 1} {T("из", "of", "/")} {pages}
-        </span>
-        {btn(T("Следующая страница", "Next page", "Trang sau"), page + 1, page >= pages - 1, "›")}
-        {btn(T("Последняя страница", "Last page", "Trang cuối"), pages - 1, page >= pages - 1, "»")}
-      </span>
-    </div>
   );
 }
 

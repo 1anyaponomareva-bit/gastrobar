@@ -69,6 +69,16 @@ import {
 } from "../../src/lib/erp/hostGate";
 import { publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
 import {
+  clampPage,
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_STORAGE_KEY,
+  PAGE_SIZES,
+  pageBounds,
+  pageCount,
+  parsePageSize,
+  slicePage,
+} from "../../src/lib/erp/pager";
+import {
   accountBalance,
   buildCashflow,
   buildPnl,
@@ -338,6 +348,49 @@ async function main() {
     assert.equal(cfg.erpHosts.length, 0);
     assert.equal(gate("www.gastrotruck.org", "/erp", "GET", cfg).action, "allow");
     assert.equal(gate("www.gastrotruck.org", "/api/erp/state", "GET", cfg).action, "allow");
+  });
+
+  await test("ERP list pager: 25 / 50 / 100 names, 131 items, stored key", async () => {
+    assert.deepEqual([...PAGE_SIZES], [25, 50, 100]);
+    assert.equal(DEFAULT_PAGE_SIZE, 100);
+    assert.equal(PAGE_SIZE_STORAGE_KEY, "gastrofood-erp-page-size");
+    assert.equal(parsePageSize(25), 25);
+    assert.equal(parsePageSize("50"), 50);
+    assert.equal(parsePageSize(100), 100);
+    assert.equal(parsePageSize("100"), 100);
+    assert.equal(parsePageSize("13"), 100);
+    assert.equal(parsePageSize(0), 100);
+    assert.equal(parsePageSize(null), 100);
+    assert.equal(parsePageSize(undefined), 100);
+    assert.equal(parsePageSize("foo"), 100);
+    assert.equal(pageCount(131, 25), 6);
+    assert.equal(pageCount(131, 50), 3);
+    assert.equal(pageCount(131, 100), 2);
+    assert.equal(pageCount(0, 25), 1);
+    assert.equal(pageCount(25, 25), 1);
+    assert.equal(pageCount(26, 25), 2);
+    assert.equal(pageCount(100, 100), 1);
+    assert.equal(pageCount(101, 100), 2);
+    const items = Array.from({ length: 131 }, (_, i) => i + 1);
+    const first25 = slicePage(items, 0, 25);
+    assert.equal(first25.pages, 6);
+    assert.equal(first25.current, 0);
+    assert.deepEqual(first25.rows, items.slice(0, 25));
+    const last25 = slicePage(items, 5, 25);
+    assert.equal(last25.current, 5);
+    assert.deepEqual(last25.rows, items.slice(125));
+    assert.equal(last25.rows.length, 6);
+    const mid50 = slicePage(items, 1, 50);
+    assert.equal(mid50.pages, 3);
+    assert.deepEqual(mid50.rows, items.slice(50, 100));
+    const second100 = slicePage(items, 1, 100);
+    assert.equal(second100.pages, 2);
+    assert.deepEqual(second100.rows, items.slice(100));
+    assert.equal(clampPage(9, 131, 100), 1, "oversized page index clamps to last page");
+    const bounds = pageBounds(131, 0, 100);
+    assert.deepEqual(bounds, { from: 1, to: 100, current: 0, pages: 2 });
+    assert.deepEqual(pageBounds(131, 0, 25), { from: 1, to: 25, current: 0, pages: 6 });
+    assert.deepEqual(pageBounds(131, 5, 25), { from: 126, to: 131, current: 5, pages: 6 });
   });
 
   db = await createTestDb();

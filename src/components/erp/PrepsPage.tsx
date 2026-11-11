@@ -1,7 +1,8 @@
 "use client";
 
 import { useErpRouter } from "./erpHref";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Pager, usePageSize } from "./Pager";
 import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
@@ -51,7 +52,10 @@ const yieldText = (recipe: ErpRecipe | undefined, unit: ErpUnit | null) => {
 export function PrepsPage() {
   const { state } = useErp();
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  useEffect(() => setPage(0), [query, pageSize]);
   if (!state || !ctx) return null;
 
   const all = state.products
@@ -59,6 +63,9 @@ export function PrepsPage() {
     .sort((a, b) => a.name_en.localeCompare(b.name_en));
   const q = query.trim().toLowerCase();
   const list = all.filter((p) => !q || `${p.name_en} ${p.name_vn}`.toLowerCase().includes(q));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
 
   return (
     <>
@@ -123,7 +130,7 @@ export function PrepsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((p) => {
+                  {pageRows.map((p) => {
                     const recipes = state.recipes.filter((r) => r.product_id === p.id);
                     const active = recipes.find((r) => r.status === "active");
                     const draft = recipes.find((r) => r.status === "draft");
@@ -171,6 +178,9 @@ export function PrepsPage() {
               </table>
             </div>
           )}
+          {list.length ? (
+            <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+          ) : null}
         </>
       )}
     </>

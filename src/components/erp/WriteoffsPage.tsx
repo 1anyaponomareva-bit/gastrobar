@@ -6,7 +6,7 @@ import type { ErpDocument, ErpDocumentLine, ErpState, ErpWriteoffReason } from "
 import { docHref } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, matches, MultiSelect, type CondOp } from "./filters";
-import { Pager, PAGE } from "./StockBalances";
+import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, errorText, loadingText, NavLink, packText, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
 import "./writeoffs.css";
@@ -431,6 +431,7 @@ function WriteoffList({
   const { act } = useErp();
   const [from, to] = periodRange(filters);
   const [pageNo, setPageNo] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
   const [open, setOpen] = useState<Set<string>>(new Set());
   const search = useDeferredValue(filters.query);
 
@@ -467,13 +468,13 @@ function WriteoffList({
   }, [rows, search, filters]);
 
   const filterKey = JSON.stringify([filters.query, filters.warehouses, filters.categories, filters.reasons, filters.extras, filters.products, filters.employees, filters.statuses, filters.amount, filters.amountOp, filters.comment, from, to]);
-  useEffect(() => setPageNo(0), [filterKey]);
+  useEffect(() => setPageNo(0), [filterKey, pageSize]);
 
   const shown = columns().filter((c) => !filters.hidden.includes(c.id));
   const colSpan = shown.length + 3;
-  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(pageNo, pages - 1);
-  const pageRows = list.slice(current * PAGE, current * PAGE + PAGE);
+  const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
   const posted = list.filter((row) => row.doc.status === "posted");
   const total = posted.reduce((sum, row) => sum + (row.amount ?? 0), 0);
   const incomplete = posted.some((row) => row.doc.cost_known === false);
@@ -880,7 +881,7 @@ function WriteoffList({
           </table>
         </div>
         <div className="erpWoFoot">
-          <Pager total={list.length} page={current} pages={pages} onPage={setPageNo} />
+          <Pager total={list.length} page={current} pages={pages} pageSize={pageSize} onPage={setPageNo} onPageSize={setPageSize} />
           <span className="erpWoFound" data-testid="wo-found">
             {T("Найдено", "Found", "Tìm thấy")}: {list.length}
             {drafts || cancelled

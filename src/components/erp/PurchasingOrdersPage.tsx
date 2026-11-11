@@ -6,6 +6,7 @@ import type { OrderStatus, SupplierOrder } from "@/lib/orders/types";
 import { formatQty, sumDisplayRemaining } from "@/lib/orders/qty";
 import { PurchasingStatusBadge } from "./PurchasingStatus";
 import { formatVietnamDate, orderStatusInstant } from "@/lib/orders/datetime";
+import { Pager, usePageSize } from "./Pager";
 import { Empty, errorText, loadingText, NavLink, PageHead, T } from "./ui";
 
 const STATUSES: OrderStatus[] = ["ordered", "partial", "received", "closed"];
@@ -16,6 +17,8 @@ export function PurchasingOrdersPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<OrderStatus | "">("");
   const [supplier, setSupplier] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
 
   const load = useCallback(async () => {
     setError(null);
@@ -46,6 +49,11 @@ export function PurchasingOrdersPage() {
       return `${order.docNo} ${order.supplierName} ${order.comment ?? ""} ${order.createdBy ?? ""}`.toLowerCase().includes(q);
     });
   }, [orders, query, status, supplier]);
+
+  useEffect(() => setPage(0), [query, status, supplier, pageSize]);
+  const pages = Math.max(1, Math.ceil(shown.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = shown.slice(current * pageSize, current * pageSize + pageSize);
 
   return (
     <>
@@ -117,7 +125,7 @@ export function PurchasingOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((order) => {
+              {pageRows.map((order) => {
                 const remaining = sumDisplayRemaining(order.lines);
                 return (
                   <tr key={order.id}>
@@ -146,6 +154,10 @@ export function PurchasingOrdersPage() {
             </tbody>
           </table>
         </div>
+      ) : null}
+
+      {shown.length ? (
+        <Pager total={shown.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       ) : null}
     </>
   );
