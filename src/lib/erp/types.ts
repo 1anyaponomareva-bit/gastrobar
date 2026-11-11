@@ -59,10 +59,11 @@ export type ErpWarehouse = Archivable & {
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
 export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
 
-/** Shared ordering unit (Poster «Фасовка»): name is display-only; unit + qty_base are used in maths. */
+/** Shared ordering unit (Poster «Фасовка»): name is English display; name_vn is optional Vietnamese. */
 export type ErpPack = {
   id: string;
   name: string;
+  name_vn?: string | null;
   unit: ErpUnit;
   qty_base: number;
   archived_at?: string | null;

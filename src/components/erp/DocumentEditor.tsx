@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
-import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packPrice, packToBase } from "@/lib/erp/packs";
+import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packDisplayName, packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { PurchasingReceiptPanel } from "./PurchasingReceiptPanel";
@@ -593,7 +593,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                                 <option value="">{T("без фасовки", "no pack", "không")}</option>
                                 {packs.map((p) => (
                                   <option key={p.id} value={p.id}>
-                                    {packText(p.name)} = {qtyText(p.qty_base, unit)}
+                                    {packDisplayName(p)} = {qtyText(p.qty_base, unit)}
                                   </option>
                                 ))}
                               </select>

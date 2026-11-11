@@ -5,6 +5,7 @@ import {
   defaultPackId,
   isMarkedQty,
   orderPackCaption,
+  orderPackDisplayName,
   orderPackUnit,
   packOf,
   productDetailLine,
@@ -56,11 +57,14 @@ export function OrderProductCard({
         <div className="orders-field" style={{ margin: "8px 0" }}>
           <label>{packLabel}</label>
           <select className="orders-select" value={current.packId ?? ""} onChange={(event) => onPack(event.target.value)}>
-            {product.packs.map((item) => (
-              <option key={item.pack_id} value={item.pack_id}>
-                {item.code ? `${item.label} · ${item.code}` : item.label}
-              </option>
-            ))}
+            {product.packs.map((item) => {
+              const name = orderPackDisplayName(item, lang);
+              return (
+                <option key={item.pack_id} value={item.pack_id}>
+                  {item.code ? `${name} · ${item.code}` : name}
+                </option>
+              );
+            })}
           </select>
         </div>
       ) : null}

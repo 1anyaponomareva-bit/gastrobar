@@ -245,6 +245,7 @@ function packOf(raw: Json): OrderProductPack {
     id: str(pick(raw, "id"), packId),
     pack_id: packId,
     label: str(pick(raw, "label", "name", "packLabel", "pack_label")),
+    nameVn: optStr(pick(raw, "nameVn", "name_vn", "labelVn", "label_vn")),
     unit: str(pick(raw, "unit")),
     qty_base: num(pick(raw, "qty_base", "qtyBase")) || 1,
     is_default: Boolean(pick(raw, "is_default", "isDefault")),

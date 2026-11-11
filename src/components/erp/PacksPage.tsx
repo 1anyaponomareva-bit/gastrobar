@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useErpRouter } from "./erpHref";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
-import { defaultPackId, packUsageCountMap, productsUsingPack } from "@/lib/erp/packs";
+import { defaultPackId, packDisplayName, packNameSubtitle, packUsageCountMap, productsUsingPack } from "@/lib/erp/packs";
 import type { ErpPack, ErpProduct, ErpState } from "@/lib/erp/types";
 import { downloadXlsx } from "@/lib/erp/xlsx";
 import { useErp } from "./ErpShell";
@@ -113,12 +113,13 @@ export function PacksPage() {
   const shownCols = columns().filter((c) => !filters.hidden.includes(c.id));
 
   const filtered = packs.filter((pack) => {
-    if (q && !pack.name.toLowerCase().includes(q)) return false;
+    const names = `${pack.name} ${pack.name_vn ?? ""}`.toLowerCase();
+    if (q && !names.includes(q)) return false;
     if (unitFilter.size && !unitFilter.has(pack.unit)) return false;
     return filters.conditions.every((cond) => {
       const field = fields.find((f) => f.id === cond.field);
       if (!field) return true;
-      const value = field.id === "name" ? pack.name : field.id === "use" ? (usage.get(pack.id) ?? 0) : pack.qty_base;
+      const value = field.id === "name" ? names : field.id === "use" ? (usage.get(pack.id) ?? 0) : pack.qty_base;
       return matches(cond, field.kind, value);
     });
   });
@@ -137,8 +138,11 @@ export function PacksPage() {
     switch (id) {
       case "no":
         return index + 1;
-      case "name":
-        return pack.name;
+      case "name": {
+        const sub = packNameSubtitle(pack);
+        const main = packDisplayName(pack);
+        return sub ? `${main} · ${sub}` : main;
+      }
       case "unit":
         return packUnitLabel(pack.unit);
       case "qty":
@@ -167,9 +171,9 @@ export function PacksPage() {
     if (
       !window.confirm(
         T(
-          `Удалить фасовку «${pack.name}»? Она исчезнет из новых документов, старые поставки сохранятся.`,
-          `Delete pack “${pack.name}”? It will leave new documents; old deliveries keep it.`,
-          `Xóa quy cách “${pack.name}”? Không còn ở phiếu mới, phiếu cũ giữ nguyên.`,
+          `Удалить фасовку «${packDisplayName(pack)}»? Она исчезнет из новых документов, старые поставки сохранятся.`,
+          `Delete pack “${packDisplayName(pack)}”? It will leave new documents; old deliveries keep it.`,
+          `Xóa quy cách “${packDisplayName(pack)}”? Không còn ở phiếu mới, phiếu cũ giữ nguyên.`,
         ),
       )
     )
@@ -298,7 +302,10 @@ export function PacksPage() {
                   {shownCols.map((c) => (
                     <td key={c.id} className={c.id === "name" ? "main" : c.num ? "num" : undefined} data-label={c.label}>
                       {c.id === "name" ? (
-                        <strong className="erpPackName">{packText(pack.name)}</strong>
+                        <>
+                          <strong className="erpPackName">{packDisplayName(pack)}</strong>
+                          {packNameSubtitle(pack) ? <span className="erpCellSub">{packNameSubtitle(pack)}</span> : null}
+                        </>
                       ) : c.id === "qty" ? (
                         packQtyText(Number(pack.qty_base), pack.unit)
                       ) : c.id === "use" ? (
@@ -350,7 +357,7 @@ function defaultPackName(state: ErpState, product: ErpProduct): string {
   const id = defaultPackId(state.productPacks, product.id);
   if (!id) return "—";
   const pack = state.packs.find((item) => item.id === id);
-  if (pack) return packText(pack.name);
+  if (pack) return packDisplayName(pack);
   const link = state.productPacks.find((item) => item.product_id === product.id && item.pack_id === id);
   return packText(link?.label || "—");
 }
@@ -382,7 +389,7 @@ export function PackIngredientsPage({ id }: { id: string }) {
         ← {T("Фасовки", "Packs", "Quy cách")}
       </NavLink>
       <PageHead
-        title={packText(pack.name)}
+        title={packDisplayName(pack)}
         sub={`${ingredientsLabel()}: ${rows.length}`}
       />
       <StockMobileNav active="/erp/stock/packs" />
@@ -442,10 +449,15 @@ export function PackEditor({ id }: { id: string }) {
   const isNew = id === "new";
   const pack = isNew ? null : state!.packs.find((p) => p.id === id);
   const [name, setName] = useState(pack?.name ?? "");
+  const [nameVn, setNameVn] = useState(pack?.name_vn ?? "");
   const [unit, setUnit] = useState<ErpUnit | "">(pack?.unit ?? "");
   const [qty, setQty] = useState<number | null>(pack?.qty_base ?? null);
   const [error, setError] = useState<string | null>(null);
-  const dirty = name !== (pack?.name ?? "") || unit !== (pack?.unit ?? "") || qty !== (pack?.qty_base ?? null);
+  const dirty =
+    name !== (pack?.name ?? "") ||
+    nameVn !== (pack?.name_vn ?? "") ||
+    unit !== (pack?.unit ?? "") ||
+    qty !== (pack?.qty_base ?? null);
   useDirtyGuard(dirty);
   if (!isNew && !pack) {
     return (
@@ -472,7 +484,7 @@ export function PackEditor({ id }: { id: string }) {
     }
     setError(null);
     const result = await act<{ id: string }>(
-      { action: "savePack", pack: { id: pack?.id, name: name.trim(), unit, qty_base: qty } },
+      { action: "savePack", pack: { id: pack?.id, name: name.trim(), name_vn: nameVn.trim(), unit, qty_base: qty } },
       isNew ? T("Фасовка создана", "Pack created", "Đã tạo quy cách") : T("Изменения сохранены", "Changes saved", "Đã lưu"),
     );
     if (!result) return;
@@ -485,11 +497,14 @@ export function PackEditor({ id }: { id: string }) {
       <NavLink href="/erp/stock/packs" className="erpBack">
         ← {T("Фасовки", "Packs", "Quy cách")}
       </NavLink>
-      <PageHead title={isNew ? T("Новая фасовка", "New pack", "Quy cách mới") : pack?.name} />
+      <PageHead title={isNew || !pack ? T("Новая фасовка", "New pack", "Quy cách mới") : packDisplayName(pack)} />
       <section className="erpCard">
         <div className="erpGrid two">
-          <Field label={T("Название *", "Name *", "Tên *")}>
+          <Field label={T("Название (EN) *", "Name (EN) *", "Name (EN) *")}>
             <input value={name} onChange={(e) => setName(e.target.value)} autoFocus={isNew} maxLength={80} data-testid="pack-name" />
+          </Field>
+          <Field label={T("Tên (VN)", "Tên (VN)", "Tên (VN)")}>
+            <input value={nameVn} onChange={(e) => setNameVn(e.target.value)} maxLength={80} data-testid="pack-name-vn" />
           </Field>
           <Field label={T("Ед. измерения *", "Unit *", "Đơn vị *")}>
             <select value={unit} onChange={(e) => setUnit(e.target.value as ErpUnit | "")} data-testid="pack-unit">

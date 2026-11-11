@@ -100,6 +100,7 @@ export function OrderList({ initialTab }: Props) {
       if (!query) return true;
       const supplierName = suppliers.find((row) => row.id === product.supplierId)?.name ?? "";
       const packCodes = product.packs.map((item) => item.code ?? "");
+      const packNames = product.packs.flatMap((item) => [item.label, item.nameVn ?? ""]);
       return [
         product.nameEn,
         product.nameVn,
@@ -109,6 +110,7 @@ export function OrderList({ initialTab }: Props) {
         product.categoryNameVn ?? "",
         supplierName,
         ...packCodes,
+        ...packNames,
       ].some((text) => text.toLowerCase().includes(query));
     },
     [search, suppliers],

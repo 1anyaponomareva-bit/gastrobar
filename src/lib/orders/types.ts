@@ -50,6 +50,8 @@ export type OrderProductPack = {
   id: string;
   pack_id: string;
   label: string;
+  /** Optional Vietnamese catalog name. Empty → show English `label`. */
+  nameVn?: string | null;
   unit: string;
   qty_base: number;
   is_default: boolean;

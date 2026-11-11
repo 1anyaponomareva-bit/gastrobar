@@ -40,6 +40,8 @@ import {
 import {
   basePrice,
   formatPackLabel,
+  packDisplayName,
+  packNameSubtitle,
   packPrice,
   packToBase,
   packUsageCount,
@@ -3469,6 +3471,59 @@ async function main() {
         .sort(),
       [first, second].sort(),
     );
+  });
+
+  await test("pack card stores English name and optional Vietnamese name_vn", async () => {
+    const id = await savePack({ name: "VN-card Bottle 1 L", name_vn: "Chai 1 L", unit: "l", qty_base: 1 });
+    const row = await one<{ name: string; name_vn: string | null; unit: string }>(
+      "select name, name_vn, unit from public.erp_packs where id = $1",
+      [id],
+    );
+    assert.deepEqual(row, { name: "VN-card Bottle 1 L", name_vn: "Chai 1 L", unit: "l" });
+
+    const empty = await savePack({ name: "VN-card Can 5 L", unit: "l", qty_base: 5 });
+    assert.equal(await value("select name_vn from public.erp_packs where id = $1", [empty]), null);
+
+    await savePack({ id, name: "VN-card Bottle 1 L", unit: "l", qty_base: 1 });
+    assert.equal(await value("select name_vn from public.erp_packs where id = $1", [id]), "Chai 1 L", "omit name_vn keeps VN");
+
+    const loaded = await value<{ packs: { id: string; name: string; name_vn: string | null }[] }>("select public.erp_load_state($1)", ["packs"]);
+    const listed = loaded.packs.find((pack) => pack.id === id);
+    assert.equal(listed?.name, "VN-card Bottle 1 L");
+    assert.equal(listed?.name_vn, "Chai 1 L");
+
+    try {
+      setErpLang("ru");
+      assert.equal(packDisplayName({ name: "Bottle 1 L", name_vn: "Chai 1 L" }), "Bottle 1 L");
+      assert.equal(packNameSubtitle({ name: "Bottle 1 L", name_vn: "Chai 1 L" }), "Chai 1 L");
+      setErpLang("en");
+      assert.equal(packDisplayName({ name: "Bottle 1 L", name_vn: "Chai 1 L" }), "Bottle 1 L");
+      setErpLang("vn");
+      assert.equal(packDisplayName({ name: "Bottle 1 L", name_vn: "Chai 1 L" }), "Chai 1 L");
+      assert.equal(packNameSubtitle({ name: "Bottle 1 L", name_vn: "Chai 1 L" }), "Bottle 1 L");
+      assert.equal(packDisplayName({ name: "Bottle 1 L", name_vn: "" }), "Bottle 1 L");
+      assert.equal(packNameSubtitle({ name: "Bottle 1 L", name_vn: "" }), "");
+    } finally {
+      setErpLang("ru");
+    }
+
+    const water = await saveProduct({
+      type: "ingredient",
+      name_en: "Pack bilingual water",
+      name_vn: "Nước",
+      base_unit: "l",
+      packs: [{ pack_id: id, label: "VN-card Bottle 1 L", qty_base: 1, is_default: true }],
+    });
+    const catalog = await value<{ packs: { label: string; nameVn: string; name_vn: string }[] }>(
+      "select public.erp_order_product_json(p.*) from public.erp_products p where p.id = $1",
+      [water],
+    );
+    assert.equal(catalog.packs[0].label, "VN-card Bottle 1 L");
+    assert.equal(catalog.packs[0].nameVn, "Chai 1 L");
+    assert.equal(catalog.packs[0].name_vn, "Chai 1 L");
+
+    await savePack({ id, name: "VN-card Bottle 1 L", name_vn: "", unit: "l", qty_base: 1 });
+    assert.equal(await value("select name_vn from public.erp_packs where id = $1", [id]), null);
   });
 
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {

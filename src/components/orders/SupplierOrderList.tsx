@@ -255,7 +255,8 @@ export function SupplierOrderList({
       const query = search.toLowerCase().trim();
       if (!query) return true;
       const packCodes = product.packs.map((item) => item.code ?? "");
-      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.productCode ?? "", product.categoryName ?? "", product.categoryNameVn ?? "", supplier.name, ...packCodes].some(
+      const packNames = product.packs.flatMap((item) => [item.label, item.nameVn ?? ""]);
+      return [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.productCode ?? "", product.categoryName ?? "", product.categoryNameVn ?? "", supplier.name, ...packCodes, ...packNames].some(
         (text) => text.toLowerCase().includes(query),
       );
     },

@@ -3,7 +3,9 @@
  * The catalog UI shows that name as-is: it is not parsed into «Коробка/Бутылка».
  * parsePackLabel remains for the Staff import coefficient, not for screen labels.
  */
+import { erpLang, type ErpLang } from "../../components/erp/i18n";
 import type { ErpUnit } from "./costing";
+import { productDisplayName } from "./productName";
 import type { ErpDocumentLine, ErpPack, ErpProduct, ErpProductPack } from "./types";
 
 export type PackContainer = "box" | "pack" | "pcs" | "btl" | "can" | "bag";
@@ -63,6 +65,23 @@ export const basePrice = (onePackPrice: number, qtyBase: number) => (qtyBase > 0
 
 export const packNameOf = (pack: Pick<ErpPack, "name"> | { label?: string } | null | undefined) =>
   pack && "name" in pack && pack.name ? pack.name : ((pack as { label?: string } | null)?.label ?? "");
+
+type PackNameFields = { name?: string | null; name_vn?: string | null };
+
+/** RU/EN → English `name`. VN → `name_vn` if filled, else English. Do not invent a translation. */
+export function packDisplayName(pack: PackNameFields, lang: ErpLang = erpLang()): string {
+  return productDisplayName({ name_en: pack.name, name_vn: pack.name_vn }, lang);
+}
+
+/** Other stored language under the list title when Vietnamese is filled. */
+export function packNameSubtitle(pack: PackNameFields, lang: ErpLang = erpLang()): string {
+  const en = (pack.name ?? "").trim();
+  const vn = (pack.name_vn ?? "").trim();
+  if (!vn) return "";
+  const main = packDisplayName(pack, lang);
+  if (main === vn) return en !== vn ? en : "";
+  return vn;
+}
 
 /** Name frozen on the document line, else the live catalog name. */
 export function linePackName(line: Pick<ErpDocumentLine, "pack_name" | "pack_id">, packs: Iterable<ErpPack | (ErpPack & { label?: string })>): string {

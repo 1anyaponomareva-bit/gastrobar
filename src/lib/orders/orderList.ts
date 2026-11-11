@@ -33,6 +33,14 @@ export function catalogItemName(
   return productDisplayName({ locale, nameEn: product.nameEn, nameVn: product.nameVn });
 }
 
+/** Catalog pack label: RU/EN → English `label`; VN → `nameVn` if filled, else English. */
+export function orderPackDisplayName(
+  pack: Pick<OrderProductPack, "label"> & { nameVn?: string | null },
+  locale: ProductNameLocale = "ru",
+): string {
+  return productDisplayName({ locale, nameEn: pack.label, nameVn: pack.nameVn }, locale);
+}
+
 export const ALL_SUPPLIER_TAB = "all";
 export const ALL_CATEGORY_TAB = ALL_SUPPLIER_TAB;
 export const UNCATEGORIZED_CATEGORY_TAB = "uncategorized";

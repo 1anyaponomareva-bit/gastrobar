@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useErpStripPrefix, useErpRouter } from "./erpHref";
 import { publicErpHref } from "@/lib/erp/publicPath";
 import { productTitle } from "@/lib/erp/costing";
-import { compatiblePacks, packToBase } from "@/lib/erp/packs";
+import { compatiblePacks, packDisplayName, packToBase } from "@/lib/erp/packs";
 import {
   clearLocalDraft,
   countFromDocument,
@@ -34,7 +34,6 @@ import {
   loadingText,
   NavLink,
   NumberInput,
-  packText,
   PageHead,
   productById,
   qtyText,
@@ -653,7 +652,7 @@ function CountTable({
                             <option value="">{T("базовая единица", "base unit", "đơn vị gốc")}</option>
                             {packs.map((p) => (
                               <option key={p.id} value={p.id}>
-                                {packText(p.name)} = {qtyText(p.qty_base, unit)}
+                                {packDisplayName(p)} = {qtyText(p.qty_base, unit)}
                               </option>
                             ))}
                           </select>

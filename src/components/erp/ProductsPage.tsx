@@ -12,7 +12,7 @@ import {
   type ErpUnit,
   type LossPcts,
 } from "@/lib/erp/costing";
-import { compatiblePacks } from "@/lib/erp/packs";
+import { compatiblePacks, packDisplayName } from "@/lib/erp/packs";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
@@ -30,7 +30,6 @@ import {
   NavLink,
   noSearchResults,
   NumberInput,
-  packText,
   PageHead,
   PRODUCT_TYPES,
   qtyText,
@@ -540,7 +539,7 @@ function ProductEditor({
                         >
                           {options.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {packText(p.name)}
+                              {packDisplayName(p)}
                             </option>
                           ))}
                         </select>

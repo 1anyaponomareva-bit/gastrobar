@@ -37,6 +37,7 @@ import {
   isHistoryDoneStatus,
   orderLineBaseUnit,
   orderPackCaption,
+  orderPackDisplayName,
   orderPackUnit,
   orderPdfWarehouseFields,
   orderPdfWarehouseOf,
@@ -439,6 +440,9 @@ test("pack caption and details match Staff cards: 1 pack = N, supplier + pack SK
   assert.equal(orderPackCaption({ label: "pack 24 pcs", unit: "pcs", qty_base: 24 }), "1 pack = 24 pcs");
   assert.equal(orderPackCaption({ label: "box 5 kg", unit: "kg", qty_base: 5 }), "1 box = 5 kg");
   assert.equal(orderPackCaption({ label: "24 pcs", unit: "pcs", qty_base: 24 }), "1 pack = 24 pcs");
+  assert.equal(orderPackDisplayName({ label: "Bottle 1 L", nameVn: "Chai 1 L" }, "ru"), "Bottle 1 L");
+  assert.equal(orderPackDisplayName({ label: "Bottle 1 L", nameVn: "Chai 1 L" }, "vn"), "Chai 1 L");
+  assert.equal(orderPackDisplayName({ label: "Bottle 1 L", nameVn: "" }, "vn"), "Bottle 1 L");
   assert.equal(orderPackUnit({ label: "pack 24 pcs", unit: "pcs" }, "pcs"), "pack");
   assert.equal(
     productDetailLine({ brand: "Allowrie Unsalted", supplierName: "MM", showSupplier: true, packCode: "234468" }),
