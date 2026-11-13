@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, StaffMergeResult } from "@/lib/erp/types";
+import { DEFAULT_VAT_RATE, defaultInputVatRate, vatRatesForSelect, visibleVatExceptions } from "@/lib/erp/vat";
 import { useErp } from "./ErpShell";
+import { Pager, usePageSize } from "./Pager";
 import { RefList } from "./RefList";
 import { productsWithoutPack, productsWithoutUnit, unresolvedLines } from "./review";
-import { errorText, Field, NavLink, NumberInput, PageHead, ProductPicker, QtyInput, savingText, SubTabs, T, toBase, unitLabel, unitOf, useDirtyGuard } from "./ui";
+import { errorText, Field, NavLink, PageHead, ProductPicker, QtyInput, savingText, SubTabs, T, toBase, unitLabel, unitOf, useDirtyGuard } from "./ui";
 
 const serviceTabs = () => [
   { href: "/erp/service", label: T("Настройки", "Settings", "Cài đặt") },
@@ -46,15 +48,26 @@ export function SettingsPage() {
             <input type="checkbox" checked={form.input_vat_enabled} onChange={(e) => set("input_vat_enabled", e.target.checked)} />
             {T("Учитывать входящий НДС в поставках", "Track input VAT on deliveries", "Tính VAT đầu vào khi nhập hàng")}
           </label>
-          <Field label={T("Входящий НДС по умолчанию, %", "Default input VAT, %", "VAT đầu vào mặc định, %")}>
-            <NumberInput value={form.default_input_vat_rate} disabled={!form.input_vat_enabled} onChange={(v) => set("default_input_vat_rate", v)} />
+          <Field
+            label={T("НДС по умолчанию, %", "Default VAT, %", "VAT mặc định, %")}
+            hint={T("Новый ингредиент получает эту ставку. Сейчас для всех без исключения — 8%.", "New ingredients get this rate. Everyone not on the exception list uses it (8% until you change it).", "Nguyên liệu mới nhận mức này. Chưa có ngoại lệ thì 8%.")}
+          >
+            <VatRateSelect
+              value={form.default_input_vat_rate}
+              fallback={DEFAULT_VAT_RATE}
+              onChange={(v) => set("default_input_vat_rate", v)}
+            />
           </Field>
           <label className="erpCheck">
             <input type="checkbox" checked={form.output_vat_enabled} onChange={(e) => set("output_vat_enabled", e.target.checked)} />
             {T("Цены в меню включают НДС", "Menu prices include VAT", "Giá menu đã gồm VAT")}
           </label>
           <Field label={T("НДС с продаж по умолчанию, %", "Default sales VAT, %", "VAT đầu ra mặc định, %")}>
-            <NumberInput value={form.default_output_vat_rate} disabled={!form.output_vat_enabled} onChange={(v) => set("default_output_vat_rate", v)} />
+            <VatRateSelect
+              value={form.default_output_vat_rate}
+              fallback={DEFAULT_VAT_RATE}
+              onChange={(v) => set("default_output_vat_rate", v)}
+            />
           </Field>
         </div>
         <p className="erpHint">
@@ -70,13 +83,23 @@ export function SettingsPage() {
             className="erpBtn primary"
             disabled={busy || !dirty}
             onClick={async () => {
-              if (await act({ action: "saveSettings", settings: form }, T("Настройки сохранены", "Settings saved", "Đã lưu cài đặt"))) setSaved(JSON.stringify(form));
+              const settings = {
+                ...form,
+                default_input_vat_rate: form.default_input_vat_rate ?? DEFAULT_VAT_RATE,
+                default_output_vat_rate: form.default_output_vat_rate ?? DEFAULT_VAT_RATE,
+              };
+              if (await act({ action: "saveSettings", settings }, T("Настройки сохранены", "Settings saved", "Đã lưu cài đặt"))) {
+                setForm(settings);
+                setSaved(JSON.stringify(settings));
+              }
             }}
           >
             {busy ? savingText() : T("Сохранить настройки", "Save settings", "Lưu cài đặt")}
           </button>
         </div>
       </section>
+
+      <VatExceptionsCard defaultRate={defaultInputVatRate(state.settings)} />
 
       <section className="erpCard">
         <h2>{T("Каналы продаж и комиссии", "Sales channels and commission", "Kênh bán và hoa hồng")}</h2>
@@ -102,6 +125,147 @@ export function SettingsPage() {
 
       <SpeedCard />
     </>
+  );
+}
+
+function VatRateSelect({
+  value,
+  onChange,
+  fallback,
+  exclude,
+  disabled,
+}: {
+  value: number | null | undefined;
+  onChange: (value: number) => void;
+  fallback?: number;
+  exclude?: number | null;
+  disabled?: boolean;
+}) {
+  const shown = value ?? fallback ?? DEFAULT_VAT_RATE;
+  return (
+    <select
+      className="erpVatSelect"
+      value={String(shown)}
+      disabled={disabled}
+      onChange={(event) => onChange(Number(event.target.value))}
+    >
+      {vatRatesForSelect(shown, exclude).map((rate) => (
+        <option key={rate} value={rate}>
+          {rate}%
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
+  const { state, act, busy } = useErp();
+  const listed = visibleVatExceptions(state?.vatExceptions, defaultRate);
+  const listedIds = useMemo(() => new Set(listed.map((row) => row.product_id)), [listed]);
+  const otherRates = useMemo(() => vatRatesForSelect(null, defaultRate), [defaultRate]);
+  const [productId, setProductId] = useState("");
+  const [rate, setRate] = useState(() => vatRatesForSelect(null, defaultRate)[0] ?? 10);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = usePageSize();
+  useEffect(() => {
+    if (rate === defaultRate && otherRates[0] != null) setRate(otherRates[0]);
+  }, [defaultRate, otherRates, rate]);
+  useEffect(() => setPage(0), [listed.length, pageSize]);
+  if (!state) return null;
+  const pickerState: ErpState = {
+    ...state,
+    products: state.products.filter((p) => !listedIds.has(p.id)),
+  };
+  const named = listed
+    .map((row) => ({
+      ...row,
+      name: productTitle(state.products.find((p) => p.id === row.product_id) ?? { name_en: row.product_id, name_vn: "" }),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const pages = Math.max(1, Math.ceil(named.length / pageSize));
+  const current = Math.min(page, pages - 1);
+  const pageRows = named.slice(current * pageSize, current * pageSize + pageSize);
+  const add = async () => {
+    if (!productId || rate === defaultRate) return;
+    if (
+      await act(
+        { action: "saveVatException", exception: { product_id: productId, vat_rate: rate } },
+        T("Исключение сохранено", "Exception saved", "Đã lưu ngoại lệ"),
+      )
+    ) {
+      setProductId("");
+    }
+  };
+  return (
+    <section className="erpCard erpVatExceptions" data-testid="vat-exceptions">
+      <h2>{T("Исключения", "Exceptions", "Ngoại lệ")}</h2>
+      <p className="erpHint">
+        {T(
+          `У всех ингредиентов НДС ${defaultRate}%, пока их нет в этом списке. Новый ингредиент тоже получает ${defaultRate}% — ставку на карточке выбирать не нужно. Сюда добавляют только те, у кого ставка другая.`,
+          `Every ingredient uses ${defaultRate}% VAT until it is on this list. A new ingredient also gets ${defaultRate}% — you do not pick a rate on the product card. Add only products with a different rate.`,
+          `Mọi nguyên liệu dùng VAT ${defaultRate}% trừ khi có trong danh sách này. Nguyên liệu mới cũng ${defaultRate}% — không chọn trên thẻ. Chỉ thêm mức khác.`,
+        )}
+      </p>
+      <div className="erpVatAdd">
+        <Field label={T("Ингредиент", "Ingredient", "Nguyên liệu")} wide>
+          <ProductPicker state={pickerState} value={productId} onChange={setProductId} />
+        </Field>
+        <Field label={T("НДС, %", "VAT, %", "VAT, %")}>
+          <VatRateSelect value={rate} exclude={defaultRate} onChange={setRate} />
+        </Field>
+        <div className="erpVatAddAct">
+          <button type="button" className="erpBtn primary" disabled={busy || !productId || rate === defaultRate} onClick={() => void add()}>
+            {T("Добавить", "Add", "Thêm")}
+          </button>
+        </div>
+      </div>
+      {named.length ? (
+        <>
+          <div className="erpTableWrap">
+            <table className="erpTable stack">
+              <thead>
+                <tr>
+                  <th>{T("Ингредиент", "Ingredient", "Nguyên liệu")}</th>
+                  <th className="num">{T("НДС", "VAT", "VAT")}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((row) => (
+                  <tr key={row.product_id}>
+                    <td className="main">
+                      <span className="erpName">{row.name}</span>
+                    </td>
+                    <td className="num" data-label={T("НДС", "VAT", "VAT")}>
+                      {row.vat_rate}%
+                    </td>
+                    <td className="num">
+                      <button
+                        type="button"
+                        className="erpBtn ghost erpVatRemove"
+                        disabled={busy}
+                        aria-label={T("Убрать", "Remove", "Xóa")}
+                        onClick={() =>
+                          void act(
+                            { action: "deleteVatException", productId: row.product_id },
+                            T("Исключение удалено", "Exception removed", "Đã xóa ngoại lệ"),
+                          )
+                        }
+                      >
+                        {T("Убрать", "Remove", "Xóa")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pager total={named.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+        </>
+      ) : (
+        <p className="erpHint">{T("Исключений пока нет — у всех ингредиентов ставка по умолчанию.", "No exceptions yet — every ingredient uses the default rate.", "Chưa có ngoại lệ — mọi nguyên liệu dùng mức mặc định.")}</p>
+      )}
+    </section>
   );
 }
 

@@ -57,6 +57,13 @@ import { xlsxBytes } from "../../src/lib/erp/xlsx";
 import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../../src/lib/erp/stockView";
 import { packSupplierIds, packSupplierLabel, supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
 import { ingredientCategoryStats, withInputVat } from "../../src/lib/erp/ingredientCategoryStats";
+import {
+  DEFAULT_VAT_RATE,
+  ERP_VAT_RATES,
+  defaultInputVatRate,
+  effectiveInputVatRate,
+  visibleVatExceptions,
+} from "../../src/lib/erp/vat";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import { countFromDocument, nowDateTimeLocal } from "../../src/lib/erp/inventoryUi";
 import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
@@ -520,6 +527,7 @@ async function main() {
       "financeShifts",
       "financeEmployees",
       "financePayroll",
+      "vatExceptions",
     ]) {
       assert.ok(key in full, key);
     }
@@ -926,6 +934,78 @@ async function main() {
       [100000, 10000, 110000, 10000],
     );
     await q("update public.erp_settings set input_vat_enabled = false");
+  });
+
+  await test("ingredient VAT defaults to 8%; exceptions override; removing restores default", async () => {
+    assert.deepEqual([...ERP_VAT_RATES], [0, 5, 8, 10]);
+    assert.equal(DEFAULT_VAT_RATE, 8);
+    assert.ok(ERP_VAT_RATES.length > 1 && ERP_VAT_RATES.includes(8));
+    assert.equal(defaultInputVatRate({ default_input_vat_rate: null }), 8);
+    assert.equal(defaultInputVatRate({ default_input_vat_rate: 10 }), 10);
+    assert.equal(effectiveInputVatRate("a", { default_input_vat_rate: null }, []), 8);
+    assert.equal(effectiveInputVatRate("a", { default_input_vat_rate: 8 }, [{ product_id: "a", vat_rate: 0 }]), 0);
+    assert.equal(effectiveInputVatRate("b", { default_input_vat_rate: 8 }, [{ product_id: "a", vat_rate: 10 }]), 8);
+    assert.equal(visibleVatExceptions([{ product_id: "a", vat_rate: 8 }, { product_id: "b", vat_rate: 10 }], 8).length, 1);
+
+    await q("update public.erp_settings set default_input_vat_rate = 8, input_vat_enabled = true");
+    const fresh = await saveProduct({ type: "ingredient", name_en: "VAT default item", base_unit: "kg" });
+    assert.equal(n(await value("select default_input_vat_rate from public.erp_settings")), 8);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [fresh])), 8);
+    assert.equal(n(await value("select count(*) from public.erp_vat_exceptions where product_id = $1", [fresh])), 0);
+
+    await q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ default_input_vat_rate: 5, input_vat_enabled: true }), ACTOR]);
+    assert.equal(n(await value("select default_input_vat_rate from public.erp_settings")), 5);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [fresh])), 5);
+    await expectError(
+      q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ default_input_vat_rate: 7 }), ACTOR]),
+      "ERP_INVALID",
+    );
+
+    await q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ default_input_vat_rate: 8, input_vat_enabled: true }), ACTOR]);
+    const extra = await saveProduct({ type: "ingredient", name_en: "VAT exception item", base_unit: "kg" });
+    await expectError(
+      q("select public.erp_save_vat_exception($1::jsonb, $2)", [JSON.stringify({ product_id: extra, vat_rate: 8 }), ACTOR]),
+      "ERP_INVALID",
+    );
+    await q("select public.erp_save_vat_exception($1::jsonb, $2)", [JSON.stringify({ product_id: extra, vat_rate: 10 }), ACTOR]);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [extra])), 10);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [fresh])), 8);
+
+    const excepted = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      prices_include_vat: true,
+      lines: [{ product_id: extra, qty: 1, unit_price: 11000 }],
+    });
+    await post(excepted);
+    const exceptedLine = await one<Record<string, unknown>>(
+      "select net_amount, vat_amount, gross_amount from public.erp_document_lines where document_id = $1",
+      [excepted],
+    );
+    assert.deepEqual([n(exceptedLine.net_amount), n(exceptedLine.vat_amount), n(exceptedLine.gross_amount)], [10000, 1000, 11000]);
+
+    const ordinary = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      prices_include_vat: true,
+      lines: [{ product_id: fresh, qty: 1, unit_price: 10800 }],
+    });
+    await post(ordinary);
+    const ordinaryLine = await one<Record<string, unknown>>(
+      "select net_amount, vat_amount, gross_amount from public.erp_document_lines where document_id = $1",
+      [ordinary],
+    );
+    assert.deepEqual([n(ordinaryLine.net_amount), n(ordinaryLine.vat_amount), n(ordinaryLine.gross_amount)], [10000, 800, 10800]);
+
+    await q("select public.erp_delete_vat_exception($1, $2)", [extra, ACTOR]);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [extra])), 8);
+
+    await q("select public.erp_save_vat_exception($1::jsonb, $2)", [JSON.stringify({ product_id: extra, vat_rate: 0 }), ACTOR]);
+    await q("select public.erp_save_settings($1::jsonb, $2)", [JSON.stringify({ default_input_vat_rate: 0 }), ACTOR]);
+    assert.equal(n(await value("select count(*) from public.erp_vat_exceptions where product_id = $1", [extra])), 0);
+
+    await q("update public.erp_settings set input_vat_enabled = false, default_input_vat_rate = 8, default_output_vat_rate = coalesce(default_output_vat_rate, 8)");
+    await q("delete from public.erp_vat_exceptions");
   });
 
   await test("product with stock cannot be archived; base unit locked once used", async () => {
@@ -3274,6 +3354,7 @@ async function main() {
     assert.equal(withInputVat(null, { input_vat_enabled: true, default_input_vat_rate: 10 }), null);
     assert.equal(withInputVat(1000, { input_vat_enabled: false, default_input_vat_rate: 10 }), 1000);
     assert.equal(withInputVat(1000, { input_vat_enabled: true, default_input_vat_rate: 10 }), 1100);
+    assert.equal(withInputVat(1000, { input_vat_enabled: true, default_input_vat_rate: null }), 1080);
 
     const stats = ingredientCategoryStats(
       [

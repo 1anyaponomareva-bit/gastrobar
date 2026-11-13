@@ -16,6 +16,7 @@ import {
 import { compatiblePacks, packDisplayName } from "@/lib/erp/packs";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
+import { effectiveInputVatRate } from "@/lib/erp/vat";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
@@ -509,6 +510,21 @@ function ProductEditor({
           }
         >
           {unit ? <NumberInput value={form.est_unit_cost} onChange={(v) => set("est_unit_cost", v)} /> : <span className="erpNoUnit">{T("Сначала выберите единицу", "Choose a unit first", "Chọn đơn vị trước")}</span>}
+        </Field>
+        <Field
+          label={T("НДС", "VAT", "VAT")}
+          hint={
+            product && state.vatExceptions?.some((row) => row.product_id === product.id)
+              ? T("Исключение из Служебное → Настройки. На карточке ставку не меняют.", "Exception from Admin → Settings. The rate is not edited on this card.", "Ngoại lệ trong Quản trị → Cài đặt. Không sửa trên thẻ này.")
+              : T("Для новых ингредиентов всегда ставка по умолчанию. Другую ставку задают списком исключений в Служебном.", "New ingredients always get the default rate. A different rate is set on the exception list in Admin.", "Nguyên liệu mới luôn dùng mức mặc định. Mức khác khai trong danh sách ngoại lệ.")
+          }
+        >
+          <span className="erpVatReadout" data-testid="product-vat">
+            {effectiveInputVatRate(product?.id, state.settings, state.vatExceptions)}%
+          </span>
+          <NavLink href="/erp/service" className="erpLink">
+            {T("Список исключений в настройках", "Exception list in settings", "Danh sách ngoại lệ trong cài đặt")}
+          </NavLink>
         </Field>
       </div>
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>

@@ -4,6 +4,7 @@ import { Suspense, useMemo } from "react";
 import { costLine, productTitle } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
+import { withProductInputVat } from "@/lib/erp/ingredientCategoryStats";
 import { CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
@@ -106,7 +107,21 @@ function MenuGoodsList() {
       cell: costCell,
       text: (row) => (row.cost == null ? "" : String(Math.round(row.cost))),
     },
-    { id: "costVat", label: T("Себестоимость с НДС", "Cost incl. VAT", "Giá vốn có VAT"), num: true, defaultHidden: true, sort: false, cell: () => dash, text: () => "" },
+    {
+      id: "costVat",
+      label: T("Себестоимость с НДС", "Cost incl. VAT", "Giá vốn có VAT"),
+      num: true,
+      defaultHidden: true,
+      sort: false,
+      cell: (row) => {
+        const value = withProductInputVat(row.cost, row.id, state.settings, state.vatExceptions);
+        return value == null ? dash : vnd(value);
+      },
+      text: (row) => {
+        const value = withProductInputVat(row.cost, row.id, state.settings, state.vatExceptions);
+        return value == null ? "" : String(Math.round(value));
+      },
+    },
     { id: "price", label: T("Цена", "Price", "Giá"), num: true, sort: false, cell: () => dash, text: () => "" },
     { id: "profit", label: T("Прибыль", "Profit", "Lợi nhuận"), num: true, defaultHidden: true, sort: false, cell: () => dash, text: () => "" },
     { id: "markup", label: T("Наценка", "Markup", "Phụ thu"), num: true, sort: false, cell: () => dash, text: () => "" },

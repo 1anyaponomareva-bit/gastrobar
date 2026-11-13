@@ -1,5 +1,6 @@
 import { addTotals, stockByProduct, stockOf, stockValue } from "./stockView";
-import type { ErpCategory, ErpDish, ErpProduct, ErpSettings, ErpStockRow } from "./types";
+import type { ErpCategory, ErpDish, ErpProduct, ErpSettings, ErpStockRow, ErpVatException } from "./types";
+import { DEFAULT_VAT_RATE, effectiveInputVatRate } from "./vat";
 
 export const INGREDIENT_PRODUCT_TYPES = new Set(["ingredient", "packaging", "consumable"]);
 export const CATEGORY_TRASH_DAYS = 14;
@@ -8,12 +9,22 @@ export const CATEGORY_TRASH_DAYS = 14;
 export function withInputVat(
   net: number | null,
   settings: Pick<ErpSettings, "input_vat_enabled" | "default_input_vat_rate">,
+  rate?: number | null,
 ): number | null {
   if (net == null) return null;
   if (!settings.input_vat_enabled) return net;
-  const rate = settings.default_input_vat_rate;
-  if (rate == null) return net;
-  return net * (1 + Number(rate) / 100);
+  const use = rate ?? settings.default_input_vat_rate ?? DEFAULT_VAT_RATE;
+  if (use == null) return net;
+  return net * (1 + Number(use) / 100);
+}
+
+export function withProductInputVat(
+  net: number | null,
+  productId: string,
+  settings: Pick<ErpSettings, "input_vat_enabled" | "default_input_vat_rate">,
+  exceptions: ErpVatException[] | null | undefined,
+): number | null {
+  return withInputVat(net, settings, effectiveInputVatRate(productId, settings, exceptions));
 }
 
 export type IngredientCategoryStat = {

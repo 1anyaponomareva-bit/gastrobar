@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useErpRouter } from "./erpHref";
-import type { ErpCategory } from "@/lib/erp/types";
+import type { ErpCategory, ErpState } from "@/lib/erp/types";
 import {
   CATEGORY_TRASH_DAYS,
+  INGREDIENT_PRODUCT_TYPES,
   ingredientCategoryStats,
   liveCategories,
   sumIngredientCategoryStats,
   trashAlive,
   trashedCategories,
-  withInputVat,
+  withProductInputVat,
 } from "@/lib/erp/ingredientCategoryStats";
+import { stockByProduct, stockOf, stockValue } from "@/lib/erp/stockView";
 import type { IngredientCategoryStat } from "@/lib/erp/ingredientCategoryStats";
 import { CatalogTable, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
@@ -29,9 +31,16 @@ function qtyLabel(qty: number, unit: string | null, mixed: boolean) {
   return unit ? `${packQtyText(qty, unit)} ${unitLabel(unit)}` : packQtyText(qty);
 }
 
-function valueCell(net: number | null, withVat: (n: number | null) => number | null) {
-  const value = withVat(net);
-  return value == null ? "—" : vnd(value);
+function categoryValueWithVat(state: ErpState, categoryId: string): number | null {
+  const stockMap = stockByProduct(state.stock, null);
+  let sum = 0;
+  for (const product of state.products) {
+    if (product.archived_at || product.category_id !== categoryId || !INGREDIENT_PRODUCT_TYPES.has(product.type)) continue;
+    const value = withProductInputVat(stockValue(stockOf(stockMap, product.id)), product.id, state.settings, state.vatExceptions);
+    if (value == null) return null;
+    sum += value;
+  }
+  return sum;
 }
 
 function editHref(row: { id: string }) {
@@ -47,7 +56,7 @@ export function MenuIngredientCategoriesPage() {
   );
   if (!state) return null;
 
-  const vat = (net: number | null) => withInputVat(net, state.settings);
+  const vatOf = (categoryId: string) => categoryValueWithVat(state, categoryId);
   const q = query.trim().toLowerCase();
   const rows = stats.filter((row) => {
     if (!q) return true;
@@ -89,9 +98,12 @@ export function MenuIngredientCategoriesPage() {
       id: "valueVat",
       label: T("Стоимость остатков с НДС", "Stock value incl. VAT", "Giá trị tồn gồm VAT"),
       num: true,
-      cell: (row) => valueCell(row.valueNet, vat),
+      cell: (row) => {
+        const value = vatOf(row.id);
+        return value == null ? "—" : vnd(value);
+      },
       text: (row) => {
-        const value = vat(row.valueNet);
+        const value = vatOf(row.id);
         return value == null ? "" : String(Math.round(value));
       },
     },
@@ -167,7 +179,11 @@ export function MenuIngredientCategoriesPage() {
                         ? "—"
                         : vnd(totals.valueNet)
                       : column.id === "valueVat"
-                        ? valueCell(totals.valueNet, vat)
+                        ? (() => {
+                            const values = rows.map((row) => vatOf(row.id));
+                            if (values.some((value) => value == null)) return "—";
+                            return vnd(values.reduce((sum: number, value) => sum + (value ?? 0), 0));
+                          })()
                         : null}
             </td>
           ))}

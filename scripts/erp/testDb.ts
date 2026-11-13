@@ -38,6 +38,7 @@ export const MIGRATIONS = [
   "20261109130000_erp_order_placed_by_name.sql",
   "20261111230000_erp_pack_name_vn.sql",
   "20261114120000_erp_loss_defrost.sql",
+  "20261114140000_erp_vat_exceptions.sql",
   "20261114153000_erp_vietnam_today.sql",
 ].map((file) => path.join(process.cwd(), "supabase/migrations", file));
 

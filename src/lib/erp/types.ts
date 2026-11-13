@@ -26,6 +26,12 @@ export type ErpSettings = {
   timezone?: string;
 };
 
+/** Ingredient whose input VAT differs from the company default. Edited in Служебное. */
+export type ErpVatException = {
+  product_id: string;
+  vat_rate: number;
+};
+
 type Archivable = { archived_at: string | null };
 
 export type ErpCategory = Archivable & {
@@ -242,6 +248,8 @@ export type ErpState = {
   financeShifts?: FinanceShift[];
   financeEmployees?: FinanceEmployee[];
   financePayroll?: FinancePayroll[];
+  /** Products with a VAT rate other than the company default. Missing → none. */
+  vatExceptions?: ErpVatException[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
@@ -391,6 +399,8 @@ export type ErpAction =
   | { action: "restoreCategory"; id: string }
   | { action: "purgeCategoryTrash" }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
+  | { action: "saveVatException"; exception: { product_id: string; vat_rate: number } }
+  | { action: "deleteVatException"; productId: string }
   | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
   | { action: "saveDocument"; document: Record<string, unknown> }
   /** With `document`, the draft is saved first (and stays saved if posting fails). */

@@ -399,7 +399,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
             </select>
           </Field>
           {state.settings.output_vat_enabled ? (
-            <Field label={T("НДС, %", "VAT, %", "VAT, %")} hint={`${T("По умолчанию", "Default", "Mặc định")}: ${state.settings.default_output_vat_rate ?? "—"}%`}>
+            <Field label={T("НДС, %", "VAT, %", "VAT, %")} hint={`${T("По умолчанию", "Default", "Mặc định")}: ${state.settings.default_output_vat_rate ?? 8}%`}>
               <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />
             </Field>
           ) : null}

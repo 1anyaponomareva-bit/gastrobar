@@ -27,7 +27,7 @@
  *
  * Sale / markup / food-cost (VND). `price` is the menu price as shown (gross of output VAT
  * when output VAT is enabled):
- *   vatRate      = dish.vat_rate ?? settings.default_output_vat_rate   (0 when output VAT is off)
+ *   vatRate      = dish.vat_rate ?? settings.default_output_vat_rate ?? 8   (0 when output VAT is off)
  *   netRevenue   = price / (1 + vatRate/100)
  *   vat          = price − netRevenue
  *   commission   = price × commission_pct / 100
@@ -43,6 +43,7 @@
  */
 
 import { productLabel } from "./productName";
+import { DEFAULT_VAT_RATE } from "./vat";
 export { liveCatalogName, productLabel, productTitle } from "./productName";
 
 export type ErpUnit = "kg" | "l" | "pcs";
@@ -316,7 +317,7 @@ export function channelResult(
   if (price === null) issues.push("no_price");
   let vatRate: number | null = 0;
   if (settings.output_vat_enabled) {
-    vatRate = dishVatRate ?? settings.default_output_vat_rate;
+    vatRate = dishVatRate ?? settings.default_output_vat_rate ?? DEFAULT_VAT_RATE;
     if (vatRate === null) issues.push("no_vat_rate");
   }
   if (channel.commission_pct === null) issues.push("no_commission");

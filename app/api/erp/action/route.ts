@@ -117,7 +117,13 @@ export async function POST(request: Request) {
         return timing.json({ ok: true, patch: await fresh(["categories", "products"]) });
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
-        return timing.json({ ok: true, patch: await fresh(["settings"]) });
+        return timing.json({ ok: true, patch: await fresh(["settings", "vatExceptions"]) });
+      case "saveVatException":
+        await rpc("erp_save_vat_exception", { p: object(a.exception, "exception"), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(["vatExceptions"]) });
+      case "deleteVatException":
+        await rpc("erp_delete_vat_exception", { p_product: uuid(a.productId), p_actor: actor });
+        return timing.json({ ok: true, patch: await fresh(["vatExceptions"]) });
       case "saveWriteoffReason": {
         const id = await rpc("erp_save_writeoff_reason", { p: object(a.reason, "reason"), p_actor: actor });
         return timing.json({ id, patch: await fresh(["writeoffReasons"]) });

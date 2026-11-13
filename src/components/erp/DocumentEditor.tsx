@@ -7,6 +7,7 @@ import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
 import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packDisplayName, packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { effectiveInputVatRate } from "@/lib/erp/vat";
 import { vietnamNowTime } from "@/lib/orders/datetime";
 import { StatusBadge } from "./docs";
 import { PurchasingReceiptPanel } from "./PurchasingReceiptPanel";
@@ -676,9 +677,13 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                     {vatOn ? (
                       <td className="edit" data-label={T("НДС, %", "VAT, %", "VAT, %")} style={{ width: 90 }}>
                         {editable ? (
-                          <NumberInput value={line.vat_rate} placeholder={String(state.settings.default_input_vat_rate ?? "")} onChange={(v) => update(index, { vat_rate: v })} />
+                          <NumberInput
+                            value={line.vat_rate}
+                            placeholder={String(effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions))}
+                            onChange={(v) => update(index, { vat_rate: v })}
+                          />
                         ) : (
-                          (line.vat_rate ?? state.settings.default_input_vat_rate ?? "—")
+                          (line.vat_rate ?? effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions))
                         )}
                       </td>
                     ) : null}

@@ -6,7 +6,7 @@ import type {
   FinanceShift,
   FinanceTransaction,
 } from "./finance";
-import type { ErpDish, ErpDocument, ErpLocation, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState } from "./types";
+import type { ErpDish, ErpDocument, ErpLocation, ErpProductCostQuote, ErpRecipe, ErpRecipeLine, ErpState, ErpVatException } from "./types";
 import { check, erpDb } from "./server";
 
 /** Parts of the ERP screen data that can be loaded on their own. */
@@ -33,10 +33,11 @@ export const ALL_PARTS: StatePart[] = [
   "financeShifts",
   "financeEmployees",
   "financePayroll",
+  "vatExceptions",
 ];
 
 /** Warehouse screens need these before recipes/dishes. First paint still uses ALL_PARTS: after `erp_load_state` that is one SQL; splitting would add a second round trip. */
-export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons"];
+export const STOCK_SHELL_PARTS: StatePart[] = ["settings", "categories", "suppliers", "warehouses", "channels", "products", "packs", "productPacks", "stock", "writeoffReasons", "vatExceptions"];
 
 const MISSING_FN = new Set(["PGRST202", "42883"]);
 /** Skip a missing RPC for a while, then try again (migration may land after the first warm instance). */
@@ -168,6 +169,8 @@ async function loadPart(part: StatePart): Promise<unknown> {
         await db.from("erp_finance_payroll").select("*").order("period_end", { ascending: false }).limit(2000),
         [] as FinancePayroll[],
       );
+    case "vatExceptions":
+      return optionalTable(await db.from("erp_vat_exceptions").select("*"), [] as ErpVatException[]);
     case "dishes": {
       const [dishes, lines, prices] = await Promise.all([
         db.from("erp_dishes").select("*").order("name_en"),
@@ -218,6 +221,9 @@ export async function loadState(parts: StatePart[] = ALL_PARTS): Promise<Partial
     }
     if (parts.includes("locations") && batched.locations === undefined) {
       batched.locations = (await loadPart("locations")) as ErpLocation[];
+    }
+    if (parts.includes("vatExceptions") && batched.vatExceptions === undefined) {
+      batched.vatExceptions = (await loadPart("vatExceptions")) as ErpVatException[];
     }
     const financeParts = [
       "financeAccounts",
