@@ -1,3 +1,5 @@
+import { VIETNAM_TZ, vietnamIsoDate, vietnamTodayIso } from "@/lib/orders/datetime";
+
 /** Poster Finance: balances, deal date vs cash date, P&L, Cash flow, monthly report. */
 
 export type FinanceTxType = "income" | "expense" | "transfer";
@@ -99,34 +101,17 @@ export type FinancePayroll = {
   comment: string | null;
 };
 
-export const FINANCE_TZ = "Asia/Ho_Chi_Minh";
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+export const FINANCE_TZ = VIETNAM_TZ;
+export const vietnamDateIso = vietnamIsoDate;
 
 export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-export function vietnamDateIso(value: string | Date): string {
-  if (typeof value === "string" && DATE_ONLY.test(value.slice(0, 10)) && value.length <= 10) return value.slice(0, 10);
-  const date = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: FINANCE_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  return year && month && day ? `${year}-${month}-${day}` : "";
-}
-
 export function monthRange(yearMonth: string): { from: string; to: string } {
   const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
   if (!match) {
-    const now = vietnamDateIso(new Date());
+    const now = vietnamTodayIso();
     return monthRange(now.slice(0, 7));
   }
   const year = Number(match[1]);

@@ -4,6 +4,7 @@ import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, us
 import { productTitle } from "@/lib/erp/costing";
 import { documentSupplierIds, documentSupplierLabel, receiptMatchesSupplier } from "@/lib/erp/docSupplier";
 import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { vietnamIsoDate, vietnamNowTime } from "@/lib/orders/datetime";
 import { docHref, StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
@@ -204,13 +205,12 @@ const sortValue = (row: Row, key: SortKey): string | number => {
   }
 };
 
-/** Local time of saving, shown next to the date when it was saved on that day. */
+/** Vietnam time of saving, shown next to the date when it was saved on that day. */
 function timeOf(doc: ErpDocument): string {
   if (!doc.created_at) return "";
   const at = new Date(doc.created_at);
   if (Number.isNaN(at.getTime())) return "";
-  const local = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
-  return local === doc.doc_date ? `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}` : "";
+  return vietnamIsoDate(at) === doc.doc_date ? vietnamNowTime(at) : "";
 }
 
 const lineSum = (line: ErpDocumentLine): number | null =>

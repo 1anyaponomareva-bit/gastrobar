@@ -7,6 +7,7 @@ import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
 import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packDisplayName, packPrice, packToBase } from "@/lib/erp/packs";
 import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { vietnamNowTime } from "@/lib/orders/datetime";
 import { StatusBadge } from "./docs";
 import { PurchasingReceiptPanel } from "./PurchasingReceiptPanel";
 import { useErp } from "./ErpShell";
@@ -47,10 +48,7 @@ type SetLines = (update: (lines: ErpDocumentLine[]) => ErpDocumentLine[]) => voi
 /** randomUUID exists only on https and localhost; without it the busy-disabled buttons still guard. */
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : null);
 
-const nowTime = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
+const nowTime = () => vietnamNowTime();
 
 function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | null): ErpDocument {
   return {

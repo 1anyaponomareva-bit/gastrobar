@@ -4,6 +4,7 @@ import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, us
 import { liveCatalogName } from "@/lib/erp/costing";
 import { PROCESSING_LIST_PATH, PROCESSING_NEW_HREF, processingDocPath } from "@/lib/erp/processing";
 import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { vietnamNowTime } from "@/lib/orders/datetime";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
@@ -145,7 +146,7 @@ function timeOf(doc: ErpDocument): string {
   if (doc.doc_time) return doc.doc_time.slice(0, 5);
   if (doc.occurred_at) {
     const at = new Date(doc.occurred_at);
-    if (!Number.isNaN(at.getTime())) return `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+    if (!Number.isNaN(at.getTime())) return vietnamNowTime(at);
   }
   return "";
 }

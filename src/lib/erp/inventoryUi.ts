@@ -1,5 +1,6 @@
 import { productTitle } from "@/lib/erp/costing";
 import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
+import { vietnamDateTimeLocal, vietnamIsoDate } from "@/lib/orders/datetime";
 
 const stockQty = (state: ErpState, productId: string, warehouseId: string | null | undefined): number =>
   warehouseId ? (state.stock.find((row) => row.product_id === productId && row.warehouse_id === warehouseId)?.qty ?? 0) : 0;
@@ -90,10 +91,8 @@ export type CountsPage = { documents: CountListItem[]; more: boolean; logic: Cou
 
 const META_PREFIX = "INVJSON:";
 
-export function nowDateTimeLocal(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export function nowDateTimeLocal(now: Date = new Date()): string {
+  return vietnamDateTimeLocal(now);
 }
 
 export function encodeCountComment(meta: CountMeta, comment: string): string {
@@ -271,7 +270,7 @@ export function documentFromCount(doc: CountDoc): Record<string, unknown> {
   return {
     id: doc.id,
     doc_type: "count",
-    doc_date: doc.counted_at.slice(0, 10),
+    doc_date: vietnamIsoDate(doc.counted_at) || doc.counted_at.slice(0, 10),
     counted_at: doc.counted_at,
     occurred_at: doc.when === "now" ? null : doc.counted_at,
     count_kind: doc.mode,
@@ -298,9 +297,7 @@ function toLocalInput(value: string): string {
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return value;
   const at = Date.parse(value);
   if (Number.isNaN(at)) return value.slice(0, 16);
-  const d = new Date(at);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return vietnamDateTimeLocal(new Date(at));
 }
 
 /**

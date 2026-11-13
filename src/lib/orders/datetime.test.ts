@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatVietnamDate, formatVietnamDateTime, orderStatusInstant } from "./datetime";
+import {
+  formatVietnamDate,
+  formatVietnamDateTime,
+  orderStatusInstant,
+  vietnamDateTimeLocal,
+  vietnamIsoDate,
+  vietnamNowTime,
+  vietnamTodayIso,
+} from "./datetime";
 
 test("Vietnam date+time from the UTC ISO the UI used to dump", () => {
   assert.equal(formatVietnamDateTime("2026-11-07T13:40:53.759115+00:00"), "07.11.2026 20:40");
@@ -22,6 +30,17 @@ test("empty and junk stay empty", () => {
   assert.equal(formatVietnamDateTime(null), "");
   assert.equal(formatVietnamDateTime(""), "");
   assert.equal(formatVietnamDateTime("nope"), "");
+});
+
+test("Vietnam calendar today is not UTC ISO date at 03:00 in Nha Trang", () => {
+  const night = new Date("2026-11-14T03:00:00+07:00");
+  assert.equal(night.toISOString().slice(0, 10), "2026-11-13");
+  assert.equal(vietnamTodayIso(night), "2026-11-14");
+  assert.equal(vietnamTodayIso(new Date("2026-11-13T20:00:00.000Z")), "2026-11-14");
+  assert.equal(vietnamIsoDate(night), "2026-11-14");
+  assert.equal(vietnamNowTime(night), "03:00");
+  assert.equal(vietnamDateTimeLocal(night), "2026-11-14T03:00");
+  assert.equal(vietnamIsoDate("2026-11-14"), "2026-11-14");
 });
 
 test("status chip date is received when received, otherwise ordered", () => {

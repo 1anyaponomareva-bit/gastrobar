@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ComponentProps, type MouseEvent, typ
 import { useErpHref } from "./erpHref";
 import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
+import { formatVietnamDate, formatVietnamDateTime, vietnamTodayIso } from "@/lib/orders/datetime";
 import { locale, T } from "./i18n";
 
 export { T } from "./i18n";
@@ -220,12 +221,8 @@ export const packQtyText = (value: number, unit?: string | null) => {
   if (unit === "kg" || unit === "l") return rounded.toLocaleString(locale(), { minimumFractionDigits: 3, maximumFractionDigits: 3 });
   return numText(rounded);
 };
-export const dateText = (value: string | null | undefined) => {
-  if (!value) return "—";
-  const [y, m, d] = value.slice(0, 10).split("-");
-  return `${d}.${m}.${y}`;
-};
-export const dateTimeText = (value: string | null | undefined) => (value ? `${dateText(value)} ${value.slice(11, 16)}` : "—");
+export const dateText = (value: string | null | undefined) => formatVietnamDate(value) || "—";
+export const dateTimeText = (value: string | null | undefined) => formatVietnamDateTime(value) || "—";
 
 export const num = (text: string): number | null => {
   const value = Number(text.replace(/\s/g, "").replace(",", "."));
@@ -426,10 +423,8 @@ export function productById(state: ErpState, id: string | null | undefined): Erp
   return id ? state.products.find((p) => p.id === id) : undefined;
 }
 
-export const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+/** Vietnam calendar date — new ERP documents default to this, including SSR on UTC. */
+export const today = (now?: Date) => vietnamTodayIso(now);
 
 export const addDays = (date: string, days: number) => {
   const d = new Date(`${date}T00:00:00Z`);

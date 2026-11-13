@@ -58,7 +58,7 @@ import { costInfo, costNumber, stockByProduct, stockOf, stockValue } from "../..
 import { packSupplierIds, packSupplierLabel, supplierCategoryIds } from "../../src/lib/erp/supplierCategories";
 import { ingredientCategoryStats, withInputVat } from "../../src/lib/erp/ingredientCategoryStats";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
-import { countFromDocument } from "../../src/lib/erp/inventoryUi";
+import { countFromDocument, nowDateTimeLocal } from "../../src/lib/erp/inventoryUi";
 import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
 import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
 import { supplierOrderRows } from "../../src/lib/staffOrderRows";
@@ -93,6 +93,12 @@ import {
   type FinanceCategory,
   type FinanceTransaction,
 } from "../../src/lib/erp/finance";
+import {
+  vietnamDateTimeLocal,
+  vietnamIsoDate,
+  vietnamNowTime,
+  vietnamTodayIso,
+} from "../../src/lib/orders/datetime";
 
 const ACTOR = "test@gastrofood";
 let db: PGlite;
@@ -167,6 +173,22 @@ function gate(host: string, path: string, method = "GET", cfg?: ErpHostGateConfi
 }
 
 async function main() {
+  await test("ERP today is Vietnam calendar date, not UTC ISO", async () => {
+    const night = new Date("2026-11-14T03:00:00+07:00");
+    assert.equal(night.toISOString().slice(0, 10), "2026-11-13");
+    assert.equal(vietnamTodayIso(night), "2026-11-14");
+    assert.equal(vietnamTodayIso(new Date("2026-11-13T20:00:00.000Z")), "2026-11-14");
+    assert.equal(vietnamIsoDate(night), "2026-11-14");
+    assert.equal(vietnamNowTime(night), "03:00");
+    assert.equal(vietnamDateTimeLocal(night), "2026-11-14T03:00");
+    assert.equal(nowDateTimeLocal(night), "2026-11-14T03:00", "new inventory counted_at defaults to VN wall time");
+    assert.equal(
+      vietnamTodayIso(night),
+      "2026-11-14",
+      "new document default date (ui.today → vietnamTodayIso) is VN, not yesterday",
+    );
+  });
+
   await test("host gate flags split: empty A and B off leave legacy ERP in place", async () => {
     const cfg = readErpHostGateConfig({});
     assert.deepEqual(cfg, { erpHosts: [], redirectFromLegacy: false, closeLegacyApi: false });
@@ -628,6 +650,27 @@ async function main() {
     name_vn: "Chả bò",
     base_unit: "pcs",
     shelf_life_days: 3,
+  });
+
+  await test("save without doc_date uses Vietnam today, not UTC current_date", async () => {
+    await q("set timezone to 'UTC'");
+    assert.equal(await value<string>("select public.erp_business_tz()"), "Asia/Ho_Chi_Minh");
+    assert.equal(
+      await value<string>("select (timestamptz '2026-11-13 20:00:00+00' at time zone public.erp_business_tz())::date::text"),
+      "2026-11-14",
+    );
+    const marker = await saveProduct({ type: "ingredient", name_en: "VN date marker", base_unit: "kg" });
+    const vn = await value<string>("select public.erp_business_today()::text");
+    const utc = await value<string>("select (timezone('UTC', now()))::date::text");
+    const id = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      lines: [{ product_id: marker, qty: 1, unit_price: 1 }],
+    });
+    const date = await value<string>("select doc_date::text from public.erp_documents where id = $1", [id]);
+    assert.equal(date, vn);
+    if (vn !== utc) assert.notEqual(date, utc);
+    await q("reset timezone");
   });
 
   let receipt1 = "";

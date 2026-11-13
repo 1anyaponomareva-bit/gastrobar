@@ -1,5 +1,5 @@
 import type { FinanceAccountKind, FinancePayType, FinancePnlBlock, FinanceTxType } from "@/lib/erp/finance";
-import { FINANCE_TZ } from "@/lib/erp/finance";
+import { vietnamDateTimeLocal } from "@/lib/orders/datetime";
 import { T } from "./i18n";
 
 export function accountKindLabel(kind: FinanceAccountKind) {
@@ -46,19 +46,7 @@ export const PAY_TYPES: FinancePayType[] = ["monthly", "hourly", "shift", "perce
 export function toDatetimeLocal(iso: string | null | undefined, now = new Date()): string {
   const date = iso ? new Date(iso) : now;
   if (Number.isNaN(date.getTime())) return "";
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: FINANCE_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  let hour = get("hour");
-  if (hour === "24") hour = "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${hour.padStart(2, "0")}:${get("minute").padStart(2, "0")}`;
+  return vietnamDateTimeLocal(date);
 }
 
 /** datetime-local is wall time in Vietnam; store as +07:00. */

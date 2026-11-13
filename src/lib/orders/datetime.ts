@@ -1,4 +1,4 @@
-/** Vietnam wall clock for order timestamps (Postgres timestamptz arrives as UTC ISO). */
+/** Vietnam wall clock (no DST). Postgres timestamptz arrives as UTC ISO. */
 export const VIETNAM_TZ = "Asia/Ho_Chi_Minh";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,6 +18,49 @@ function vietnamParts(date: Date, withTime: boolean): Intl.DateTimeFormatPart[] 
     year: "numeric",
     ...(withTime ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" as const } : {}),
   }).formatToParts(date);
+}
+
+function vietnamYmdHm(date: Date): { year: string; month: string; day: string; hour: string; minute: string } {
+  const parts = vietnamParts(date, true);
+  let hour = part(parts, "hour");
+  if (hour === "24") hour = "00";
+  return {
+    year: part(parts, "year"),
+    month: part(parts, "month"),
+    day: part(parts, "day"),
+    hour: hour.padStart(2, "0"),
+    minute: part(parts, "minute").padStart(2, "0"),
+  };
+}
+
+/** Calendar date `YYYY-MM-DD` in Asia/Ho_Chi_Minh. Independent of the JS engine timezone. */
+export function vietnamTodayIso(now: Date = new Date()): string {
+  const { year, month, day } = vietnamYmdHm(now);
+  return year && month && day ? `${year}-${month}-${day}` : "";
+}
+
+/** Clock `HH:mm` in Asia/Ho_Chi_Minh. */
+export function vietnamNowTime(now: Date = new Date()): string {
+  const { hour, minute } = vietnamYmdHm(now);
+  return hour && minute ? `${hour}:${minute}` : "";
+}
+
+/** `YYYY-MM-DDTHH:mm` wall time in Asia/Ho_Chi_Minh (datetime-local inputs). */
+export function vietnamDateTimeLocal(now: Date = new Date()): string {
+  const { year, month, day, hour, minute } = vietnamYmdHm(now);
+  if (!year || !month || !day || !hour || !minute) return "";
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+/** Calendar `YYYY-MM-DD`: date-only strings stay put; instants convert in Vietnam. */
+export function vietnamIsoDate(value: string | Date): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (DATE_ONLY.test(trimmed)) return trimmed;
+    const date = new Date(trimmed);
+    return Number.isNaN(date.getTime()) ? "" : vietnamTodayIso(date);
+  }
+  return Number.isNaN(value.getTime()) ? "" : vietnamTodayIso(value);
 }
 
 function joinDate(parts: Intl.DateTimeFormatPart[]): string {

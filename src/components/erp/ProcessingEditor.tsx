@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { liveCatalogName } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
+import { vietnamNowTime } from "@/lib/orders/datetime";
 import { PROCESSING_LIST_PATH, PROCESSING_NEW_HREF, processingComposition, processingDocPath } from "@/lib/erp/processing";
 import type { ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
@@ -35,10 +36,7 @@ const LIST_HREF = PROCESSING_LIST_PATH;
 
 type SavedDoc = { id: string; document?: ErpDocument | null };
 
-const nowTime = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
+const nowTime = () => vietnamNowTime();
 
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : null);
 

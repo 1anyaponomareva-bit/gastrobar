@@ -3,6 +3,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { CountListItem, CountLogic } from "@/lib/erp/inventoryUi";
 import { fetchCountList } from "@/lib/erp/inventoryUi";
+import { vietnamIsoDate } from "@/lib/orders/datetime";
 import { StatusBadge, docHref } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
@@ -205,7 +206,7 @@ export function InventoryPage() {
     const statuses = new Set(filters.extras.includes("status") ? filters.statuses : []);
     const out = rows.filter((row) => {
       const warehouse = row.warehouse_id ? warehouseName(state, row.warehouse_id) : "";
-      const day = (row.posted_at ?? row.counted_at ?? row.created_at ?? "").slice(0, 10);
+      const day = vietnamIsoDate(row.posted_at ?? row.counted_at ?? row.created_at ?? "");
       return (
         (!q || `${row.doc_no ?? ""} ${warehouse} ${typeLabel(row.mode)} ${countStatusLabel(row.status)} ${row.comment}`.toLowerCase().includes(q)) &&
         (!wh.size || wh.has(row.warehouse_id ?? "")) &&

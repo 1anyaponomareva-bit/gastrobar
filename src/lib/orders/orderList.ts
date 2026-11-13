@@ -1,4 +1,5 @@
 import { productDisplayName, type ProductNameLocale } from "../erp/productName";
+import { vietnamIsoDate } from "./datetime";
 import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type OrderPdfKind } from "./orderPdfTypes";
 import { formatQty, isPositiveQty, lineOpenReceiveQty, parseQty, receiveLineUnits, type ReceiveMode } from "./qty";
 import type { OrderLineDetail, OrderProduct, OrderProductPack, OrderStatus, OrderWarehouse } from "./types";
@@ -462,7 +463,7 @@ export function supplierPrintPdfInput(
   return {
     orderNo: meta.orderNo,
     revision: 0,
-    orderedAt: (meta.orderedAt || new Date().toISOString()).slice(0, 10),
+    orderedAt: vietnamIsoDate(meta.orderedAt || new Date()),
     supplierName: meta.supplierName,
     warehouseName: warehouse.warehouseName,
     warehouseAddress: warehouse.warehouseAddress,

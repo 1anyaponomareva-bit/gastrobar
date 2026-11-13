@@ -3,12 +3,13 @@
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productTitle } from "@/lib/erp/costing";
 import type { ErpDocument, ErpDocumentLine, ErpState, ErpWriteoffReason } from "@/lib/erp/types";
+import { vietnamIsoDate, vietnamNowTime } from "@/lib/orders/datetime";
 import { docHref } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, matches, MultiSelect, type CondOp } from "./filters";
 import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
-import { addDays, dateText, errorText, loadingText, NavLink, packText, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
+import { addDays, dateText, dateTimeText, errorText, loadingText, NavLink, packText, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
 import "./writeoffs.css";
 
 const STORE_KEY = "gastrofood-erp-writeoffs";
@@ -189,14 +190,13 @@ type Row = {
 
 const personName = (email: string | null | undefined) => (email ? email.split("@")[0] : "");
 
-/** Time of the write-off; older documents without one show the time they were saved on that day. */
+/** Time of the write-off; older documents without one show the Vietnam time they were saved on that day. */
 function timeOf(doc: ErpDocument): string {
   if (doc.doc_time) return doc.doc_time.slice(0, 5);
   if (!doc.created_at) return "";
   const at = new Date(doc.created_at);
   if (Number.isNaN(at.getTime())) return "";
-  const local = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
-  return local === doc.doc_date ? `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}` : "";
+  return vietnamIsoDate(at) === doc.doc_date ? vietnamNowTime(at) : "";
 }
 
 function buildRows(state: ErpState, documents: ErpDocument[]): Row[] {
@@ -920,7 +920,7 @@ function WriteoffDetail({ state, row }: { state: ErpState; row: Row }) {
           <div>
             <dt>{T("Проведено", "Completed", "Ghi sổ")}</dt>
             <dd>
-              {dateText(doc.posted_at)} · {doc.posted_by ?? "—"}
+              {dateTimeText(doc.posted_at)} · {doc.posted_by ?? "—"}
             </dd>
           </div>
         ) : null}
