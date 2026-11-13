@@ -7,7 +7,6 @@ export const stockNavItems = () => [
   { href: "/erp/stock", label: T("Остатки", "Balances", "Tồn kho") },
   { href: "/erp/stock/receipts", label: T("Поставки", "Deliveries", "Nhập hàng") },
   { href: "/erp/purchasing/orders", label: T("Заказы поставщикам", "Supplier orders", "Đơn NCC") },
-  { href: "/erp/stock/processing", label: T("Переработки", "Processing", "Chế biến") },
   { href: "/erp/stock/transfers", label: T("Перемещения", "Transfers", "Chuyển kho") },
   { href: "/erp/stock/writeoffs", label: T("Списания", "Write-offs", "Xuất hủy") },
   { href: "/erp/stock/report", label: T("Отчёт по движению", "Movement report", "Báo cáo biến động") },

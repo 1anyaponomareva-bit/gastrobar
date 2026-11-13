@@ -26,6 +26,33 @@ export const ERP_PAGE_SEGMENTS = [
   "finance",
 ] as const;
 
+/** Poster Processing list (moved from Stock). */
+export const PROCESSING_LIST_PATH = "/erp/menu/processing";
+
+export function processingDocPath(id: string): string {
+  return `${PROCESSING_LIST_PATH}/${id}`;
+}
+
+/**
+ * Old processing URLs → `/erp/menu/processing`. Same-host 307 so bookmarks keep working.
+ * `/erp/preps/batches` is checked before `/erp/preps/batch` so it does not become `.../es`.
+ */
+export function movedErpPagePath(pathname: string): string | null {
+  const path = trimTrailingSlash(pathname || "/");
+  const tailAfter = (prefix: string): string | null => {
+    if (path === prefix) return "";
+    if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
+    return null;
+  };
+  if (path === "/erp/preps/batches" || path === "/preps/batches") return PROCESSING_LIST_PATH;
+  if (path === "/erp/production" || path === "/production") return PROCESSING_LIST_PATH;
+  for (const prefix of ["/erp/stock/processing", "/stock/processing", "/erp/preps/batch", "/preps/batch"]) {
+    const tail = tailAfter(prefix);
+    if (tail !== null) return `${PROCESSING_LIST_PATH}${tail}`;
+  }
+  return null;
+}
+
 export const MINI_APP_SEGMENTS = [
   "staff",
   "recipes",

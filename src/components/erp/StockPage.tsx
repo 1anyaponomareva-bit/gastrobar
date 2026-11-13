@@ -15,7 +15,7 @@ import { WriteoffsPage } from "./WriteoffsPage";
 
 export const STOCK_KINDS: Record<string, { types: ErpDocType[]; newHref: string }> = {
   receipts: { types: ["receipt", "opening"], newHref: "/erp/documents/new?type=receipt" },
-  processing: { types: ["production"], newHref: "/erp/preps/batch/new" },
+  processing: { types: ["production"], newHref: "/erp/menu/processing/new" },
   transfers: { types: ["transfer"], newHref: "/erp/documents/new?type=transfer" },
   writeoffs: { types: ["writeoff"], newHref: "/erp/documents/new?type=writeoff" },
   counts: { types: ["count"], newHref: "/erp/stock/counts/new" },

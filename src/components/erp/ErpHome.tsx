@@ -53,7 +53,7 @@ export function ErpHome() {
           icon={svg(<path d="M4 8h13l-3-3M20 16H7l3 3" />)}
         />
         <QuickTile
-          href="/erp/preps/batch/new"
+          href="/erp/menu/processing/new"
           title={T("Изготовить полуфабрикат", "Make a semi-finished product", "Sản xuất bán thành phẩm")}
           text={T("Списать сырьё и получить партию по рецептуре", "Use ingredients and produce a batch", "Trừ nguyên liệu, nhập mẻ thành phẩm")}
           icon={svg(<path d="M5 11h14v3a7 7 0 01-14 0v-3zM8 7c0-1 1-1.5 1-3M12 7c0-1 1-1.5 1-3M16 7c0-1 1-1.5 1-3" />)}

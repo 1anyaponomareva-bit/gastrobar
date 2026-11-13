@@ -1,0 +1,74 @@
+.erpProcCount {
+  margin-left: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--erp-muted);
+}
+
+.erpProc .erpPackActs {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.erpProc .erpPackActs .erpDrop {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.erpProcWhen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erpProcWhen input[type="date"],
+.erpProcWhen input[type="time"] {
+  min-width: 0;
+  flex: 1 1 8rem;
+}
+
+.erpProcDetailGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.erpProcDetailGrid h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+@media (min-width: 760px) {
+  .erpProcDetailGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .erpProc .erpWoTable {
+    min-width: 720px;
+  }
+
+  .erpProc .erpWoTable .erpPackActs {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--erp-card);
+    box-shadow: -6px 0 8px -6px rgba(20, 20, 19, 0.18);
+  }
+
+  .erpProc .erpWoTable tbody tr:hover .erpPackActs,
+  .erpProc .erpWoTable tbody tr.open .erpPackActs {
+    background: var(--erp-soft);
+  }
+
+  .erpProc .erpWoTable.stack td.erpPackActs {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .erpProc .erpWoTable.stack td.erpPackActs::before {
+    content: none;
+  }
+}

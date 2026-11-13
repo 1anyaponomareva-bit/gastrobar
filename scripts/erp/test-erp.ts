@@ -68,7 +68,8 @@ import {
   readErpHostGateConfig,
   type ErpHostGateConfig,
 } from "../../src/lib/erp/hostGate";
-import { publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
+import { movedErpPagePath, publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
+import { processingComposition } from "../../src/lib/erp/processing";
 import {
   clampPage,
   DEFAULT_PAGE_SIZE,
@@ -256,6 +257,47 @@ async function main() {
     assert.equal(gate("erp.example.test", "/api/orders/drafts/729e2699-1db3-492b-8a14-e98286c38781", "POST").action, "allow");
     assert.equal(isErpHostAllowedPath("/stock/receipts"), false);
     assert.equal(isErpHostAllowedPath("/menu"), false);
+    assert.equal(isErpHostAllowedPath("/erp/menu/processing"), true);
+    assert.equal(isErpHostAllowedPath("/erp/menu/processing/new"), true);
+  });
+
+  await test("processing moved under Menu: host gate 307s old stock URLs on the same host", async () => {
+    const cfg = gateCfg({ erpHosts: ["gastrofood.vn", "www.gastrofood.vn"] });
+    assert.equal(gate("www.gastrofood.vn", "/erp/menu/processing", "GET", cfg).action, "allow");
+    assert.equal(gate("gastrofood.vn", "/erp/menu/processing/new", "GET", cfg).action, "allow");
+    const old = gate("www.gastrofood.vn", "/erp/stock/processing", "GET", cfg);
+    assert.equal(old.action, "redirect");
+    if (old.action === "redirect") {
+      assert.equal(old.status, 307);
+      assert.equal(old.location, "https://www.gastrofood.vn/erp/menu/processing");
+    }
+    const unprefixed = gate("www.gastrofood.vn", "/stock/processing?x=1", "GET", cfg);
+    assert.equal(unprefixed.action, "redirect");
+    if (unprefixed.action === "redirect") {
+      assert.equal(unprefixed.status, 307);
+      assert.equal(unprefixed.location, "https://www.gastrofood.vn/erp/menu/processing?x=1");
+    }
+    const batch = gate("gastrofood.vn", "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3", "GET", cfg);
+    assert.equal(batch.action, "redirect");
+    if (batch.action === "redirect") {
+      assert.equal(batch.location, "https://gastrofood.vn/erp/menu/processing/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
+    }
+    const batches = gate("gastrofood.vn", "/erp/preps/batches", "GET", cfg);
+    assert.equal(batches.action, "redirect");
+    if (batches.action === "redirect") assert.equal(batches.location, "https://gastrofood.vn/erp/menu/processing");
+    assert.equal(gate("www.gastrofood.vn", "/erp/stock/processing", "POST", cfg).action, "allow");
+    const truckOff = gate("www.gastrotruck.org", "/erp/stock/processing", "GET", { ...cfg, redirectFromLegacy: false });
+    assert.equal(truckOff.action, "redirect");
+    if (truckOff.action === "redirect") {
+      assert.equal(truckOff.status, 307);
+      assert.equal(truckOff.location, "https://www.gastrotruck.org/erp/menu/processing");
+    }
+    const truckOn = gate("www.gastrotruck.org", "/erp/stock/processing", "GET", { ...cfg, redirectFromLegacy: true });
+    assert.equal(truckOn.action, "redirect");
+    if (truckOn.action === "redirect") assert.equal(truckOn.location, "https://gastrofood.vn/erp/menu/processing");
+    assert.equal(movedErpPagePath("/erp/preps/batches"), "/erp/menu/processing");
+    assert.equal(movedErpPagePath("/erp/preps/batch/new"), "/erp/menu/processing/new");
+    assert.equal(movedErpPagePath("/erp/menu/processing"), null);
   });
 
   await test("legacy 307 is GET/HEAD only, preserves path+query, never 308", async () => {
@@ -1153,6 +1195,7 @@ async function main() {
     assert.equal(initialWarehouses("receipt", noPrep, prep).warehouse_id, null, "an archived Prep is not offered");
     assert.equal(initialWarehouses("receipt", list.filter((w) => w.kind !== "prep_kitchen"), null).warehouse_id, null);
     // Other documents keep their old defaults.
+    assert.deepEqual(initialWarehouses("production", list, null), { warehouse_id: prep, target_warehouse_id: prep });
     assert.deepEqual(initialWarehouses("transfer", list, null), { warehouse_id: main, target_warehouse_id: prep });
     assert.equal(initialWarehouses("writeoff", list, null).warehouse_id, main);
     assert.equal(initialWarehouses("count", list, online).warehouse_id, online);
@@ -2448,7 +2491,7 @@ async function main() {
     assert.equal(line.movements?.writeoff?.[0].href, "/erp/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2");
     assert.equal(line.movements?.out?.[0].qty, 3);
     assert.equal(line.movements?.out?.[0].href, "/erp/documents/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
-    assert.equal(line.movements?.in?.[0].href, "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
+    assert.equal(line.movements?.in?.[0].href, "/erp/menu/processing/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
     const viaApi = countFromDocument(
       {
         doc_type: "count",
@@ -2475,7 +2518,7 @@ async function main() {
     );
     assert.equal(viaApi.lines[0].writeoff_qty, 2, "erp_count_get 'moves' is the same period jsonb as count_moves");
     assert.equal(viaApi.lines[0].out_qty, 3);
-    assert.equal(viaApi.lines[0].movements?.in?.[0].href, "/erp/preps/batch/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
+    assert.equal(viaApi.lines[0].movements?.in?.[0].href, "/erp/menu/processing/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3");
   });
 
   await test("production posting rejects a missing yield and batches with no ingredients consumed", async () => {
@@ -2507,6 +2550,76 @@ async function main() {
     assert.equal(await stock(dough, online), 0);
     assert.equal(n(await value("select count(*) from public.erp_movements")), movesAfterReceipt, "failed production post leaves no partial movements");
     assert.equal(n(await value("select count(*) from public.erp_movements where document_id in ($1, $2)", [noYield, empty])), 0);
+  });
+
+  await test("processing create/post uses the current tech-card composition and live catalog names", async () => {
+    const flour = await saveProduct({ type: "ingredient", name_en: "Process flour", name_vn: "Bột chế biến", base_unit: "kg" });
+    const salt = await saveProduct({ type: "ingredient", name_en: "Process salt", name_vn: "Muối chế biến", base_unit: "kg" });
+    const dough = await saveProduct({ type: "semi_finished", name_en: "Process dough", name_vn: "Bột nhào", base_unit: "kg" });
+    await post(await saveDoc({ doc_type: "receipt", warehouse_id: prep, lines: [{ product_id: flour, qty: 10, unit_price: 20000 }, { product_id: salt, qty: 1, unit_price: 5000 }] }));
+    const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: dough,
+        yield_qty: 1,
+        lines: [
+          { product_id: flour, qty: 0.8 },
+          { product_id: salt, qty: 0.02 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [recipe, ACTOR]);
+    await saveProduct({ id: flour, type: "ingredient", name_en: "Renamed process flour", name_vn: "Bột đã đổi", base_unit: "kg" });
+    const composition = processingComposition({
+      recipes: [
+        {
+          id: recipe,
+          product_id: dough,
+          status: "active",
+          yield_qty: 1,
+          lines: [
+            { id: "l1", recipe_id: recipe, line_no: 1, product_id: flour, qty: 0.8, note: null, raw_name: null, raw_amount: null, raw_unit: null },
+            { id: "l2", recipe_id: recipe, line_no: 2, product_id: salt, qty: 0.02, note: null, raw_name: null, raw_amount: null, raw_unit: null },
+          ],
+        },
+      ],
+      outputId: dough,
+      outputQty: 2,
+    });
+    assert.equal(composition.source, "recipe");
+    assert.equal(composition.recipeId, recipe);
+    assert.equal(composition.lines.length, 2);
+    const flourLine = composition.lines.find((line) => line.product_id === flour);
+    const saltLine = composition.lines.find((line) => line.product_id === salt);
+    assert.equal(n(flourLine?.qty), 1.6);
+    assert.equal(n(saltLine?.qty), 0.04);
+    const products = [
+      { id: flour, name_en: "Renamed process flour", name_vn: "Bột đã đổi" },
+      { id: salt, name_en: "Process salt", name_vn: "Muối chế biến" },
+    ];
+    assert.equal(liveCatalogName(products, flour, "en"), "Renamed process flour");
+    try {
+      setErpLang("vn");
+      assert.equal(liveCatalogName(products, flour), "Bột đã đổi");
+    } finally {
+      setErpLang("ru");
+    }
+    const flourBefore = (await stock(flour, prep))!;
+    const saltBefore = (await stock(salt, prep))!;
+    const posted = await saveDoc({
+      doc_type: "production",
+      warehouse_id: prep,
+      target_warehouse_id: prep,
+      recipe_id: composition.recipeId,
+      output_product_id: dough,
+      plan_output_qty: 2,
+      output_qty: 2,
+      lines: composition.lines,
+    });
+    await post(posted);
+    assert.ok(Math.abs((await stock(flour, prep))! - (flourBefore - 1.6)) < 1e-9);
+    assert.ok(Math.abs((await stock(salt, prep))! - (saltBefore - 0.04)) < 1e-9);
+    assert.equal(await stock(dough, prep), 2);
   });
 
   await test("movement report: production ingredients out, output in, leftover after transfer", async () => {
@@ -2686,7 +2799,7 @@ async function main() {
     assert.equal(mapped.lines[0].writeoff_qty, 3);
     assert.equal(mapped.lines[0].out_qty, 9);
     assert.equal(mapped.lines[0].movements?.writeoff?.[0].href, `/erp/documents/${wo}`);
-    assert.equal(mapped.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
+    assert.equal(mapped.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/menu/processing/${pr}`);
     const viaGet = countFromDocument(
       {
         doc_type: "count",
@@ -2699,7 +2812,7 @@ async function main() {
       true,
     );
     assert.equal(viaGet.lines[0].writeoff_qty, 3);
-    assert.equal(viaGet.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/preps/batch/${pr}`);
+    assert.equal(viaGet.lines[0].movements?.out?.find((m) => m.doc_id === pr)?.href, `/erp/menu/processing/${pr}`);
   });
 
   await test("no second ingredients catalog besides erp_products", async () => {

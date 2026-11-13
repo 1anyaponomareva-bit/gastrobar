@@ -39,6 +39,7 @@ import {
   isErpPagePath,
   isErpPublicPagePath,
   isUnprefixedErpPagePath,
+  movedErpPagePath,
   toInternalErpPathname,
   toPublicErpHref,
 } from "./publicPath";
@@ -230,6 +231,13 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
       return { action: "allow" };
     }
 
+    if (isGetLike(method)) {
+      const moved = movedErpPagePath(pathname);
+      if (moved) {
+        return { action: "redirect", status: 307, location: absoluteUrl(`https://${host}`, moved, search) };
+      }
+    }
+
     if (isErpPublicPagePath(pathname) || isOrdersPagePath(pathname) || isRecipesPagePath(pathname)) {
       return { action: "allow" };
     }
@@ -248,12 +256,17 @@ export function decideErpHostGate(input: ErpHostGateInput, config: ErpHostGateCo
   }
 
   if (isLegacyPublicHost(host) && isErpPagePath(pathname)) {
+    const moved = movedErpPagePath(pathname);
+    const destPath = moved ?? pathname;
     if (config.redirectFromLegacy && canonical && isGetLike(method)) {
       return {
         action: "redirect",
         status: 307,
-        location: absoluteUrl(`https://${canonical}`, pathname, search),
+        location: absoluteUrl(`https://${canonical}`, destPath, search),
       };
+    }
+    if (moved && isGetLike(method)) {
+      return { action: "redirect", status: 307, location: absoluteUrl(`https://${host}`, moved, search) };
     }
     return { action: "allow" };
   }

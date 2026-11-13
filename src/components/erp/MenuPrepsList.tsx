@@ -104,8 +104,8 @@ function MenuPrepsTable() {
       addHref="/erp/preps/recipe/new"
       addLabel={T("Добавить", "Add", "Thêm")}
       extraActions={
-        <NavLink href="/erp/preps/batch/new" className="erpBtn">
-          {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
+        <NavLink href="/erp/menu/processing/new" className="erpBtn">
+          {T("Переработка", "Processing", "Chế biến")}
         </NavLink>
       }
       rowHref={(row) => `/erp/preps/recipe/${row.id}`}
@@ -139,8 +139,8 @@ function MenuPrepsTable() {
           <NavLink href={withMenuListReturn(`/erp/preps/recipe/${row.id}`, list.href)} className="erpDropAction">
             {T("Открыть рецепт", "Open recipe", "Mở công thức")}
           </NavLink>
-          <NavLink href="/erp/preps/batches" className="erpDropAction">
-            {T("Партии", "Batches", "Mẻ")}
+          <NavLink href="/erp/menu/processing" className="erpDropAction">
+            {T("Переработки", "Processing", "Chế biến")}
           </NavLink>
         </>
       )}

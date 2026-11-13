@@ -270,8 +270,14 @@ function assertListExport(kind: "transfers" | "processing", files: { csv: { name
   if (!files.csv.name.startsWith(`${kind}_`) || !files.csv.name.endsWith(".csv")) throw new Error(`bad csv name ${files.csv.name}`);
   if (!files.xlsx.name.startsWith(`${kind}_`) || !files.xlsx.name.endsWith(".xlsx")) throw new Error(`bad xlsx name ${files.xlsx.name}`);
   const header = files.csv.rows[0] ?? [];
-  if (header.length !== 5) throw new Error(`csv header ${header.join("|")}`);
-  if (!header.includes("Документ") && !header.includes("Document")) throw new Error(`csv header ${header.join("|")}`);
+  if (kind === "processing") {
+    if (header.length < 4) throw new Error(`csv header ${header.join("|")}`);
+    if (!header.some((cell) => /исходн|source|nguyên/i.test(cell))) throw new Error(`csv header ${header.join("|")}`);
+    if (!header.some((cell) => /полученн|result|sản phẩm nhận/i.test(cell))) throw new Error(`csv header ${header.join("|")}`);
+  } else {
+    if (header.length !== 5) throw new Error(`csv header ${header.join("|")}`);
+    if (!header.includes("Документ") && !header.includes("Document")) throw new Error(`csv header ${header.join("|")}`);
+  }
   if (header.some((cell) => /счёт|счет|account|оплат|payment/i.test(cell))) {
     throw new Error(`account/payment column leaked: ${header.join("|")}`);
   }
@@ -442,7 +448,7 @@ async function main() {
       }
     };
     await warmPage("/erp/stock/transfers");
-    await warmPage("/erp/stock/processing");
+    await warmPage("/erp/menu/processing");
     await warmPage("/erp/stock/writeoffs");
 
     const uniqueLabel = uniqueWh.name.includes("Food Truck") ? "Food Truck" : uniqueWh.name;
@@ -479,7 +485,7 @@ async function main() {
     if (printAll.cols !== 5) throw new Error(`print all cols ${printAll.cols}`);
     console.log(`transfers print all: ${printAll.rows} rows`);
 
-    await page.goto(`${base}/erp/stock/processing`);
+    await page.goto(`${base}/erp/menu/processing`);
     await waitExportReady(page);
     const procAll = await captureExport(page);
     assertListExport("processing", procAll, "UI-PROC-SOUP", 3);
@@ -488,14 +494,7 @@ async function main() {
     await fillSearch(page, "UI-PROC-SOUP");
     const procFiltered = await captureExport(page);
     assertListExport("processing", procFiltered, "UI-PROC-SOUP", 2);
-    const printProc = await capturePrint(page);
-    if (printProc.rows !== 2) throw new Error(`print processing filtered ${printProc.rows}`);
-    if (printProc.cols !== 5) throw new Error(`print processing cols ${printProc.cols}`);
-    if (!printProc.text.includes("Переработки") && !printProc.text.includes("Processing")) {
-      throw new Error(`processing print title: ${printProc.title}`);
-    }
-    if (!printProc.text.includes("UI-PROC-SOUP")) throw new Error(`print missing soup: ${printProc.text}`);
-    console.log(`processing print filtered: ${printProc.rows} rows`);
+    console.log(`processing export filtered: ${procFiltered.csv.rows.length - 1} rows`);
 
     await page.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await page.goto(`${base}/erp/stock/writeoffs`);

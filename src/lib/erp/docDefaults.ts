@@ -18,6 +18,10 @@ export function initialWarehouses(
   const prep = byKind("prep_kitchen");
   if (type === "receipt") return { warehouse_id: preset ?? prep, target_warehouse_id: null };
   const source = preset ?? byKind("warehouse") ?? active[0]?.id ?? null;
+  if (type === "production") {
+    const dest = preset ?? prep ?? source;
+    return { warehouse_id: dest, target_warehouse_id: dest };
+  }
   return {
     warehouse_id: source,
     target_warehouse_id:

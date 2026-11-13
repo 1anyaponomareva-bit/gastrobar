@@ -1,5 +1,6 @@
-import { BatchesPage } from "@/components/erp/PrepsPage";
+import { erpRedirect } from "@/lib/erp/erpRedirect";
+import { PROCESSING_LIST_PATH } from "@/lib/erp/processing";
 
-export default function ErpBatchesPage() {
-  return <BatchesPage />;
+export default async function ErpBatchesRedirect() {
+  await erpRedirect(PROCESSING_LIST_PATH);
 }

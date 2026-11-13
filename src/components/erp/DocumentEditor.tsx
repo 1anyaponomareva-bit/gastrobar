@@ -134,7 +134,7 @@ export function DocumentEditor({ id }: { id: string }) {
     if (id === "new") {
       const type = params.get("type") as ErpDocType;
       if (type === "production") {
-        router.replace("/erp/preps/batch/new");
+        router.replace("/erp/menu/processing/new");
         return;
       }
       if (type === "count") {
@@ -160,7 +160,7 @@ export function DocumentEditor({ id }: { id: string }) {
     }
     fetchDoc(id)
       .then((saved) => {
-        if (saved.doc_type === "production") router.replace(`/erp/preps/batch/${id}`);
+        if (saved.doc_type === "production") router.replace(`/erp/menu/processing/${id}`);
         else if (saved.doc_type === "count") router.replace(`/erp/stock/counts/${id}`);
         else loadSaved(saved);
       })
@@ -192,7 +192,7 @@ export function DocumentEditor({ id }: { id: string }) {
   const type = doc.doc_type;
   const set: SetDoc = (key, value) => setDoc((prev) => (prev ? { ...prev, [key]: value } : prev));
   const setLines: SetLines = (update) => setDoc((prev) => (prev ? { ...prev, lines: update(prev.lines) } : prev));
-  const kindHref = `/erp/stock/${stockKindOf(type)}`;
+  const kindHref = type === "production" ? "/erp/menu/processing" : `/erp/stock/${stockKindOf(type)}`;
   const backLabel =
     (
       {

@@ -33,7 +33,7 @@ import {
 
 const prepTabs = () => [
   { href: "/erp/menu/preps", label: T("Рецептуры", "Recipes", "Công thức") },
-  { href: "/erp/preps/batches", label: T("Изготовленные партии", "Produced batches", "Mẻ đã sản xuất") },
+  { href: "/erp/menu/processing", label: T("Переработки", "Processing", "Chế biến") },
 ];
 
 const prepsSub = () =>
@@ -77,7 +77,7 @@ export function PrepsPage() {
             <NavLink href="/erp/preps/recipe/new" className="erpBtn">
               + {T("Новый полуфабрикат", "New semi-finished", "Bán thành phẩm mới")}
             </NavLink>
-            <NavLink href="/erp/preps/batch/new" className="erpBtn primary">
+            <NavLink href="/erp/menu/processing/new" className="erpBtn primary">
               {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
             </NavLink>
           </>
@@ -165,7 +165,7 @@ export function PrepsPage() {
                               {T("Открыть рецепт", "Open recipe", "Mở công thức")}
                             </NavLink>
                             {active ? (
-                              <NavLink href={`/erp/preps/batch/new?recipe=${active.id}`} className="erpBtn small primary">
+                              <NavLink href={`/erp/menu/processing/new?recipe=${active.id}`} className="erpBtn small primary">
                                 {T("Изготовить", "Make", "Sản xuất")}
                               </NavLink>
                             ) : null}
@@ -197,13 +197,13 @@ export function BatchesPage() {
         title={T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")}
         sub={prepsSub()}
         actions={
-          <NavLink href="/erp/preps/batch/new" className="erpBtn primary">
+          <NavLink href="/erp/menu/processing/new" className="erpBtn primary">
             {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
           </NavLink>
         }
       />
       <MenuMobileNav active={MENU_HREFS.preps} />
-      <SubTabs tabs={prepTabs()} active="/erp/preps/batches" />
+      <SubTabs tabs={prepTabs()} active="/erp/menu/processing" />
       <DocTable
         state={state}
         {...docs}
@@ -216,7 +216,7 @@ export function BatchesPage() {
               "Các mẻ đã sản xuất và bản nháp sẽ hiện ở đây.",
             )}
             action={
-              <NavLink href="/erp/preps/batch/new" className="erpBtn primary">
+              <NavLink href="/erp/menu/processing/new" className="erpBtn primary">
                 {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
               </NavLink>
             }
@@ -488,7 +488,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         }
         actions={
           active ? (
-            <NavLink href={`/erp/preps/batch/new?recipe=${active.id}`} className="erpBtn primary">
+            <NavLink href={`/erp/menu/processing/new?recipe=${active.id}`} className="erpBtn primary">
               {T("Изготовить партию", "Make a batch", "Sản xuất mẻ")}
             </NavLink>
           ) : null

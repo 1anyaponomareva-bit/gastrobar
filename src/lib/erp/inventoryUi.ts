@@ -180,7 +180,7 @@ function listItemFromDocument(doc: DocLike): CountListItem | null {
 const unsignedQty = (qty: number) => Math.abs(Number(qty));
 
 function relatedDocHref(docType: string, id: string): string {
-  if (docType === "production") return `/erp/preps/batch/${id}`;
+  if (docType === "production") return `/erp/menu/processing/${id}`;
   if (docType === "count") return `/erp/stock/counts/${id}`;
   return `/erp/documents/${id}`;
 }
