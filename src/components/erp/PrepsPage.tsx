@@ -9,8 +9,10 @@ import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } fr
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { IngredientPicker } from "./IngredientPicker";
+import { compositionPartsMessage, LinePartsEditor } from "./LineParts";
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
-import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText } from "./losses";
+import { filledParts, netToSmallUnit, parseLineParts } from "@/lib/erp/lineParts";
+import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
 import {
   Empty,
   Field,
@@ -322,7 +324,9 @@ function NewPrep({ from }: { from?: string }) {
   );
 }
 
-type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" | "raw_amount" | "raw_unit" | "methods" | "net_qty">;
+type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" | "raw_amount" | "raw_unit" | "methods" | "net_qty"> & {
+  parts: ReturnType<typeof parseLineParts>;
+};
 
 type RecipeForm = {
   yield_qty: number | null;
@@ -381,6 +385,7 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
       raw_unit: line.raw_unit,
       methods: line.methods ?? [],
       net_qty: line.net_qty ?? null,
+      parts: parseLineParts(line.parts),
     })),
   };
 }
@@ -437,6 +442,11 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       return;
     }
     if (namesDirty && !(await saveNames(true))) return;
+    const partsError = form.lines.map((line) => compositionPartsMessage(state, line)).find(Boolean);
+    if (partsError) {
+      window.alert(partsError);
+      return;
+    }
     const payload: Record<string, unknown> = {
       id: viewed?.id,
       product_id: product.id,
@@ -445,7 +455,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       shelf_life_days: form.shelf_life_days,
       storage_conditions: form.storage_conditions,
       note: form.note,
-      lines: form.lines,
+      lines: form.lines.map((line) => ({
+        ...line,
+        parts: filledParts(line.parts).map((part) => ({ name: part.name.trim(), grams: part.grams })),
+      })),
     };
     if (form.instructionsText !== form.instructionsOriginal) payload.instructions = form.instructionsText;
     const result = await act<{ id: string }>(
@@ -623,10 +636,18 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                                 qty: toBase(line.raw_amount, line.raw_unit, base) ?? line.qty,
                                 methods: [],
                                 net_qty: null,
+                                parts: [],
                               });
                             }}
                           />
                         )}
+                        <LinePartsEditor
+                          parts={line.parts}
+                          parentSmall={netToSmallUnit(netOf(state, line))}
+                          unit={lineUnit}
+                          disabled={readOnly}
+                          onChange={(parts) => setLine(index, { parts })}
+                        />
                       </td>
                       <td className={readOnly ? "" : "edit"} data-label={T("Обработка", "Processing", "Sơ chế")}>
                         <MethodPicker state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
@@ -681,7 +702,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               type="button"
               className="erpBtn"
               onClick={() =>
-                set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null, methods: [], net_qty: null }])
+                set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null, methods: [], net_qty: null, parts: [] }])
               }
             >
               + {T("Добавить ингредиент", "Add ingredient", "Thêm nguyên liệu")}

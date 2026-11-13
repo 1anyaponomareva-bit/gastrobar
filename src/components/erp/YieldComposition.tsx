@@ -1,6 +1,7 @@
 "use client";
 
 import { costLine, liveCatalogName } from "@/lib/erp/costing";
+import { filledParts, parseLineParts } from "@/lib/erp/lineParts";
 import type { ErpRecipe, ErpState } from "@/lib/erp/types";
 import { netOf } from "./losses";
 import { costContextOf } from "./menuFields";
@@ -54,11 +55,22 @@ export function YieldComposition({
               const net = netOf(state, line);
               const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty).cost : null;
               const prep = state.products.find((item) => item.id === line.product_id)?.type === "semi_finished";
+              const cuts = filledParts(parseLineParts(line.parts));
+              const small = unit === "l" ? T("мл", "ml", "ml") : T("г", "g", "g");
               return (
                 <tr key={line.id || index}>
                   <td>
                     {liveCatalogName(state.products, line.product_id)}
                     {prep ? <span className="erpMuted"> {T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
+                    {cuts.length ? (
+                      <ul className="erpLinePartsList">
+                        {cuts.map((part, partIndex) => (
+                          <li key={partIndex}>
+                            {part.name} · {part.grams} {small}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </td>
                   <td className="num">{qtyText(line.qty, unit)}</td>
                   <td className="num">{net == null || (unit === "pcs" && net === 0) ? "—" : qtyText(net, unit)}</td>

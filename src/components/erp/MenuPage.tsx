@@ -16,9 +16,11 @@ import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
-import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
+import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText, type LossLine } from "./losses";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { IngredientPicker } from "./IngredientPicker";
+import { compositionPartsMessage, LinePartsEditor } from "./LineParts";
+import { filledParts, netToSmallUnit, parseLineParts, type LinePart } from "@/lib/erp/lineParts";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
 import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
@@ -47,7 +49,7 @@ type DishForm = {
   sale_price: number | null;
   vat_rate: number | null;
   note: string;
-  lines: { product_id: string; qty: number | null; methods: LossMethod[]; net_qty: number | null }[];
+  lines: { product_id: string; qty: number | null; methods: LossMethod[]; net_qty: number | null; parts: LinePart[] }[];
   channel_prices: Record<string, number | null>;
 };
 
@@ -84,6 +86,7 @@ function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
       qty: line.qty,
       methods: line.methods ?? [],
       net_qty: line.net_qty ?? null,
+      parts: parseLineParts(line.parts),
     })),
     channel_prices: Object.fromEntries((dish?.channel_prices ?? []).map((p) => [p.channel_id, p.sale_price])),
   };
@@ -313,13 +316,22 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const isNew = !dish;
 
   const save = async () => {
+    const ready = form.lines.filter((l) => l.product_id && l.qty);
+    const partsError = ready.map((line) => compositionPartsMessage(state, line)).find(Boolean);
+    if (partsError) {
+      window.alert(partsError);
+      return;
+    }
     const result = await act<{ id: string }>(
       {
         action: "saveDish",
         dish: {
           ...form,
           id: dish?.id,
-          lines: form.lines.filter((l) => l.product_id && l.qty),
+          lines: ready.map((line) => ({
+            ...line,
+            parts: filledParts(line.parts).map((part) => ({ name: part.name.trim(), grams: part.grams })),
+          })),
           channel_prices: Object.entries(form.channel_prices).map(([channel_id, sale_price]) => ({ channel_id, sale_price })),
         },
       },
@@ -427,7 +439,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                   const unit = unitOf(state, line.product_id);
                   const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null;
                   const expanded = open.has(index);
-                  const updateLine = (patch: Partial<LossLine>) =>
+                  const updateLine = (patch: Partial<DishForm["lines"][number]> | Partial<LossLine>) =>
                     set(
                       "lines",
                       form.lines.map((l, i) => (i === index ? ({ ...l, ...patch } as DishForm["lines"][number]) : l)),
@@ -439,7 +451,13 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                           <IngredientPicker
                             state={state}
                             value={line.product_id}
-                            onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null })}
+                            onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null, parts: [] })}
+                          />
+                          <LinePartsEditor
+                            parts={line.parts}
+                            parentSmall={netToSmallUnit(netOf(state, line))}
+                            unit={unit}
+                            onChange={(parts) => updateLine({ parts })}
                           />
                           <span className="erpRow">
                             {cost?.packaging ? <span className="erpBadge">{T("упаковка", "packaging", "bao bì")}</span> : null}
@@ -486,7 +504,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           <p className="erpHint">{T("Добавьте продукты, полуфабрикаты и упаковку, которые идут в одну порцию.", "Add the products, semi-finished items and packaging used in one portion.", "Thêm sản phẩm, bán thành phẩm và bao bì cho một phần.")}</p>
         )}
         <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null }])}>
+          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null, parts: [] }])}>
             + {T("Добавить в состав", "Add component", "Thêm thành phần")}
           </button>
         </div>

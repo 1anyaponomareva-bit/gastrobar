@@ -147,6 +147,22 @@ export function errorText(code: string, detail?: string): string {
       "The unit cannot change once the product is used",
       "Không thể đổi đơn vị khi đã sử dụng",
     ),
+    ERP_PARTS_SUM: T(
+      "Сумма частей должна равняться нетто ингредиента",
+      "The parts must add up to the ingredient net",
+      "Tổng các phần phải bằng netto nguyên liệu",
+    ),
+    ERP_PARTS_INVALID: T(
+      "У каждой части нужно имя и граммы",
+      "Each part needs a name and grams",
+      "Mỗi phần cần tên và số gram",
+    ),
+    ERP_PARTS_COUNT: T("Не больше 10 частей", "No more than 10 parts", "Không quá 10 phần"),
+    ERP_PARTS_UNIT: T(
+      "Части только для весовых продуктов",
+      "Parts are only for weighed products",
+      "Chỉ cho hàng cân",
+    ),
     ERP_DUPLICATE: T("Такая запись уже есть", "This already exists", "Đã tồn tại"),
     ERP_STALE: T("Данные изменил кто-то другой — обновите страницу", "Changed by someone else — reload the page", "Đã bị thay đổi, hãy tải lại"),
     ERP_COUNT_INCOMPLETE: T("Сначала заполните фактический остаток по всем позициям. Пустое поле — не ноль.", "Fill the actual quantity on every line first. An empty field is not zero.", "Hãy điền tồn thực tế mọi dòng. Ô trống không phải 0."),

@@ -1547,6 +1547,57 @@ button.erpBack {
   width: auto;
 }
 
+.erpLineParts {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--erp-soft);
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.erpLineParts .erpHint {
+  margin: 0 0 8px;
+}
+
+.erpLinePart {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 128px) 34px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.erpLinePart > input {
+  width: 100%;
+}
+
+.erpLinePart label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.erpLinePart label input {
+  width: 100%;
+  min-width: 0;
+}
+
+.erpLinePartsList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--erp-muted);
+  font-size: 13px;
+}
+
+.erpTable.stack td.main .erpLineParts {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  text-align: left;
+}
+
 /* ---------- list page with Poster-style filters ---------- */
 
 .erpPanel {

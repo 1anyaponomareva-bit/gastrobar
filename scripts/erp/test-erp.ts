@@ -35,6 +35,7 @@ import { setErpLang } from "../../src/components/erp/i18n";
 import { categoryLabel, dishInitials, lossPercentsText, posterDishMarkup, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { recipeForProduct } from "../../src/components/erp/YieldComposition";
 import { filterCompositionIngredients, ingredientNameMatches } from "../../src/lib/erp/ingredientSearch";
+import { netToSmallUnit, partsIssue } from "../../src/lib/erp/lineParts";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -3496,6 +3497,91 @@ async function main() {
     assert.deepEqual(meat.map((row) => row.id), [bones.id]);
     const dryChi = filterCompositionIngredients(catalog, "Chi", "dry");
     assert.equal(dryChi.length, 0);
+  });
+
+  await test("ingredient cut parts must sum to parent net grams", async () => {
+    const parent = netToSmallUnit(0.87);
+    assert.equal(parent, 870);
+    assert.equal(partsIssue([{ name: "mince", grams: 400 }, { name: "dice", grams: 470 }], parent, "kg"), null);
+    assert.equal(partsIssue([{ name: "mince", grams: 400 }, { name: "dice", grams: 400 }], parent, "kg"), "sum");
+    assert.equal(partsIssue([{ name: "mince", grams: 870 }], parent, "pcs"), "unit");
+    assert.equal(
+      partsIssue(
+        Array.from({ length: 11 }, (_, i) => ({ name: `cut ${i + 1}`, grams: 1 })),
+        parent,
+        "kg",
+      ),
+      "too_many",
+    );
+
+    const chicken = await saveProduct({ type: "ingredient", name_en: "Chicken Leg Quarter parts test", base_unit: "kg" });
+    const mix = await saveProduct({ type: "semi_finished", name_en: "Chicken mix parts test", base_unit: "kg" });
+    const okParts = [
+      { name: "mince", grams: 400 },
+      { name: "dice", grams: 470 },
+    ];
+    const recipeId = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: mix,
+        yield_qty: 0.87,
+        lines: [{ product_id: chicken, qty: 0.87, net_qty: 0.87, parts: okParts }],
+      }),
+      ACTOR,
+    ]);
+    const stored = await one<{ parts: unknown }>("select parts from public.erp_recipe_lines where recipe_id = $1", [recipeId]);
+    const parts = typeof stored.parts === "string" ? JSON.parse(stored.parts) : stored.parts;
+    assert.deepEqual(parts, okParts);
+
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({
+          product_id: mix,
+          yield_qty: 0.87,
+          lines: [
+            {
+              product_id: chicken,
+              qty: 0.87,
+              net_qty: 0.87,
+              parts: [
+                { name: "mince", grams: 400 },
+                { name: "dice", grams: 400 },
+              ],
+            },
+          ],
+        }),
+        ACTOR,
+      ]),
+      "ERP_PARTS_SUM",
+    );
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({
+          product_id: mix,
+          yield_qty: 0.87,
+          lines: [
+            {
+              product_id: chicken,
+              qty: 0.87,
+              net_qty: 0.87,
+              parts: Array.from({ length: 11 }, (_, i) => ({ name: `cut ${i + 1}`, grams: i === 10 ? 860 : 1 })),
+            },
+          ],
+        }),
+        ACTOR,
+      ]),
+      "ERP_PARTS_COUNT",
+    );
+
+    const dishId = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "Chicken parts dish test",
+        lines: [{ product_id: chicken, qty: 0.87, net_qty: 0.87, parts: okParts }],
+      }),
+      ACTOR,
+    ]);
+    const dishLine = await one<{ parts: unknown }>("select parts from public.erp_dish_lines where dish_id = $1", [dishId]);
+    const dishParts = typeof dishLine.parts === "string" ? JSON.parse(dishLine.parts) : dishLine.parts;
+    assert.deepEqual(dishParts, okParts);
   });
 
   await test("menu list URL keeps category and other filters; card from only accepts Menu lists", async () => {

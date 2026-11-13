@@ -135,6 +135,7 @@ export type ErpRecipeLine = {
   raw_unit: string | null;
   methods?: LossMethod[];
   net_qty?: number | null;
+  parts?: { name: string; grams: number }[];
 };
 
 export type ErpRecipeStep = { title?: { en?: string; vn?: string }; items?: { en?: string; vn?: string }[] };
@@ -166,6 +167,7 @@ export type ErpDishLine = {
   note: string | null;
   methods?: LossMethod[];
   net_qty?: number | null;
+  parts?: { name: string; grams: number }[];
 };
 
 export type ErpMovementRow = {
