@@ -21,7 +21,7 @@ import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
 import { methodLabel } from "./losses";
-import { categoryLabel, POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
+import { categoryLabel, selectableCategories, sortCategoriesByLabel, POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { RefList } from "./RefList";
 import {
@@ -150,13 +150,11 @@ export function ProductsPage() {
             </select>
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">{T("Все категории", "All categories", "Tất cả nhóm")}</option>
-              {state.categories
-                .filter((c) => !c.archived_at && !c.deleted_at)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {categoryName(c)}
-                  </option>
-                ))}
+              {selectableCategories(state.categories).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {categoryName(c)}
+                </option>
+              ))}
             </select>
             <select value={supplier} onChange={(e) => setSupplier(e.target.value)}>
               <option value="">{T("Все поставщики", "All suppliers", "Tất cả NCC")}</option>
@@ -478,13 +476,11 @@ function ProductEditor({
       <Field label={T("Категория", "Category", "Nhóm hàng")}>
         <select value={form.category_id} onChange={(e) => set("category_id", e.target.value)}>
           <option value="">{T("— без категории —", "— none —", "— không —")}</option>
-          {state.categories
-            .filter((c) => (!c.archived_at && !c.deleted_at) || c.id === form.category_id)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {categoryName(c)}
-              </option>
-            ))}
+          {selectableCategories(state.categories, form.category_id).map((c) => (
+            <option key={c.id} value={c.id}>
+              {categoryName(c)}
+            </option>
+          ))}
         </select>
       </Field>
       <Field label={productBrandFieldLabel(form.type)}>
@@ -930,7 +926,7 @@ export function CategoriesPage() {
       <SubTabs tabs={productTabs()} active="/erp/products/categories" />
       <RefList<ErpCategory>
         entity="category"
-        rows={state.categories}
+        rows={sortCategoriesByLabel(state.categories)}
         columns={[
           { key: "name_en", label: T("Название (English)", "Name (English)", "Tên (English)") },
           { key: "name_vn", label: T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)") },

@@ -8,6 +8,7 @@ import { vietnamIsoDate, vietnamNowTime } from "@/lib/orders/datetime";
 import { docHref, StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
+import { categoryFilterOptions } from "./menuFields";
 import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, docLabel, Empty, errorText, loadingText, NavLink, packText, PageHead, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
@@ -686,10 +687,7 @@ export function ReceiptsPage() {
           </button>
           <MultiSelect
             label={T("Категории", "Categories", "Nhóm")}
-            options={[
-              ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: c.name_vn && c.name_vn !== c.name_en ? `${c.name_en} / ${c.name_vn}` : c.name_en })),
-              { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-            ]}
+            options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
             value={filters.categories}
             onChange={(categories) => set({ categories })}
             searchable

@@ -1,8 +1,13 @@
 import { DEFAULT_MENU_PRICE_SOURCE, LOSS_METHODS, type CostContext, type LossPcts, type MenuPriceSource } from "@/lib/erp/costing";
+import {
+  NONE_CATEGORY_ID,
+  sortCategoriesByOnScreenName,
+  withUncategorizedLast,
+} from "@/lib/erp/categoryOrder";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
-import { productLabel } from "@/lib/erp/productName";
+import { productLabel, type ProductNameFields } from "@/lib/erp/productName";
 import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
-import { T, locale } from "./i18n";
+import { T, erpLang, locale } from "./i18n";
 
 /**
  * Field map for the Menu UI. Agreed with Agent 3:
@@ -61,13 +66,32 @@ export function dishTitle(dish: Pick<ErpDish, "name_en" | "name_vn">) {
   return dish.name_vn && dish.name_vn !== dish.name_en ? `${dish.name_en} / ${dish.name_vn}` : dish.name_en;
 }
 
-export function categoryLabel(category: Pick<ErpCategory, "name_en" | "name_vn"> | undefined) {
+export function categoryLabel(category: ProductNameFields | undefined) {
   if (!category) return "—";
   return productLabel(category);
 }
 
+/** A–Z by the on-screen name (VN when the UI language is VN). Ignores the stored drag `sort`. */
+export function sortCategoriesByLabel<T extends ProductNameFields>(categories: readonly T[]): T[] {
+  return sortCategoriesByOnScreenName(categories, erpLang());
+}
+
 export function visibleCategories(categories: ErpCategory[]) {
-  return categories.filter((category) => !category.archived_at && !category.deleted_at);
+  return sortCategoriesByLabel(categories.filter((category) => !category.archived_at && !category.deleted_at));
+}
+
+export function selectableCategories(categories: ErpCategory[], selectedId?: string | null) {
+  return sortCategoriesByLabel(
+    categories.filter((category) => (!category.archived_at && !category.deleted_at) || (selectedId != null && category.id === selectedId)),
+  );
+}
+
+/** Named categories A–Z, then Uncategorized. */
+export function categoryFilterOptions(categories: ErpCategory[], noneLabel: string) {
+  return withUncategorizedLast(
+    visibleCategories(categories).map((category) => ({ id: category.id, label: categoryLabel(category) })),
+    { id: NONE_CATEGORY_ID, label: noneLabel },
+  );
 }
 
 export function defaultDishCategoryId(categories: ErpCategory[]): string {

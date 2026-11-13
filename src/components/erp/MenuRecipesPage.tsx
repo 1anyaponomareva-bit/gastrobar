@@ -10,6 +10,7 @@ import { DropMenu, MultiSelect } from "./filters";
 import { netOf, netWeight } from "./losses";
 import { recipeForProduct, YieldComposition, yieldCompositionTitle } from "./YieldComposition";
 import {
+  categoryFilterOptions,
   categoryLabel,
   costContextOf,
   dishEconomics,
@@ -17,7 +18,6 @@ import {
   dishTitle,
   posterDishMarkup,
   posterStockQty,
-  visibleCategories,
 } from "./menuFields";
 import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
@@ -257,10 +257,7 @@ function MenuRecipesList() {
         <>
           <MultiSelect
             label={T("Категория", "Category", "Nhóm")}
-            options={[
-              ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
-              { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-            ]}
+            options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
             value={categories}
             onChange={(value) => list.set({ category: value })}
             searchable

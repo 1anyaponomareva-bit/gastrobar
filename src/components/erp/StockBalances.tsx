@@ -6,6 +6,7 @@ import { addTotals, costInfo, costNumber, stockByProduct, stockOf, stockValue, t
 import type { ErpCategory, ErpProduct, ErpProductReceipt, ErpState } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { ConditionFilters, DropMenu, matches, MultiSelect, type CondField, type Condition } from "./filters";
+import { categoryFilterOptions } from "./menuFields";
 import { StockMobileNav } from "./stockNav";
 import { Pager, usePageSize } from "./Pager";
 import { costSourceLabel, dateText, Empty, errorText, loadingText, NavLink, PageHead, PRODUCT_TYPES, qtyText, T, today, typeLabel, unitLabel, vnd } from "./ui";
@@ -324,10 +325,7 @@ export function StockPage() {
             <MultiSelect label={T("Тип", "Type", "Loại")} options={PRODUCT_TYPES.map((t) => ({ id: t, label: typeLabel(t) }))} value={filters.types} onChange={(types) => set({ types })} />
             <MultiSelect
               label={T("Категория", "Category", "Nhóm")}
-              options={[
-                ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: categoryName(c) })),
-                { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-              ]}
+              options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
               value={filters.categories}
               onChange={(categories) => set({ categories })}
               searchable

@@ -8,7 +8,7 @@ import { withProductInputVat } from "@/lib/erp/ingredientCategoryStats";
 import { CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, visibleCategories } from "./menuFields";
+import { categoryFilterOptions, categoryLabel, costContextOf } from "./menuFields";
 import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, T, typeLabel, unitLabel, vnd } from "./ui";
@@ -127,10 +127,7 @@ function MenuGoodsList() {
     { id: "markup", label: T("Наценка", "Markup", "Phụ thu"), num: true, sort: false, cell: () => dash, text: () => "" },
   ];
 
-  const categoryOptions = [
-    ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
-    { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-  ];
+  const categoryOptions = categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"));
   const editHref = (row: Row) => withMenuListReturn(`/erp/products/${row.id}`, list.href);
 
   return (

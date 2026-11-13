@@ -7,6 +7,7 @@ import { vietnamIsoDate, vietnamNowTime } from "@/lib/orders/datetime";
 import { docHref } from "./docs";
 import { useErp } from "./ErpShell";
 import { DropMenu, matches, MultiSelect, type CondOp } from "./filters";
+import { categoryFilterOptions } from "./menuFields";
 import { Pager, usePageSize } from "./Pager";
 import { StockMobileNav } from "./stockNav";
 import { addDays, dateText, dateTimeText, errorText, loadingText, NavLink, packText, qtyText, statusLabel, T, today, unitOf, vnd, warehouseName } from "./ui";
@@ -772,10 +773,7 @@ function WriteoffList({
           <MultiSelect label={T("Склад", "Location", "Kho")} options={state.warehouses.filter((w) => !w.archived_at).map((w) => ({ id: w.id, label: w.name }))} value={filters.warehouses} onChange={(warehouses) => set({ warehouses })} />
           <MultiSelect
             label={T("Категории", "Categories", "Nhóm")}
-            options={[
-              ...state.categories.filter((c) => !c.archived_at).map((c) => ({ id: c.id, label: c.name_vn && c.name_vn !== c.name_en ? `${c.name_en} / ${c.name_vn}` : c.name_en })),
-              { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-            ]}
+            options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
             value={filters.categories}
             onChange={(categories) => set({ categories })}
             searchable

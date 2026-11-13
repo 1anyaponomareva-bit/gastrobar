@@ -3,6 +3,7 @@
 import type { ErpCategory } from "@/lib/erp/types";
 import { useErp } from "./ErpShell";
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
+import { sortCategoriesByLabel } from "./menuFields";
 import { RefList } from "./RefList";
 import { PageHead, T } from "./ui";
 
@@ -26,7 +27,7 @@ export function MenuCategoriesPage({ kind }: { kind: "products" | "ingredients" 
       </p>
       <RefList<ErpCategory>
         entity="category"
-        rows={state.categories}
+        rows={sortCategoriesByLabel(state.categories)}
         columns={[
           { key: "name_en", label: T("Название (English)", "Name (English)", "Tên (English)") },
           { key: "name_vn", label: T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)") },

@@ -26,6 +26,7 @@ import {
 import type { ErpDocument } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
+import { categoryLabel, sortCategoriesByLabel } from "./menuFields";
 import {
   dateTimeText,
   Empty,
@@ -394,8 +395,10 @@ function CreateForm({
       (!q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q)),
   );
   const productCats = new Set(products.map((p) => p.category_id).filter(Boolean) as string[]);
-  const categories = state.categories.filter(
-    (c) => !c.archived_at && (!eligible || productCats.has(c.id) || doc.category_ids.includes(c.id)) && (!q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q)),
+  const categories = sortCategoriesByLabel(
+    state.categories.filter(
+      (c) => !c.archived_at && (!eligible || productCats.has(c.id) || doc.category_ids.includes(c.id)) && (!q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q)),
+    ),
   );
   const locked = !doc.warehouse_id;
 
@@ -459,7 +462,7 @@ function CreateForm({
                     checked={doc.category_ids.includes(c.id)}
                     onChange={() => set({ category_ids: doc.category_ids.includes(c.id) ? doc.category_ids.filter((id) => id !== c.id) : [...doc.category_ids, c.id] })}
                   />
-                  <span>{c.name_vn && c.name_vn !== c.name_en ? `${c.name_en} / ${c.name_vn}` : c.name_en}</span>
+                  <span>{categoryLabel(c)}</span>
                 </label>
               ))}
             </div>

@@ -11,6 +11,7 @@ import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
 import { netOf } from "./losses";
 import {
+  categoryFilterOptions,
   categoryLabel,
   dishTitle,
   INGREDIENT_TYPES,
@@ -18,7 +19,6 @@ import {
   posterStockQty,
   prepsUsingProduct,
   productCodeFieldLabel,
-  visibleCategories,
 } from "./menuFields";
 import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
@@ -299,10 +299,7 @@ function MenuIngredientsList() {
         <>
           <MultiSelect
             label={T("Категория", "Category", "Nhóm")}
-            options={[
-              ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
-              { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-            ]}
+            options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
             value={categories}
             onChange={(value) => list.set({ category: value })}
             searchable

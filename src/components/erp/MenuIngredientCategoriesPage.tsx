@@ -18,7 +18,7 @@ import type { IngredientCategoryStat } from "@/lib/erp/ingredientCategoryStats";
 import { CatalogTable, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MenuFormShell } from "./MenuFormShell";
-import { categoryLabel } from "./menuFields";
+import { categoryLabel, sortCategoriesByLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { dateTimeText, Empty, Field, NavLink, packQtyText, T, unitLabel, vnd } from "./ui";
 
@@ -51,7 +51,7 @@ export function MenuIngredientCategoriesPage() {
   const { state, act } = useErp();
   const [query, setQuery] = useState("");
   const stats = useMemo(
-    () => (state ? ingredientCategoryStats(state.categories, state.products, state.dishes, state.stock) : []),
+    () => (state ? sortCategoriesByLabel(ingredientCategoryStats(state.categories, state.products, state.dishes, state.stock)) : []),
     [state],
   );
   if (!state) return null;
@@ -294,10 +294,11 @@ export function MenuIngredientCategoryTrashPage() {
   if (!state) return null;
 
   const q = query.trim().toLowerCase();
-  const rows: TrashRow[] = trashedCategories(state.categories)
-    .filter((c) => trashAlive(c.deleted_at as string))
-    .filter((c) => !q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q))
-    .map((c) => ({ id: c.id, name: categoryLabel(c), deleted_at: c.deleted_at as string }));
+  const rows: TrashRow[] = sortCategoriesByLabel(
+    trashedCategories(state.categories)
+      .filter((c) => trashAlive(c.deleted_at as string))
+      .filter((c) => !q || `${c.name_en} ${c.name_vn}`.toLowerCase().includes(q)),
+  ).map((c) => ({ id: c.id, name: categoryLabel(c), deleted_at: c.deleted_at as string }));
 
   const columns: CatalogColumn<TrashRow>[] = [
     { id: "name", label: T("Категория", "Category", "Nhóm"), locked: true, cell: (row) => row.name, text: (row) => row.name },

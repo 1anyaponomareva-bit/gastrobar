@@ -6,7 +6,7 @@ import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { MultiSelect } from "./filters";
-import { categoryLabel, costContextOf, visibleCategories } from "./menuFields";
+import { categoryFilterOptions, categoryLabel, costContextOf } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
 import { dateTimeText, T, vnd } from "./ui";
 
@@ -95,10 +95,7 @@ export function MenuTrashPage() {
         <>
           <MultiSelect
             label={T("Категория", "Category", "Nhóm")}
-            options={[
-              ...visibleCategories(state.categories).map((c) => ({ id: c.id, label: categoryLabel(c) })),
-              { id: "none", label: T("Без категории", "No category", "Chưa phân nhóm") },
-            ]}
+            options={categoryFilterOptions(state.categories, T("Без категории", "No category", "Chưa phân nhóm"))}
             value={categories}
             onChange={setCategories}
             searchable

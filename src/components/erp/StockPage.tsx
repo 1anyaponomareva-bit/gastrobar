@@ -10,6 +10,7 @@ import { InventoryPage } from "./InventoryPage";
 import { ReceiptsPage } from "./ReceiptsPage";
 import { RefList } from "./RefList";
 import { StockMobileNav } from "./stockNav";
+import { categoryLabel, sortCategoriesByLabel } from "./menuFields";
 import { Empty, NavLink, PageHead, T, today } from "./ui";
 import { WriteoffsPage } from "./WriteoffsPage";
 
@@ -244,11 +245,11 @@ export function SuppliersPage() {
       const ids = supplierCategoryIds(supplier.id, state.products, state.productPacks);
       map.set(
         supplier.id,
-        ids
-          .map((id) => state.categories.find((c) => c.id === id))
-          .filter((c): c is ErpCategory => c != null && !c.archived_at && !c.deleted_at)
-          .map((c) => c.name_en)
-          .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+        sortCategoriesByLabel(
+          ids
+            .map((id) => state.categories.find((c) => c.id === id))
+            .filter((c): c is ErpCategory => c != null && !c.archived_at && !c.deleted_at),
+        ).map((c) => categoryLabel(c)),
       );
     }
     return map;
@@ -259,10 +260,7 @@ export function SuppliersPage() {
     for (const supplier of state.suppliers) {
       for (const id of supplierCategoryIds(supplier.id, state.products, state.productPacks)) used.add(id);
     }
-    return state.categories
-      .filter((c) => used.has(c.id) && !c.archived_at && !c.deleted_at)
-      .slice()
-      .sort((a, b) => a.name_en.localeCompare(b.name_en, undefined, { sensitivity: "base" }));
+    return sortCategoriesByLabel(state.categories.filter((c) => used.has(c.id) && !c.archived_at && !c.deleted_at));
   }, [state]);
   if (!state) return null;
 
@@ -285,7 +283,7 @@ export function SuppliersPage() {
             <option value="">{T("Все категории", "All categories", "Tất cả nhóm")}</option>
             {categoryOptions.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name_en}
+                {categoryLabel(category)}
               </option>
             ))}
           </select>
