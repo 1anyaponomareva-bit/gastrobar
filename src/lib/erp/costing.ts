@@ -43,7 +43,7 @@
  */
 
 import { productLabel } from "./productName";
-export { productLabel, productTitle } from "./productName";
+export { liveCatalogName, productLabel, productTitle } from "./productName";
 
 export type ErpUnit = "kg" | "l" | "pcs";
 export type ErpProductType = "ingredient" | "semi_finished" | "finished" | "packaging" | "consumable";

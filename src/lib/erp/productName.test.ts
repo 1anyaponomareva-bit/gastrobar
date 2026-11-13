@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { productDisplayName, productTitle } from "./productName";
+import { liveCatalogName, productDisplayName, productTitle } from "./productName";
 
 const salt = { nameEn: "Salt", nameVn: "Muối" };
 const foil = { name_en: "Aluminum Foil (45x285m)", name_vn: "Giấy bạc cuộn (45x285m)" };
@@ -38,4 +38,13 @@ test("category names follow the same locale rule", () => {
 test("brand stays on the title; still one language", () => {
   assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: "Mlekpol" }, "ru"), "Salt · Mlekpol");
   assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: "Mlekpol" }, "vn"), "Muối · Mlekpol");
+});
+
+test("composition lines read live catalog names, not a snapshot", () => {
+  const products = [{ id: "prep-1", name_en: "New sauce", name_vn: "Sốt mới" }];
+  assert.equal(liveCatalogName(products, "prep-1", "en"), "New sauce");
+  assert.equal(liveCatalogName(products, "prep-1", "vn"), "Sốt mới");
+  assert.equal(liveCatalogName(products, "prep-1", "ru"), "New sauce");
+  assert.equal(liveCatalogName(products, "missing", "en"), "—");
+  assert.equal(liveCatalogName(products, null, "en"), "—");
 });

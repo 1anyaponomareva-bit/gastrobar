@@ -422,10 +422,10 @@ function ProductEditor({
   const basics = (
     <div className="erpGrid two">
       <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-        <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} autoFocus={isNew} />
+        <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} autoFocus={isNew} maxLength={200} data-testid="product-name" />
       </Field>
       <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-        <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} />
+        <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} maxLength={200} data-testid="product-name-vn" />
       </Field>
       {ingredientCard ? (
         <Field
@@ -765,7 +765,11 @@ function ProductEditor({
       <PageHead
         title={
           <>
-            {product ? productTitle(product) : goodsMode ? T("Добавление товара", "Add product", "Thêm hàng hóa") : T("Новый продукт", "New product", "Sản phẩm mới")}
+            {product
+              ? productTitle({ ...product, name_en: form.name_en, name_vn: form.name_vn })
+              : goodsMode
+                ? T("Добавление товара", "Add product", "Thêm hàng hóa")
+                : T("Новый продукт", "New product", "Sản phẩm mới")}
             {product?.archived_at ? <span className="erpBadge">{T("в архиве", "archived", "lưu trữ")}</span> : null}
           </>
         }

@@ -14,6 +14,7 @@ import {
   channelResult,
   costLine,
   DEFAULT_MENU_PRICE_SOURCE,
+  liveCatalogName,
   productTitle,
   summarize,
   type CostProduct,
@@ -3577,6 +3578,101 @@ async function main() {
 
     await savePack({ id, name: "VN-card Bottle 1 L", name_vn: "", unit: "l", qty_base: 1 });
     assert.equal(await value("select name_vn from public.erp_packs where id = $1", [id]), null);
+  });
+
+  await test("prep card English and Vietnamese names save; tech cards read live names", async () => {
+    const prep = await saveProduct({
+      type: "semi_finished",
+      name_en: "Prep-card sauce",
+      name_vn: "Sốt thẻ",
+      base_unit: "kg",
+    });
+    const bun = await saveProduct({ type: "ingredient", name_en: "Prep-card bun", base_unit: "pcs" });
+    const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "Prep-card burger",
+        name_vn: "Burger thẻ",
+        lines: [
+          { product_id: bun, qty: 1 },
+          { product_id: prep, qty: 0.12 },
+        ],
+      }),
+      ACTOR,
+    ]);
+
+    await saveProduct({
+      id: prep,
+      type: "semi_finished",
+      name_en: "Renamed prep sauce",
+      name_vn: "Sốt đã đổi",
+      base_unit: "kg",
+    });
+
+    const stored = await one<{ name_en: string; name_vn: string; type: string }>(
+      "select name_en, name_vn, type from public.erp_products where id = $1",
+      [prep],
+    );
+    assert.deepEqual(stored, { name_en: "Renamed prep sauce", name_vn: "Sốt đã đổi", type: "semi_finished" });
+
+    const composition = await q<{ product_id: string; name_en: string; name_vn: string }>(
+      `select l.product_id, p.name_en, p.name_vn
+       from public.erp_dish_lines l
+       join public.erp_products p on p.id = l.product_id
+       where l.dish_id = $1
+       order by l.line_no`,
+      [dish],
+    );
+    assert.equal(composition.length, 2);
+    assert.deepEqual(
+      composition.find((row) => row.product_id === prep),
+      { product_id: prep, name_en: "Renamed prep sauce", name_vn: "Sốt đã đổi" },
+    );
+
+    const loaded = await value<{
+      products: { id: string; name_en: string; name_vn: string }[];
+      dishes: { id: string; lines: { product_id: string }[] }[];
+    }>("select public.erp_load_state($1)", ["products,dishes"]);
+    const loadedDish = loaded.dishes.find((row) => row.id === dish);
+    assert.ok(loadedDish, "dish is in load_state");
+    const lineProduct = loaded.products.find((row) => row.id === prep);
+    assert.deepEqual(
+      { name_en: lineProduct?.name_en, name_vn: lineProduct?.name_vn },
+      { name_en: "Renamed prep sauce", name_vn: "Sốt đã đổi" },
+    );
+    assert.equal(liveCatalogName(loaded.products, prep, "en"), "Renamed prep sauce");
+    assert.equal(liveCatalogName(loaded.products, prep, "ru"), "Renamed prep sauce");
+    try {
+      setErpLang("vn");
+      assert.equal(liveCatalogName(loaded.products, prep), "Sốt đã đổi");
+      assert.equal(liveCatalogName(loaded.products, prep, "vn"), "Sốt đã đổi");
+      setErpLang("en");
+      assert.equal(liveCatalogName(loaded.products, prep), "Renamed prep sauce");
+    } finally {
+      setErpLang("ru");
+    }
+    assert.ok(
+      loadedDish!.lines.some((line) => line.product_id === prep),
+      "tech card still points at the prep by id after rename",
+    );
+
+    await saveProduct({
+      id: prep,
+      type: "semi_finished",
+      name_en: "Renamed prep sauce",
+      name_vn: "",
+      base_unit: "kg",
+    });
+    assert.equal(await value("select name_vn from public.erp_products where id = $1", [prep]), "");
+    try {
+      setErpLang("vn");
+      assert.equal(
+        liveCatalogName([{ id: prep, name_en: "Renamed prep sauce", name_vn: "" }], prep),
+        "Renamed prep sauce",
+        "VN UI falls back to English when Vietnamese is empty",
+      );
+    } finally {
+      setErpLang("ru");
+    }
   });
 
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {

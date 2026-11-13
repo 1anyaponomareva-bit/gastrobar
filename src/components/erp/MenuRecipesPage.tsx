@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { costLine, productTitle } from "@/lib/erp/costing";
+import { costLine, liveCatalogName } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { Caret, CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
@@ -66,7 +66,7 @@ function DishComposition({ state, dish }: { state: ErpState; dish: ErpDish }) {
               return (
                 <tr key={line.id}>
                   <td>
-                    {product ? productTitle(product) : line.product_id}
+                    {liveCatalogName(state.products, line.product_id)}
                     {prep ? <span className="erpMuted"> {T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
                   </td>
                   <td className="num">{qtyText(line.qty, unit)}</td>

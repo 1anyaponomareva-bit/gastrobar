@@ -3,7 +3,7 @@
 import { useErpRouter } from "./erpHref";
 import { useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
-import { buildCostContext, costLine, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
+import { buildCostContext, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
@@ -268,10 +268,22 @@ function NewPrep({ from }: { from?: string }) {
       <div className="erpCard">
         <div className="erpGrid">
           <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-            <input value={nameEn} onChange={(event) => setNameEn(event.target.value)} placeholder="Beef patty" />
+            <input
+              value={nameEn}
+              onChange={(event) => setNameEn(event.target.value)}
+              placeholder="Beef patty"
+              maxLength={200}
+              data-testid="prep-name"
+            />
           </Field>
           <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-            <input value={nameVn} onChange={(event) => setNameVn(event.target.value)} placeholder="Chả bò" />
+            <input
+              value={nameVn}
+              onChange={(event) => setNameVn(event.target.value)}
+              placeholder="Chả bò"
+              maxLength={200}
+              data-testid="prep-name-vn"
+            />
           </Field>
           <Field
             label={T("Единица учёта *", "Unit *", "Đơn vị *")}
@@ -334,6 +346,22 @@ function stepsToText(instructions: ErpRecipe["instructions"]): string {
     .join("\n\n");
 }
 
+/** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
+function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
+  return {
+    id: product.id,
+    type: product.type,
+    name_en: nameEn.trim(),
+    name_vn: nameVn.trim(),
+    base_unit: product.base_unit,
+    category_id: product.category_id,
+    unit_weight_kg: product.unit_weight_kg,
+    brand: product.brand ?? "",
+    shelf_life_days: product.shelf_life_days,
+    storage_conditions: product.storage_conditions ?? "",
+  };
+}
+
 function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
   const text = recipe ? stepsToText(recipe.instructions) : "";
   return {
@@ -367,13 +395,16 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [editing, setEditing] = useState<boolean>(!viewed || viewed.status === "draft");
   const [form, setForm] = useState(() => formFrom(viewed, product));
   const [baseline, setBaseline] = useState(() => JSON.stringify(formFrom(viewed, product)));
+  const [nameEn, setNameEn] = useState(product.name_en);
+  const [nameVn, setNameVn] = useState(product.name_vn ?? "");
   const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
-  useDirtyGuard(dirty);
+  const namesDirty = nameEn.trim() !== product.name_en.trim() || nameVn.trim() !== (product.name_vn ?? "").trim();
+  useDirtyGuard(dirty || namesDirty);
 
   const open = (recipe: ErpRecipe) => {
-    if (dirty && !window.confirm(T("Есть несохранённые изменения. Открыть другую версию?", "Unsaved changes. Open another version?", "Có thay đổi chưa lưu. Mở phiên bản khác?"))) return;
+    if ((dirty || namesDirty) && !window.confirm(T("Есть несохранённые изменения. Открыть другую версию?", "Unsaved changes. Open another version?", "Có thay đổi chưa lưu. Mở phiên bản khác?"))) return;
     const next = formFrom(recipe, product);
     setViewId(recipe.id);
     setEditing(recipe.status === "draft");
@@ -385,7 +416,26 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const setLine = (index: number, patch: Partial<LineDraft>) =>
     setForm((prev) => ({ ...prev, lines: prev.lines.map((line, i) => (i === index ? { ...line, ...patch } : line)) }));
 
+  const saveNames = async (quiet = false) => {
+    const nextEn = nameEn.trim();
+    const nextVn = nameVn.trim();
+    if (!nextEn) return false;
+    const result = await act<{ id: string }>(
+      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn) },
+      quiet ? false : T("Название сохранено", "Name saved", "Đã lưu tên"),
+    );
+    if (!result) return false;
+    setNameEn(nextEn);
+    setNameVn(nextVn);
+    return true;
+  };
+
   const save = async () => {
+    if (namesDirty && !dirty) {
+      await saveNames();
+      return;
+    }
+    if (namesDirty && !(await saveNames(true))) return;
     const payload: Record<string, unknown> = {
       id: viewed?.id,
       product_id: product.id,
@@ -410,7 +460,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
 
   const activate = async () => {
     if (!viewed || viewed.status !== "draft") return;
-    if (dirty) {
+    if (dirty || namesDirty) {
       window.alert(T("Сначала сохраните изменения.", "Save your changes first.", "Hãy lưu thay đổi trước."));
       return;
     }
@@ -430,7 +480,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     <>
       <BackLink from={from} />
       <PageHead
-        title={productTitle(product)}
+        title={productTitle({ ...product, name_en: nameEn, name_vn: nameVn })}
         sub={
           active
             ? `${T("Действующая версия", "Active version", "Phiên bản đang dùng")} v${active.version} · ${T("выход", "yield", "sản lượng")} ${yieldText(active, unit)}`
@@ -444,6 +494,25 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           ) : null
         }
       />
+
+      <div className="erpCard">
+        <h2>{T("Название", "Name", "Tên")}</h2>
+        <div className="erpGrid two">
+          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
+            <input value={nameEn} onChange={(event) => setNameEn(event.target.value)} maxLength={200} data-testid="prep-name" />
+          </Field>
+          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
+            <input value={nameVn} onChange={(event) => setNameVn(event.target.value)} maxLength={200} data-testid="prep-name-vn" />
+          </Field>
+        </div>
+        <p className="erpHint">
+          {T(
+            "Название на карточке и в тех. картах одно и то же. Вьетнамское необязательно — в VN-интерфейсе подставится английское.",
+            "This name is the card title and what tech cards show. Vietnamese is optional — the VN UI falls back to English.",
+            "Tên này là tiêu đề thẻ và tên trên công thức. Tiếng Việt không bắt buộc — giao diện VN sẽ dùng tiếng Anh.",
+          )}
+        </p>
+      </div>
 
       {recipes.length > 1 ? (
         <div className="erpSubTabs">
@@ -538,7 +607,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                           </div>
                         ) : null}
                         {readOnly ? (
-                          <span className="erpName">{line.product_id ? productTitle(state.products.find((p) => p.id === line.product_id) ?? { name_en: "?", name_vn: "" }) : "—"}</span>
+                          <span className="erpName">{liveCatalogName(state.products, line.product_id)}</span>
                         ) : (
                           <ProductPicker
                             state={state}
@@ -658,13 +727,21 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       </div>
 
       <div className="erpActions">
-        {!readOnly ? (
-          <button type="button" className="erpBtn primary" disabled={busy || (!dirty && viewed?.status === "draft")} onClick={save}>
+        {!readOnly || namesDirty ? (
+          <button
+            type="button"
+            className="erpBtn primary"
+            disabled={busy || !nameEn.trim() || (!namesDirty && !dirty && viewed?.status === "draft")}
+            onClick={() => void save()}
+            data-testid="prep-save"
+          >
             {busy
               ? savingText()
-              : viewed && viewed.status !== "draft"
-                ? T("Сохранить как новую версию", "Save as new version", "Lưu phiên bản mới")
-                : T("Сохранить черновик", "Save draft", "Lưu nháp")}
+              : namesDirty && !dirty
+                ? T("Сохранить название", "Save name", "Lưu tên")
+                : viewed && viewed.status !== "draft"
+                  ? T("Сохранить как новую версию", "Save as new version", "Lưu phiên bản mới")
+                  : T("Сохранить черновик", "Save draft", "Lưu nháp")}
           </button>
         ) : null}
         {viewed?.status === "draft" ? (

@@ -46,3 +46,19 @@ export const productLabel = (product: ProductNameFields, lang: ErpLang = erpLang
 /** Name with the brand: items that differ only by brand are separate products. */
 export const productTitle = (product: ProductNameFields & { brand?: string | null }, lang: ErpLang = erpLang()) =>
   productDisplayTitle(product, lang);
+
+type CatalogNameRow = ProductNameFields & { id: string; brand?: string | null };
+
+/**
+ * Name for a recipe/dish composition line: always the current catalog row, never a
+ * string frozen when the line was added. Missing product → "—".
+ */
+export function liveCatalogName(
+  products: readonly CatalogNameRow[],
+  productId: string | null | undefined,
+  lang: ErpLang = erpLang(),
+): string {
+  if (!productId) return "—";
+  const product = products.find((item) => item.id === productId);
+  return product ? productTitle(product, lang) : "—";
+}
