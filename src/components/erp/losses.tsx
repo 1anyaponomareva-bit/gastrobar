@@ -6,6 +6,7 @@ import { numText, qtyText, QtyInput, T } from "./ui";
 
 export const methodLabel = (method: LossMethod) =>
   ({
+    defrost: T("Разморозка", "Defrost", "Rã đông"),
     clean: T("Очистка", "Cleaning", "Sơ chế"),
     boil: T("Варка", "Boiling", "Luộc"),
     fry: T("Жарка", "Frying", "Chiên"),

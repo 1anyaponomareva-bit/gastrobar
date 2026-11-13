@@ -696,7 +696,7 @@ function ProductEditor({
           "Phần trăm khối lượng hao hụt khi sơ chế. Ví dụ sơ chế 26%: 1 kg còn 740 g. Công thức và món dùng để tính netto.",
         )}
       </p>
-      <div className="erpGrid five">
+      <div className="erpGrid six">
         {LOSS_METHODS.map((m) => (
           <Field key={m} label={`${methodLabel(m)}, %`}>
             <NumberInput value={form[`loss_${m}_pct`]} placeholder="0" onChange={(v) => set(`loss_${m}_pct`, v)} />

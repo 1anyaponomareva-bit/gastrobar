@@ -15,6 +15,8 @@ import {
   costLine,
   DEFAULT_MENU_PRICE_SOURCE,
   liveCatalogName,
+  LOSS_METHODS,
+  netFactor,
   productTitle,
   summarize,
   type CostProduct,
@@ -1015,11 +1017,28 @@ async function main() {
   });
 
   await test("losses: stored on products and recipe/dish lines, gross stays the stock amount", async () => {
+    assert.deepEqual([...LOSS_METHODS], ["defrost", "clean", "boil", "fry", "stew", "bake"]);
+    assert.ok(LOSS_METHODS.indexOf("defrost") < LOSS_METHODS.indexOf("clean"), "defrost sits before clean");
+    assert.ok(Math.abs(netFactor({ loss_defrost_pct: 10, loss_clean_pct: 20 }, ["defrost", "clean"]) - 0.72) < 1e-12);
+
     const apple = await saveProduct({ type: "ingredient", name_en: "Apple loss test", base_unit: "kg", loss_clean_pct: 26 });
     assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [apple])), 26);
+    assert.equal(await value("select loss_defrost_pct from public.erp_products where id = $1", [apple]), null, "old cards keep empty defrost");
     await saveProduct({ id: apple, type: "ingredient", name_en: "Apple loss test", base_unit: "kg" });
     assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [apple])), 26, "omitted loss is kept");
     await expectError(saveProduct({ id: apple, type: "ingredient", name_en: "Apple loss test", base_unit: "kg", loss_fry_pct: 100 }), "check");
+
+    const fish = await saveProduct({
+      type: "ingredient",
+      name_en: "Fish defrost loss test",
+      base_unit: "kg",
+      loss_defrost_pct: 8,
+      loss_clean_pct: 12,
+    });
+    assert.equal(n(await value("select loss_defrost_pct from public.erp_products where id = $1", [fish])), 8);
+    assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [fish])), 12);
+    await saveProduct({ id: fish, type: "ingredient", name_en: "Fish defrost loss test", base_unit: "kg" });
+    assert.equal(n(await value("select loss_defrost_pct from public.erp_products where id = $1", [fish])), 8, "omitted defrost is kept");
 
     const pie = await saveProduct({ type: "semi_finished", name_en: "Apple pie loss test", base_unit: "kg" });
     const recipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
@@ -1035,6 +1054,18 @@ async function main() {
       q("select public.erp_save_recipe($1::jsonb, $2)", [JSON.stringify({ id: recipe, product_id: pie, yield_qty: 1, lines: [{ product_id: apple, qty: 1, methods: ["smoke"] }] }), ACTOR]),
       "check",
     );
+
+    await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        id: recipe,
+        product_id: pie,
+        yield_qty: 1,
+        lines: [{ product_id: fish, qty: 1, net_qty: 0.81, methods: ["defrost", "clean"] }],
+      }),
+      ACTOR,
+    ]);
+    const thawedLine = await one<{ methods: string[] }>("select methods from public.erp_recipe_lines where recipe_id = $1", [recipe]);
+    assert.deepEqual(thawedLine.methods.sort(), ["clean", "defrost"]);
 
     const dish = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
       JSON.stringify({ name_en: "Apple dish loss test", lines: [{ product_id: apple, qty: 0.2, net_qty: 0.148, methods: ["clean"] }] }),
@@ -3224,13 +3255,28 @@ async function main() {
   await test("ingredient list losses and stock stay honest: empty losses are —, unknown cost is null", async () => {
     assert.equal(lossPercentsText({}), "—");
     assert.equal(
-      lossPercentsText({ loss_clean_pct: null, loss_boil_pct: null, loss_fry_pct: null, loss_stew_pct: null, loss_bake_pct: null }),
+      lossPercentsText({
+        loss_defrost_pct: null,
+        loss_clean_pct: null,
+        loss_boil_pct: null,
+        loss_fry_pct: null,
+        loss_stew_pct: null,
+        loss_bake_pct: null,
+      }),
       "—",
     );
-    assert.equal(lossPercentsText({ loss_clean_pct: 26 }), "26% 0% 0% 0% 0%");
+    assert.equal(lossPercentsText({ loss_clean_pct: 26 }), "0% 26% 0% 0% 0% 0%");
+    assert.equal(lossPercentsText({ loss_defrost_pct: 10, loss_clean_pct: 20 }), "10% 20% 0% 0% 0% 0%");
     assert.equal(
-      lossPercentsText({ loss_clean_pct: 13, loss_boil_pct: 0, loss_fry_pct: 0, loss_stew_pct: 0, loss_bake_pct: 0 }),
-      "13% 0% 0% 0% 0%",
+      lossPercentsText({
+        loss_defrost_pct: 0,
+        loss_clean_pct: 13,
+        loss_boil_pct: 0,
+        loss_fry_pct: 0,
+        loss_stew_pct: 0,
+        loss_bake_pct: 0,
+      }),
+      "0% 13% 0% 0% 0% 0%",
     );
     assert.match(posterStockQty(0, "pcs"), /0[,.]00/);
     assert.match(posterStockQty(0, "kg"), /0[,.]000/);

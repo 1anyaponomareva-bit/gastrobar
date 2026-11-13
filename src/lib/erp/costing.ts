@@ -153,8 +153,8 @@ export function buildCostContext(products: CostProduct[], recipes: CostRecipe[],
   };
 }
 
-/** Processing methods with a weight loss, as in Poster. Line qty is gross (taken from stock). */
-export const LOSS_METHODS = ["clean", "boil", "fry", "stew", "bake"] as const;
+/** Processing methods with a weight loss, as in Poster (defrost before clean). Line qty is gross (taken from stock). */
+export const LOSS_METHODS = ["defrost", "clean", "boil", "fry", "stew", "bake"] as const;
 export type LossMethod = (typeof LOSS_METHODS)[number];
 export type LossPcts = { [M in LossMethod as `loss_${M}_pct`]?: number | null };
 

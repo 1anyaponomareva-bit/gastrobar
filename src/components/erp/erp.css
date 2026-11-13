@@ -1409,8 +1409,9 @@ button.erpBack {
   margin: 16px 0;
 }
 
-.erpGrid.five {
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+.erpGrid.five,
+.erpGrid.six {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
 }
 
 /* Processing methods of a recipe line */

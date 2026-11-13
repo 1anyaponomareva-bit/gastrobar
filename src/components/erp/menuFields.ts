@@ -100,7 +100,7 @@ export function posterDecimals(value: number, decimals: number) {
   return value.toLocaleString(locale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-/** Poster list: «26% 0% 0% 0% 0%», or «—» when no loss % is stored. Do not invent 0 for empty cards. */
+/** Poster list: «0% 26% 0% 0% 0% 0%» (defrost first), or «—» when no loss % is stored. Do not invent 0 for empty cards. */
 export function lossPercentsText(product: LossPcts): string {
   const values = LOSS_METHODS.map((method) => product[`loss_${method}_pct`]);
   if (values.every((value) => value == null)) return "—";
