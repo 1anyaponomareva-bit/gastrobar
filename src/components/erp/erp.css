@@ -725,6 +725,77 @@ button.erpBack {
   min-width: 0;
 }
 
+.erpIngPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.erpIngCats {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.erpIngChip {
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: var(--erp-card);
+  color: var(--erp-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.erpIngChip.on {
+  border-color: var(--erp-accent);
+  background: var(--erp-accent-soft);
+  color: var(--erp-accent);
+}
+
+.erpIngList {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  background: var(--erp-card);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.erpIngList button {
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.erpIngList button:hover,
+.erpIngList button.on {
+  background: var(--erp-accent-soft);
+}
+
+.erpIngEmpty {
+  padding: 8px 10px;
+  color: var(--erp-muted);
+  font-size: 13px;
+}
+
 .erpMore {
   border-top: 1px solid var(--erp-line);
   margin-top: 16px;
@@ -1414,15 +1485,16 @@ button.erpBack {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
 }
 
-/* Processing methods of a recipe line */
+/* Processing methods of a recipe line. In-flow so overflow:hidden tables actually unroll. */
 .erpMethods {
   position: relative;
-  display: inline-block;
+  display: block;
 }
 
 .erpMethods > summary {
   cursor: pointer;
   list-style: none;
+  display: list-item;
   padding: 6px 10px;
   border: 1px solid var(--erp-line);
   border-radius: 8px;
@@ -1439,12 +1511,17 @@ button.erpBack {
   color: var(--erp-muted);
 }
 
+.erpMethods[open] > summary::after {
+  content: " ▴";
+}
+
 .erpMethods > div {
-  position: absolute;
+  position: static;
   z-index: 15;
-  top: calc(100% + 4px);
-  left: 0;
+  margin-top: 4px;
   min-width: 180px;
+  width: max-content;
+  max-width: 100%;
   background: var(--erp-card);
   border: 1px solid var(--erp-line);
   border-radius: 10px;

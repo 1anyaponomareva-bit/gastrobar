@@ -489,7 +489,8 @@ export function CatalogTable<Row extends { id: string }>({
                       className={openHref ? "clickable" : ""}
                       onClick={(e) => {
                         if (!openHref) return;
-                        if ((e.target as HTMLElement).closest("a, button, input, label")) return;
+                        const node = e.target instanceof Element ? e.target : (e.target as Node).parentElement;
+                        if (node?.closest("a, button, input, label, .erpMenuLinks, .erpMenuExpandRow")) return;
                         router.push(openHref);
                       }}
                     >
@@ -504,7 +505,7 @@ export function CatalogTable<Row extends { id: string }>({
                         </td>
                       ))}
                       <td className="erpMenuRowActions erpNoPrint">
-                        <div className="erpMenuLinks">
+                        <div className="erpMenuLinks" onClick={(event) => event.stopPropagation()}>
                           {rowEnd?.(row)}
                           {rowMenu ? (
                             <DropMenu

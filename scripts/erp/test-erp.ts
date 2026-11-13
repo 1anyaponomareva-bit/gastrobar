@@ -33,6 +33,8 @@ import {
 } from "../../src/lib/erp/menuListQuery";
 import { setErpLang } from "../../src/components/erp/i18n";
 import { categoryLabel, dishInitials, lossPercentsText, posterDishMarkup, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
+import { recipeForProduct } from "../../src/components/erp/YieldComposition";
+import { filterCompositionIngredients, ingredientNameMatches } from "../../src/lib/erp/ingredientSearch";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -3421,6 +3423,79 @@ async function main() {
     assert.equal(posterDishMarkup(0, 0, 180000), "—");
     assert.equal(posterDishMarkup(38577.14, 237.4, 130000), "237%");
     assert.equal(posterDishMarkup(24030, -100, 0), "-100%");
+  });
+
+  await test("prep list expander uses the active recipe for standard-yield composition", async () => {
+    const state = {
+      recipes: [
+        { id: "old", product_id: "prep", status: "archived", lines: [] },
+        { id: "on", product_id: "prep", status: "active", lines: [{ id: "l1" }] },
+      ],
+    };
+    assert.equal(recipeForProduct(state as never, "prep")?.id, "on");
+    assert.equal(recipeForProduct(state as never, "missing"), null);
+  });
+
+  await test("yield composition picker is ingredients only, prefix search, and category filter", async () => {
+    const sausage = {
+      id: "prep-chicken-sausage",
+      type: "semi_finished",
+      name_en: "Chicken Sausage",
+      name_vn: "Xúc xích gà",
+      category_id: "meat",
+      base_unit: "kg",
+      archived_at: null,
+      product_code: "CSK-1",
+    };
+    const goods = {
+      id: "fin-sauce",
+      type: "finished",
+      name_en: "Bottled Sauce",
+      name_vn: "Sốt chai",
+      category_id: "sauce",
+      base_unit: "pcs",
+      archived_at: null,
+    };
+    const bones = {
+      id: "11111111-aaaa-bbbb",
+      type: "ingredient",
+      name_en: "Chicken Bones",
+      name_vn: "Xương gà",
+      category_id: "meat",
+      base_unit: "kg",
+      archived_at: null,
+      product_code: "BONES-99",
+    };
+    const flour = {
+      id: "ing-flour",
+      type: "ingredient",
+      name_en: "Wheat Flour",
+      name_vn: "Bột mì",
+      category_id: "dry",
+      base_unit: "kg",
+      archived_at: null,
+    };
+    const catalog = [sausage, goods, bones, flour];
+
+    const all = filterCompositionIngredients(catalog, "");
+    assert.deepEqual(all.map((row) => row.id).sort(), ["11111111-aaaa-bbbb", "ing-flour"]);
+    assert.ok(!all.some((row) => row.id === sausage.id || row.id === goods.id));
+
+    assert.equal(ingredientNameMatches(bones, "Chi"), true);
+    assert.equal(ingredientNameMatches(bones, "chicken b"), true);
+    assert.equal(ingredientNameMatches(bones, "Xương"), true);
+    assert.equal(ingredientNameMatches(bones, "xuong"), true);
+    assert.equal(ingredientNameMatches(bones, "BONES-99"), false);
+    assert.equal(ingredientNameMatches(bones, "11111111"), false);
+
+    const prefix = filterCompositionIngredients(catalog, "Chi");
+    assert.deepEqual(prefix.map((row) => row.id), [bones.id]);
+    const vn = filterCompositionIngredients(catalog, "Xương");
+    assert.deepEqual(vn.map((row) => row.id), [bones.id]);
+    const meat = filterCompositionIngredients(catalog, "", "meat");
+    assert.deepEqual(meat.map((row) => row.id), [bones.id]);
+    const dryChi = filterCompositionIngredients(catalog, "Chi", "dry");
+    assert.equal(dryChi.length, 0);
   });
 
   await test("menu list URL keeps category and other filters; card from only accepts Menu lists", async () => {

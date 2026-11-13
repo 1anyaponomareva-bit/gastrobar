@@ -18,6 +18,7 @@ import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText, type LossLine } from "./losses";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
+import { IngredientPicker } from "./IngredientPicker";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
 import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
@@ -28,7 +29,6 @@ import {
   NumberInput,
   PageHead,
   pct,
-  ProductPicker,
   qtyText,
   QtyInput,
   savingText,
@@ -436,7 +436,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                     <Fragment key={index}>
                       <tr className={cost && cost.cost === null ? "short" : ""}>
                         <td className="main" style={{ minWidth: 240 }}>
-                          <ProductPicker
+                          <IngredientPicker
                             state={state}
                             value={line.product_id}
                             onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null })}

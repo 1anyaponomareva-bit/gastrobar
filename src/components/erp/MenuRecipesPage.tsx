@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Fragment, Suspense, useMemo, useState } from "react";
 import { costLine, liveCatalogName } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
@@ -8,6 +8,7 @@ import { Caret, CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilte
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
 import { netOf, netWeight } from "./losses";
+import { recipeForProduct, YieldComposition, yieldCompositionTitle } from "./YieldComposition";
 import {
   categoryLabel,
   costContextOf,
@@ -46,8 +47,8 @@ function DishComposition({ state, dish }: { state: ErpState; dish: ErpDish }) {
   return (
     <div className="erpMenuUsageBlock">
       <h3>{T("Состав и история редактирования", "Composition and edit history", "Thành phần và lịch sử sửa")}</h3>
-      <div className="erpTableWrap">
-        <table className="erpTable erpMenuTable">
+      <div className="erpTableWrap erpYieldWrap">
+        <table className="erpTable">
           <thead>
             <tr>
               <th>{T("Ингредиент", "Ingredient", "Nguyên liệu")}</th>
@@ -63,16 +64,29 @@ function DishComposition({ state, dish }: { state: ErpState; dish: ErpDish }) {
               const net = netOf(state, line);
               const cost = costLine(ctx, line.product_id, line.qty).cost;
               const prep = product?.type === "semi_finished";
+              const prepRecipe = prep ? recipeForProduct(state, line.product_id) : null;
               return (
-                <tr key={line.id}>
-                  <td>
-                    {liveCatalogName(state.products, line.product_id)}
-                    {prep ? <span className="erpMuted"> {T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
-                  </td>
-                  <td className="num">{qtyText(line.qty, unit)}</td>
-                  <td className="num">{net == null || (unit === "pcs" && net === 0) ? "—" : qtyText(net, unit)}</td>
-                  <td className="num">{cost == null ? "—" : vnd(cost)}</td>
-                </tr>
+                <Fragment key={line.id}>
+                  <tr>
+                    <td>
+                      {liveCatalogName(state.products, line.product_id)}
+                      {prep ? <span className="erpMuted"> {T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
+                    </td>
+                    <td className="num">{qtyText(line.qty, unit)}</td>
+                    <td className="num">{net == null || (unit === "pcs" && net === 0) ? "—" : qtyText(net, unit)}</td>
+                    <td className="num">{cost == null ? "—" : vnd(cost)}</td>
+                  </tr>
+                  {prep ? (
+                    <tr className="erpYieldNested">
+                      <td colSpan={4}>
+                        <details className="erpYieldCompose">
+                          <summary>{yieldCompositionTitle()}</summary>
+                          <YieldComposition state={state} recipe={prepRecipe} heading={false} />
+                        </details>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               );
             })}
           </tbody>
@@ -274,7 +288,14 @@ function MenuRecipesList() {
       }
       rowEnd={(row) => (
         <>
-          <button type="button" className="erpLink" onClick={() => setDetailsId(row.id === detailsId ? null : row.id)}>
+          <button
+            type="button"
+            className="erpLink"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDetailsId(row.id === detailsId ? null : row.id);
+            }}
+          >
             {T("Состав", "Composition", "Thành phần")}
           </button>
           {archived ? null : (

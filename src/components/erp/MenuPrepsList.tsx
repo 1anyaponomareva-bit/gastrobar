@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { plannedUnitCost, productTitle } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
@@ -11,6 +11,7 @@ import { costContextOf } from "./menuFields";
 import { useMenuListQuery } from "./menuListState";
 import { MENU_HREFS } from "./menuNav";
 import { NavLink, qtyText, T, unitLabel, vnd } from "./ui";
+import { recipeForProduct, YieldComposition } from "./YieldComposition";
 
 type Row = ErpProduct & { yieldText: string; cost: number | null; recipeStatus: string };
 
@@ -27,6 +28,7 @@ function MenuPrepsTable() {
   const list = useMenuListQuery(MENU_HREFS.preps);
   const query = list.q;
   const archived = list.archived;
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const ctx = useMemo(() => (state ? costContextOf(state) : null), [state]);
   if (!state || !ctx) return null;
 
@@ -109,6 +111,8 @@ function MenuPrepsTable() {
         </NavLink>
       }
       rowHref={(row) => `/erp/preps/recipe/${row.id}`}
+      expandedId={detailsId}
+      rowExpand={(row) => <YieldComposition state={state} recipe={recipeForProduct(state, row.id)} />}
       onTrash={async (ids) => {
         for (const id of ids) await act({ action: "setArchived", entity: "product", id, archived: !archived }, false);
       }}
@@ -134,6 +138,23 @@ function MenuPrepsTable() {
           </DropMenu>
         </>
       }
+      rowEnd={(row) => (
+        <>
+          <button
+            type="button"
+            className="erpLink"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDetailsId(row.id === detailsId ? null : row.id);
+            }}
+          >
+            {T("Состав", "Composition", "Thành phần")}
+          </button>
+          <NavLink href={withMenuListReturn(`/erp/preps/recipe/${row.id}`, list.href)} className="erpLink">
+            {T("Ред.", "Edit", "Sửa")}
+          </NavLink>
+        </>
+      )}
       rowMenu={(row) => (
         <>
           <NavLink href={withMenuListReturn(`/erp/preps/recipe/${row.id}`, list.href)} className="erpDropAction">

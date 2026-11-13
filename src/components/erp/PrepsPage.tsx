@@ -8,6 +8,7 @@ import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
+import { IngredientPicker } from "./IngredientPicker";
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { grossPatch, lossHint, MethodPicker, NetCell, netWeight, netWeightText } from "./losses";
 import {
@@ -17,7 +18,6 @@ import {
   noSearchResults,
   NumberInput,
   PageHead,
-  ProductPicker,
   qtyText,
   QtyInput,
   savingText,
@@ -397,6 +397,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [baseline, setBaseline] = useState(() => JSON.stringify(formFrom(viewed, product)));
   const [nameEn, setNameEn] = useState(product.name_en);
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
+  const [composeOpen, setComposeOpen] = useState(true);
   const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
@@ -570,7 +571,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       </div>
 
       <div className="erpCard">
-        <h2>{T("Состав на нормативный выход", "Ingredients for the standard yield", "Thành phần cho sản lượng chuẩn")}</h2>
+        <details className="erpYieldCompose" open={composeOpen} onToggle={(event) => setComposeOpen(event.currentTarget.open)}>
+          <summary>
+            {T("Состав на нормативный выход", "Ingredients for the standard yield", "Thành phần cho sản lượng chuẩn")}
+          </summary>
         {unlinked ? (
           <div className="erpNotice warn">
             {T(
@@ -581,7 +585,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           </div>
         ) : null}
         {form.lines.length ? (
-          <div className="erpTableWrap">
+          <div className="erpTableWrap erpYieldWrap">
             <table className="erpTable stack">
               <thead>
                 <tr>
@@ -609,7 +613,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                         {readOnly ? (
                           <span className="erpName">{liveCatalogName(state.products, line.product_id)}</span>
                         ) : (
-                          <ProductPicker
+                          <IngredientPicker
                             state={state}
                             value={line.product_id}
                             onChange={(productId) => {
@@ -718,6 +722,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           ) : null}
         </div>
 
+        </details>
         <details className="erpMore">
           <summary>{T("Технология приготовления", "Method", "Cách làm")}</summary>
           <div>
