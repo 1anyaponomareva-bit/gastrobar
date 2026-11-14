@@ -350,10 +350,11 @@ type RecipeForm = {
   lines: LineDraft[];
 };
 
-const recipeKind = (value: string | null | undefined): PrepCardKind => (value === "dish" ? "dish" : "prep");
+const recipeKind = (value: string | null | undefined): PrepCardKind =>
+  value === "sauce" || value === "dish" ? "sauce" : "prep";
 
 /** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
-function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
+function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string, pieceWeight = product.unit_weight_kg) {
   return {
     id: product.id,
     type: product.type,
@@ -361,7 +362,7 @@ function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
     name_vn: nameVn.trim(),
     base_unit: product.base_unit,
     category_id: product.category_id,
-    unit_weight_kg: product.unit_weight_kg,
+    unit_weight_kg: pieceWeight,
     brand: product.brand ?? "",
     shelf_life_days: product.shelf_life_days,
     storage_conditions: product.storage_conditions ?? "",
@@ -407,16 +408,19 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [baseline, setBaseline] = useState(() => JSON.stringify(formFrom(viewed, product)));
   const [nameEn, setNameEn] = useState(product.name_en);
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
+  const [pieceWeight, setPieceWeight] = useState<number | null>(product.unit_weight_kg);
   const [composeOpen, setComposeOpen] = useState(true);
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
   const namesDirty = nameEn.trim() !== product.name_en.trim() || nameVn.trim() !== (product.name_vn ?? "").trim();
-  useDirtyGuard(dirty || namesDirty);
+  const pieceDirty = (pieceWeight ?? null) !== (product.unit_weight_kg ?? null);
+  const productDirty = namesDirty || pieceDirty;
+  useDirtyGuard(dirty || productDirty);
 
   const open = (recipe: ErpRecipe) => {
-    if ((dirty || namesDirty) && !window.confirm(T("Есть несохранённые изменения. Открыть другую версию?", "Unsaved changes. Open another version?", "Có thay đổi chưa lưu. Mở phiên bản khác?"))) return;
+    if ((dirty || productDirty) && !window.confirm(T("Есть несохранённые изменения. Открыть другую версию?", "Unsaved changes. Open another version?", "Có thay đổi chưa lưu. Mở phiên bản khác?"))) return;
     const next = formFrom(recipe, product);
     setViewId(recipe.id);
     setEditing(recipe.status === "draft");
@@ -456,8 +460,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const nextVn = nameVn.trim();
     if (!nextEn) return false;
     const result = await act<{ id: string }>(
-      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn) },
-      quiet ? false : T("Название сохранено", "Name saved", "Đã lưu tên"),
+      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, pieceWeight) },
+      quiet ? false : T("Карточка сохранена", "Card saved", "Đã lưu thẻ"),
     );
     if (!result) return false;
     setNameEn(nextEn);
@@ -466,11 +470,11 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   };
 
   const save = async () => {
-    if (namesDirty && !dirty) {
+    if (productDirty && !dirty) {
       await saveNames();
       return;
     }
-    if (namesDirty && !(await saveNames(true))) return;
+    if (productDirty && !(await saveNames(true))) return;
     const partsError = form.lines.map((line) => compositionPartsMessage(state, line)).find(Boolean);
     if (partsError) {
       window.alert(partsError);
@@ -507,7 +511,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
 
   const activate = async () => {
     if (!viewed || viewed.status !== "draft") return;
-    if (dirty || namesDirty) {
+    if (dirty || productDirty) {
       window.alert(T("Сначала сохраните изменения.", "Save your changes first.", "Hãy lưu thay đổi trước."));
       return;
     }
@@ -548,8 +552,6 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         cardNo={form.card_no}
         cardDate={form.card_date}
         photo={form.photo}
-        yieldQty={form.yield_qty}
-        unit={unit}
         readOnly={readOnly}
         onKind={(value) => set("kind", value)}
         onNameEn={setNameEn}
@@ -557,7 +559,6 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         onCardNo={(value) => set("card_no", value)}
         onCardDate={(value) => set("card_date", value)}
         onPhoto={(value) => set("photo", value)}
-        onYieldQty={(value) => set("yield_qty", value)}
       />
       <p className="erpHint">
         {T(
@@ -599,6 +600,12 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       <div className="erpCard">
         <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
         <div className="erpGrid">
+          <Field
+            label={T("Вес 1 штуки", "Weight of 1 piece", "Khối lượng 1 cái")}
+            hint={T("Сколько весит одна штука готового продукта", "How much one finished piece weighs", "Một cái thành phẩm nặng bao nhiêu")}
+          >
+            <QtyInput base="kg" value={pieceWeight} disabled={readOnly} defaultSmall onChange={setPieceWeight} />
+          </Field>
           {unit && unit !== "pcs" ? (
             <Field
               label={T("Штук в партии", "Pieces per batch", "Số cái mỗi mẻ")}
@@ -804,18 +811,18 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       <PrepStepsEditor steps={form.steps} readOnly={readOnly} onChange={(steps) => set("steps", steps)} />
 
       <div className="erpActions">
-        {!readOnly || namesDirty ? (
+        {!readOnly || productDirty ? (
           <button
             type="button"
             className="erpBtn primary"
-            disabled={busy || !nameEn.trim() || (!namesDirty && !dirty && viewed?.status === "draft")}
+            disabled={busy || !nameEn.trim() || (!productDirty && !dirty && viewed?.status === "draft")}
             onClick={() => void save()}
             data-testid="prep-save"
           >
             {busy
               ? savingText()
-              : namesDirty && !dirty
-                ? T("Сохранить название", "Save name", "Lưu tên")
+              : productDirty && !dirty
+                ? T("Сохранить карточку", "Save card", "Lưu thẻ")
                 : viewed && viewed.status !== "draft"
                   ? T("Сохранить как новую версию", "Save as new version", "Lưu phiên bản mới")
                   : T("Сохранить черновик", "Save draft", "Lưu nháp")}
@@ -835,6 +842,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               setForm(next);
               setBaseline(JSON.stringify(next));
               setEditing(false);
+              setPieceWeight(product.unit_weight_kg);
             }}
           >
             {T("Отменить изменения", "Discard changes", "Hủy thay đổi")}

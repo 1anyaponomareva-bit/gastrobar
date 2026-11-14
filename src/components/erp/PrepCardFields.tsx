@@ -3,8 +3,7 @@
 import { useRef, useState } from "react";
 import type { RecipeStepDraft } from "@/lib/erp/recipeCard";
 import { emptyRecipeStep } from "@/lib/erp/recipeCard";
-import type { ErpUnit } from "@/lib/erp/costing";
-import { Field, QtyInput, T } from "./ui";
+import { Field, T } from "./ui";
 
 async function downscaleImage(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -91,7 +90,7 @@ function PhotoField({
   );
 }
 
-export type PrepCardKind = "dish" | "prep";
+export type PrepCardKind = "sauce" | "prep";
 
 export function PrepCardHeader({
   kind,
@@ -100,8 +99,6 @@ export function PrepCardHeader({
   cardNo,
   cardDate,
   photo,
-  yieldQty,
-  unit,
   readOnly,
   onKind,
   onNameEn,
@@ -109,7 +106,6 @@ export function PrepCardHeader({
   onCardNo,
   onCardDate,
   onPhoto,
-  onYieldQty,
 }: {
   kind: PrepCardKind;
   nameEn: string;
@@ -117,8 +113,6 @@ export function PrepCardHeader({
   cardNo: string;
   cardDate: string;
   photo: string;
-  yieldQty: number | null;
-  unit: ErpUnit | null;
   readOnly: boolean;
   onKind: (value: PrepCardKind) => void;
   onNameEn: (value: string) => void;
@@ -126,7 +120,6 @@ export function PrepCardHeader({
   onCardNo: (value: string) => void;
   onCardDate: (value: string) => void;
   onPhoto: (value: string) => void;
-  onYieldQty: (value: number | null) => void;
 }) {
   return (
     <div className="erpCard erpPrepHeader">
@@ -136,10 +129,10 @@ export function PrepCardHeader({
             value={kind}
             disabled={readOnly}
             data-testid="prep-kind"
-            onChange={(event) => onKind(event.target.value === "dish" ? "dish" : "prep")}
+            onChange={(event) => onKind(event.target.value === "sauce" ? "sauce" : "prep")}
           >
-            <option value="dish">{T("Блюда", "Dishes", "Món ăn")}</option>
-            <option value="prep">{T("Заготовки", "Preps", "Sơ chế")}</option>
+            <option value="sauce">{T("Соусы", "Sauces", "Sốt")}</option>
+            <option value="prep">{T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm")}</option>
           </select>
         </Field>
       </div>
@@ -160,18 +153,6 @@ export function PrepCardHeader({
         </Field>
       </div>
       <PhotoField url={photo} disabled={readOnly} onChange={onPhoto} />
-      <div className="erpGrid">
-        <Field
-          label={T("Вес готового продукта (нормативный выход) *", "Finished yield weight *", "Trọng lượng thành phẩm (sản lượng chuẩn) *")}
-          hint={T(
-            "Сколько полуфабриката выходит после приготовления — тот же выход, что в составе.",
-            "How much finished product you get after cooking — the same yield as in the composition.",
-            "Lượng thành phẩm sau khi nấu — cùng sản lượng với phần thành phần.",
-          )}
-        >
-          <QtyInput base={unit} value={yieldQty} disabled={readOnly} defaultSmall={unit !== "pcs"} onChange={onYieldQty} />
-        </Field>
-      </div>
     </div>
   );
 }
