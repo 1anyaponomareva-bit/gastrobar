@@ -35,7 +35,16 @@ import { setErpLang } from "../../src/components/erp/i18n";
 import { categoryLabel, dishInitials, lossPercentsText, posterDishMarkup, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { recipeForProduct } from "../../src/components/erp/YieldComposition";
 import { filterCompositionIngredients, ingredientNameMatches } from "../../src/lib/erp/ingredientSearch";
-import { netToSmallUnit, partsIssue } from "../../src/lib/erp/lineParts";
+import {
+  closeCutsDraft,
+  cutsPlaqueOpen,
+  netToSmallUnit,
+  openCutsDraft,
+  partsIssue,
+  partsRemainderGrams,
+  shiftOpenCuts,
+  toggleCutsState,
+} from "../../src/lib/erp/lineParts";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -3497,6 +3506,27 @@ async function main() {
     assert.deepEqual(meat.map((row) => row.id), [bones.id]);
     const dryChi = filterCompositionIngredients(catalog, "Chi", "dry");
     assert.equal(dryChi.length, 0);
+  });
+
+  await test("cut plaque stays closed until Нарезка", async () => {
+    assert.equal(cutsPlaqueOpen(false, "kg"), false);
+    assert.equal(cutsPlaqueOpen(false, "l"), false);
+    assert.equal(cutsPlaqueOpen(true, "kg"), true);
+    assert.equal(cutsPlaqueOpen(true, "pcs"), false);
+    assert.equal(cutsPlaqueOpen(true, null), false);
+    assert.deepEqual(openCutsDraft([]), [{ name: "", grams: null }]);
+    assert.deepEqual(openCutsDraft([{ name: "dice", grams: 200 }]), [{ name: "dice", grams: 200 }]);
+    assert.deepEqual(closeCutsDraft([{ name: "", grams: null }]), []);
+    assert.deepEqual(closeCutsDraft([{ name: "dice", grams: 200 }, { name: "", grams: null }]), [{ name: "dice", grams: 200 }]);
+    const opened = toggleCutsState(new Set(), 0, []);
+    assert.equal(opened.open.has(0), true);
+    assert.deepEqual(opened.parts, [{ name: "", grams: null }]);
+    const closed = toggleCutsState(opened.open, 0, opened.parts);
+    assert.equal(closed.open.has(0), false);
+    assert.deepEqual(closed.parts, []);
+    const leftover = partsRemainderGrams([{ name: "mince", grams: 400 }], 870);
+    assert.equal(leftover, 470);
+    assert.deepEqual([...shiftOpenCuts(new Set([0, 2]), 0)].sort(), [1]);
   });
 
   await test("ingredient cut parts must sum to parent net grams", async () => {

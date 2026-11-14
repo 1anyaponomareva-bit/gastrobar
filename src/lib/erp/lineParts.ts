@@ -46,3 +46,51 @@ export function partsIssue(parts: LinePart[] | undefined, parentSmall: number | 
   if (partsSumGrams(rows) !== parentSmall) return "sum";
   return null;
 }
+
+/** Cuts exist only for weighed products. Pieces never get a нарезка plaque. */
+export function canCutParts(unit: string | null | undefined): boolean {
+  return unit === "kg" || unit === "l";
+}
+
+/** Plaque stays hidden until the cook presses Нарезка. Saved parts do not auto-open it. */
+export function cutsPlaqueOpen(userOpen: boolean, unit: string | null | undefined): boolean {
+  return Boolean(userOpen) && canCutParts(unit);
+}
+
+/** First open seeds one empty row so they can type a cut immediately. */
+export function openCutsDraft(parts: LinePart[] | undefined): LinePart[] {
+  return parts?.length ? parts : [{ name: "", grams: null }];
+}
+
+/** Closing without filled cuts clears the empty starter row. */
+export function closeCutsDraft(parts: LinePart[] | undefined): LinePart[] {
+  return filledParts(parts);
+}
+
+export function partsRemainderGrams(parts: LinePart[] | undefined, parentSmall: number | null): number | null {
+  if (parentSmall == null) return null;
+  return parentSmall - partsSumGrams(parts);
+}
+
+export function toggleCutsState(
+  openIndexes: Iterable<number>,
+  index: number,
+  parts: LinePart[],
+): { open: Set<number>; parts: LinePart[] } {
+  const open = new Set(openIndexes);
+  if (open.has(index)) {
+    open.delete(index);
+    return { open, parts: closeCutsDraft(parts) };
+  }
+  open.add(index);
+  return { open, parts: openCutsDraft(parts) };
+}
+
+export function shiftOpenCuts(openIndexes: Iterable<number>, removedIndex: number): Set<number> {
+  const next = new Set<number>();
+  for (const index of openIndexes) {
+    if (index === removedIndex) continue;
+    next.add(index > removedIndex ? index - 1 : index);
+  }
+  return next;
+}

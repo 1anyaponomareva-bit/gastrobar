@@ -1662,11 +1662,123 @@ button.erpBack {
   font-size: 13px;
 }
 
-.erpTable.stack td.main .erpLineParts {
-  display: block;
+.erpComposeName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.erpComposeName .erpIngPicker {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.erpComposeName .erpRow {
+  flex: none;
+}
+
+.erpComposeActs {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.erpCutsBtn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  background: var(--erp-card);
+  color: var(--erp-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.erpCutsBtn:hover {
+  background: var(--erp-soft);
+}
+
+.erpCutsBtn.on {
+  border-color: var(--erp-accent);
+  background: var(--erp-accent-soft);
+  color: var(--erp-accent);
+}
+
+.erpCutsCount {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--erp-accent);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.erpCutsPlaqueRow > td {
+  padding: 0 8px 10px;
+}
+
+.erpLineParts.erpCutsPlaque {
+  margin: 0;
   width: 100%;
-  margin-top: 10px;
-  text-align: left;
+  box-sizing: border-box;
+}
+
+@media (min-width: 761px) {
+  .erpTable.erpComposeTable tbody tr.erpComposeLine > td {
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .erpTable.erpComposeTable tbody tr.erpComposeLine > td.main {
+    min-width: 220px;
+    max-width: 360px;
+  }
+
+  .erpTable.erpComposeTable tbody tr.erpCutsPlaqueRow > td {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  .erpTable.stack tr.erpCutsPlaqueRow {
+    border-bottom: 1px solid var(--erp-line);
+    padding: 0 4px 10px;
+  }
+
+  .erpTable.stack tr.erpCutsPlaqueRow > td,
+  .erpTable.stack tr.erpCutsPlaqueRow > td.num {
+    display: block;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    justify-content: stretch;
+  }
+
+  .erpTable.stack tr.erpCutsPlaqueRow > td::before {
+    content: none;
+  }
+
+  .erpTable.stack td.erpComposeActs {
+    justify-content: flex-end;
+  }
+
+  .erpTable.stack .erpComposeName {
+    flex-wrap: wrap;
+  }
 }
 
 /* ---------- list page with Poster-style filters ---------- */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useErpRouter } from "./erpHref";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { buildCostContext, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
@@ -9,9 +9,9 @@ import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } fr
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { IngredientPicker } from "./IngredientPicker";
-import { compositionPartsMessage, LinePartsEditor } from "./LineParts";
+import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./LineParts";
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
-import { filledParts, netToSmallUnit, parseLineParts } from "@/lib/erp/lineParts";
+import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
 import {
   Empty,
@@ -403,6 +403,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [nameEn, setNameEn] = useState(product.name_en);
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
   const [composeOpen, setComposeOpen] = useState(true);
+  const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
@@ -416,11 +417,27 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     setEditing(recipe.status === "draft");
     setForm(next);
     setBaseline(JSON.stringify(next));
+    setCutsOpen(new Set());
   };
 
   const set = <K extends keyof RecipeForm>(key: K, value: RecipeForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
   const setLine = (index: number, patch: Partial<LineDraft>) =>
     setForm((prev) => ({ ...prev, lines: prev.lines.map((line, i) => (i === index ? { ...line, ...patch } : line)) }));
+  const toggleCuts = (index: number) => {
+    const next = toggleCutsState(cutsOpen, index, form.lines[index].parts);
+    setCutsOpen(next.open);
+    setLine(index, { parts: next.parts });
+  };
+  const setLineParts = (index: number, parts: LineDraft["parts"]) => {
+    setLine(index, { parts });
+    if (!parts.length) {
+      setCutsOpen((prev) => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+    }
+  };
 
   const saveNames = async (quiet = false) => {
     const nextEn = nameEn.trim();
@@ -599,7 +616,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         ) : null}
         {form.lines.length ? (
           <div className="erpTableWrap erpYieldWrap">
-            <table className="erpTable stack">
+            <table className="erpTable stack erpComposeTable">
               <thead>
                 <tr>
                   <th>{T("Продукт", "Product", "Sản phẩm")}</th>
@@ -607,84 +624,100 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                   <th>{T("Брутто", "Gross", "Brutto")}</th>
                   <th>{T("Нетто", "Net", "Netto")}</th>
                   <th className="num">{T("Стоимость", "Cost", "Chi phí")}</th>
-                  {!readOnly ? <th /> : null}
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {form.lines.map((line, index) => {
                   const lineUnit = unitOf(state, line.product_id);
                   const cost = costs[index];
+                  const cuts = cutsOpen.has(index);
                   return (
-                    <tr key={index}>
-                      <td className="main" style={{ minWidth: 240 }}>
-                        {line.raw_name && !line.product_id ? (
-                          <div className="erpHint">
-                            <span className="erpBadge warn">{T("нужно выбрать продукт", "choose a product", "chọn sản phẩm")}</span> {line.raw_name.en} ·{" "}
-                            {line.raw_amount} {line.raw_unit}
+                    <Fragment key={index}>
+                      <tr className="erpComposeLine">
+                        <td className="main">
+                          <div className="erpComposeName">
+                            {line.raw_name && !line.product_id ? (
+                              <div className="erpHint">
+                                <span className="erpBadge warn">{T("нужно выбрать продукт", "choose a product", "chọn sản phẩm")}</span> {line.raw_name.en} ·{" "}
+                                {line.raw_amount} {line.raw_unit}
+                              </div>
+                            ) : null}
+                            {readOnly ? (
+                              <span className="erpName">{liveCatalogName(state.products, line.product_id)}</span>
+                            ) : (
+                              <IngredientPicker
+                                state={state}
+                                value={line.product_id}
+                                onChange={(productId) => {
+                                  const base = unitOf(state, productId);
+                                  setLine(index, {
+                                    product_id: productId || null,
+                                    qty: toBase(line.raw_amount, line.raw_unit, base) ?? line.qty,
+                                    methods: [],
+                                    net_qty: null,
+                                    parts: [],
+                                  });
+                                  setCutsOpen((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(index);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            )}
                           </div>
-                        ) : null}
-                        {readOnly ? (
-                          <span className="erpName">{liveCatalogName(state.products, line.product_id)}</span>
-                        ) : (
-                          <IngredientPicker
-                            state={state}
-                            value={line.product_id}
-                            onChange={(productId) => {
-                              const base = unitOf(state, productId);
-                              setLine(index, {
-                                product_id: productId || null,
-                                qty: toBase(line.raw_amount, line.raw_unit, base) ?? line.qty,
-                                methods: [],
-                                net_qty: null,
-                                parts: [],
-                              });
-                            }}
-                          />
-                        )}
-                        <LinePartsEditor
-                          parts={line.parts}
-                          parentSmall={netToSmallUnit(netOf(state, line))}
-                          unit={lineUnit}
-                          disabled={readOnly}
-                          onChange={(parts) => setLine(index, { parts })}
-                        />
-                      </td>
-                      <td className={readOnly ? "" : "edit"} data-label={T("Обработка", "Processing", "Sơ chế")}>
-                        <MethodPicker state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
-                      </td>
-                      <td className={readOnly ? "" : "edit"} data-label={T("Брутто", "Gross", "Brutto")}>
-                        {readOnly ? (
-                          qtyText(line.qty, lineUnit)
-                        ) : line.product_id ? (
-                          <QtyInput
-                            base={lineUnit}
-                            value={line.qty}
-                            defaultSmall={lineUnit !== "pcs"}
-                            onChange={(v) => setLine(index, grossPatch(state, line, v))}
-                          />
-                        ) : (
-                          <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
-                        )}
-                      </td>
-                      <td className={readOnly || !line.methods?.length ? "" : "edit"} data-label={T("Нетто", "Net", "Netto")}>
-                        <NetCell state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
-                      </td>
-                      <td className="num" data-label={T("Стоимость", "Cost", "Chi phí")}>
-                        {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
-                      </td>
-                      {!readOnly ? (
-                        <td className="num">
-                          <button
-                            type="button"
-                            className="erpIconBtn"
-                            aria-label={T("Удалить строку", "Remove line", "Xóa dòng")}
-                            onClick={() => set("lines", form.lines.filter((_, i) => i !== index))}
-                          >
-                            ×
-                          </button>
                         </td>
-                      ) : null}
-                    </tr>
+                        <td className={readOnly ? "" : "edit"} data-label={T("Обработка", "Processing", "Sơ chế")}>
+                          <MethodPicker state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
+                        </td>
+                        <td className={readOnly ? "" : "edit"} data-label={T("Брутто", "Gross", "Brutto")}>
+                          {readOnly ? (
+                            qtyText(line.qty, lineUnit)
+                          ) : line.product_id ? (
+                            <QtyInput
+                              base={lineUnit}
+                              value={line.qty}
+                              defaultSmall={lineUnit !== "pcs"}
+                              onChange={(v) => setLine(index, grossPatch(state, line, v))}
+                            />
+                          ) : (
+                            <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
+                          )}
+                        </td>
+                        <td className={readOnly || !line.methods?.length ? "" : "edit"} data-label={T("Нетто", "Net", "Netto")}>
+                          <NetCell state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
+                        </td>
+                        <td className="num" data-label={T("Стоимость", "Cost", "Chi phí")}>
+                          {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
+                        </td>
+                        <td className="num erpComposeActs">
+                          <LinePartsButton parts={line.parts} unit={lineUnit} open={cuts} disabled={readOnly} onToggle={() => toggleCuts(index)} />
+                          {!readOnly ? (
+                            <button
+                              type="button"
+                              className="erpIconBtn"
+                              aria-label={T("Удалить строку", "Remove line", "Xóa dòng")}
+                              onClick={() => {
+                                set("lines", form.lines.filter((_, i) => i !== index));
+                                setCutsOpen((prev) => shiftOpenCuts(prev, index));
+                              }}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                      <LinePartsPlaque
+                        colSpan={6}
+                        open={cuts}
+                        parts={line.parts}
+                        parentSmall={netToSmallUnit(netOf(state, line))}
+                        unit={lineUnit}
+                        disabled={readOnly}
+                        onChange={(parts) => setLineParts(index, parts)}
+                      />
+                    </Fragment>
                   );
                 })}
               </tbody>

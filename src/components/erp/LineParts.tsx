@@ -1,6 +1,17 @@
 "use client";
 
-import { MAX_LINE_PARTS, netToSmallUnit, partsIssue, partsSumGrams, type LinePart, type PartsIssue } from "@/lib/erp/lineParts";
+import {
+  canCutParts,
+  cutsPlaqueOpen,
+  filledParts,
+  MAX_LINE_PARTS,
+  netToSmallUnit,
+  partsIssue,
+  partsRemainderGrams,
+  partsSumGrams,
+  type LinePart,
+  type PartsIssue,
+} from "@/lib/erp/lineParts";
 import type { ErpState } from "@/lib/erp/types";
 import { netOf, type LossLine } from "./losses";
 import { NumberInput, T, unitOf } from "./ui";
@@ -27,6 +38,58 @@ export function compositionPartsMessage(state: ErpState, line: LossLine & { part
   return issueText(issue, parent, partsSumGrams(line.parts), small);
 }
 
+export function LinePartsButton({
+  parts,
+  unit,
+  open,
+  disabled,
+  onToggle,
+}: {
+  parts: LinePart[];
+  unit: string | null;
+  open: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  if (!canCutParts(unit)) return null;
+  const count = filledParts(parts).length;
+  if (disabled && !count) return null;
+  return (
+    <button type="button" className={`erpCutsBtn${open ? " on" : ""}`} aria-expanded={open} onClick={onToggle}>
+      {T("Нарезка", "Cuts", "Thái")}
+      {count ? <span className="erpCutsCount">{count}</span> : null}
+    </button>
+  );
+}
+
+export function LinePartsPlaque({
+  colSpan,
+  open,
+  parts,
+  parentSmall,
+  unit,
+  disabled,
+  onChange,
+}: {
+  colSpan: number;
+  open: boolean;
+  parts: LinePart[];
+  parentSmall: number | null;
+  unit: string | null;
+  disabled?: boolean;
+  onChange: (parts: LinePart[]) => void;
+}) {
+  if (!cutsPlaqueOpen(open, unit)) return null;
+  if (disabled && !filledParts(parts).length) return null;
+  return (
+    <tr className="erpCutsPlaqueRow">
+      <td colSpan={colSpan}>
+        <LinePartsEditor parts={parts} parentSmall={parentSmall} unit={unit} disabled={disabled} onChange={onChange} />
+      </td>
+    </tr>
+  );
+}
+
 export function LinePartsEditor({
   parts,
   parentSmall,
@@ -40,18 +103,20 @@ export function LinePartsEditor({
   disabled?: boolean;
   onChange: (parts: LinePart[]) => void;
 }) {
-  if (unit === "pcs" || !unit) return null;
-  const rows = parts.length ? parts : [];
-  if (disabled && !rows.length) return null;
+  if (!canCutParts(unit)) return null;
+  const rows = parts;
+  if (disabled && !filledParts(rows).length) return null;
   const small = unit === "l" ? T("мл", "ml", "ml") : T("г", "g", "g");
   const issue = partsIssue(rows, parentSmall, unit);
   const sum = partsSumGrams(rows);
+  const left = partsRemainderGrams(rows, parentSmall);
   return (
-    <div className="erpLineParts">
+    <div className="erpLineParts erpCutsPlaque">
       <p className="erpHint">
-        {T("Части / нарезка", "Cuts / parts", "Phần / cắt")}
+        {T("Нарезка", "Cuts", "Thái")}
         {parentSmall != null ? ` · ${T("нетто", "net", "netto")} ${parentSmall} ${small}` : ""}
         {rows.length ? ` · ${T("сумма", "sum", "tổng")} ${sum} ${small}` : ""}
+        {left != null && rows.length ? ` · ${T("осталось", "left", "còn")} ${left} ${small}` : ""}
       </p>
       {rows.map((part, index) => (
         <div key={index} className="erpLinePart">

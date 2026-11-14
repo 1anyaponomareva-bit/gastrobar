@@ -19,8 +19,8 @@ import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText, type LossLine } from "./losses";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { IngredientPicker } from "./IngredientPicker";
-import { compositionPartsMessage, LinePartsEditor } from "./LineParts";
-import { filledParts, netToSmallUnit, parseLineParts, type LinePart } from "@/lib/erp/lineParts";
+import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./LineParts";
+import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState, type LinePart } from "@/lib/erp/lineParts";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
 import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
@@ -300,6 +300,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const [form, setForm] = useState<DishForm>(() => toForm(dish, defaultCategory));
   const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish, defaultCategory)));
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [priceSource, setPriceSource] = useState<MenuPriceSource>(DEFAULT_MENU_PRICE_SOURCE);
   const [workshop, setWorkshop] = useState<string>(POSTER_WORKSHOPS[0]);
   const [barcode, setBarcode] = useState("");
@@ -349,6 +350,27 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
       else next.add(index);
       return next;
     });
+  const toggleCuts = (index: number) => {
+    const next = toggleCutsState(cutsOpen, index, form.lines[index].parts);
+    setCutsOpen(next.open);
+    set(
+      "lines",
+      form.lines.map((line, i) => (i === index ? { ...line, parts: next.parts } : line)),
+    );
+  };
+  const setLineParts = (index: number, parts: LinePart[]) => {
+    set(
+      "lines",
+      form.lines.map((line, i) => (i === index ? { ...line, parts } : line)),
+    );
+    if (!parts.length) {
+      setCutsOpen((prev) => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+    }
+  };
 
   const childRows = (line: CostLine, depth: number, key: string): ReactNode => (
     <Fragment key={key}>
@@ -422,7 +444,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
         <h2>{T("Состав на 1 порцию", "Composition per portion", "Thành phần mỗi phần")}</h2>
         {form.lines.length ? (
           <div className="erpTableWrap">
-            <table className="erpTable stack">
+            <table className="erpTable stack erpComposeTable">
               <thead>
                 <tr>
                   <th>{T("Продукт", "Product", "Sản phẩm")}</th>
@@ -439,6 +461,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                   const unit = unitOf(state, line.product_id);
                   const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null;
                   const expanded = open.has(index);
+                  const cuts = cutsOpen.has(index);
                   const updateLine = (patch: Partial<DishForm["lines"][number]> | Partial<LossLine>) =>
                     set(
                       "lines",
@@ -446,27 +469,30 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                     );
                   return (
                     <Fragment key={index}>
-                      <tr className={cost && cost.cost === null ? "short" : ""}>
-                        <td className="main" style={{ minWidth: 240 }}>
-                          <IngredientPicker
-                            state={state}
-                            value={line.product_id}
-                            onChange={(productId) => updateLine({ product_id: productId, methods: [], net_qty: null, parts: [] })}
-                          />
-                          <LinePartsEditor
-                            parts={line.parts}
-                            parentSmall={netToSmallUnit(netOf(state, line))}
-                            unit={unit}
-                            onChange={(parts) => updateLine({ parts })}
-                          />
-                          <span className="erpRow">
-                            {cost?.packaging ? <span className="erpBadge">{T("упаковка", "packaging", "bao bì")}</span> : null}
-                            {cost?.children ? (
-                              <button type="button" className="erpLink" onClick={() => toggle(index)}>
-                                {expanded ? T("скрыть состав", "hide composition", "ẩn thành phần") : T("показать состав", "show composition", "xem thành phần")}
-                              </button>
-                            ) : null}
-                          </span>
+                      <tr className={cost && cost.cost === null ? "short erpComposeLine" : "erpComposeLine"}>
+                        <td className="main">
+                          <div className="erpComposeName">
+                            <IngredientPicker
+                              state={state}
+                              value={line.product_id}
+                              onChange={(productId) => {
+                                updateLine({ product_id: productId, methods: [], net_qty: null, parts: [] });
+                                setCutsOpen((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(index);
+                                  return next;
+                                });
+                              }}
+                            />
+                            <span className="erpRow">
+                              {cost?.packaging ? <span className="erpBadge">{T("упаковка", "packaging", "bao bì")}</span> : null}
+                              {cost?.children ? (
+                                <button type="button" className="erpLink" onClick={() => toggle(index)}>
+                                  {expanded ? T("скрыть состав", "hide composition", "ẩn thành phần") : T("показать состав", "show composition", "xem thành phần")}
+                                </button>
+                              ) : null}
+                            </span>
+                          </div>
                         </td>
                         <td className="edit" data-label={T("Обработка", "Processing", "Sơ chế")}>
                           <MethodPicker state={state} line={line} onChange={updateLine} />
@@ -487,12 +513,29 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                         <td className="num" data-label={T("Стоимость", "Cost", "Thành tiền")}>
                           {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
                         </td>
-                        <td className="num">
-                          <button type="button" className="erpIconBtn" aria-label={T("Убрать строку", "Remove line", "Xóa dòng")} onClick={() => set("lines", form.lines.filter((_, i) => i !== index))}>
+                        <td className="num erpComposeActs">
+                          <LinePartsButton parts={line.parts} unit={unit} open={cuts} onToggle={() => toggleCuts(index)} />
+                          <button
+                            type="button"
+                            className="erpIconBtn"
+                            aria-label={T("Убрать строку", "Remove line", "Xóa dòng")}
+                            onClick={() => {
+                              set("lines", form.lines.filter((_, i) => i !== index));
+                              setCutsOpen((prev) => shiftOpenCuts(prev, index));
+                            }}
+                          >
                             ×
                           </button>
                         </td>
                       </tr>
+                      <LinePartsPlaque
+                        colSpan={7}
+                        open={cuts}
+                        parts={line.parts}
+                        parentSmall={netToSmallUnit(netOf(state, line))}
+                        unit={unit}
+                        onChange={(parts) => setLineParts(index, parts)}
+                      />
                       {expanded && cost?.children ? cost.children.map((child, i) => childRows(child, 1, `${index}-${i}`)) : null}
                     </Fragment>
                   );
