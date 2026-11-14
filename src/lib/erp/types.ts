@@ -138,7 +138,11 @@ export type ErpRecipeLine = {
   parts?: { name: string; grams: number }[];
 };
 
-export type ErpRecipeStep = { title?: { en?: string; vn?: string }; items?: { en?: string; vn?: string }[] };
+export type ErpRecipeStep = {
+  title?: { en?: string; vn?: string; ru?: string };
+  photo?: string;
+  items?: { en?: string; vn?: string; ru?: string }[];
+};
 
 export type ErpRecipe = {
   id: string;
@@ -151,6 +155,10 @@ export type ErpRecipe = {
   shelf_life_days: number | null;
   storage_conditions: string | null;
   note: string | null;
+  card_no?: string | null;
+  card_date?: string | null;
+  card_revision?: string | null;
+  photo?: string | null;
   legacy_recipe_id: string | null;
   created_at: string;
   created_by: string | null;

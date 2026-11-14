@@ -543,6 +543,10 @@ button.erpBack {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
+.erpGrid.three {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
 .erpActions {
   display: flex;
   flex-wrap: wrap;
@@ -3437,4 +3441,70 @@ button.erpBack {
   .erpVatExceptions .erpBtn.primary {
     width: 100%;
   }
+}
+
+.erpPrepHeader .erpPhotoField {
+  margin: 12px 0 4px;
+}
+
+.erpPhotoField {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.erpPhotoField img {
+  width: 160px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--erp-bg);
+}
+
+.erpPhotoField.small img {
+  width: 120px;
+  height: 76px;
+}
+
+.erpPhotoActs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erpPrepSteps {
+  margin: 8px 0 16px;
+}
+
+.erpPrepSteps > h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.erpPrepStepHead {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 10px;
+}
+
+.erpPrepStepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--erp-bg);
+  font-weight: 800;
+}
+
+.erpPrepStep .erpPhotoField {
+  margin: 0 0 12px;
+}
+
+.erpHint.warn {
+  color: var(--erp-warn);
 }

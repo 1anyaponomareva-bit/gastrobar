@@ -5,7 +5,8 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
-import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
+import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
+import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDraft } from "@/lib/erp/recipeCard";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { IngredientPicker } from "./IngredientPicker";
@@ -13,6 +14,7 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
+import { PrepCardHeader, PrepStepsEditor } from "./PrepCardFields";
 import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
 import {
   Empty,
@@ -28,6 +30,7 @@ import {
   SubTabs,
   T,
   toBase,
+  today,
   unitLabel,
   unitOf,
   useDirtyGuard,
@@ -330,26 +333,18 @@ type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" 
 };
 
 type RecipeForm = {
+  card_no: string;
+  card_date: string;
+  card_revision: string;
+  photo: string;
   yield_qty: number | null;
   yield_pieces: number | null;
   shelf_life_days: number | null;
   storage_conditions: string;
   note: string;
-  instructionsText: string;
-  instructionsOriginal: string;
+  steps: RecipeStepDraft[];
   lines: LineDraft[];
 };
-
-function stepsToText(instructions: ErpRecipe["instructions"]): string {
-  if (typeof instructions === "string") return instructions;
-  return (instructions as ErpRecipeStep[])
-    .map((step, index) => {
-      const title = step.title?.en ? `${index + 1}. ${step.title.en}${step.title.vn ? ` / ${step.title.vn}` : ""}` : `${index + 1}.`;
-      const items = (step.items ?? []).map((item) => `- ${item.en ?? ""}${item.vn ? ` / ${item.vn}` : ""}`);
-      return [title, ...items].join("\n");
-    })
-    .join("\n\n");
-}
 
 /** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
 function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
@@ -368,15 +363,17 @@ function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
 }
 
 function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
-  const text = recipe ? stepsToText(recipe.instructions) : "";
   return {
+    card_no: recipe?.card_no ?? "",
+    card_date: (recipe?.card_date ?? "").slice(0, 10) || (recipe ? "" : today()),
+    card_revision: recipe?.card_revision ?? "",
+    photo: recipe?.photo ?? "",
     yield_qty: recipe?.yield_qty ?? null,
     yield_pieces: recipe?.yield_pieces ?? null,
     shelf_life_days: recipe?.shelf_life_days ?? product.shelf_life_days ?? null,
     storage_conditions: recipe?.storage_conditions ?? product.storage_conditions ?? "",
     note: recipe?.note ?? "",
-    instructionsText: text,
-    instructionsOriginal: text,
+    steps: parseRecipeInstructions(recipe?.instructions),
     lines: (recipe?.lines ?? []).map((line) => ({
       product_id: line.product_id,
       qty: line.qty,
@@ -468,17 +465,21 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const payload: Record<string, unknown> = {
       id: viewed?.id,
       product_id: product.id,
+      card_no: form.card_no.trim(),
+      card_date: form.card_date,
+      card_revision: form.card_revision.trim(),
+      photo: form.photo,
       yield_qty: form.yield_qty,
       yield_pieces: unit === "pcs" ? form.yield_qty : form.yield_pieces,
       shelf_life_days: form.shelf_life_days,
       storage_conditions: form.storage_conditions,
       note: form.note,
+      instructions: serializeRecipeInstructions(form.steps),
       lines: form.lines.map((line) => ({
         ...line,
         parts: filledParts(line.parts).map((part) => ({ name: part.name.trim(), grams: part.grams })),
       })),
     };
-    if (form.instructionsText !== form.instructionsOriginal) payload.instructions = form.instructionsText;
     const result = await act<{ id: string }>(
       { action: "saveRecipe", recipe: payload },
       T("Черновик рецептуры сохранён", "Recipe draft saved", "Đã lưu bản nháp"),
@@ -526,24 +527,31 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         }
       />
 
-      <div className="erpCard">
-        <h2>{T("Название", "Name", "Tên")}</h2>
-        <div className="erpGrid two">
-          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-            <input value={nameEn} onChange={(event) => setNameEn(event.target.value)} maxLength={200} data-testid="prep-name" />
-          </Field>
-          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-            <input value={nameVn} onChange={(event) => setNameVn(event.target.value)} maxLength={200} data-testid="prep-name-vn" />
-          </Field>
-        </div>
-        <p className="erpHint">
-          {T(
-            "Название на карточке и в тех. картах одно и то же. Вьетнамское необязательно — в VN-интерфейсе подставится английское.",
-            "This name is the card title and what tech cards show. Vietnamese is optional — the VN UI falls back to English.",
-            "Tên này là tiêu đề thẻ và tên trên công thức. Tiếng Việt không bắt buộc — giao diện VN sẽ dùng tiếng Anh.",
-          )}
-        </p>
-      </div>
+      <PrepCardHeader
+        nameEn={nameEn}
+        nameVn={nameVn}
+        cardNo={form.card_no}
+        cardDate={form.card_date}
+        cardRevision={form.card_revision}
+        photo={form.photo}
+        yieldQty={form.yield_qty}
+        unit={unit}
+        readOnly={readOnly}
+        onNameEn={setNameEn}
+        onNameVn={setNameVn}
+        onCardNo={(value) => set("card_no", value)}
+        onCardDate={(value) => set("card_date", value)}
+        onCardRevision={(value) => set("card_revision", value)}
+        onPhoto={(value) => set("photo", value)}
+        onYieldQty={(value) => set("yield_qty", value)}
+      />
+      <p className="erpHint">
+        {T(
+          "Название на карточке и в тех. картах одно и то же. Вьетнамское необязательно — в VN-интерфейсе подставится английское.",
+          "This name is the card title and what tech cards show. Vietnamese is optional — the VN UI falls back to English.",
+          "Tên này là tiêu đề thẻ và tên trên công thức. Tiếng Việt không bắt buộc — giao diện VN sẽ dùng tiếng Anh.",
+        )}
+      </p>
 
       {recipes.length > 1 ? (
         <div className="erpSubTabs">
@@ -575,14 +583,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       ) : null}
 
       <div className="erpCard">
-        <h2>{T("Выход и хранение", "Yield and storage", "Sản lượng và bảo quản")}</h2>
+        <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
         <div className="erpGrid">
-          <Field
-            label={T("Нормативный выход *", "Standard yield *", "Sản lượng chuẩn *")}
-            hint={T("Сколько получается из состава ниже", "How much the ingredients below make", "Lượng thu được từ thành phần")}
-          >
-            <QtyInput base={unit} value={form.yield_qty} disabled={readOnly} onChange={(v) => set("yield_qty", v)} />
-          </Field>
           {unit && unit !== "pcs" ? (
             <Field
               label={T("Штук в партии", "Pieces per batch", "Số cái mỗi mẻ")}
@@ -764,13 +766,9 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         ) : null}
 
         </details>
-        <details className="erpMore">
-          <summary>{T("Технология приготовления", "Method", "Cách làm")}</summary>
-          <div>
-            <textarea rows={8} value={form.instructionsText} disabled={readOnly} onChange={(event) => set("instructionsText", event.target.value)} />
-          </div>
-        </details>
       </div>
+
+      <PrepStepsEditor steps={form.steps} readOnly={readOnly} onChange={(steps) => set("steps", steps)} />
 
       <div className="erpActions">
         {!readOnly || namesDirty ? (

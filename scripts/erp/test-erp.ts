@@ -81,6 +81,7 @@ import { countFromDocument, nowDateTimeLocal } from "../../src/lib/erp/inventory
 import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
 import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
 import { supplierOrderRows } from "../../src/lib/staffOrderRows";
+import { parseRecipeInstructions, serializeRecipeInstructions } from "../../src/lib/erp/recipeCard";
 import { applyMigration, createTestDb } from "./testDb";
 import {
   decideErpHostGate,
@@ -4147,6 +4148,90 @@ async function main() {
     } finally {
       setErpLang("ru");
     }
+  });
+
+  await test("prep card header, photo URL and cooking steps persist on erp_recipes", async () => {
+    const sauce = await saveProduct({ type: "semi_finished", name_en: "Header sauce", name_vn: "Sốt đầu", base_unit: "kg" });
+    const salt = await saveProduct({ type: "ingredient", name_en: "Header salt", base_unit: "kg" });
+    const id = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: sauce,
+        card_no: "GF-PR-077",
+        card_date: "14.11.2026",
+        card_revision: "01",
+        photo: "https://example.test/erp-photos/preps/hero.jpg",
+        yield_qty: 1.5,
+        instructions: [
+          {
+            title: { en: "Mix", vn: "Trộn" },
+            photo: "https://example.test/erp-photos/preps/step-1.jpg",
+            items: [
+              { en: "Add salt", vn: "Thêm muối" },
+              { en: "Stir", vn: "Khuấy" },
+            ],
+          },
+        ],
+        lines: [{ product_id: salt, qty: 0.01 }],
+      }),
+      ACTOR,
+    ]);
+    const row = await one<{
+      card_no: string;
+      card_date: string;
+      card_revision: string;
+      photo: string;
+      yield_qty: string;
+      instructions: { title: { en: string; vn: string }; photo: string; items: { en: string; vn: string }[] }[];
+    }>("select card_no, card_date::text, card_revision, photo, yield_qty, instructions from public.erp_recipes where id = $1", [id]);
+    assert.equal(row.card_no, "GF-PR-077");
+    assert.equal(String(row.card_date).slice(0, 10), "2026-11-14");
+    assert.equal(row.card_revision, "01");
+    assert.equal(row.photo, "https://example.test/erp-photos/preps/hero.jpg");
+    assert.equal(n(row.yield_qty), 1.5);
+    assert.equal(row.instructions.length, 1);
+    assert.equal(row.instructions[0].title.en, "Mix");
+    assert.equal(row.instructions[0].title.vn, "Trộn");
+    assert.equal(row.instructions[0].photo, "https://example.test/erp-photos/preps/step-1.jpg");
+    assert.equal(row.instructions[0].items.length, 2);
+    assert.equal(row.instructions[0].items[0].vn, "Thêm muối");
+    assert.equal(row.instructions[0].items[1].en, "Stir");
+
+    const parsed = parseRecipeInstructions(row.instructions);
+    assert.equal(parsed[0].itemsEn.split("\n").length, 2);
+    assert.equal(serializeRecipeInstructions(parsed)[0].items?.[1].vn, "Khuấy");
+
+    await q("select public.erp_activate_recipe($1, $2)", [id, ACTOR]);
+    const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ id, yield_qty: 1.6, lines: [{ product_id: salt, qty: 0.012 }] }),
+      ACTOR,
+    ]);
+    assert.notEqual(v2, id);
+    const copied = await one<{ card_no: string; photo: string; yield_qty: string; instructions: unknown[] }>(
+      "select card_no, photo, yield_qty, instructions from public.erp_recipes where id = $1",
+      [v2],
+    );
+    assert.equal(copied.card_no, "GF-PR-077", "new version keeps header when payload omits it");
+    assert.equal(copied.photo, "https://example.test/erp-photos/preps/hero.jpg");
+    assert.equal(n(copied.yield_qty), 1.6);
+    assert.equal((copied.instructions as unknown[]).length, 1);
+
+    const fromText = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: sauce,
+        yield_qty: 0.5,
+        instructions: "Boil water\nCool",
+        lines: [{ product_id: salt, qty: 0.001 }],
+      }),
+      ACTOR,
+    ]);
+    const textSteps = await value<{ items: { en: string }[] }[]>(
+      "select instructions from public.erp_recipes where id = $1",
+      [fromText],
+    );
+    assert.deepEqual(
+      textSteps.map((step) => step.items.map((item) => item.en)),
+      [["Boil water", "Cool"]],
+    );
   });
 
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {
