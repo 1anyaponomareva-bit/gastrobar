@@ -3,10 +3,13 @@
 import { useErpRouter } from "./erpHref";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
+import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
 import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDraft } from "@/lib/erp/recipeCard";
+import { useDragReorder } from "@/lib/useDragReorder";
+import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
 import { DocTable, useDocuments } from "./docs";
 import { useErp } from "./ErpShell";
 import { IngredientPicker } from "./IngredientPicker";
@@ -330,6 +333,7 @@ function NewPrep({ from }: { from?: string }) {
 
 type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" | "raw_amount" | "raw_unit" | "methods" | "net_qty"> & {
   parts: ReturnType<typeof parseLineParts>;
+  is_main: boolean;
 };
 
 type RecipeForm = {
@@ -384,6 +388,7 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
       methods: line.methods ?? [],
       net_qty: line.net_qty ?? null,
       parts: parseLineParts(line.parts),
+      is_main: Boolean(line.is_main),
     })),
   };
 }
@@ -436,6 +441,13 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       });
     }
   };
+  const ingredientDrag = useDragReorder(
+    (from, to) => {
+      setForm((prev) => ({ ...prev, lines: moveListItem(prev.lines, from, to) }));
+      setCutsOpen((prev) => moveOpenIndexes(prev, from, to));
+    },
+    { bottomEdge: 160 },
+  );
 
   const saveNames = async (quiet = false) => {
     const nextEn = nameEn.trim();
@@ -617,6 +629,19 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           </div>
         ) : null}
         {form.lines.length ? (
+          <MainIngredientChips
+            labels={form.lines.map((line, index) =>
+              compositionChipLabel(
+                line.product_id ? liveCatalogName(state.products, line.product_id) : line.raw_name?.en || line.raw_name?.vn || line.raw_name?.ru,
+                index,
+              ),
+            )}
+            mains={form.lines.map((line) => Boolean(line.is_main))}
+            disabled={readOnly}
+            onToggle={(index) => set("lines", withMainFlags(form.lines, index))}
+          />
+        ) : null}
+        {form.lines.length ? (
           <div className="erpTableWrap erpYieldWrap">
             <table className="erpTable stack erpComposeTable">
               <thead>
@@ -636,9 +661,15 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                   const cuts = cutsOpen.has(index);
                   return (
                     <Fragment key={index}>
-                      <tr className="erpComposeLine">
+                      <tr
+                        ref={(element) => {
+                          ingredientDrag.rowRefs.current[index] = element;
+                        }}
+                        className={`erpComposeLine${ingredientDrag.dragIndex === index ? " dragging" : ""}`}
+                      >
                         <td className="main">
                           <div className="erpComposeName">
+                            {!readOnly ? <ComposeDragHandle index={index} handleProps={ingredientDrag.handleProps} /> : null}
                             {line.raw_name && !line.product_id ? (
                               <div className="erpHint">
                                 <span className="erpBadge warn">{T("нужно выбрать продукт", "choose a product", "chọn sản phẩm")}</span> {line.raw_name.en} ·{" "}
@@ -743,7 +774,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               type="button"
               className="erpBtn"
               onClick={() =>
-                set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null, methods: [], net_qty: null, parts: [] }])
+                set("lines", [...form.lines, { product_id: null, qty: null, note: null, raw_name: null, raw_amount: null, raw_unit: null, methods: [], net_qty: null, parts: [], is_main: false }])
               }
             >
               + {T("Добавить ингредиент", "Add ingredient", "Thêm nguyên liệu")}

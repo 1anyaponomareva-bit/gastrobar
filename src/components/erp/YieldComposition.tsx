@@ -112,6 +112,7 @@ export function YieldComposition({
               return (
                 <tr key={line.id || index}>
                   <td>
+                    {line.is_main ? <span className="erpMainMark" aria-hidden>★ </span> : null}
                     {liveCatalogName(state.products, line.product_id)}
                     {prep ? <span className="erpMuted"> {T("(п/ф)", "(prep)", "(bán TP)")}</span> : null}
                     {cuts.length ? (

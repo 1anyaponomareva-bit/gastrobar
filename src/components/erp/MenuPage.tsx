@@ -2,10 +2,12 @@
 
 import { useErpRouter } from "./erpHref";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
   costLine,
   DEFAULT_MENU_PRICE_SOURCE,
   isPackaging,
+  liveCatalogName,
   type ChannelResult,
   type CostContext,
   type CostLine,
@@ -14,6 +16,8 @@ import {
 } from "@/lib/erp/costing";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
+import { useDragReorder } from "@/lib/useDragReorder";
+import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
 import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText, type LossLine } from "./losses";
@@ -50,7 +54,7 @@ type DishForm = {
   sale_price: number | null;
   vat_rate: number | null;
   note: string;
-  lines: { product_id: string; qty: number | null; methods: LossMethod[]; net_qty: number | null; parts: LinePart[] }[];
+  lines: { product_id: string; qty: number | null; methods: LossMethod[]; net_qty: number | null; parts: LinePart[]; is_main: boolean }[];
   channel_prices: Record<string, number | null>;
 };
 
@@ -88,6 +92,7 @@ function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
       methods: line.methods ?? [],
       net_qty: line.net_qty ?? null,
       parts: parseLineParts(line.parts),
+      is_main: Boolean(line.is_main),
     })),
     channel_prices: Object.fromEntries((dish?.channel_prices ?? []).map((p) => [p.channel_id, p.sale_price])),
   };
@@ -372,6 +377,14 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
       });
     }
   };
+  const ingredientDrag = useDragReorder(
+    (from, to) => {
+      setForm((prev) => ({ ...prev, lines: moveListItem(prev.lines, from, to) }));
+      setCutsOpen((prev) => moveOpenIndexes(prev, from, to));
+      setOpen((prev) => moveOpenIndexes(prev, from, to));
+    },
+    { bottomEdge: 160 },
+  );
 
   const childRows = (line: CostLine, depth: number, key: string): ReactNode => (
     <Fragment key={key}>
@@ -444,6 +457,13 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
       <section className="erpCard">
         <h2>{T("Состав на 1 порцию", "Composition per portion", "Thành phần mỗi phần")}</h2>
         {form.lines.length ? (
+          <MainIngredientChips
+            labels={form.lines.map((line, index) => compositionChipLabel(liveCatalogName(state.products, line.product_id), index))}
+            mains={form.lines.map((line) => Boolean(line.is_main))}
+            onToggle={(index) => set("lines", withMainFlags(form.lines, index))}
+          />
+        ) : null}
+        {form.lines.length ? (
           <div className="erpTableWrap">
             <table className="erpTable stack erpComposeTable">
               <thead>
@@ -470,9 +490,15 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                     );
                   return (
                     <Fragment key={index}>
-                      <tr className={cost && cost.cost === null ? "short erpComposeLine" : "erpComposeLine"}>
+                      <tr
+                        ref={(element) => {
+                          ingredientDrag.rowRefs.current[index] = element;
+                        }}
+                        className={`${cost && cost.cost === null ? "short " : ""}erpComposeLine${ingredientDrag.dragIndex === index ? " dragging" : ""}`}
+                      >
                         <td className="main">
                           <div className="erpComposeName">
+                            <ComposeDragHandle index={index} handleProps={ingredientDrag.handleProps} />
                             <IngredientPicker
                               state={state}
                               value={line.product_id}
@@ -557,7 +583,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           <p className="erpHint">{T("Добавьте продукты, полуфабрикаты и упаковку, которые идут в одну порцию.", "Add the products, semi-finished items and packaging used in one portion.", "Thêm sản phẩm, bán thành phẩm và bao bì cho một phần.")}</p>
         )}
         <div className="erpActions">
-          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null, parts: [] }])}>
+          <button type="button" className="erpBtn" onClick={() => set("lines", [...form.lines, { product_id: "", qty: null, methods: [], net_qty: null, parts: [], is_main: false }])}>
             + {T("Добавить в состав", "Add component", "Thêm thành phần")}
           </button>
         </div>

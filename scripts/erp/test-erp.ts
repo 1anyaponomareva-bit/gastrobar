@@ -45,6 +45,15 @@ import {
   shiftOpenCuts,
   toggleCutsState,
 } from "../../src/lib/erp/lineParts";
+import {
+  compositionChipLabel,
+  mainLineIndexes,
+  MAX_MAIN_INGREDIENTS,
+  moveListItem,
+  moveOpenIndexes,
+  toggleMainFlags,
+  withMainFlags,
+} from "../../src/lib/erp/compositionLines";
 import { initialWarehouses } from "../../src/lib/erp/docDefaults";
 import {
   applyReceiptSupplier,
@@ -4232,6 +4241,149 @@ async function main() {
       textSteps.map((step) => step.items.map((item) => item.en)),
       [["Boil water", "Cool"]],
     );
+  });
+
+  await test("composition drag remaps cuts and main flags like recipes (max 4)", async () => {
+    assert.deepEqual(moveListItem(["a", "b", "c"], 2, 0), ["c", "a", "b"]);
+    assert.deepEqual([...moveOpenIndexes(new Set([2, 1]), 2, 0)].sort(), [0, 2]);
+    assert.equal(MAX_MAIN_INGREDIENTS, 4);
+    assert.deepEqual(mainLineIndexes([false, true, false, true]), [1, 3]);
+    assert.deepEqual(toggleMainFlags([false, false], 0), [true, false]);
+    assert.deepEqual(toggleMainFlags([true, false, false, false, false], 0), [false, false, false, false, false]);
+    const four = toggleMainFlags([true, true, true, true, false], 4);
+    assert.deepEqual(four, [true, true, true, true, false]);
+    assert.deepEqual(
+      withMainFlags([{ is_main: false }, { is_main: false, name: "salt" }], 1),
+      [{ is_main: false }, { is_main: true, name: "salt" }],
+    );
+    assert.equal(compositionChipLabel("Beef", 0), "Beef");
+    assert.equal(compositionChipLabel("—", 2), "#3");
+  });
+
+  await test("recipe and dish composition persist line order and is_main without dropping card header", async () => {
+    const mix = await saveProduct({ type: "semi_finished", name_en: "Main mix drag", base_unit: "kg" });
+    const beef = await saveProduct({ type: "ingredient", name_en: "Main beef drag", base_unit: "kg" });
+    const salt = await saveProduct({ type: "ingredient", name_en: "Main salt drag", base_unit: "kg" });
+    const onion = await saveProduct({ type: "ingredient", name_en: "Main onion drag", base_unit: "kg" });
+    const id = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: mix,
+        card_no: "GF-PR-DRG",
+        card_revision: "02",
+        yield_qty: 1,
+        lines: [
+          { product_id: beef, qty: 0.7, is_main: true },
+          { product_id: salt, qty: 0.02 },
+          { product_id: onion, qty: 0.28, is_main: true },
+        ],
+      }),
+      ACTOR,
+    ]);
+    const first = await q<{ product_id: string; line_no: number; is_main: boolean }>(
+      "select product_id, line_no, is_main from public.erp_recipe_lines where recipe_id = $1 order by line_no",
+      [id],
+    );
+    assert.deepEqual(
+      first.map((row) => [row.line_no, row.product_id, Boolean(row.is_main)]),
+      [
+        [1, beef, true],
+        [2, salt, false],
+        [3, onion, true],
+      ],
+    );
+    await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        id,
+        yield_qty: 1,
+        lines: [
+          { product_id: onion, qty: 0.28, is_main: true },
+          { product_id: beef, qty: 0.7, is_main: true },
+          { product_id: salt, qty: 0.02 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    const reordered = await q<{ product_id: string; line_no: number; is_main: boolean }>(
+      "select product_id, line_no, is_main from public.erp_recipe_lines where recipe_id = $1 order by line_no",
+      [id],
+    );
+    assert.deepEqual(
+      reordered.map((row) => [row.line_no, row.product_id, Boolean(row.is_main)]),
+      [
+        [1, onion, true],
+        [2, beef, true],
+        [3, salt, false],
+      ],
+    );
+    const header = await one<{ card_no: string; card_revision: string }>(
+      "select card_no, card_revision from public.erp_recipes where id = $1",
+      [id],
+    );
+    assert.equal(header.card_no, "GF-PR-DRG", "reorder save must keep prep card number");
+    assert.equal(header.card_revision, "02");
+
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({
+          product_id: mix,
+          yield_qty: 1,
+          lines: [beef, salt, onion, beef, salt].map((product_id, index) => ({
+            product_id,
+            qty: 0.1 + index / 100,
+            is_main: true,
+          })),
+        }),
+        ACTOR,
+      ]),
+      "ERP_INVALID",
+    );
+
+    const dishId = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "Main dish drag",
+        lines: [
+          { product_id: beef, qty: 0.2, is_main: true },
+          { product_id: onion, qty: 0.05 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    const dishLines = await q<{ product_id: string; line_no: number; is_main: boolean }>(
+      "select product_id, line_no, is_main from public.erp_dish_lines where dish_id = $1 order by line_no",
+      [dishId],
+    );
+    assert.deepEqual(
+      dishLines.map((row) => [row.line_no, row.product_id, Boolean(row.is_main)]),
+      [
+        [1, beef, true],
+        [2, onion, false],
+      ],
+    );
+  });
+
+  await test("composition UI keeps narezka button, overlay processing, chips, drag and mains", async () => {
+    const preps = await readFile(path.join(process.cwd(), "src/components/erp/PrepsPage.tsx"), "utf8");
+    const menu = await readFile(path.join(process.cwd(), "src/components/erp/MenuPage.tsx"), "utf8");
+    const picker = await readFile(path.join(process.cwd(), "src/components/erp/IngredientPicker.tsx"), "utf8");
+    const losses = await readFile(path.join(process.cwd(), "src/components/erp/losses.tsx"), "utf8");
+    const parts = await readFile(path.join(process.cwd(), "src/lib/erp/lineParts.ts"), "utf8");
+    const css = await readFile(path.join(process.cwd(), "src/components/erp/erp.css"), "utf8");
+    assert.match(preps, /useDragReorder/);
+    assert.match(preps, /MainIngredientChips/);
+    assert.match(preps, /ComposeDragHandle/);
+    assert.match(preps, /LinePartsButton/);
+    assert.match(preps, /PrepCardHeader/);
+    assert.match(preps, /PrepStepsEditor/);
+    assert.match(menu, /useDragReorder/);
+    assert.match(menu, /MainIngredientChips/);
+    assert.match(menu, /LinePartsButton/);
+    assert.match(picker, /erpIngCats/);
+    assert.match(picker, /erpIngChip/);
+    assert.equal(losses.includes("<details"), false);
+    assert.match(losses, /erpMethodsDrop/);
+    assert.match(css, /\.erpMethodsDrop\s*\{[\s\S]*?position:\s*absolute/);
+    assert.match(parts, /must sum to the parent net/);
+    assert.match(parts, /Plaque stays hidden until the cook presses/);
   });
 
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {

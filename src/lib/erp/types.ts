@@ -136,6 +136,7 @@ export type ErpRecipeLine = {
   methods?: LossMethod[];
   net_qty?: number | null;
   parts?: { name: string; grams: number }[];
+  is_main?: boolean;
 };
 
 export type ErpRecipeStep = {
@@ -176,6 +177,7 @@ export type ErpDishLine = {
   methods?: LossMethod[];
   net_qty?: number | null;
   parts?: { name: string; grams: number }[];
+  is_main?: boolean;
 };
 
 export type ErpMovementRow = {

@@ -42,6 +42,7 @@ export const MIGRATIONS = [
   "20261114153000_erp_vietnam_today.sql",
   "20261114160000_erp_recipe_line_parts.sql",
   "20261114170000_erp_recipe_card.sql",
+  "20261114180000_erp_recipe_line_main.sql",
 ].map((file) => path.join(process.cwd(), "supabase/migrations", file));
 
 /** In-memory Postgres with the Supabase roles the migration grants to. */

@@ -1712,6 +1712,90 @@ button.erpBack {
   min-width: 160px;
 }
 
+.erpComposeName .erpDragHandle {
+  flex: none;
+}
+
+.erpMainBlock {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 2px solid #ffcf33;
+  border-radius: 12px;
+  background: #fffbea;
+}
+
+.erpMainBlock > span {
+  color: var(--erp-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.erpMainChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.erpMainChip {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--erp-text);
+  cursor: pointer;
+}
+
+.erpMainChip.on {
+  border-color: #e0a800;
+  background: #ffcf33;
+  color: #111;
+}
+
+.erpMainChip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.erpDragHandle {
+  width: 32px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--erp-soft);
+  color: var(--erp-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.erpComposeLine.dragging {
+  position: relative;
+  z-index: 2;
+  background: #fff7d6;
+  box-shadow: 0 6px 18px #0002;
+}
+
+.erpComposeLine.dragging .erpDragHandle {
+  background: #ffcf33;
+  color: #111;
+  cursor: grabbing;
+}
+
+.erpMainMark {
+  color: #c49200;
+  font-weight: 800;
+}
+
 .erpComposeName .erpRow {
   flex: none;
 }
