@@ -726,24 +726,98 @@ button.erpBack {
 }
 
 .erpIngPicker {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  min-width: 0;
+  z-index: 1;
+}
+
+.erpIngPicker.open {
+  z-index: 6;
+}
+
+.erpIngField {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--erp-text);
+  background: #fff;
+  border: 1px solid #d6d1c7;
+  border-radius: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+}
+
+.erpTable .erpIngField {
+  min-height: 38px;
+  padding: 6px 9px;
+}
+
+.erpIngField.empty {
+  color: var(--erp-muted);
+}
+
+.erpIngDrop {
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  background: var(--erp-card);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.erpIngDrop .erpPickerSearch {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
 }
 
 .erpIngCats {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
+  width: 100%;
   max-width: 100%;
-  padding-bottom: 2px;
-  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.erpTableWrap:has(.erpIngPicker) {
+  overflow: visible;
+}
+
+.erpTable td:has(> .erpIngPicker),
+.erpTable td.main:has(.erpIngPicker) {
+  position: relative;
+  overflow: visible;
 }
 
 .erpIngChip {
   flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -765,13 +839,10 @@ button.erpBack {
 .erpIngList {
   list-style: none;
   margin: 0;
-  padding: 4px;
+  padding: 0;
   max-height: 220px;
+  overflow-x: hidden;
   overflow-y: auto;
-  border: 1px solid var(--erp-line);
-  border-radius: 10px;
-  background: var(--erp-card);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .erpIngList button {

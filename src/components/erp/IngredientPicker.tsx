@@ -20,10 +20,12 @@ export function IngredientPicker({
   disabled?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [open, setOpen] = useState(false);
   const selected = value ? state.products.find((product) => product.id === value) : undefined;
+  const placeholder = T("Найти ингредиент…", "Find an ingredient…", "Tìm nguyên liệu…");
 
   const chips = useMemo(() => {
     const { ids, hasUncategorized } = compositionCategoryIds(state.products);
@@ -60,6 +62,10 @@ export function IngredientPicker({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+  }, [open]);
+
   if (disabled) {
     return <span className="erpName">{selected ? productTitle(selected) : "—"}</span>;
   }
@@ -71,70 +77,73 @@ export function IngredientPicker({
   };
 
   return (
-    <div className="erpIngPicker" ref={root}>
-      {chips.length > 1 ? (
-        <div className="erpIngCats" role="tablist" aria-label={T("Категория", "Category", "Nhóm")}>
-          {chips.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              role="tab"
-              aria-selected={category === chip.id}
-              className={`erpIngChip ${category === chip.id ? "on" : ""}`}
-              onClick={() => {
-                setCategory(chip.id);
-                setOpen(true);
-              }}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <input
-        className="erpPickerSearch"
-        type="search"
-        value={query}
-        placeholder={
-          selected
-            ? productTitle(selected)
-            : T("Найти ингредиент…", "Find an ingredient…", "Tìm nguyên liệu…")
-        }
-        aria-label={T("Поиск ингредиента", "Ingredient search", "Tìm nguyên liệu")}
-        autoComplete="off"
-        onFocus={() => setOpen(true)}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            if (matches[0]) pick(matches[0].id);
-          }
-        }}
-      />
+    <div className={`erpIngPicker${open ? " open" : ""}`} ref={root}>
+      <button
+        type="button"
+        className={`erpIngField${selected ? "" : " empty"}`}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={T("Продукт", "Product", "Sản phẩm")}
+        onClick={() => setOpen(true)}
+      >
+        {selected ? productTitle(selected) : placeholder}
+      </button>
       {open ? (
-        <ul className="erpIngList" role="listbox">
-          {matches.length ? (
-            matches.map((product) => (
-              <li key={product.id}>
+        <div className="erpIngDrop">
+          {chips.length > 1 ? (
+            <div className="erpIngCats" role="tablist" aria-label={T("Категория", "Category", "Nhóm")}>
+              {chips.map((chip) => (
                 <button
+                  key={chip.id}
                   type="button"
-                  role="option"
-                  aria-selected={product.id === value}
-                  className={product.id === value ? "on" : ""}
-                  onClick={() => pick(product.id)}
+                  role="tab"
+                  aria-selected={category === chip.id}
+                  className={`erpIngChip ${category === chip.id ? "on" : ""}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setCategory(chip.id)}
                 >
-                  {productTitle(product)}
-                  {product.base_unit ? ` (${unitLabel(product.base_unit)})` : ""}
+                  {chip.label}
                 </button>
-              </li>
-            ))
-          ) : (
-            <li className="erpIngEmpty">{T("Ничего не найдено", "No matches", "Không tìm thấy")}</li>
-          )}
-        </ul>
+              ))}
+            </div>
+          ) : null}
+          <input
+            ref={searchRef}
+            className="erpPickerSearch"
+            type="search"
+            value={query}
+            placeholder={placeholder}
+            aria-label={T("Поиск ингредиента", "Ingredient search", "Tìm nguyên liệu")}
+            autoComplete="off"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (matches[0]) pick(matches[0].id);
+              }
+            }}
+          />
+          <ul className="erpIngList" role="listbox">
+            {matches.length ? (
+              matches.map((product) => (
+                <li key={product.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={product.id === value}
+                    className={product.id === value ? "on" : ""}
+                    onClick={() => pick(product.id)}
+                  >
+                    {productTitle(product)}
+                    {product.base_unit ? ` (${unitLabel(product.base_unit)})` : ""}
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="erpIngEmpty">{T("Ничего не найдено", "No matches", "Không tìm thấy")}</li>
+            )}
+          </ul>
+        </div>
       ) : null}
     </div>
   );
