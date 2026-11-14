@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LOSS_METHODS, lossPct, netFactor, roundQty, type LossMethod, type LossPcts } from "@/lib/erp/costing";
 import type { ErpProduct, ErpState } from "@/lib/erp/types";
 import { numText, qtyText, QtyInput, T } from "./ui";
@@ -61,10 +62,51 @@ export function MethodPicker({
   onChange: (patch: Partial<LossLine>) => void;
   disabled?: boolean;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const product = productOf(state, line.product_id);
   const chosen = line.methods ?? [];
+  const options = product && hasLosses(product) ? lossOptions(product, chosen) : [];
+  const canPick = Boolean(product && hasLosses(product) && options.length && !disabled);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !canPick) {
+      setDropUp(false);
+      return;
+    }
+    const rootEl = root.current;
+    const dropEl = dropRef.current;
+    if (!rootEl || !dropEl) return;
+    const rootRect = rootEl.getBoundingClientRect();
+    const gap = 4;
+    const spaceBelow = window.innerHeight - rootRect.bottom - gap;
+    const spaceAbove = rootRect.top - gap;
+    setDropUp(dropEl.offsetHeight > spaceBelow && spaceAbove > spaceBelow);
+  }, [open, canPick, chosen, options.length]);
+
+  useEffect(() => {
+    if (!canPick && open) setOpen(false);
+  }, [canPick, open]);
+
   if (!product || !hasLosses(product)) return <span className="erpMuted">—</span>;
-  const options = lossOptions(product, chosen);
   if (disabled) return <span>{methodsText(chosen)}</span>;
   if (!options.length) {
     return (
@@ -73,25 +115,37 @@ export function MethodPicker({
       </span>
     );
   }
+
   return (
-    <details className="erpMethods">
-      <summary>{chosen.length ? methodsText(chosen) : T("выбрать", "choose", "chọn")}</summary>
-      <div>
-        {options.map((method) => (
-          <label key={method}>
-            <input
-              type="checkbox"
-              checked={chosen.includes(method)}
-              onChange={(event) => {
-                const next = event.target.checked ? [...chosen, method] : chosen.filter((m) => m !== method);
-                onChange(methodsPatch(state, line, LOSS_METHODS.filter((m) => next.includes(m))));
-              }}
-            />
-            {methodLabel(method)} <span className="erpMuted">−{numText(lossPct(product, method))}%</span>
-          </label>
-        ))}
-      </div>
-    </details>
+    <div className={`erpMethods${open ? " open" : ""}${dropUp ? " up" : ""}`} ref={root}>
+      <button
+        type="button"
+        className="erpMethodsBtn"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={T("Обработка", "Processing", "Sơ chế")}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {chosen.length ? methodsText(chosen) : T("выбрать", "choose", "chọn")}
+      </button>
+      {open ? (
+        <div className="erpMethodsDrop" ref={dropRef} role="listbox">
+          {options.map((method) => (
+            <label key={method}>
+              <input
+                type="checkbox"
+                checked={chosen.includes(method)}
+                onChange={(event) => {
+                  const next = event.target.checked ? [...chosen, method] : chosen.filter((m) => m !== method);
+                  onChange(methodsPatch(state, line, LOSS_METHODS.filter((m) => next.includes(m))));
+                }}
+              />
+              {methodLabel(method)} <span className="erpMuted">−{numText(lossPct(product, method))}%</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -803,14 +803,21 @@ button.erpBack {
   overflow: hidden;
 }
 
-.erpTableWrap:has(.erpIngPicker) {
+.erpTableWrap:has(.erpIngPicker),
+.erpTableWrap:has(.erpMethods) {
   overflow: visible;
 }
 
 .erpTable td:has(> .erpIngPicker),
-.erpTable td.main:has(.erpIngPicker) {
+.erpTable td.main:has(.erpIngPicker),
+.erpTable td:has(> .erpMethods) {
   position: relative;
   overflow: visible;
+}
+
+.erpTable tr:has(.erpMethods.open),
+.erpTable td:has(> .erpMethods.open) {
+  z-index: 8;
 }
 
 .erpIngChip {
@@ -1319,6 +1326,10 @@ button.erpBack {
     max-width: none;
   }
 
+  .erpTable.stack td.edit:has(.erpMethods) {
+    overflow: visible;
+  }
+
   .erpTable.stack td:empty {
     display: none;
   }
@@ -1556,43 +1567,60 @@ button.erpBack {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
 }
 
-/* Processing methods of a recipe line. In-flow so overflow:hidden tables actually unroll. */
+/* Processing methods: overlay list so opening Очистка does not grow the yield card. */
 .erpMethods {
   position: relative;
   display: block;
+  width: 100%;
+  min-width: 0;
+  z-index: 1;
 }
 
-.erpMethods > summary {
-  cursor: pointer;
-  list-style: none;
-  display: list-item;
+.erpMethods.open {
+  z-index: 9;
+}
+
+.erpMethodsBtn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--erp-text);
+  background: var(--erp-card);
   border: 1px solid var(--erp-line);
   border-radius: 8px;
-  background: var(--erp-card);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
 }
 
-.erpMethods > summary::-webkit-details-marker {
-  display: none;
-}
-
-.erpMethods > summary::after {
+.erpMethodsBtn::after {
   content: " ▾";
+  flex: none;
   color: var(--erp-muted);
 }
 
-.erpMethods[open] > summary::after {
+.erpMethods.open > .erpMethodsBtn::after {
   content: " ▴";
 }
 
-.erpMethods > div {
-  position: static;
-  z-index: 15;
-  margin-top: 4px;
-  min-width: 180px;
+.erpMethodsDrop {
+  position: absolute;
+  z-index: 16;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: max(100%, 180px);
   width: max-content;
-  max-width: 100%;
+  max-width: min(280px, 90vw);
+  max-height: min(280px, 50vh);
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--erp-card);
   border: 1px solid var(--erp-line);
   border-radius: 10px;
@@ -1600,10 +1628,16 @@ button.erpBack {
   padding: 6px;
 }
 
+.erpMethods.up > .erpMethodsDrop {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 .erpMethods label {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
@@ -1731,6 +1765,31 @@ button.erpBack {
   padding: 0 8px 10px;
 }
 
+.erpTable tfoot tr.erpYieldCostRow > td.erpYieldCostCell {
+  font-weight: 650;
+  background: var(--erp-soft);
+}
+
+.erpYieldCostBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  min-width: 0;
+}
+
+.erpYieldCostBar strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.erpYieldCostMoney {
+  margin-left: auto;
+  text-align: right;
+  min-width: 0;
+}
+
 .erpLineParts.erpCutsPlaque {
   margin: 0;
   width: 100%;
@@ -1774,6 +1833,29 @@ button.erpBack {
 
   .erpTable.stack td.erpComposeActs {
     justify-content: flex-end;
+  }
+
+  .erpTable.stack tfoot tr.erpYieldCostRow {
+    padding: 8px 4px 10px;
+  }
+
+  .erpTable.stack tfoot tr.erpYieldCostRow > td,
+  .erpTable.stack tfoot tr.erpYieldCostRow > td.erpYieldCostCell {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    text-align: left;
+    justify-content: stretch;
+  }
+
+  .erpTable.stack tfoot tr.erpYieldCostRow > td::before,
+  .erpTable.stack tfoot tr.erpYieldCostRow > td.erpYieldCostCell::before {
+    content: none;
+  }
+
+  .erpYieldCostMoney {
+    margin-left: 0;
+    text-align: left;
   }
 
   .erpTable.stack .erpComposeName {

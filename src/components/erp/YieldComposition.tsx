@@ -1,11 +1,11 @@
 "use client";
 
-import { costLine, liveCatalogName } from "@/lib/erp/costing";
+import { compositionYieldCost, costLine, liveCatalogName } from "@/lib/erp/costing";
 import { filledParts, parseLineParts } from "@/lib/erp/lineParts";
 import type { ErpRecipe, ErpState } from "@/lib/erp/types";
 import { netOf } from "./losses";
 import { costContextOf } from "./menuFields";
-import { qtyText, T, unitOf, vnd } from "./ui";
+import { qtyText, T, unitLabel, unitOf, vnd } from "./ui";
 
 export function recipeForProduct(state: ErpState, productId: string | null | undefined) {
   if (!productId) return null;
@@ -15,6 +15,55 @@ export function recipeForProduct(state: ErpState, productId: string | null | und
 
 export const yieldCompositionTitle = () =>
   T("Состав на нормативный выход", "Ingredients for the standard yield", "Thành phần cho sản lượng chuẩn");
+
+/** Compact bar after composition rows: normative yield + cost of that yield (gross line costs). */
+export function YieldCostFooter({
+  colSpan,
+  yieldText,
+  cost,
+  perUnit,
+}: {
+  colSpan: number;
+  yieldText: string;
+  cost: number | null;
+  perUnit?: string | null;
+}) {
+  return (
+    <tfoot>
+      <tr className="erpYieldCostRow">
+        <td colSpan={colSpan} className="erpYieldCostCell">
+          <div className="erpYieldCostBar">
+            <span className="erpYieldCostYield">
+              {T("Выход", "Yield", "Sản lượng")}: <strong>{yieldText}</strong>
+            </span>
+            <span className="erpYieldCostMoney">
+              {T("Себестоимость выхода", "Cost of the yield", "Giá vốn sản lượng")}:{" "}
+              <strong>{cost === null ? T("неполная", "incomplete", "chưa đủ") : vnd(cost)}</strong>
+              {cost !== null && perUnit ? <span className="erpMuted"> · {perUnit}</span> : null}
+            </span>
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  );
+}
+
+export function yieldDisplayText(
+  yieldQty: number | null | undefined,
+  unit: string | null | undefined,
+  yieldPieces?: number | null,
+) {
+  if (!yieldQty) return "—";
+  const main = qtyText(yieldQty, unit);
+  return yieldPieces && unit !== "pcs" ? `${main} · ${yieldPieces} ${unitLabel("pcs")}` : main;
+}
+
+export function yieldPerUnitText(cost: number | null, yieldQty: number | null | undefined, unit: string | null | undefined, yieldPieces?: number | null) {
+  if (cost === null || !yieldQty) return null;
+  const bits = [`${vnd(cost / yieldQty)} / ${unitLabel(unit)}`];
+  if (yieldPieces && unit !== "pcs") bits.push(`${vnd(cost / yieldPieces)} / ${unitLabel("pcs")}`);
+  return bits.join(" · ");
+}
 
 /** Prep-recipe lines for the standard yield, used in list expanders and nested under tech cards. */
 export function YieldComposition({
@@ -36,6 +85,9 @@ export function YieldComposition({
       </div>
     );
   }
+  const product = state.products.find((item) => item.id === recipe.product_id);
+  const yieldUnit = product?.base_unit ?? null;
+  const yieldCost = compositionYieldCost(ctx, recipe.lines);
   return (
     <div className="erpMenuUsageBlock">
       {heading ? <h3>{title}</h3> : null}
@@ -79,6 +131,12 @@ export function YieldComposition({
               );
             })}
           </tbody>
+          <YieldCostFooter
+            colSpan={4}
+            yieldText={yieldDisplayText(recipe.yield_qty, yieldUnit, recipe.yield_pieces)}
+            cost={yieldCost}
+            perUnit={yieldPerUnitText(yieldCost, recipe.yield_qty, yieldUnit, recipe.yield_pieces)}
+          />
         </table>
       </div>
     </div>

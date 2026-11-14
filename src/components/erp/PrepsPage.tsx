@@ -3,7 +3,7 @@
 import { useErpRouter } from "./erpHref";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
-import { buildCostContext, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
+import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpRecipeStep, ErpState } from "@/lib/erp/types";
 import { DocTable, useDocuments } from "./docs";
@@ -13,6 +13,7 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
+import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
 import {
   Empty,
   Field,
@@ -500,8 +501,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   };
 
   const costs = form.lines.map((line) => (line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null));
-  const known = form.lines.length > 0 && costs.every((line) => line && line.cost !== null);
-  const batchCost = known ? costs.reduce((sum, line) => sum + (line?.cost ?? 0), 0) : null;
+  const batchCost = compositionYieldCost(ctx, form.lines);
   const unlinked = form.lines.filter((line) => !line.product_id).length;
   const readOnly = !editing;
   const net = netWeight(state, form.lines);
@@ -721,6 +721,12 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                   );
                 })}
               </tbody>
+              <YieldCostFooter
+                colSpan={6}
+                yieldText={yieldDisplayText(form.yield_qty, unit, form.yield_pieces)}
+                cost={batchCost}
+                perUnit={yieldPerUnitText(batchCost, form.yield_qty, unit, form.yield_pieces)}
+              />
             </table>
           </div>
         ) : (
@@ -756,25 +762,6 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
             ) : null}
           </div>
         ) : null}
-
-        <div className="erpKpis">
-          <div className="erpKpi">
-            <span>{T("Себестоимость выхода", "Cost of the yield", "Giá vốn sản lượng")}</span>
-            <strong>{batchCost === null ? T("неполная", "incomplete", "chưa đủ") : vnd(batchCost)}</strong>
-          </div>
-          <div className="erpKpi">
-            <span>
-              {T("За 1", "Per 1", "Mỗi 1")} {unitLabel(unit)}
-            </span>
-            <strong>{vnd(batchCost !== null && form.yield_qty ? batchCost / form.yield_qty : null)}</strong>
-          </div>
-          {form.yield_pieces && unit !== "pcs" ? (
-            <div className="erpKpi">
-              <span>{T("За 1 шт", "Per piece", "Mỗi cái")}</span>
-              <strong>{vnd(batchCost !== null ? batchCost / form.yield_pieces : null)}</strong>
-            </div>
-          ) : null}
-        </div>
 
         </details>
         <details className="erpMore">

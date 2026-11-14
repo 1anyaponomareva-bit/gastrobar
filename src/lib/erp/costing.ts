@@ -241,6 +241,26 @@ export function plannedUnitCost(ctx: CostContext, productId: string): number | n
   return costLine(ctx, productId, 1).unitCost;
 }
 
+/**
+ * Cost of the recipe/dish yield: sum of GROSS line costs (stock take).
+ * Cut parts split the same net and are not extra purchases.
+ * Unknown or empty lines make the whole yield cost incomplete (never 0).
+ */
+export function compositionYieldCost(
+  ctx: CostContext,
+  lines: readonly { product_id: string | null | undefined; qty: number | null | undefined }[],
+): number | null {
+  const ready = lines.filter((line) => line.product_id && line.qty);
+  if (!ready.length) return null;
+  let sum = 0;
+  for (const line of ready) {
+    const cost = costLine(ctx, line.product_id as string, line.qty as number).cost;
+    if (cost === null) return null;
+    sum += cost;
+  }
+  return sum;
+}
+
 export type CostSummary = {
   lines: CostLine[];
   knownFood: number;

@@ -1,14 +1,14 @@
 "use client";
 
 import { Fragment, Suspense, useMemo, useState } from "react";
-import { costLine, liveCatalogName } from "@/lib/erp/costing";
+import { compositionYieldCost, costLine, liveCatalogName } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { Caret, CatalogTable, notImplemented, VenueStubFilter, WorkshopStubFilter, type CatalogColumn } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { DropMenu, MultiSelect } from "./filters";
 import { netOf, netWeight } from "./losses";
-import { recipeForProduct, YieldComposition, yieldCompositionTitle } from "./YieldComposition";
+import { recipeForProduct, YieldComposition, YieldCostFooter, yieldCompositionTitle } from "./YieldComposition";
 import {
   categoryFilterOptions,
   categoryLabel,
@@ -90,6 +90,11 @@ function DishComposition({ state, dish }: { state: ErpState; dish: ErpDish }) {
               );
             })}
           </tbody>
+          <YieldCostFooter
+            colSpan={4}
+            yieldText={T("1 порция", "1 portion", "1 phần")}
+            cost={compositionYieldCost(ctx, dish.lines)}
+          />
         </table>
       </div>
     </div>

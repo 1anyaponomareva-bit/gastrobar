@@ -19,6 +19,7 @@ import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText, type LossLine } from "./losses";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { IngredientPicker } from "./IngredientPicker";
+import { YieldCostFooter } from "./YieldComposition";
 import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./LineParts";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState, type LinePart } from "@/lib/erp/lineParts";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
@@ -541,6 +542,15 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                   );
                 })}
               </tbody>
+              <YieldCostFooter
+                colSpan={7}
+                yieldText={
+                  portion.kg
+                    ? `${T("1 порция", "1 portion", "1 phần")} · ${netWeightText(portion)}`
+                    : T("1 порция", "1 portion", "1 phần")
+                }
+                cost={summary.totalCost}
+              />
             </table>
           </div>
         ) : (
