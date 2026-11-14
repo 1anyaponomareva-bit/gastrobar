@@ -34,7 +34,7 @@ export function YieldCostFooter({
         <td colSpan={colSpan} className="erpYieldCostCell">
           <div className="erpYieldCostBar">
             <span className="erpYieldCostYield">
-              {T("Выход", "Yield", "Sản lượng")}: <strong>{yieldText}</strong>
+              {T("Вес готового / выход", "Finished yield", "Thành phẩm / sản lượng")}: <strong>{yieldText}</strong>
             </span>
             <span className="erpYieldCostMoney">
               {T("Себестоимость выхода", "Cost of the yield", "Giá vốn sản lượng")}:{" "}

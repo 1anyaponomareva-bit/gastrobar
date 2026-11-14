@@ -160,6 +160,7 @@ export type ErpRecipe = {
   card_date?: string | null;
   card_revision?: string | null;
   photo?: string | null;
+  kind?: "dish" | "prep";
   legacy_recipe_id: string | null;
   created_at: string;
   created_by: string | null;

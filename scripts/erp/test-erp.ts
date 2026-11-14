@@ -4209,6 +4209,9 @@ async function main() {
     assert.equal(parsed[0].itemsEn.split("\n").length, 2);
     assert.equal(serializeRecipeInstructions(parsed)[0].items?.[1].vn, "Khuấy");
 
+    const defaultKind = await value<string>("select kind from public.erp_recipes where id = $1", [id]);
+    assert.equal(defaultKind, "prep");
+
     await q("select public.erp_activate_recipe($1, $2)", [id, ACTOR]);
     const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
       JSON.stringify({ id, yield_qty: 1.6, lines: [{ product_id: salt, qty: 0.012 }] }),
@@ -4240,6 +4243,54 @@ async function main() {
     assert.deepEqual(
       textSteps.map((step) => step.items.map((item) => item.en)),
       [["Boil water", "Cool"]],
+    );
+  });
+
+  await test("prep card tab saves a non-default folder and finished weight is yield_qty", async () => {
+    const mix = await saveProduct({ type: "semi_finished", name_en: "Tab mix", base_unit: "kg" });
+    const salt = await saveProduct({ type: "ingredient", name_en: "Tab salt", base_unit: "kg" });
+    const id = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: mix,
+        kind: "dish",
+        yield_qty: 1.2985,
+        lines: [{ product_id: salt, qty: 0.01 }],
+      }),
+      ACTOR,
+    ]);
+    const row = await one<{ kind: string; yield_qty: string }>(
+      "select kind, yield_qty from public.erp_recipes where id = $1",
+      [id],
+    );
+    assert.equal(row.kind, "dish");
+    assert.equal(n(row.yield_qty), 1.2985);
+
+    await q("select public.erp_activate_recipe($1, $2)", [id, ACTOR]);
+    const v2 = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ id, yield_qty: 1.3, lines: [{ product_id: salt, qty: 0.011 }] }),
+      ACTOR,
+    ]);
+    assert.notEqual(v2, id);
+    const copied = await one<{ kind: string; yield_qty: string }>(
+      "select kind, yield_qty from public.erp_recipes where id = $1",
+      [v2],
+    );
+    assert.equal(copied.kind, "dish", "new version keeps tab when payload omits it");
+    assert.equal(n(copied.yield_qty), 1.3);
+
+    const back = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ id: v2, kind: "prep", yield_qty: 1.3, lines: [{ product_id: salt, qty: 0.011 }] }),
+      ACTOR,
+    ]);
+    assert.equal(back, v2);
+    assert.equal(await value("select kind from public.erp_recipes where id = $1", [v2]), "prep");
+
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({ product_id: mix, kind: "sauce", yield_qty: 1, lines: [{ product_id: salt, qty: 0.01 }] }),
+        ACTOR,
+      ]),
+      "ERP_INVALID",
     );
   });
 
@@ -4374,6 +4425,15 @@ async function main() {
     assert.match(preps, /LinePartsButton/);
     assert.match(preps, /PrepCardHeader/);
     assert.match(preps, /PrepStepsEditor/);
+    const header = await readFile(path.join(process.cwd(), "src/components/erp/PrepCardFields.tsx"), "utf8");
+    assert.match(header, /data-testid="prep-kind"/);
+    assert.match(header, /value=\{kind\}/);
+    assert.match(header, /option value="dish"/);
+    assert.match(header, /option value="prep"/);
+    assert.equal(header.includes('value="prep" disabled'), false);
+    assert.equal(header.includes("Версия"), false);
+    assert.match(header, /нормативный выход/);
+    assert.match(header, /onYieldQty/);
     assert.match(menu, /useDragReorder/);
     assert.match(menu, /MainIngredientChips/);
     assert.match(menu, /LinePartsButton/);

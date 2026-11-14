@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { RecipeStepDraft } from "@/lib/erp/recipeCard";
 import { emptyRecipeStep } from "@/lib/erp/recipeCard";
 import type { ErpUnit } from "@/lib/erp/costing";
-import { Field, QtyInput, T, unitLabel } from "./ui";
+import { Field, QtyInput, T } from "./ui";
 
 async function downscaleImage(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -91,38 +91,40 @@ function PhotoField({
   );
 }
 
+export type PrepCardKind = "dish" | "prep";
+
 export function PrepCardHeader({
+  kind,
   nameEn,
   nameVn,
   cardNo,
   cardDate,
-  cardRevision,
   photo,
   yieldQty,
   unit,
   readOnly,
+  onKind,
   onNameEn,
   onNameVn,
   onCardNo,
   onCardDate,
-  onCardRevision,
   onPhoto,
   onYieldQty,
 }: {
+  kind: PrepCardKind;
   nameEn: string;
   nameVn: string;
   cardNo: string;
   cardDate: string;
-  cardRevision: string;
   photo: string;
   yieldQty: number | null;
   unit: ErpUnit | null;
   readOnly: boolean;
+  onKind: (value: PrepCardKind) => void;
   onNameEn: (value: string) => void;
   onNameVn: (value: string) => void;
   onCardNo: (value: string) => void;
   onCardDate: (value: string) => void;
-  onCardRevision: (value: string) => void;
   onPhoto: (value: string) => void;
   onYieldQty: (value: number | null) => void;
 }) {
@@ -130,7 +132,13 @@ export function PrepCardHeader({
     <div className="erpCard erpPrepHeader">
       <div className="erpGrid">
         <Field label={T("Вкладка", "Tab", "Mục")}>
-          <select value="prep" disabled>
+          <select
+            value={kind}
+            disabled={readOnly}
+            data-testid="prep-kind"
+            onChange={(event) => onKind(event.target.value === "dish" ? "dish" : "prep")}
+          >
+            <option value="dish">{T("Блюда", "Dishes", "Món ăn")}</option>
             <option value="prep">{T("Заготовки", "Preps", "Sơ chế")}</option>
           </select>
         </Field>
@@ -143,24 +151,25 @@ export function PrepCardHeader({
           <input value={nameVn} onChange={(event) => onNameVn(event.target.value)} maxLength={200} data-testid="prep-name-vn" />
         </Field>
       </div>
-      <div className="erpGrid three">
+      <div className="erpGrid two">
         <Field label={T("Карта №", "Card No.", "Số thẻ")}>
           <input value={cardNo} disabled={readOnly} maxLength={80} onChange={(event) => onCardNo(event.target.value)} />
         </Field>
         <Field label={T("Дата", "Date", "Ngày lập")}>
           <input type="date" value={cardDate} disabled={readOnly} onChange={(event) => onCardDate(event.target.value)} />
         </Field>
-        <Field label={T("Версия", "Revision", "Phiên bản")}>
-          <input value={cardRevision} disabled={readOnly} maxLength={40} onChange={(event) => onCardRevision(event.target.value)} />
-        </Field>
       </div>
       <PhotoField url={photo} disabled={readOnly} onChange={onPhoto} />
       <div className="erpGrid">
         <Field
-          label={T("Вес готового продукта *", "Finished weight *", "Trọng lượng thành phẩm *")}
-          hint={unit ? unitLabel(unit) : undefined}
+          label={T("Вес готового продукта (нормативный выход) *", "Finished yield weight *", "Trọng lượng thành phẩm (sản lượng chuẩn) *")}
+          hint={T(
+            "Сколько полуфабриката выходит после приготовления — тот же выход, что в составе.",
+            "How much finished product you get after cooking — the same yield as in the composition.",
+            "Lượng thành phẩm sau khi nấu — cùng sản lượng với phần thành phần.",
+          )}
         >
-          <QtyInput base={unit} value={yieldQty} disabled={readOnly} onChange={onYieldQty} />
+          <QtyInput base={unit} value={yieldQty} disabled={readOnly} defaultSmall={unit !== "pcs"} onChange={onYieldQty} />
         </Field>
       </div>
     </div>

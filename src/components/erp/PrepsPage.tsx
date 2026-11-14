@@ -17,7 +17,7 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
-import { PrepCardHeader, PrepStepsEditor } from "./PrepCardFields";
+import { PrepCardHeader, PrepStepsEditor, type PrepCardKind } from "./PrepCardFields";
 import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
 import {
   Empty,
@@ -337,9 +337,9 @@ type LineDraft = Pick<ErpRecipeLine, "product_id" | "qty" | "note" | "raw_name" 
 };
 
 type RecipeForm = {
+  kind: PrepCardKind;
   card_no: string;
   card_date: string;
-  card_revision: string;
   photo: string;
   yield_qty: number | null;
   yield_pieces: number | null;
@@ -349,6 +349,8 @@ type RecipeForm = {
   steps: RecipeStepDraft[];
   lines: LineDraft[];
 };
+
+const recipeKind = (value: string | null | undefined): PrepCardKind => (value === "dish" ? "dish" : "prep");
 
 /** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
 function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
@@ -368,9 +370,9 @@ function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string) {
 
 function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
   return {
+    kind: recipeKind(recipe?.kind),
     card_no: recipe?.card_no ?? "",
     card_date: (recipe?.card_date ?? "").slice(0, 10) || (recipe ? "" : today()),
-    card_revision: recipe?.card_revision ?? "",
     photo: recipe?.photo ?? "",
     yield_qty: recipe?.yield_qty ?? null,
     yield_pieces: recipe?.yield_pieces ?? null,
@@ -477,9 +479,9 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const payload: Record<string, unknown> = {
       id: viewed?.id,
       product_id: product.id,
+      kind: form.kind,
       card_no: form.card_no.trim(),
       card_date: form.card_date,
-      card_revision: form.card_revision.trim(),
       photo: form.photo,
       yield_qty: form.yield_qty,
       yield_pieces: unit === "pcs" ? form.yield_qty : form.yield_pieces,
@@ -540,20 +542,20 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       />
 
       <PrepCardHeader
+        kind={form.kind}
         nameEn={nameEn}
         nameVn={nameVn}
         cardNo={form.card_no}
         cardDate={form.card_date}
-        cardRevision={form.card_revision}
         photo={form.photo}
         yieldQty={form.yield_qty}
         unit={unit}
         readOnly={readOnly}
+        onKind={(value) => set("kind", value)}
         onNameEn={setNameEn}
         onNameVn={setNameVn}
         onCardNo={(value) => set("card_no", value)}
         onCardDate={(value) => set("card_date", value)}
-        onCardRevision={(value) => set("card_revision", value)}
         onPhoto={(value) => set("photo", value)}
         onYieldQty={(value) => set("yield_qty", value)}
       />
@@ -789,7 +791,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               <>
                 {" "}
                 <button type="button" className="erpLink" onClick={() => set("yield_qty", netYield)}>
-                  {T("Подставить в нормативный выход", "Use as standard yield", "Dùng làm sản lượng chuẩn")}
+                  {T("Подставить в вес готового", "Use as finished yield", "Dùng làm trọng lượng thành phẩm")}
                 </button>
               </>
             ) : null}
