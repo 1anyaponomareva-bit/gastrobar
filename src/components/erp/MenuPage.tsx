@@ -8,6 +8,7 @@ import {
   DEFAULT_MENU_PRICE_SOURCE,
   isPackaging,
   liveCatalogName,
+  processedUnitCost,
   type ChannelResult,
   type CostContext,
   type CostLine,
@@ -480,7 +481,10 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
               <tbody>
                 {form.lines.map((line, index) => {
                   const unit = unitOf(state, line.product_id);
+                  const product = line.product_id ? state.products.find((row) => row.id === line.product_id) : undefined;
                   const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null;
+                  const perUnit =
+                    !cost || cost.unitCost === null ? null : processedUnitCost(cost.unitCost, product, line.methods);
                   const expanded = open.has(index);
                   const cuts = cutsOpen.has(index);
                   const updateLine = (patch: Partial<DishForm["lines"][number]> | Partial<LossLine>) =>
@@ -535,7 +539,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                           <NetCell state={state} line={line} onChange={updateLine} />
                         </td>
                         <td className="num" data-label={T("Цена за единицу", "Unit cost", "Đơn giá")}>
-                          {!cost || cost.unitCost === null ? "—" : `${vnd(cost.unitCost)} / ${unitLabel(unit)}`}
+                          {perUnit === null ? "—" : `${vnd(perUnit)} / ${unitLabel(unit)}`}
                         </td>
                         <td className="num" data-label={T("Стоимость", "Cost", "Thành tiền")}>
                           {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}

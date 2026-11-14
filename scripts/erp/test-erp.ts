@@ -16,9 +16,12 @@ import {
   DEFAULT_MENU_PRICE_SOURCE,
   liveCatalogName,
   LOSS_METHODS,
+  finalCostPerKg,
   netFactor,
+  processedUnitCost,
   productTitle,
   summarize,
+  usableWeight,
   type CostProduct,
   type CostRecipe,
 } from "../../src/lib/erp/costing";
@@ -1164,7 +1167,17 @@ async function main() {
   await test("losses: stored on products and recipe/dish lines, gross stays the stock amount", async () => {
     assert.deepEqual([...LOSS_METHODS], ["defrost", "clean", "boil", "fry", "stew", "bake"]);
     assert.ok(LOSS_METHODS.indexOf("defrost") < LOSS_METHODS.indexOf("clean"), "defrost sits before clean");
-    assert.ok(Math.abs(netFactor({ loss_defrost_pct: 10, loss_clean_pct: 20 }, ["defrost", "clean"]) - 0.72) < 1e-12);
+    const sequential = { loss_defrost_pct: 10, loss_clean_pct: 20 };
+    const usable = usableWeight(1, sequential, ["defrost", "clean"]);
+    assert.ok(Math.abs(usable - 0.72) < 1e-12, "1 kg, 10% thaw, 20% clean → 0.72 sequential");
+    assert.ok(Math.abs(usable - 0.7) > 1e-9, "must not add 10% + 20% = 0.70");
+    assert.ok(Math.abs(netFactor(sequential, ["defrost", "clean"]) - 0.72) < 1e-12);
+    assert.ok(Math.abs(usableWeight(1, sequential, ["clean", "defrost"]) - 0.72) < 1e-12, "stage order is thaw then clean");
+    assert.ok(Math.abs(finalCostPerKg(100_000, usable)! - 100_000 / 0.72) < 1e-6);
+    assert.ok(Math.abs(processedUnitCost(100_000, sequential, ["defrost", "clean"])! - 100_000 / 0.72) < 1e-6);
+    assert.ok(Math.abs(usableWeight(1, { ...sequential, loss_boil_pct: 10 }, ["defrost", "clean", "boil"]) - 0.9 * 0.8 * 0.9) < 1e-12);
+    assert.equal(usableWeight(1, sequential, []), 1, "empty stages leave purchase weight");
+    assert.equal(finalCostPerKg(100_000, 0), null);
 
     const apple = await saveProduct({ type: "ingredient", name_en: "Apple loss test", base_unit: "kg", loss_clean_pct: 26 });
     assert.equal(n(await value("select loss_clean_pct from public.erp_products where id = $1", [apple])), 26);

@@ -22,8 +22,11 @@
  * goods as both produced stock and recipe inputs. Set explodeRecipes=false to value a
  * produced prep as one SKU from last_lot / fifo_remaining / reference instead.
  *
- * Line qty is GROSS (taken from stock). Processing losses change net weight, not cost:
- * you pay for what left the warehouse. Cost = unitCost × gross qty.
+ * Line qty is GROSS (taken from stock). Processing losses are sequential on remaining
+ * weight, not a sum of percents: usableWeight = purchaseWeight × Π (1 − pct_i/100)
+ * in thaw → clean → boil → fry → stew → bake order. Cost of 1 kg usable product is
+ * purchaseCost / usableWeight. Line food cost of the take is still purchaseCost of
+ * the gross (same as finalCostPerKg × net).
  *
  * Sale / markup / food-cost (VND). `price` is the menu price as shown (gross of output VAT
  * when output VAT is enabled):
@@ -154,16 +157,54 @@ export function buildCostContext(products: CostProduct[], recipes: CostRecipe[],
   };
 }
 
-/** Processing methods with a weight loss, as in Poster (defrost before clean). Line qty is gross (taken from stock). */
+/** Processing methods with a weight loss, as in Poster (thaw/defrost before clean). Line qty is gross (taken from stock). */
 export const LOSS_METHODS = ["defrost", "clean", "boil", "fry", "stew", "bake"] as const;
 export type LossMethod = (typeof LOSS_METHODS)[number];
 export type LossPcts = { [M in LossMethod as `loss_${M}_pct`]?: number | null };
 
 export const lossPct = (product: LossPcts | undefined, method: LossMethod) => Number(product?.[`loss_${method}_pct`] ?? 0);
 
-/** Share of the gross weight left after all chosen methods (1 = no loss). */
-export const netFactor = (product: LossPcts | undefined, methods: readonly LossMethod[] = []) =>
-  methods.reduce((factor, method) => factor * (1 - lossPct(product, method) / 100), 1);
+/**
+ * Remaining share of purchase weight after sequential stages (1 = no loss).
+ * Each next percent applies to what is left, in thaw → clean → … order.
+ * 1 kg, 10% thaw, 20% clean → 0.9 × 0.8 = 0.72, not 1 − 0.10 − 0.20 = 0.70.
+ * Unselected or 0% stages multiply by 1.
+ */
+export const netFactor = (product: LossPcts | undefined, methods: readonly LossMethod[] = []) => {
+  const chosen = new Set(methods);
+  return LOSS_METHODS.reduce(
+    (factor, method) => (chosen.has(method) ? factor * (1 - lossPct(product, method) / 100) : factor),
+    1,
+  );
+};
+
+/** Remaining kg/l after sequential losses: purchaseWeight × Π (1 − pct_i/100). */
+export function usableWeight(
+  purchaseWeight: number,
+  product: LossPcts | undefined,
+  methods: readonly LossMethod[] = [],
+): number {
+  return purchaseWeight * netFactor(product, methods);
+}
+
+/**
+ * Cost of 1 kg (or 1 l) of usable product.
+ * `purchaseCost` is the cost of the purchaseWeight that produced `usable`.
+ * Zero or missing usable weight stays null (never divide by zero).
+ */
+export function finalCostPerKg(purchaseCost: number | null, usable: number): number | null {
+  if (purchaseCost === null || !Number.isFinite(purchaseCost) || !(usable > 0)) return null;
+  return purchaseCost / usable;
+}
+
+/** Purchase unit cost converted to cost per 1 usable unit after the chosen stages. */
+export function processedUnitCost(
+  purchaseUnitCost: number | null,
+  product: LossPcts | undefined,
+  methods: readonly LossMethod[] = [],
+): number | null {
+  return finalCostPerKg(purchaseUnitCost, netFactor(product, methods));
+}
 
 export const roundQty = (value: number) => Math.round(value * 1e6) / 1e6;
 

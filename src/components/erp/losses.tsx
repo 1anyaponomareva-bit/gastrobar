@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { LOSS_METHODS, lossPct, netFactor, roundQty, type LossMethod, type LossPcts } from "@/lib/erp/costing";
+import { LOSS_METHODS, lossPct, netFactor, roundQty, usableWeight, type LossMethod, type LossPcts } from "@/lib/erp/costing";
 import type { ErpProduct, ErpState } from "@/lib/erp/types";
 import { numText, qtyText, QtyInput, T } from "./ui";
 
@@ -26,13 +26,13 @@ const productOf = (state: ErpState, id: string | null) => (id ? state.products.f
 export const netOf = (state: ErpState, line: LossLine): number | null => {
   if (line.qty === null) return null;
   if (!line.methods?.length) return line.qty;
-  return line.net_qty ?? roundQty(line.qty * netFactor(productOf(state, line.product_id), line.methods));
+  return line.net_qty ?? roundQty(usableWeight(line.qty, productOf(state, line.product_id), line.methods));
 };
 
 export function grossPatch(state: ErpState, line: LossLine, qty: number | null): Partial<LossLine> {
   const methods = line.methods ?? [];
   if (!methods.length || qty === null) return { qty, net_qty: null };
-  return { qty, net_qty: roundQty(qty * netFactor(productOf(state, line.product_id), methods)) };
+  return { qty, net_qty: roundQty(usableWeight(qty, productOf(state, line.product_id), methods)) };
 }
 
 export function netPatch(state: ErpState, line: LossLine, net: number | null): Partial<LossLine> {
@@ -188,7 +188,7 @@ export const netWeightText = (weight: { kg: number; partial: boolean }) =>
 
 export const lossHint = () =>
   T(
-    "Брутто — сколько берётся со склада, нетто — что остаётся после обработки. Себестоимость считается по брутто.",
-    "Gross is taken from stock, net is what is left after processing. Cost is based on gross.",
-    "Brutto lấy từ kho, netto là phần còn lại sau sơ chế. Giá vốn tính theo brutto.",
+    "Брутто — сколько берётся со склада. Нетто — цепочка: каждый следующий % потерь от оставшегося веса. Себестоимость 1 кг нетто = цена покупки ÷ нетто.",
+    "Gross is taken from stock. Net is sequential: each next loss % applies to the remaining weight. Cost per usable kg = purchase cost ÷ net.",
+    "Brutto lấy từ kho. Netto theo chuỗi: mỗi % hao hụt sau áp vào phần còn lại. Giá 1 kg netto = giá mua ÷ netto.",
   );

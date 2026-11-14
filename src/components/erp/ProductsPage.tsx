@@ -7,8 +7,10 @@ import {
   buildCostContext,
   costLine,
   isPackaging,
+  finalCostPerKg,
   LOSS_METHODS,
   productTitle,
+  usableWeight,
   type ErpProductType,
   type ErpUnit,
   type LossPcts,
@@ -377,6 +379,9 @@ function ProductEditor({
     return v === null || v === undefined || (v >= 0 && v < 100);
   });
   const showLosses = (unit === "kg" || unit === "l") && !isPackaging(form.type);
+  const remainingFrom1 = usableWeight(1, form, LOSS_METHODS);
+  const hasProcessingLoss = LOSS_METHODS.some((m) => Number(form[`loss_${m}_pct`] ?? 0) > 0);
+  const usableCost = finalCostPerKg(form.est_unit_cost, remainingFrom1);
   const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
@@ -703,9 +708,9 @@ function ProductEditor({
     <>
       <p className="erpHint">
         {T(
-          "Сколько процентов веса теряется при обработке. Например, очистка 26%: из 1 кг остаётся 740 г. В рецептах и блюдах по этим процентам считается нетто.",
-          "How much weight is lost in processing. For example, cleaning 26%: 1 kg leaves 740 g. Recipes and dishes use these to work out net weight.",
-          "Phần trăm khối lượng hao hụt khi sơ chế. Ví dụ sơ chế 26%: 1 kg còn 740 g. Công thức và món dùng để tính netto.",
+          "Каждый следующий процент считается от веса, оставшегося после предыдущей операции: разморозка → очистка → варка → жарка → тушение → запекание. 1 кг, разморозка 10% и очистка 20% → 0,72 кг, не 0,70 кг. Себестоимость 1 кг нетто = цена покупки ÷ оставшийся вес.",
+          "Each next percent applies to the weight left after the previous stage: thaw → clean → boil → fry → stew → bake. 1 kg, 10% thaw and 20% clean → 0.72 kg, not 0.70 kg. Cost per usable kg = purchase cost ÷ remaining weight.",
+          "Mỗi % sau tính trên phần còn lại: rã đông → sơ chế → luộc → chiên → hầm → nướng. 1 kg, rã đông 10% và sơ chế 20% → 0,72 kg, không phải 0,70 kg. Giá 1 kg netto = giá mua ÷ khối lượng còn lại.",
         )}
       </p>
       <div className="erpGrid six">
@@ -715,6 +720,17 @@ function ProductEditor({
           </Field>
         ))}
       </div>
+      {hasProcessingLoss ? (
+        <p className="erpHint" data-testid="loss-usable-weight">
+          {T("Из 1 кг остаётся", "From 1 kg remains", "Từ 1 kg còn")} <strong>{qtyText(remainingFrom1, unit)}</strong>
+          {usableCost !== null ? (
+            <>
+              {" · "}
+              {T("себестоимость 1 кг нетто", "cost per usable kg", "giá 1 kg netto")} <strong>{vnd(usableCost)}</strong>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       {!validLosses ? <div className="erpNotice warn">{T("Потери — от 0 до 99,99%.", "Losses must be from 0 to 99.99%.", "Hao hụt từ 0 đến 99,99%.")}</div> : null}
     </>
   );
