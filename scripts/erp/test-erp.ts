@@ -8,7 +8,7 @@ import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
 import { PDFDocument } from "pdf-lib";
 import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog, type StaffCatalog } from "../../src/data/staffCatalog";
-import { RECIPES } from "../../src/data/recipes";
+import { RECIPES, recipeCookingSteps, recipeText } from "../../src/data/recipes";
 import {
   buildCostContext,
   channelResult,
@@ -111,7 +111,13 @@ import {
   upsertStaffRecipe,
   type PrepPublishInput,
 } from "../../src/lib/erp/prepStaffRecipe";
-import { makePrepSheetPdf, setPrepSheetPdfFonts } from "../../src/lib/erp/prepSheetPdf";
+import {
+  buildPrepSheetModel,
+  makePrepSheetPdf,
+  prepSheetCopy,
+  prepSheetLang,
+  setPrepSheetPdfFonts,
+} from "../../src/lib/erp/prepSheetPdf";
 import { processingComposition } from "../../src/lib/erp/processing";
 import {
   clampPage,
@@ -556,6 +562,51 @@ async function main() {
     assert.match(mapped.ingredients[0].note?.en ?? "", /mince 270 g/);
     assert.equal(mapped.steps.length, 1);
     assert.equal(mapped.steps[0].items[1].vn, "Khuấy");
+    assert.equal(recipeCookingSteps(mapped).length, 1);
+    assert.equal(recipeText(mapped.steps[0].items[0], "ru"), "Add beef");
+    const fromInstructions = recipeCookingSteps({
+      ...mapped,
+      steps: [],
+      instructions: [{ title: { en: "Cook" }, items: [{ en: "Boil" }] }],
+    } as typeof mapped & Record<string, unknown>);
+    assert.equal(fromInstructions.length, 1);
+    assert.equal(fromInstructions[0].items[0].en, "Boil");
+    const fromMethod = recipeCookingSteps({
+      ...mapped,
+      steps: [],
+      method: "Sear both sides",
+    } as typeof mapped & Record<string, unknown>);
+    assert.equal(fromMethod[0].items[0].en, "Sear both sides");
+    const ruOnly = parseRecipeInstructions([{ title: { ru: "Обжарить" }, items: [{ ru: "На сильном огне" }] }]);
+    assert.equal(ruOnly[0].titleEn, "Обжарить");
+    assert.match(ruOnly[0].itemsEn, /На сильном огне/);
+    assert.equal(prepSheetLang("vn"), "vn");
+    assert.equal(prepSheetLang("en"), "en");
+    assert.equal(prepSheetLang("ru"), "en");
+    setErpLang("vn");
+    assert.equal(prepSheetLang(), "vn");
+    assert.equal(prepSheetCopy().ingredient, "Nguyên liệu");
+    const vnSheet = buildPrepSheetModel(input);
+    assert.equal(vnSheet.lang, "vn");
+    assert.equal(vnSheet.name, "Thịt bò xay");
+    assert.equal(vnSheet.rows[0].name, "Thịt bò vai");
+    assert.equal(vnSheet.copy.cooking, "Quy trình chế biến");
+    assert.ok(vnSheet.steps[0].items.includes("Thêm thịt"));
+    assert.equal(vnSheet.kind, "Bán thành phẩm");
+    setErpLang("ru");
+    assert.equal(prepSheetCopy().ingredient, "Ingredient");
+    const ruSheet = buildPrepSheetModel(input);
+    assert.equal(ruSheet.lang, "en");
+    assert.equal(ruSheet.name, "Beef mix");
+    assert.equal(ruSheet.rows[0].name, "Beef chuck");
+    assert.equal(ruSheet.copy.cooking, "Cooking technology");
+    assert.ok(ruSheet.steps[0].items.includes("Add beef"));
+    assert.ok(!ruSheet.steps[0].items.includes("Thêm thịt"));
+    setErpLang("en");
+    const enSheet = buildPrepSheetModel(input);
+    assert.equal(enSheet.copy.ingredient, "Ingredient");
+    assert.equal(enSheet.name, "Beef mix");
+    setErpLang("ru");
     assert.equal(mapped.meta?.cardNo, "GF-PR-088");
     assert.equal(mapped.meta?.date, "19.11.2026");
     assert.equal(staffRecipeCardUrl(productId), `${CANONICAL_ERP_ORIGIN}/recipes/${encodeURIComponent(staffRecipeId(productId))}`);
@@ -588,11 +639,13 @@ async function main() {
       bold: toAb(await readFile(path.join(fontsDir, "NotoSans-Bold.ttf"))),
     });
     try {
-      const blob = await makePrepSheetPdf(input);
+      const blob = await makePrepSheetPdf(input, { lang: "vn" });
       const bytes = new Uint8Array(await blob.arrayBuffer());
       assert.equal(new TextDecoder().decode(bytes.slice(0, 5)), "%PDF-");
       const pdf = await PDFDocument.load(bytes);
       assert.ok(pdf.getPageCount() >= 1);
+      const enBlob = await makePrepSheetPdf(input, { lang: "ru" });
+      assert.equal(new TextDecoder().decode(new Uint8Array(await enBlob.arrayBuffer()).slice(0, 5)), "%PDF-");
     } finally {
       setPrepSheetPdfFonts(null);
     }

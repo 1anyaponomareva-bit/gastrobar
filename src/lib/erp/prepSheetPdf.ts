@@ -1,33 +1,267 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { getAssetUrl } from "@/lib/appVersion";
+import { erpLang, type ErpLang } from "@/components/erp/i18n";
 import { formatVnd } from "./costing";
+import type { ErpUnit } from "./costing";
 import { formatVietnamDate } from "@/lib/orders/datetime";
 import {
   lineNetQty,
   METHOD_LABEL,
   prepKindTitle,
-  sheetQty,
   type PrepPublishInput,
   type PrepPublishLine,
   type PrepPublishProduct,
 } from "./prepStaffRecipe";
+import type { RecipeStepDraft } from "./recipeCard";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-const MARGIN_X = 36;
-const MARGIN_TOP = 40;
+const MARGIN_X = 40;
+const MARGIN_TOP = 36;
 const MARGIN_BOTTOM = 40;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
+
+const FONT_SIZE = 9;
+const TITLE_SIZE = 18;
+const LINE_GAP = 3;
+const ROW_PAD_Y = 7;
 
 const COLORS = {
   text: rgb(0.07, 0.07, 0.07),
   muted: rgb(0.38, 0.38, 0.38),
   gold: rgb(0.83, 0.66, 0.22),
+  goldBar: rgb(0.95, 0.68, 0),
   goldSoft: rgb(1, 0.97, 0.9),
   line: rgb(0.86, 0.86, 0.86),
   section: rgb(0.95, 0.95, 0.95),
+  white: rgb(1, 1, 1),
+  zebra: rgb(0.99, 0.98, 0.96),
 };
+
+const COLS = {
+  name: 250,
+  qty: 62,
+  unit: 48,
+  note: CONTENT_WIDTH - 250 - 62 - 48,
+};
+
+export type PrepSheetLang = "en" | "vn";
+
+export type PrepSheetCopy = {
+  composition: string;
+  ingredient: string;
+  qty: string;
+  unit: string;
+  note: string;
+  cooking: string;
+  yield: string;
+  cost: string;
+  cardNo: string;
+  date: string;
+  rev: string;
+  shelfLife: string;
+  days: string;
+  step: string;
+  piece: string;
+  pcs: string;
+  g: string;
+  kg: string;
+  ml: string;
+  l: string;
+};
+
+const COPY: Record<PrepSheetLang, PrepSheetCopy> = {
+  en: {
+    composition: "Composition",
+    ingredient: "Ingredient",
+    qty: "Qty",
+    unit: "Unit",
+    note: "Note",
+    cooking: "Cooking technology",
+    yield: "Yield",
+    cost: "Cost",
+    cardNo: "Card No.",
+    date: "Date",
+    rev: "Rev.",
+    shelfLife: "Shelf life",
+    days: "days",
+    step: "Step",
+    piece: "1 pc",
+    pcs: "pcs",
+    g: "g",
+    kg: "kg",
+    ml: "ml",
+    l: "l",
+  },
+  vn: {
+    composition: "Thành phần",
+    ingredient: "Nguyên liệu",
+    qty: "SL",
+    unit: "ĐVT",
+    note: "Ghi chú",
+    cooking: "Quy trình chế biến",
+    yield: "Khối lượng thành phẩm",
+    cost: "Giá vốn",
+    cardNo: "Số thẻ",
+    date: "Ngày",
+    rev: "Sửa đổi",
+    shelfLife: "Hạn dùng",
+    days: "ngày",
+    step: "Bước",
+    piece: "1 cái",
+    pcs: "cái",
+    g: "g",
+    kg: "kg",
+    ml: "ml",
+    l: "l",
+  },
+};
+
+/** VN UI → Vietnamese sheet; English and Russian UI → English sheet. */
+export function prepSheetLang(ui: ErpLang = erpLang()): PrepSheetLang {
+  return ui === "vn" ? "vn" : "en";
+}
+
+export function prepSheetCopy(lang: PrepSheetLang = prepSheetLang()): PrepSheetCopy {
+  return COPY[lang];
+}
+
+export function pickSheetText(en: string, vn: string, lang: PrepSheetLang): string {
+  const primary = (lang === "vn" ? vn : en).trim();
+  const fallback = (lang === "vn" ? en : vn).trim();
+  return primary || fallback;
+}
+
+type SheetRow = { name: string; qty: string; unit: string; note: string; main: boolean };
+
+export type PrepSheetModel = {
+  lang: PrepSheetLang;
+  copy: PrepSheetCopy;
+  kind: string;
+  name: string;
+  cardNo: string;
+  date: string;
+  revision: string;
+  facts: string[];
+  rows: SheetRow[];
+  yieldLine: string;
+  costLine: string;
+  steps: { title: string; items: string[]; photo: string }[];
+};
+
+function trimNum(value: number): string {
+  return String(Math.round(value * 1000) / 1000);
+}
+
+function qtyAndUnit(
+  value: number | null | undefined,
+  unit: ErpUnit | null,
+  copy: PrepSheetCopy,
+): { qty: string; unit: string } {
+  if (value == null) return { qty: "—", unit: "" };
+  if ((unit === "kg" || unit === "l") && value !== 0 && Math.abs(value) < 1) {
+    return { qty: trimNum(value * 1000), unit: unit === "kg" ? copy.g : copy.ml };
+  }
+  if (unit === "kg") return { qty: trimNum(value), unit: copy.kg };
+  if (unit === "l") return { qty: trimNum(value), unit: copy.l };
+  if (unit === "pcs") return { qty: trimNum(value), unit: copy.pcs };
+  return { qty: trimNum(value), unit: copy.g };
+}
+
+function catalogOf(input: PrepPublishInput, id: string | null): PrepPublishProduct | undefined {
+  return id ? input.catalog.find((row) => row.id === id) : undefined;
+}
+
+function lineTitle(line: PrepPublishLine, product: PrepPublishProduct | undefined, lang: PrepSheetLang): string {
+  const en = (product?.name_en || line.raw_name?.en || line.raw_name?.ru || "").trim();
+  const vn = (product?.name_vn || line.raw_name?.vn || "").trim();
+  return pickSheetText(en, vn, lang) || "—";
+}
+
+function cutsText(line: PrepPublishLine, copy: PrepSheetCopy): string {
+  const parts = (line.parts ?? []).filter((part) => part.name.trim() && part.grams != null);
+  return parts.map((part) => `${part.name.trim()} ${Math.round((part.grams ?? 0) * 10) / 10} ${copy.g}`).join("; ");
+}
+
+function lineNote(line: PrepPublishLine, lang: PrepSheetLang, copy: PrepSheetCopy): string {
+  const methods = (line.methods ?? []).map((method) => METHOD_LABEL[method][lang]).filter(Boolean).join(", ");
+  const cuts = cutsText(line, copy);
+  return [methods, cuts].filter(Boolean).join(" · ");
+}
+
+function stepBlock(step: RecipeStepDraft, lang: PrepSheetLang, index: number, copy: PrepSheetCopy): {
+  title: string;
+  items: string[];
+  photo: string;
+} {
+  const title = pickSheetText(step.titleEn, step.titleVn, lang);
+  const enLines = step.itemsEn.split(/\r?\n/).map((line) => line.trim());
+  const vnLines = step.itemsVn.split(/\r?\n/).map((line) => line.trim());
+  const count = Math.max(enLines.length, vnLines.length);
+  const items: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const line = pickSheetText(enLines[i] ?? "", vnLines[i] ?? "", lang);
+    if (line) items.push(line);
+  }
+  return { title: title || `${copy.step} ${index + 1}`, items, photo: step.photo.trim() };
+}
+
+/** All labels, names and step lines that will be drawn — used by tests and the painter. */
+export function buildPrepSheetModel(input: PrepPublishInput, uiLang: ErpLang = erpLang()): PrepSheetModel {
+  const lang = prepSheetLang(uiLang);
+  const copy = prepSheetCopy(lang);
+  const date = formatVietnamDate(input.cardDate) || input.cardDate.trim() || "—";
+  const name = pickSheetText(input.product.name_en, input.product.name_vn ?? "", lang) || "—";
+  const facts: string[] = [];
+  if (input.product.unit_weight_kg && input.product.unit_weight_kg > 0) {
+    const piece = qtyAndUnit(input.product.unit_weight_kg, "kg", copy);
+    facts.push(`${copy.piece}: ${piece.qty} ${piece.unit}`.trim());
+  }
+  if (input.shelfLifeDays && input.shelfLifeDays > 0) {
+    facts.push(`${copy.shelfLife}: ${input.shelfLifeDays} ${copy.days}`);
+  }
+  if (input.storageConditions.trim()) facts.push(input.storageConditions.trim());
+
+  const rows = input.lines.flatMap((line) => {
+    const product = catalogOf(input, line.product_id);
+    if (line.qty == null && !line.raw_name && !line.product_id) return [];
+    const unit = product?.base_unit ?? null;
+    const net = lineNetQty(line, product);
+    const amount = qtyAndUnit(net, unit, copy);
+    return [
+      {
+        name: lineTitle(line, product, lang),
+        qty: amount.qty,
+        unit: amount.unit,
+        note: lineNote(line, lang, copy),
+        main: Boolean(line.is_main),
+      },
+    ];
+  });
+
+  const yieldAmount = qtyAndUnit(input.yieldQty, input.product.base_unit, copy);
+  const yieldExtra =
+    input.yieldPieces && input.product.base_unit !== "pcs" ? ` · ${input.yieldPieces} ${copy.pcs}` : "";
+  const yieldLine = `${copy.yield}: ${yieldAmount.qty} ${yieldAmount.unit}${yieldExtra}`.replace(/\s+/g, " ").trim();
+
+  return {
+    lang,
+    copy,
+    kind: prepKindTitle(input.kind)[lang],
+    name,
+    cardNo: input.cardNo.trim() || "—",
+    date,
+    revision: (input.cardRevision ?? (input.version ? String(input.version).padStart(2, "0") : "01")).trim() || "01",
+    facts,
+    rows,
+    yieldLine,
+    costLine: `${copy.cost}: ${formatVnd(input.batchCost ?? null)}`,
+    steps: input.steps
+      .map((step, index) => stepBlock(step, lang, index, copy))
+      .filter((step) => step.title || step.items.length),
+  };
+}
 
 type Fonts = { regular: ArrayBuffer; bold: ArrayBuffer };
 
@@ -57,7 +291,9 @@ async function loadFontBytes(): Promise<Fonts> {
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = String(text || "")
+    .split(/\s+/)
+    .filter(Boolean);
   const lines: string[] = [];
   let current = "";
   const pushLong = (token: string) => {
@@ -103,42 +339,59 @@ function ensure(state: DrawState, height: number): void {
   if (state.y - height < MARGIN_BOTTOM) newPage(state);
 }
 
-function text(
+function baselineFor(topY: number, size: number, pad = ROW_PAD_Y): number {
+  return topY - pad - size;
+}
+
+function drawTextLine(
   state: DrawState,
   value: string,
-  opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb>; gap?: number; width?: number; x?: number },
+  x: number,
+  y: number,
+  opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {},
 ): void {
-  const size = opts.size ?? 10;
-  const font = opts.bold ? state.bold : state.font;
-  const color = opts.color ?? COLORS.text;
-  const width = opts.width ?? CONTENT_WIDTH;
-  const x = opts.x ?? MARGIN_X;
-  const lines = wrapText(value, font, size, width);
+  if (!value) return;
+  state.page.drawText(value, {
+    x,
+    y,
+    size: opts.size ?? FONT_SIZE,
+    font: opts.bold ? state.bold : state.font,
+    color: opts.color ?? COLORS.text,
+  });
+}
+
+function wrappedHeight(lines: number, size = FONT_SIZE): number {
+  return ROW_PAD_Y * 2 + lines * size + Math.max(0, lines - 1) * LINE_GAP;
+}
+
+function drawWrapped(
+  state: DrawState,
+  lines: string[],
+  x: number,
+  topY: number,
+  opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {},
+): void {
+  const size = opts.size ?? FONT_SIZE;
+  let y = baselineFor(topY, size);
   for (const line of lines) {
-    ensure(state, size + 4);
-    state.page.drawText(line, { x, y: state.y, size, font, color });
-    state.y -= size + 3;
+    drawTextLine(state, line, x, y, opts);
+    y -= size + LINE_GAP;
   }
-  if (opts.gap) state.y -= opts.gap;
 }
 
 function section(state: DrawState, title: string): void {
-  ensure(state, 26);
+  const height = 22;
+  ensure(state, height + 10);
+  const top = state.y;
   state.page.drawRectangle({
     x: MARGIN_X,
-    y: state.y - 6,
+    y: top - height,
     width: CONTENT_WIDTH,
-    height: 20,
+    height,
     color: COLORS.section,
   });
-  state.page.drawText(title, {
-    x: MARGIN_X + 8,
-    y: state.y,
-    size: 10,
-    font: state.bold,
-    color: COLORS.text,
-  });
-  state.y -= 24;
+  drawTextLine(state, title, MARGIN_X + 10, baselineFor(top, 10, 6), { size: 10, bold: true });
+  state.y = top - height - 8;
 }
 
 async function embedPhoto(doc: PDFDocument, url: string | undefined): Promise<PDFImage | null> {
@@ -170,30 +423,129 @@ function drawImage(state: DrawState, image: PDFImage, maxW: number, maxH: number
   const h = image.height * scale;
   ensure(state, h + 8);
   state.page.drawImage(image, { x: MARGIN_X, y: state.y - h, width: w, height: h });
-  state.y -= h + 10;
+  state.y -= h + 12;
 }
 
-function catalogOf(input: PrepPublishInput, id: string | null): PrepPublishProduct | undefined {
-  return id ? input.catalog.find((row) => row.id === id) : undefined;
+function drawHeader(state: DrawState, model: PrepSheetModel, logo: PDFImage | null): void {
+  const copy = model.copy;
+  const nameLines = wrapText(model.name, state.bold, TITLE_SIZE, CONTENT_WIDTH - (logo ? 90 : 0));
+  const meta = [
+    `${copy.cardNo} ${model.cardNo}`,
+    `${copy.date} ${model.date}`,
+    `${copy.rev} ${model.revision}`,
+  ];
+  const logoH = logo ? Math.min(36, (36 / logo.width) * logo.height) : 0;
+  const headerH = 10 + Math.max(logoH, 14) + 8 + nameLines.length * (TITLE_SIZE + 2) + 18 + 36 + 8;
+  ensure(state, headerH);
+  const top = state.y;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: top - 4,
+    width: CONTENT_WIDTH,
+    height: 4,
+    color: COLORS.goldBar,
+  });
+  let y = top - 14;
+  if (logo) {
+    const w = (logoH / logo.height) * logo.width;
+    state.page.drawImage(logo, { x: MARGIN_X, y: y - logoH + 8, width: w, height: logoH });
+    drawTextLine(state, "GASTROFOOD", MARGIN_X + w + 10, y - 4, { size: 11, bold: true, color: COLORS.gold });
+  } else {
+    drawTextLine(state, "GASTROFOOD", MARGIN_X, y - 4, { size: 11, bold: true, color: COLORS.gold });
+  }
+  y -= Math.max(logoH, 16) + 2;
+  drawTextLine(state, model.kind, MARGIN_X, y, { size: 9, color: COLORS.muted });
+  y -= 16;
+  for (const line of nameLines) {
+    drawTextLine(state, line, MARGIN_X, y - TITLE_SIZE + 4, { size: TITLE_SIZE, bold: true });
+    y -= TITLE_SIZE + 2;
+  }
+  y -= 10;
+  const cellW = CONTENT_WIDTH / 3;
+  const metaH = 32;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: y - metaH,
+    width: CONTENT_WIDTH,
+    height: metaH,
+    color: COLORS.goldSoft,
+    borderColor: COLORS.line,
+    borderWidth: 0.6,
+  });
+  meta.forEach((label, index) => {
+    const x = MARGIN_X + cellW * index;
+    if (index > 0) {
+      state.page.drawLine({
+        start: { x, y: y - 6 },
+        end: { x, y: y - metaH + 6 },
+        thickness: 0.5,
+        color: COLORS.line,
+      });
+    }
+    drawTextLine(state, label, x + 10, y - 20, { size: 9, color: COLORS.muted });
+  });
+  state.y = y - metaH - 14;
 }
 
-function lineTitle(line: PrepPublishLine, product: PrepPublishProduct | undefined): { en: string; vn: string } {
-  const en = (product?.name_en || line.raw_name?.en || line.raw_name?.ru || "").trim() || "—";
-  const vn = (product?.name_vn || line.raw_name?.vn || "").trim();
-  return { en, vn };
+function drawTableHeader(state: DrawState, copy: PrepSheetCopy): void {
+  const height = 22;
+  ensure(state, height);
+  const top = state.y;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: top - height,
+    width: CONTENT_WIDTH,
+    height,
+    color: COLORS.goldSoft,
+    borderColor: COLORS.line,
+    borderWidth: 0.6,
+  });
+  const y = baselineFor(top, 8, 7);
+  let x = MARGIN_X + 8;
+  drawTextLine(state, copy.ingredient, x, y, { size: 8, bold: true });
+  x += COLS.name;
+  drawTextLine(state, copy.qty, x, y, { size: 8, bold: true });
+  x += COLS.qty;
+  drawTextLine(state, copy.unit, x, y, { size: 8, bold: true });
+  x += COLS.unit;
+  drawTextLine(state, copy.note, x, y, { size: 8, bold: true });
+  state.y = top - height;
 }
 
-function cutsText(line: PrepPublishLine): string {
-  const parts = (line.parts ?? []).filter((part) => part.name.trim() && part.grams != null);
-  return parts.map((part) => `${part.name.trim()} ${Math.round((part.grams ?? 0) * 10) / 10} g`).join("; ");
+function drawTableRow(state: DrawState, row: SheetRow, zebra: boolean, copy: PrepSheetCopy): void {
+  const nameLines = wrapText(row.name, row.main ? state.bold : state.font, FONT_SIZE, COLS.name - 12);
+  const noteLines = wrapText(row.note || "—", state.font, 8, COLS.note - 10);
+  const height = Math.max(wrappedHeight(nameLines.length), wrappedHeight(noteLines.length, 8), 24);
+  if (state.y - height < MARGIN_BOTTOM) {
+    newPage(state);
+    drawTableHeader(state, copy);
+  }
+  const top = state.y;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: top - height,
+    width: CONTENT_WIDTH,
+    height,
+    color: zebra ? COLORS.zebra : COLORS.white,
+    borderColor: COLORS.line,
+    borderWidth: 0.4,
+  });
+  let x = MARGIN_X + 8;
+  drawWrapped(state, nameLines, x, top, { bold: row.main });
+  x += COLS.name;
+  drawTextLine(state, row.qty, x, baselineFor(top, FONT_SIZE), { size: FONT_SIZE, bold: true });
+  x += COLS.qty;
+  drawTextLine(state, row.unit, x, baselineFor(top, FONT_SIZE), { size: FONT_SIZE, color: COLORS.muted });
+  x += COLS.unit;
+  drawWrapped(state, noteLines, x, top, { size: 8, color: COLORS.muted });
+  state.y = top - height;
 }
 
-function methodsText(line: PrepPublishLine): string {
-  if (!line.methods?.length) return "—";
-  return line.methods.map((method) => METHOD_LABEL[method].en).join(", ");
-}
-
-export async function makePrepSheetPdf(input: PrepPublishInput): Promise<Blob> {
+export async function makePrepSheetPdf(
+  input: PrepPublishInput,
+  options?: { lang?: ErpLang },
+): Promise<Blob> {
+  const model = buildPrepSheetModel(input, options?.lang ?? erpLang());
   const { regular, bold } = await loadFontBytes();
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -207,110 +559,66 @@ export async function makePrepSheetPdf(input: PrepPublishInput): Promise<Blob> {
     bold: fontBold,
   };
 
-  const kind = prepKindTitle(input.kind);
-  const date = formatVietnamDate(input.cardDate) || input.cardDate.trim() || "—";
-  const nameEn = input.product.name_en.trim() || "Untitled";
-  const nameVn = (input.product.name_vn ?? "").trim();
-
-  text(state, "GASTROFOOD", { size: 11, bold: true, color: COLORS.gold, gap: 2 });
-  text(state, `${kind.en}  ·  ${kind.ru}  ·  ${kind.vn}`, { size: 9, color: COLORS.muted, gap: 6 });
-  text(state, nameEn, { size: 18, bold: true, gap: 2 });
-  if (nameVn && nameVn !== nameEn) text(state, nameVn, { size: 12, color: COLORS.muted, gap: 4 });
-
-  const meta = [
-    `Card No. ${input.cardNo.trim() || "—"}`,
-    `Date ${date}`,
-    `Rev. ${(input.cardRevision ?? (input.version ? String(input.version).padStart(2, "0") : "01")).trim()}`,
-  ].join("    ");
-  text(state, meta, { size: 9, color: COLORS.muted, gap: 8 });
+  const logo =
+    (await embedPhoto(doc, getAssetUrl("/food/menu/GASTROFOOD-line.png"))) ||
+    (await embedPhoto(doc, getAssetUrl("/food/menu/GASTROFOOD.png")));
+  drawHeader(state, model, logo);
 
   const hero = await embedPhoto(doc, input.photo.trim() || undefined);
-  if (hero) drawImage(state, hero, 220, 140);
+  if (hero) drawImage(state, hero, 220, 130);
 
-  const facts: string[] = [];
-  if (input.product.unit_weight_kg && input.product.unit_weight_kg > 0) {
-    facts.push(`1 pc: ${sheetQty(input.product.unit_weight_kg, "kg")}`);
-  }
-  if (input.shelfLifeDays && input.shelfLifeDays > 0) facts.push(`Shelf life: ${input.shelfLifeDays} days`);
-  if (input.storageConditions.trim()) facts.push(input.storageConditions.trim());
-  if (facts.length) text(state, facts.join("    "), { size: 9, color: COLORS.muted, gap: 8 });
-
-  section(state, "Composition / Состав / Thành phần");
-  const cols = { name: 200, proc: 78, gross: 70, net: 70, cuts: 90 };
-  const headerY = state.y;
-  ensure(state, 16);
-  state.page.drawRectangle({ x: MARGIN_X, y: headerY - 4, width: CONTENT_WIDTH, height: 16, color: COLORS.goldSoft });
-  let x = MARGIN_X + 4;
-  const headers = [
-    ["Ingredient", cols.name],
-    ["Proc.", cols.proc],
-    ["Gross", cols.gross],
-    ["Net", cols.net],
-    ["Cuts", cols.cuts],
-  ] as const;
-  for (const [label, width] of headers) {
-    state.page.drawText(label, { x, y: headerY, size: 8, font: fontBold, color: COLORS.text });
-    x += width;
-  }
-  state.y -= 18;
-
-  for (const line of input.lines) {
-    const product = catalogOf(input, line.product_id);
-    const names = lineTitle(line, product);
-    const unit = product?.base_unit ?? null;
-    const net = lineNetQty(line, product);
-    const nameLines = wrapText(names.vn && names.vn !== names.en ? `${names.en} / ${names.vn}` : names.en, font, 8, cols.name - 6);
-    const cutLines = wrapText(cutsText(line) || "—", font, 8, cols.cuts - 4);
-    const rowH = Math.max(nameLines.length, cutLines.length) * 11 + 6;
-    ensure(state, rowH);
-    const rowTop = state.y;
-    let cx = MARGIN_X + 4;
-    nameLines.forEach((row, index) => {
-      state.page.drawText(row, { x: cx, y: rowTop - index * 11, size: 8, font: index === 0 && line.is_main ? fontBold : font, color: COLORS.text });
-    });
-    cx += cols.name;
-    state.page.drawText(methodsText(line), { x: cx, y: rowTop, size: 8, font, color: COLORS.text });
-    cx += cols.proc;
-    state.page.drawText(sheetQty(line.qty, unit), { x: cx, y: rowTop, size: 8, font, color: COLORS.text });
-    cx += cols.gross;
-    state.page.drawText(sheetQty(net, unit), { x: cx, y: rowTop, size: 8, font, color: COLORS.text });
-    cx += cols.net;
-    cutLines.forEach((row, index) => {
-      state.page.drawText(row, { x: cx, y: rowTop - index * 11, size: 8, font, color: COLORS.muted });
-    });
-    state.y -= rowH;
-    state.page.drawLine({
-      start: { x: MARGIN_X, y: state.y + 4 },
-      end: { x: MARGIN_X + CONTENT_WIDTH, y: state.y + 4 },
-      thickness: 0.4,
-      color: COLORS.line,
-    });
+  if (model.facts.length) {
+    const factText = model.facts.join("    ");
+    const factLines = wrapText(factText, font, 9, CONTENT_WIDTH);
+    const factH = wrappedHeight(factLines.length, 9);
+    ensure(state, factH);
+    drawWrapped(state, factLines, MARGIN_X, state.y, { size: 9, color: COLORS.muted });
+    state.y -= factH + 6;
   }
 
-  const yieldText = `Yield: ${sheetQty(input.yieldQty, input.product.base_unit)}${
-    input.yieldPieces && input.product.base_unit !== "pcs" ? ` · ${input.yieldPieces} pcs` : ""
-  }`;
-  const costText = `Cost: ${formatVnd(input.batchCost ?? null)}`;
-  text(state, `${yieldText}    ${costText}`, { size: 10, bold: true, gap: 10 });
+  section(state, model.copy.composition);
+  drawTableHeader(state, model.copy);
+  model.rows.forEach((row, index) => drawTableRow(state, row, index % 2 === 1, model.copy));
 
-  if (input.steps.length) {
-    section(state, "Cooking / Технология / Quy trình");
-    for (const [index, step] of input.steps.entries()) {
-      const title = [step.titleEn.trim(), step.titleVn.trim()].filter(Boolean).join(" / ") || `Step ${index + 1}`;
-      text(state, `${index + 1}. ${title}`, { size: 11, bold: true, gap: 2 });
-      const photo = await embedPhoto(doc, step.photo.trim() || undefined);
+  const summaryH = 28;
+  ensure(state, summaryH + 12);
+  state.y -= 8;
+  const summaryTop = state.y;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: summaryTop - summaryH,
+    width: CONTENT_WIDTH,
+    height: summaryH,
+    color: COLORS.goldSoft,
+    borderColor: COLORS.line,
+    borderWidth: 0.6,
+  });
+  drawTextLine(state, `${model.yieldLine}      ${model.costLine}`, MARGIN_X + 10, baselineFor(summaryTop, 10, 8), {
+    size: 10,
+    bold: true,
+  });
+  state.y = summaryTop - summaryH - 16;
+
+  if (model.steps.length) {
+    section(state, model.copy.cooking);
+    for (const [index, step] of model.steps.entries()) {
+      const title = `${index + 1}.  ${step.title}`;
+      const titleLines = wrapText(title, fontBold, 11, CONTENT_WIDTH - 8);
+      const itemBlocks = step.items.map((item) => wrapText(`•  ${item}`, font, 9, CONTENT_WIDTH - 22));
+      const blockH =
+        wrappedHeight(titleLines.length, 11) +
+        itemBlocks.reduce((sum, lines) => sum + lines.length * 12, 0) +
+        10;
+      ensure(state, blockH);
+      drawWrapped(state, titleLines, MARGIN_X, state.y, { size: 11, bold: true });
+      state.y -= wrappedHeight(titleLines.length, 11) - ROW_PAD_Y;
+      const photo = await embedPhoto(doc, step.photo || undefined);
       if (photo) drawImage(state, photo, 180, 110);
-      const enLines = step.itemsEn.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      const vnLines = step.itemsVn.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      const count = Math.max(enLines.length, vnLines.length);
-      for (let i = 0; i < count; i += 1) {
-        const en = enLines[i] ?? "";
-        const vn = vnLines[i] ?? "";
-        if (en) text(state, `• ${en}`, { size: 9, gap: 0 });
-        if (vn && vn !== en) text(state, `  ${vn}`, { size: 8, color: COLORS.muted, gap: 2 });
-        else state.y -= 2;
+      for (const lines of itemBlocks) {
+        drawWrapped(state, lines, MARGIN_X + 14, state.y, { size: 9 });
+        state.y -= lines.length * 12 + 2;
       }
-      state.y -= 6;
+      state.y -= 8;
     }
   }
 

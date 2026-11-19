@@ -85,9 +85,24 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
     return [{ name: rowName, amount: net, unit, ...(main ? { main: true } : {}) }];
   });
 
-  const steps = list(source.steps).flatMap((item) => {
+  const stepSource = list(source.steps).length
+    ? source.steps
+    : source.instructions ?? source.method ?? source.cooking;
+  const stepList = typeof stepSource === "string" && stepSource.trim() ? [stepSource] : list(stepSource);
+  const steps = stepList.flatMap((item) => {
+    if (typeof item === "string") {
+      const line = localized({ en: item, ru: item, vn: item });
+      return hasText(line) ? [{ items: [line] }] : [];
+    }
     const row = (item ?? {}) as Record<string, unknown>;
-    const items = list(row.items).map(localized).filter(hasText);
+    const itemSource = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions;
+    const items =
+      typeof itemSource === "string"
+        ? itemSource
+            .split(/\r?\n/)
+            .map((line) => localized({ en: line, ru: line, vn: line }))
+            .filter(hasText)
+        : list(itemSource).map(localized).filter(hasText);
     const title = localized(row.title);
     if (!items.length && !hasText(title)) return [];
     return [{ ...(hasText(title) ? { title } : {}), ...(photo(row.photo) ? { photo: photo(row.photo) } : {}), items }];

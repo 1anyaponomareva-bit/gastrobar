@@ -328,8 +328,14 @@ export function prepPublishFromSaved(
       raw_name: line.raw_name,
     })),
     catalog,
-    steps: parseRecipeInstructions(recipe.instructions),
+    steps: parseRecipeInstructions(recipeInstructionSource(recipe)),
   };
+}
+
+function recipeInstructionSource(recipe: ErpRecipe): unknown {
+  const extra = recipe as ErpRecipe & { steps?: unknown; method?: unknown; cooking?: unknown };
+  if (recipe.instructions != null && recipe.instructions !== "") return recipe.instructions;
+  return extra.steps ?? extra.method ?? extra.cooking;
 }
 
 export function prepSheetFileName(input: PrepPublishInput): string {

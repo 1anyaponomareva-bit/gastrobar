@@ -95,7 +95,7 @@ test("downloadPdfFile clicks <a download> blob and never navigator.share", () =>
   });
   URL.createObjectURL = () => "blob:prep-pdf";
   URL.revokeObjectURL = () => undefined;
-  globalThis.setTimeout = (() => 0) as typeof setTimeout;
+  globalThis.setTimeout = (() => 0) as unknown as typeof setTimeout;
 
   try {
     downloadPdfFile(new Blob(["%PDF"], { type: "application/pdf" }), "tech-card.pdf");

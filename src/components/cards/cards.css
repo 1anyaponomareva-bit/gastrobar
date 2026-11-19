@@ -35,6 +35,12 @@
 .orders-app .cards-app {
   min-height: 0;
   background: transparent;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
 }
 
 .orders-tabs button.orders-tab {

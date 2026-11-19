@@ -7,6 +7,8 @@ import {
   baseUnitAmount,
   mainIngredientIndexes,
   mergeRecipes,
+  recipeCookingSteps,
+  recipeText,
   type Recipe,
   type RecipeFactIcon,
   type RecipeKind,
@@ -265,6 +267,7 @@ function initialScaleInput(base: number, split: boolean) {
 
 function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
   const second = secondaryLang(lang);
+  const cookingSteps = recipeCookingSteps(recipe);
   const main = mainProducts(recipe);
   const units = main?.units ?? null;
   const base = main?.base ?? 1;
@@ -421,21 +424,21 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
         </div>
       ) : null}
       <div className="tcSteps">
-        {recipe.steps.map((stepItem, index) => (
+        {cookingSteps.map((stepItem, index) => (
           <section key={index} className="tcStep">
             <header>
               <span className="tcStepNum">{index + 1}</span>
-              {stepItem.title ? (
+              {recipeText(stepItem.title, lang) || recipeText(stepItem.title, second) ? (
                 <span className="tcStepTitle">
-                  <b>{stepItem.title[lang]}</b>
-                  <i>{stepItem.title[second]}</i>
+                  <b>{recipeText(stepItem.title, lang)}</b>
+                  <i>{recipeText(stepItem.title, second)}</i>
                 </span>
               ) : null}
             </header>
             {stepItem.photo ? <img src={getAssetUrl(stepItem.photo)} alt="" className="tcStepPhoto" /> : null}
             <ul>
               {stepItem.items.map((item, itemIndex) => (
-                <li key={itemIndex}>{item[lang]}</li>
+                <li key={itemIndex}>{recipeText(item, lang)}</li>
               ))}
             </ul>
           </section>

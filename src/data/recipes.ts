@@ -62,6 +62,98 @@ export type Recipe = {
 /** Recipes created or fully edited by admins; `deleted` hides built-in recipes from code. */
 export type StoredRecipes = { recipes: Recipe[]; deleted: string[] };
 
+/** One language from a localized field, falling back so RU/EN/VN never render blank. */
+export function recipeText(value: LocalizedText | undefined, lang: RecipeLang): string {
+  if (!value) return "";
+  return (value[lang] || value.en || value.vn || value.ru || "").trim();
+}
+
+function asLocalized(value: unknown): LocalizedText | undefined {
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return undefined;
+    return { ru: text, en: text, vn: text };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const en = typeof row.en === "string" ? row.en.trim() : "";
+  const vn = typeof row.vn === "string" ? row.vn.trim() : "";
+  const ru = typeof row.ru === "string" ? row.ru.trim() : "";
+  const fallback = en || ru || vn;
+  if (!fallback) return undefined;
+  return { en: en || ru || vn, vn: vn || en || ru, ru: ru || en || vn };
+}
+
+function parseCookingStep(value: unknown): RecipeStep | null {
+  if (typeof value === "string") {
+    const lines = value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => asLocalized(line))
+      .filter((line): line is LocalizedText => Boolean(line));
+    return lines.length ? { items: lines } : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const title = asLocalized(row.title);
+  const photo = typeof row.photo === "string" && row.photo.trim() ? row.photo.trim() : undefined;
+  const rawItems = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions;
+  let items: LocalizedText[] = [];
+  if (typeof rawItems === "string") {
+    items = rawItems
+      .split(/\r?\n/)
+      .map((line) => asLocalized(line))
+      .filter((line): line is LocalizedText => Boolean(line));
+  } else if (Array.isArray(rawItems)) {
+    items = rawItems.map(asLocalized).filter((line): line is LocalizedText => Boolean(line));
+  }
+  if (!items.length && !title) {
+    const loc = asLocalized(row);
+    if (loc) items = [loc];
+  }
+  if (!items.length && !title && !photo) return null;
+  return { ...(title ? { title } : {}), ...(photo ? { photo } : {}), items };
+}
+
+function normalizeCookingStep(step: RecipeStep): RecipeStep | null {
+  const title = step.title ? asLocalized(step.title) : undefined;
+  const items = (step.items ?? []).map(asLocalized).filter((line): line is LocalizedText => Boolean(line));
+  const photo = step.photo?.trim() || undefined;
+  if (!title && !items.length && !photo) return null;
+  return { ...(title ? { title } : {}), ...(photo ? { photo } : {}), items };
+}
+
+/**
+ * Cooking technology for the VN/staff viewer. Canonical key is `steps`;
+ * ERP/admin payloads sometimes stored the same text as instructions/method.
+ */
+export function recipeCookingSteps(recipe: Recipe | (Recipe & Record<string, unknown>)): RecipeStep[] {
+  const extra = recipe as Recipe & Record<string, unknown>;
+  const direct = Array.isArray(recipe.steps)
+    ? recipe.steps.map(normalizeCookingStep).filter((step): step is RecipeStep => Boolean(step))
+    : [];
+  if (direct.length) return direct;
+  const alt = extra.instructions ?? extra.method ?? extra.cooking ?? extra.technology ?? extra.cookingSteps;
+  if (alt == null || alt === "") return [];
+  if (typeof alt === "string") {
+    const step = parseCookingStep(alt);
+    return step ? [step] : [];
+  }
+  if (Array.isArray(alt)) {
+    return alt.map(parseCookingStep).filter((step): step is RecipeStep => Boolean(step));
+  }
+  if (typeof alt === "object") {
+    const nested = (alt as Record<string, unknown>).steps ?? (alt as Record<string, unknown>).items;
+    if (Array.isArray(nested)) {
+      return nested.map(parseCookingStep).filter((step): step is RecipeStep => Boolean(step));
+    }
+    const step = parseCookingStep(alt);
+    return step ? [step] : [];
+  }
+  return [];
+}
+
 /** Built-in recipes from code, replaced or removed by admin-stored ones, plus admin-created recipes. */
 export function mergeRecipes(stored: StoredRecipes | null): Recipe[] {
   if (!stored) return RECIPES;
@@ -72,7 +164,7 @@ export function mergeRecipes(stored: StoredRecipes | null): Recipe[] {
   );
   const builtInIds = new Set(RECIPES.map((recipe) => recipe.id));
   const created = stored.recipes.filter((recipe) => !builtInIds.has(recipe.id) && !deleted.has(recipe.id));
-  return [...builtIn, ...created];
+  return [...builtIn, ...created].map((recipe) => ({ ...recipe, steps: recipeCookingSteps(recipe) }));
 }
 
 export type IngredientOverride = { amount?: number };
