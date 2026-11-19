@@ -7,7 +7,14 @@ import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } fr
 import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
+import { deliverPdfFile } from "@/lib/deliverPdfFile";
 import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDraft } from "@/lib/erp/recipeCard";
+import { makePrepSheetPdf } from "@/lib/erp/prepSheetPdf";
+import {
+  prepSheetFileName,
+  staffRecipeCardUrl,
+  type PrepPublishInput,
+} from "@/lib/erp/prepStaffRecipe";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
 import { DocTable, useDocuments } from "./docs";
@@ -97,20 +104,15 @@ export function PrepsPage() {
       {!all.length ? (
         <Empty
           title={T("Пока нет полуфабрикатов", "No semi-finished products yet", "Chưa có bán thành phẩm")}
-          text={T(
-            "Создайте полуфабрикат с рецептурой или загрузите рецептуры из приложения Recipes.",
-            "Create a semi-finished product with a recipe or import recipes from the Recipes app.",
-            "Tạo bán thành phẩm với công thức hoặc nhập công thức từ ứng dụng Recipes.",
+            text={T(
+            "Создайте полуфабрикат с рецептурой — при сохранении карточка появится в Recipes для сотрудников.",
+            "Create a semi-finished product with a recipe. Saving the card publishes it to Recipes for staff.",
+            "Tạo bán thành phẩm với công thức — khi lưu, thẻ sẽ hiện trên Recipes cho nhân viên.",
           )}
           action={
-            <>
-              <NavLink href="/erp/preps/recipe/new" className="erpBtn primary">
-                {T("Создать полуфабрикат", "Create semi-finished", "Tạo bán thành phẩm")}
-              </NavLink>
-              <NavLink href="/erp/service/import" className="erpBtn">
-                {T("Загрузить рецептуры", "Import recipes", "Nhập công thức")}
-              </NavLink>
-            </>
+            <NavLink href="/erp/preps/recipe/new" className="erpBtn primary">
+              {T("Создать полуфабрикат", "Create semi-finished", "Tạo bán thành phẩm")}
+            </NavLink>
           }
         />
       ) : (
@@ -411,6 +413,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [pieceWeight, setPieceWeight] = useState<number | null>(product.unit_weight_kg);
   const [composeOpen, setComposeOpen] = useState(true);
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const [appBusy, setAppBusy] = useState(false);
   const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
@@ -455,6 +459,35 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     { bottomEdge: 160 },
   );
 
+  const costs = form.lines.map((line) => (line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null));
+  const batchCost = compositionYieldCost(ctx, form.lines);
+
+  const publishInput = (): PrepPublishInput => ({
+    product: { ...product, name_en: nameEn, name_vn: nameVn, unit_weight_kg: pieceWeight },
+    kind: form.kind,
+    cardNo: form.card_no,
+    cardDate: form.card_date,
+    photo: form.photo,
+    yieldQty: form.yield_qty,
+    yieldPieces: unit === "pcs" ? form.yield_qty : form.yield_pieces,
+    shelfLifeDays: form.shelf_life_days,
+    storageConditions: form.storage_conditions,
+    version: viewed?.version,
+    lines: form.lines.map((line, index) => ({
+      product_id: line.product_id,
+      qty: line.qty,
+      net_qty: line.net_qty,
+      methods: line.methods,
+      parts: line.parts,
+      is_main: line.is_main,
+      raw_name: line.raw_name,
+      cost: costs[index]?.cost ?? null,
+    })),
+    catalog: state.products,
+    steps: form.steps,
+    batchCost,
+  });
+
   const saveNames = async (quiet = false) => {
     const nextEn = nameEn.trim();
     const nextVn = nameVn.trim();
@@ -471,14 +504,13 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
 
   const save = async () => {
     if (productDirty && !dirty) {
-      await saveNames();
-      return;
+      return Boolean(await saveNames());
     }
-    if (productDirty && !(await saveNames(true))) return;
+    if (productDirty && !(await saveNames(true))) return false;
     const partsError = form.lines.map((line) => compositionPartsMessage(state, line)).find(Boolean);
     if (partsError) {
       window.alert(partsError);
-      return;
+      return false;
     }
     const payload: Record<string, unknown> = {
       id: viewed?.id,
@@ -506,6 +538,37 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       setViewId(result.id);
       setEditing(true);
       setBaseline(JSON.stringify(form));
+      return true;
+    }
+    return false;
+  };
+
+  const savePdf = async () => {
+    setSheetBusy(true);
+    try {
+      const input = publishInput();
+      const blob = await makePrepSheetPdf(input);
+      await deliverPdfFile(blob, prepSheetFileName(input), { title: nameEn.trim() || "Tech card" });
+    } catch {
+      window.alert(T("Не удалось сохранить PDF", "Could not save the PDF", "Không lưu được PDF"));
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
+  const openInApp = async () => {
+    const href = staffRecipeCardUrl(product.id);
+    const needsSave = dirty || productDirty || viewed?.status === "draft" || !viewed;
+    if (!needsSave) {
+      window.location.assign(href);
+      return;
+    }
+    setAppBusy(true);
+    try {
+      if (!(await save())) return;
+      window.location.assign(href);
+    } finally {
+      setAppBusy(false);
     }
   };
 
@@ -519,8 +582,6 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       setEditing(false);
   };
 
-  const costs = form.lines.map((line) => (line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null));
-  const batchCost = compositionYieldCost(ctx, form.lines);
   const unlinked = form.lines.filter((line) => !line.product_id).length;
   const readOnly = !editing;
   const net = netWeight(state, form.lines);
@@ -849,6 +910,33 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           </button>
         ) : null}
       </div>
+      <div className="erpActions">
+        <button
+          type="button"
+          className="erpBtn"
+          disabled={sheetBusy || appBusy}
+          onClick={() => void savePdf()}
+          data-testid="prep-pdf"
+        >
+          {sheetBusy ? savingText() : T("Сохранить PDF", "Save PDF", "Lưu PDF")}
+        </button>
+        <button
+          type="button"
+          className="erpBtn primary"
+          disabled={sheetBusy || appBusy || busy || !nameEn.trim()}
+          onClick={() => void openInApp()}
+          data-testid="prep-get-in-app"
+        >
+          {appBusy ? savingText() : "GET IN APP"}
+        </button>
+      </div>
+      <p className="erpHint">
+        {T(
+          "PDF — оформленный лист техкарты. GET IN APP открывает эту карточку в приложении Recipes для сотрудников (https://gastrofood.vn/recipes/…).",
+          "PDF is a formatted tech-card sheet. GET IN APP opens this card in the staff Recipes app (https://gastrofood.vn/recipes/…).",
+          "PDF là phiếu kỹ thuật. GET IN APP mở thẻ này trong ứng dụng Recipes cho nhân viên (https://gastrofood.vn/recipes/…).",
+        )}
+      </p>
       {viewed?.status === "draft" ? (
         <p className="erpHint">
           {T(

@@ -102,7 +102,16 @@ import {
   readErpHostGateConfig,
   type ErpHostGateConfig,
 } from "../../src/lib/erp/hostGate";
-import { movedErpPagePath, publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
+import { CANONICAL_ERP_ORIGIN, movedErpPagePath, publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
+import { findRecipeByCard, recipeCardFromPathname, staffRecipePath } from "../../src/lib/recipes/cardUrl";
+import {
+  staffRecipeCardUrl,
+  staffRecipeFromPrep,
+  staffRecipeId,
+  upsertStaffRecipe,
+  type PrepPublishInput,
+} from "../../src/lib/erp/prepStaffRecipe";
+import { makePrepSheetPdf, setPrepSheetPdfFonts } from "../../src/lib/erp/prepSheetPdf";
 import { processingComposition } from "../../src/lib/erp/processing";
 import {
   clampPage,
@@ -274,6 +283,10 @@ async function main() {
     }
     assert.equal(gate("erp.example.test", "/recipes", "GET").action, "allow");
     assert.equal(gate("erp.example.test", "/recipes/admin", "GET").action, "allow");
+    assert.equal(
+      gate("erp.example.test", "/recipes/erp-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", "GET").action,
+      "allow",
+    );
     assert.equal(gate("erp.example.test", "/api/recipes/overrides", "GET").action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/recipes", "POST").action, "allow");
     assert.equal(gate("erp.example.test", "/api/recipes-admin/import", "POST").action, "allow");
@@ -392,6 +405,7 @@ async function main() {
     assert.equal(gate("gastrofood.vn", "/erp", "GET", cfg).action, "allow");
     assert.equal(gate("www.gastrofood.vn", "/erp", "GET", cfg).action, "allow");
     assert.equal(gate("gastrofood.vn", "/erp/stock", "GET", cfg).action, "allow");
+    assert.equal(gate("gastrofood.vn", "/recipes/erp-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", "GET", cfg).action, "allow");
     assert.equal(gate("www.gastrofood.vn", "/erp/menu?q=1", "GET", cfg).action, "allow");
     const oldStock = gate("www.gastrofood.vn", "/stock/receipts?x=1", "GET", cfg);
     assert.equal(oldStock.action, "redirect");
@@ -490,6 +504,98 @@ async function main() {
     assert.deepEqual(bounds, { from: 1, to: 100, current: 0, pages: 2 });
     assert.deepEqual(pageBounds(131, 0, 25), { from: 1, to: 25, current: 0, pages: 6 });
     assert.deepEqual(pageBounds(131, 5, 25), { from: 126, to: 131, current: 5, pages: 6 });
+  });
+
+  await test("ERP prep publishes one-way to VN recipes JSON; existing staff cards stay out of ERP", async () => {
+    const productId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+    const beefId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
+    const input: PrepPublishInput = {
+      product: { id: productId, name_en: "Beef mix", name_vn: "Thịt bò xay", base_unit: "kg", unit_weight_kg: 0.08 },
+      kind: "prep",
+      cardNo: "GF-PR-088",
+      cardDate: "2026-11-19",
+      photo: "https://example.test/erp-photos/preps/hero.jpg",
+      yieldQty: 1.2,
+      yieldPieces: 10,
+      shelfLifeDays: 3,
+      storageConditions: "0…4 °C",
+      version: 1,
+      lines: [
+        {
+          product_id: beefId,
+          qty: 1,
+          net_qty: 0.87,
+          methods: ["clean"],
+          parts: [
+            { name: "mince", grams: 270 },
+            { name: "cubes", grams: 600 },
+          ],
+          is_main: true,
+        },
+        { product_id: null, qty: null, raw_name: null, parts: [] },
+      ],
+      catalog: [
+        { id: productId, name_en: "Beef mix", name_vn: "Thịt bò xay", base_unit: "kg" },
+        { id: beefId, name_en: "Beef chuck", name_vn: "Thịt bò vai", base_unit: "kg", loss_clean_pct: 13 },
+      ],
+      steps: [{ titleEn: "Mix", titleVn: "Trộn", photo: "", itemsEn: "Add beef\nStir", itemsVn: "Thêm thịt\nKhuấy" }],
+      batchCost: 120000,
+    };
+    const mapped = staffRecipeFromPrep(input);
+    assert.equal(mapped.id, staffRecipeId(productId));
+    assert.equal(mapped.erpProductId, productId);
+    assert.equal(mapped.kind, "prep");
+    assert.equal(mapped.name.en, "Beef mix");
+    assert.equal(mapped.name.vn, "Thịt bò xay");
+    assert.equal(mapped.yield.amount, 1200);
+    assert.equal(mapped.yield.unit, "g");
+    assert.equal(mapped.ingredients.length, 1, "cuts are notes, not extra SKUs");
+    assert.equal(mapped.ingredients[0].amount, 870);
+    assert.equal(mapped.ingredients[0].unit, "g");
+    assert.equal(mapped.ingredients[0].main, true);
+    assert.match(mapped.ingredients[0].note?.en ?? "", /mince 270 g/);
+    assert.equal(mapped.steps.length, 1);
+    assert.equal(mapped.steps[0].items[1].vn, "Khuấy");
+    assert.equal(mapped.meta?.cardNo, "GF-PR-088");
+    assert.equal(mapped.meta?.date, "19.11.2026");
+    assert.equal(staffRecipeCardUrl(productId), `${CANONICAL_ERP_ORIGIN}/recipes/${encodeURIComponent(staffRecipeId(productId))}`);
+    assert.ok(!staffRecipeCardUrl(productId).includes("gastrotruck.org"));
+    assert.equal(recipeCardFromPathname(staffRecipePath(mapped.id)), mapped.id);
+    assert.equal(recipeCardFromPathname("/recipes/admin"), null);
+
+    const sausage = RECIPES.find((recipe) => recipe.id === "chicken-sausage");
+    assert.ok(sausage);
+    const first = upsertStaffRecipe({ recipes: [sausage!], deleted: [] }, mapped);
+    assert.equal(first.replaced, false);
+    assert.equal(first.id, mapped.id);
+    assert.equal(first.stored.recipes.find((recipe) => recipe.id === "chicken-sausage")?.name.en, sausage!.name.en);
+    assert.ok(!first.stored.recipes.some((recipe) => recipe.id === "chicken-sausage" && recipe.erpProductId));
+    const updated = staffRecipeFromPrep({ ...input, yieldQty: 1.3, product: { ...input.product, name_en: "Beef mix v2" } });
+    const second = upsertStaffRecipe(first.stored, updated);
+    assert.equal(second.replaced, true);
+    assert.equal(second.id, mapped.id);
+    assert.equal(second.stored.recipes.filter((recipe) => recipe.erpProductId === productId).length, 1);
+    assert.equal(second.stored.recipes.find((recipe) => recipe.erpProductId === productId)?.name.en, "Beef mix v2");
+    assert.equal(second.stored.recipes.find((recipe) => recipe.id === "chicken-sausage")?.ingredients.length, sausage!.ingredients.length);
+    assert.equal(findRecipeByCard(second.stored.recipes, "GF-PR-088")?.id, mapped.id);
+    assert.equal(findRecipeByCard(second.stored.recipes, productId)?.id, mapped.id);
+    assert.equal(findRecipeByCard(second.stored.recipes, "chicken-sausage")?.id, "chicken-sausage");
+
+    const fontsDir = path.join(process.cwd(), "public", "fonts");
+    const toAb = (buf: Buffer) => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    setPrepSheetPdfFonts({
+      regular: toAb(await readFile(path.join(fontsDir, "NotoSans-Regular.ttf"))),
+      bold: toAb(await readFile(path.join(fontsDir, "NotoSans-Bold.ttf"))),
+    });
+    try {
+      const blob = await makePrepSheetPdf(input);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      assert.equal(new TextDecoder().decode(bytes.slice(0, 5)), "%PDF-");
+      const pdf = await PDFDocument.load(bytes);
+      assert.ok(pdf.getPageCount() >= 1);
+    } finally {
+      setPrepSheetPdfFonts(null);
+    }
   });
 
   db = await createTestDb();

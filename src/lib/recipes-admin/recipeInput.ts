@@ -49,18 +49,24 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value.slice(0, MAX_ITEMS) : [];
 }
 
-/** Only photos bundled with the site or uploaded to our Supabase bucket. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Only photos bundled with the site or uploaded to our Supabase buckets (recipes + ERP). */
 function photo(value: unknown): string | undefined {
   if (typeof value !== "string" || !value) return undefined;
   if (value.startsWith("/") && !value.startsWith("//")) return value;
   const base = getSupabaseBackendUrl();
-  return base && value.startsWith(`${base}/storage/v1/object/public/recipes-photos/`) ? value : undefined;
+  if (!base || !value.startsWith(`${base}/storage/v1/object/public/`)) return undefined;
+  if (value.startsWith(`${base}/storage/v1/object/public/recipes-photos/`)) return value;
+  if (value.startsWith(`${base}/storage/v1/object/public/erp-photos/`)) return value;
+  return undefined;
 }
 
 /** Validates a recipe sent from the admin form; returns null when required parts are missing. */
 export function sanitizeRecipe(input: unknown): Recipe | null {
   const source = (input ?? {}) as Record<string, unknown>;
   const id = typeof source.id === "string" ? slugify(source.id) : "";
+  const erpProductId = typeof source.erpProductId === "string" && UUID.test(source.erpProductId) ? source.erpProductId : undefined;
   const kind = KINDS.includes(source.kind as RecipeKind) ? (source.kind as RecipeKind) : null;
   const name = localized(source.name);
   const yieldSource = (source.yield ?? {}) as Record<string, unknown>;
@@ -110,6 +116,7 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
   return {
     id,
     kind,
+    ...(erpProductId ? { erpProductId } : {}),
     name,
     ...(meta.cardNo || meta.date || meta.revision ? { meta } : {}),
     ...(photo(source.photo) ? { photo: photo(source.photo) } : {}),

@@ -36,11 +36,13 @@ export async function POST(request: Request) {
     }
     const recipe = sanitizeRecipe(body.recipe);
     if (!recipe) return NextResponse.json({ error: "invalid" }, { status: 400 });
+    const previous = stored.recipes.find((item) => item.id === recipe.id) ?? published;
+    const saved: Recipe = previous?.erpProductId && !recipe.erpProductId ? { ...recipe, erpProductId: previous.erpProductId } : recipe;
 
-    stored.recipes = [...stored.recipes.filter((item) => item.id !== recipe.id), recipe];
-    stored.deleted = stored.deleted.filter((id) => id !== recipe.id);
+    stored.recipes = [...stored.recipes.filter((item) => item.id !== saved.id), saved];
+    stored.deleted = stored.deleted.filter((id) => id !== saved.id);
     await writeStoredRecipes(stored);
-    await dropOverrides(recipe.id);
+    await dropOverrides(saved.id);
     return NextResponse.json({ stored, overrides: await readOverrides() });
   } catch (error) {
     console.error("[recipes-admin] save recipe", error);

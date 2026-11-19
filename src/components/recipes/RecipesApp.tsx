@@ -17,6 +17,7 @@ import {
 } from "@/data/recipes";
 import { getAssetUrl } from "@/lib/appVersion";
 import { translate } from "@/lib/i18n";
+import { findRecipeByCard, recipeCardFromLocation, writeRecipeCardToUrl } from "@/lib/recipes/cardUrl";
 import { toStaffAppLang } from "@/lib/staffInventoryI18n";
 import { useTranslation } from "@/lib/useTranslation";
 import "@/components/staff/staff-inventory.css";
@@ -90,31 +91,19 @@ function secondaryLang(lang: RecipeLang): RecipeLang {
   return lang === "vn" ? "en" : "vn";
 }
 
-function readRecipeFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("r");
-}
-
-function writeRecipeToUrl(id: string | null) {
-  const url = new URL(window.location.href);
-  if (id) url.searchParams.set("r", id);
-  else url.searchParams.delete("r");
-  window.history.replaceState(null, "", url);
-}
-
-export function RecipesApp() {
+export function RecipesApp({ initialCard = null }: { initialCard?: string | null }) {
   const { lang } = useTranslation();
   const recipeLang = toStaffAppLang(lang);
   const t = useCallback((key: string) => translate(recipeLang, key), [recipeLang]);
   const [kind, setKind] = useState<RecipeKind>("dish");
   const [search, setSearch] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialCard);
   const [hydrated, setHydrated] = useState(false);
   const [overrides, setOverrides] = useState<RecipeOverrides | null>(null);
   const [stored, setStored] = useState<StoredRecipes | null>(null);
 
   useEffect(() => {
-    setOpenId(readRecipeFromUrl());
+    setOpenId(recipeCardFromLocation() ?? initialCard);
     const fallback = window.setTimeout(() => setHydrated(true), 4000);
 
     fetch("/api/recipes/overrides", { cache: "no-store" })
@@ -128,7 +117,7 @@ export function RecipesApp() {
         window.clearTimeout(fallback);
         setHydrated(true);
       });
-  }, []);
+  }, [initialCard]);
 
   const recipes = useMemo(
     () =>
@@ -138,7 +127,8 @@ export function RecipesApp() {
     [stored, overrides],
   );
 
-  const openedKind = recipes.find((recipe) => recipe.id === openId)?.kind;
+  const opened = openId ? findRecipeByCard(recipes, openId) ?? null : null;
+  const openedKind = opened?.kind;
   useEffect(() => {
     if (openedKind) setKind(openedKind);
   }, [openedKind]);
@@ -155,11 +145,9 @@ export function RecipesApp() {
 
   const openRecipe = (recipe: Recipe | null) => {
     setOpenId(recipe?.id ?? null);
-    writeRecipeToUrl(recipe?.id ?? null);
+    writeRecipeCardToUrl(recipe?.id ?? null);
     window.scrollTo({ top: 0 });
   };
-
-  const opened = recipes.find((recipe) => recipe.id === openId) ?? null;
 
   if (!hydrated) {
     return (

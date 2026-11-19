@@ -1,10 +1,8 @@
 import { after } from "next/server";
-import { mergeRecipes } from "@/data/recipes";
-import { erpLocalMode } from "@/lib/erp/localDb";
+import { publishPrepStateToStaff, publishProductPrepToStaff } from "@/lib/erp/publishPrepToStaff";
 import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
 import type { ErpAction } from "@/lib/erp/types";
-import { readStoredRecipes } from "@/lib/recipes-admin/storage";
 import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalogSource";
 
 export const runtime = "nodejs";
@@ -72,9 +70,17 @@ export async function POST(request: Request) {
 
     switch (a.action) {
       case "saveProduct": {
-        const id = await rpc("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
+        const id = await rpc<string>("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
         mirrorStaffLater();
-        return timing.json({ id, patch: await fresh(["products", "packs", "productPacks"]) });
+        const patch = await fresh(["products", "packs", "productPacks", "recipes"]);
+        const product = patch.products?.find((row) => row.id === id);
+        if (product && (product.type === "semi_finished" || product.type === "finished")) {
+          await publishProductPrepToStaff(id, { recipes: patch.recipes ?? [], products: patch.products ?? [] });
+        }
+        return timing.json({
+          id,
+          patch: { products: patch.products, packs: patch.packs, productPacks: patch.productPacks },
+        });
       }
       case "savePack": {
         const id = await rpc("erp_save_pack", { p: object(a.pack, "pack"), p_actor: actor });
@@ -165,8 +171,13 @@ export async function POST(request: Request) {
         await rpc("erp_delete_draft", { p_id: uuid(a.id), p_actor: actor });
         return timing.json({ ok: true, patch: {} });
       case "saveRecipe": {
-        const id = await rpc("erp_save_recipe", { p: object(a.recipe, "recipe"), p_actor: actor });
-        return timing.json({ id, patch: await fresh(["recipes"]) });
+        const id = await rpc<string>("erp_save_recipe", { p: object(a.recipe, "recipe"), p_actor: actor });
+        const data = await fresh(["recipes", "products"]);
+        const recipesCardId = await publishPrepStateToStaff(id, {
+          recipes: data.recipes ?? [],
+          products: data.products ?? [],
+        });
+        return timing.json({ id, recipesCardId, patch: { recipes: data.recipes } });
       }
       case "activateRecipe":
         await rpc("erp_activate_recipe", { p_id: uuid(a.id), p_actor: actor });
@@ -189,10 +200,8 @@ export async function POST(request: Request) {
         const result = await mergeOldStaffCatalog(a.apply === true, actor);
         return timing.json(a.apply === true ? result : { ...result, patch: {} });
       }
-      case "importRecipes": {
-        const recipes = mergeRecipes(erpLocalMode() ? null : await readStoredRecipes());
-        return timing.json({ result: await rpc("erp_import_recipes", { p_recipes: recipes, p_actor: actor }) });
-      }
+      case "importRecipes":
+        throw new ErpHttpError(400, "ERP_RECIPES_IMPORT_DISABLED");
       case "previewCount":
         return timing.json({ preview: await rpc("erp_count_preview", { p: object(a.preview, "preview") }) });
       case "refreshCount": {

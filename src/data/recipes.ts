@@ -40,6 +40,8 @@ export type RecipeStorageRule = {
 export type Recipe = {
   id: string;
   kind: RecipeKind;
+  /** Set when this staff card was published from an ERP prep. Existing catalog cards omit it. */
+  erpProductId?: string;
   name: LocalizedText;
   /** Card number, creation date and revision printed in the card header. */
   meta?: { cardNo: string; date: string; revision: string };

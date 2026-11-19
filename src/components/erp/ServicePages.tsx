@@ -334,7 +334,6 @@ function SpeedCard() {
   );
 }
 
-type ImportResult = Record<string, number>;
 
 const FIELD_NAMES = (): Record<string, string> => ({
   name: T("Название", "Name", "Tên"),
@@ -516,55 +515,16 @@ export function StaffImportCard({ compact }: { compact?: boolean }) {
 }
 
 function RecipesImportCard() {
-  const { state, act, busy } = useErp();
-  const [result, setResult] = useState<ImportResult | null>(null);
-  if (!state) return null;
   return (
     <section className="erpCard">
-      <h2>{T("Загрузить рецептуры полуфабрикатов", "Import semi-finished recipes", "Nhập công thức bán thành phẩm")}</h2>
+      <h2>{T("Рецептуры полуфабрикатов", "Semi-finished recipes", "Công thức bán thành phẩm")}</h2>
       <p className="erpHint">
         {T(
-          "Рецептуры из приложения Recipes появятся как черновики. Ингредиенты, которые не удалось сопоставить с продуктами, попадут в «Проверку данных». Действующие рецептуры не меняются.",
-          "Recipes from the Recipes app arrive as drafts. Ingredients that could not be matched go to “Data check”. Active recipes are not changed.",
-          "Công thức từ Recipes sẽ là bản nháp. Nguyên liệu chưa khớp sẽ ở mục Kiểm tra dữ liệu.",
+          "То, что уже есть в приложении Recipes, в ERP не загружается. Карточка, которую вы сохраняете в полуфабрикатах, сама появляется в Recipes для сотрудников.",
+          "Recipes already in the staff app are not imported into ERP. A prep you save in ERP is published to Recipes for staff.",
+          "Công thức đã có trên Recipes không được nhập vào ERP. Thẻ bạn lưu trong bán thành phẩm sẽ hiện trên Recipes cho nhân viên.",
         )}
       </p>
-      <div className="erpActions">
-        <button
-          type="button"
-          className="erpBtn"
-          disabled={busy || !state.products.length}
-          onClick={async () => setResult((await act<{ result: ImportResult }>({ action: "importRecipes" }, false))?.result ?? null)}
-        >
-          {T("Загрузить рецептуры", "Import recipes", "Nhập công thức")}
-        </button>
-      </div>
-      {!state.products.length ? <p className="erpHint">{T("Сначала загрузите продукты из Staff — рецептуры ссылаются на них.", "Import products from Staff first — recipes refer to them.", "Nhập sản phẩm trước.")}</p> : null}
-      {result ? (
-        <div className="erpNotice ok">
-          <strong>{T("Готово", "Done", "Xong")}</strong>
-          <ul>
-            <li>
-              {T("Новых рецептур", "New recipes", "Công thức mới")}: {result.created ?? 0}
-            </li>
-            <li>
-              {T("Обновлено черновиков", "Drafts refreshed", "Nháp đã làm mới")}: {result.refreshed ?? 0}
-            </li>
-            <li>
-              {T("Оставлено без изменений (уже действуют)", "Kept (already active)", "Giữ nguyên")}: {result.kept ?? 0}
-            </li>
-            <li>
-              {T("Ингредиентов нужно сопоставить", "Ingredients to link", "Nguyên liệu cần liên kết")}: {result.unresolved ?? 0}
-            </li>
-          </ul>
-          <p>
-            {T("Следующий шаг", "Next step", "Bước tiếp theo")}:{" "}
-            <NavLink href={result.unresolved ? "/erp/service/review" : "/erp/menu/preps"} className="erpLink">
-              {result.unresolved ? T("сопоставьте ингредиенты", "link the ingredients", "liên kết nguyên liệu") : T("проверьте рецептуры и сделайте их действующими", "review the recipes and make them active", "kiểm tra và áp dụng công thức")}
-            </NavLink>
-          </p>
-        </div>
-      ) : null}
     </section>
   );
 }

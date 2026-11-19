@@ -97,6 +97,11 @@ export function errorText(code: string, detail?: string): string {
       "Có nguyên liệu chưa liên kết",
     ),
     ERP_EMPTY_RECIPE: T("В рецептуре нет ингредиентов", "The recipe has no ingredients", "Công thức chưa có nguyên liệu"),
+    ERP_RECIPES_IMPORT_DISABLED: T(
+      "Рецептуры из приложения Recipes в ERP не загружаются. Сохраните карточку полуфабриката — она появится в Recipes.",
+      "Staff Recipes are not imported into ERP. Save a prep card and it is published to Recipes.",
+      "Công thức trên Recipes không được nhập vào ERP. Lưu thẻ bán thành phẩm — nó sẽ hiện trên Recipes.",
+    ),
     ERP_HAS_STOCK: T(
       "На складе ещё есть остаток — сначала переместите или спишите его",
       "There is stock left — move or write it off first",
