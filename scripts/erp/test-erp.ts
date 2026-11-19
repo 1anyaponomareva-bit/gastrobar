@@ -99,7 +99,7 @@ import {
 } from "../../src/lib/erp/vat";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
 import { countFromDocument, nowDateTimeLocal } from "../../src/lib/erp/inventoryUi";
-import type { ErpCountMove, ErpStockRow } from "../../src/lib/erp/types";
+import type { ErpCountMove, ErpProduct, ErpRecipe, ErpStockRow } from "../../src/lib/erp/types";
 import { makeSupplierOrderPdfBlob } from "../../src/lib/staffInventoryPdf";
 import { supplierOrderRows } from "../../src/lib/staffOrderRows";
 import { parseRecipeInstructions, serializeRecipeInstructions } from "../../src/lib/erp/recipeCard";
@@ -721,7 +721,7 @@ async function main() {
       shelf_life_days: null,
       storage_conditions: null,
       photo: "https://example.test/erp-photos/preps/mix.jpg",
-    } as never;
+    } as ErpProduct;
     const cards = staffCardsFromErpPreps([mixProduct], []);
     assert.equal(cards.length, 1);
     assert.equal(cards[0].id, staffRecipeId(mixId));
@@ -744,16 +744,19 @@ async function main() {
       card_no: "GF-CHKN-MIX",
       card_date: "2026-11-19",
       lines: [{ product_id: beefId, qty: 1, methods: [], parts: [], is_main: true }],
-    } as never;
-    const draftMix = { ...activeMix, id: "recipe-mix-draft", status: "draft", version: 2, yield_qty: 9 };
+    } as unknown as ErpRecipe;
+    const draftMix: ErpRecipe = { ...activeMix, id: "recipe-mix-draft", status: "draft", version: 2, yield_qty: 9 };
     assert.equal(publishedPrepRecipe([draftMix, activeMix], mixId)?.id, "recipe-mix");
     const withTech = staffCardsFromErpPreps(
-      [mixProduct, { id: beefId, type: "ingredient", name_en: "Beef chuck", name_vn: "Thịt bò vai", base_unit: "kg", archived_at: null } as never],
+      [
+        mixProduct,
+        { id: beefId, type: "ingredient", name_en: "Beef chuck", name_vn: "Thịt bò vai", base_unit: "kg", archived_at: null } as ErpProduct,
+      ],
       [draftMix, activeMix],
     );
     assert.equal(withTech[0].yield.amount, 1000);
     assert.equal(withTech[0].ingredients[0].name.en, "Beef chuck");
-    const archivedOut = staffCardsFromErpPreps([{ ...mixProduct, archived_at: "2026-11-01" } as never], []);
+    const archivedOut = staffCardsFromErpPreps([{ ...mixProduct, archived_at: "2026-11-01" }], []);
     assert.equal(archivedOut.length, 0);
 
     const fontsDir = path.join(process.cwd(), "public", "fonts");

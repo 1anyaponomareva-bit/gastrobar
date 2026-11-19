@@ -112,6 +112,7 @@ export type ErpProduct = Archivable & LossPcts & {
   staff_item_no?: string | null;
   staff_hidden?: boolean;
   staff_category?: string | null;
+  photo?: string | null;
 };
 
 export type ErpStockRow = {
