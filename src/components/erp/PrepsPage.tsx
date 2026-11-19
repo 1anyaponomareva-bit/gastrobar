@@ -4,7 +4,18 @@ import { useErpRouter } from "./erpHref";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
-import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
+import {
+  buildCostContext,
+  compositionYieldCost,
+  costLine,
+  liveCatalogName,
+  productTitle,
+  recipeYieldUnitCost,
+  stockCostContext,
+  type ErpUnit,
+} from "@/lib/erp/costing";
+import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
+import { cyclicComponentIds } from "@/lib/erp/recipeBom";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
 import { downloadPdfFile } from "@/lib/deliverPdfFile";
@@ -145,7 +156,7 @@ export function PrepsPage() {
                     const recipes = state.recipes.filter((r) => r.product_id === p.id);
                     const active = recipes.find((r) => r.status === "active");
                     const draft = recipes.find((r) => r.status === "draft");
-                    const cost = active ? plannedUnitCost(ctx, p.id) : null;
+                    const cost = active ? recipeYieldUnitCost(ctx, active) : null;
                     return (
                       <tr key={p.id}>
                         <td className="main">
@@ -415,7 +426,11 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [sheetBusy, setSheetBusy] = useState(false);
   const [appBusy, setAppBusy] = useState(false);
-  const ctx = useMemo(() => buildCostContext(state.products, state.recipes), [state]);
+  const ctx = useMemo(() => stockCostContext(buildCostContext(state.products, state.recipes)), [state]);
+  const blockedComponents = useMemo(
+    () => cyclicComponentIds(state.recipes, product.id, state.products.map((item) => item.id)),
+    [state.recipes, state.products, product.id],
+  );
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
   const namesDirty = nameEn.trim() !== product.name_en.trim() || nameVn.trim() !== (product.name_vn ?? "").trim();
@@ -727,6 +742,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               <tbody>
                 {form.lines.map((line, index) => {
                   const lineUnit = unitOf(state, line.product_id);
+                  const lineProduct = line.product_id ? state.products.find((item) => item.id === line.product_id) : undefined;
+                  const prepComponent = isCompositionPrepType(lineProduct?.type);
                   const cost = costs[index];
                   const cuts = cutsOpen.has(index);
                   return (
@@ -752,6 +769,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                               <IngredientPicker
                                 state={state}
                                 value={line.product_id}
+                                excludeIds={blockedComponents}
                                 onChange={(productId) => {
                                   const base = unitOf(state, productId);
                                   setLine(index, {
@@ -795,7 +813,14 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                           {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
                         </td>
                         <td className="num erpComposeActs">
-                          <LinePartsButton parts={line.parts} unit={lineUnit} open={cuts} disabled={readOnly} onToggle={() => toggleCuts(index)} />
+                          <LinePartsButton
+                            parts={line.parts}
+                            unit={lineUnit}
+                            open={cuts}
+                            disabled={readOnly}
+                            productType={lineProduct?.type}
+                            onToggle={() => toggleCuts(index)}
+                          />
                           {!readOnly ? (
                             <button
                               type="button"
@@ -811,15 +836,17 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                           ) : null}
                         </td>
                       </tr>
-                      <LinePartsPlaque
-                        colSpan={6}
-                        open={cuts}
-                        parts={line.parts}
-                        parentSmall={netToSmallUnit(netOf(state, line))}
-                        unit={lineUnit}
-                        disabled={readOnly}
-                        onChange={(parts) => setLineParts(index, parts)}
-                      />
+                      {prepComponent ? null : (
+                        <LinePartsPlaque
+                          colSpan={6}
+                          open={cuts}
+                          parts={line.parts}
+                          parentSmall={netToSmallUnit(netOf(state, line))}
+                          unit={lineUnit}
+                          disabled={readOnly}
+                          onChange={(parts) => setLineParts(index, parts)}
+                        />
+                      )}
                     </Fragment>
                   );
                 })}
@@ -835,7 +862,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         ) : (
           <Empty
             title={T("Состав пока пуст", "No ingredients yet", "Chưa có nguyên liệu")}
-            text={T("Добавьте продукты, из которых готовится полуфабрикат.", "Add the products this is made from.", "Thêm sản phẩm dùng để làm.")}
+            text={T("Добавьте сырьё или другие полуфабрикаты, из которых готовится эта карта.", "Add ingredients or other preps this is made from.", "Thêm nguyên liệu hoặc bán thành phẩm dùng để làm.")}
           />
         )}
         {!readOnly ? (

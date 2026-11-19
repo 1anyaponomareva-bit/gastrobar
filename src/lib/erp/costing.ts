@@ -302,6 +302,21 @@ export function compositionYieldCost(
   return sum;
 }
 
+/** Value each listed component as a warehouse SKU (nested preps are not exploded). */
+export function stockCostContext(ctx: CostContext): CostContext {
+  return { ...ctx, explodeRecipes: false };
+}
+
+/**
+ * Planned cost of one output unit from this card: sum of direct component SKU costs / yield.
+ * Nested preps use their stock/reference price, not a second explosion of their own recipe.
+ */
+export function recipeYieldUnitCost(ctx: CostContext, recipe: CostRecipe): number | null {
+  if (!recipe.yield_qty) return null;
+  const total = compositionYieldCost(stockCostContext(ctx), recipe.lines);
+  return total === null ? null : total / recipe.yield_qty;
+}
+
 export type CostSummary = {
   lines: CostLine[];
   knownFood: number;

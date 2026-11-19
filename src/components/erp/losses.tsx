@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LOSS_METHODS, lossPct, netFactor, roundQty, usableWeight, type LossMethod, type LossPcts } from "@/lib/erp/costing";
+import { compositionLineAllowsProcess } from "@/lib/erp/ingredientSearch";
 import type { ErpProduct, ErpState } from "@/lib/erp/types";
 import { numText, qtyText, QtyInput, T } from "./ui";
 
@@ -17,8 +18,11 @@ export const methodLabel = (method: LossMethod) =>
 
 export type LossLine = { product_id: string | null; qty: number | null; methods?: LossMethod[]; net_qty?: number | null };
 
-/** Losses only apply to weighed products. */
+/** Losses only apply to weighed raw ingredients, not nested preps. */
 export const hasLosses = (product: ErpProduct | undefined) => product?.base_unit === "kg" || product?.base_unit === "l";
+
+export const canProcessProduct = (product: ErpProduct | undefined) =>
+  Boolean(product && hasLosses(product) && compositionLineAllowsProcess(product.type));
 
 const productOf = (state: ErpState, id: string | null) => (id ? state.products.find((p) => p.id === id) : undefined);
 
@@ -68,8 +72,8 @@ export function MethodPicker({
   const [dropUp, setDropUp] = useState(false);
   const product = productOf(state, line.product_id);
   const chosen = line.methods ?? [];
-  const options = product && hasLosses(product) ? lossOptions(product, chosen) : [];
-  const canPick = Boolean(product && hasLosses(product) && options.length && !disabled);
+  const options = canProcessProduct(product) ? lossOptions(product, chosen) : [];
+  const canPick = Boolean(canProcessProduct(product) && options.length && !disabled);
 
   useEffect(() => {
     if (!open) return;
@@ -106,7 +110,7 @@ export function MethodPicker({
     if (!canPick && open) setOpen(false);
   }, [canPick, open]);
 
-  if (!product || !hasLosses(product)) return <span className="erpMuted">—</span>;
+  if (!product || !canProcessProduct(product)) return <span className="erpMuted">—</span>;
   if (disabled) return <span>{methodsText(chosen)}</span>;
   if (!options.length) {
     return (

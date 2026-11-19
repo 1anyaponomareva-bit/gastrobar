@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { plannedUnitCost, productTitle } from "@/lib/erp/costing";
+import { productTitle, recipeYieldUnitCost } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
@@ -48,7 +48,7 @@ function MenuPrepsTable() {
       return {
         ...p,
         yieldText,
-        cost: active ? plannedUnitCost(ctx, p.id) : null,
+        cost: active ? recipeYieldUnitCost(ctx, active) : null,
         recipeStatus: !active ? (draft ? T("черновик", "draft", "nháp") : T("нет рецептуры", "no recipe", "chưa có công thức")) : "",
       };
     });

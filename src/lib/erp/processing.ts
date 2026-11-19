@@ -39,7 +39,8 @@ function recipeQtyLines(recipe: ProcessingRecipe): QtyLine[] {
 
 /**
  * Current tech-card composition for a processing document: active prep recipe, else dish
- * lines. Names are not stored — the UI reads live catalog names by product id.
+ * lines. One card level only — nested preps stay as their own product ids (warehouse SKUs).
+ * Names are not stored — the UI reads live catalog names by product id.
  */
 export function processingComposition(input: {
   recipes: readonly ProcessingRecipe[];

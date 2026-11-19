@@ -90,6 +90,11 @@ export function errorText(code: string, detail?: string): string {
     ERP_WAREHOUSE_ARCHIVED: T("Склад в архиве", "The location is archived", "Kho đã lưu trữ"),
     ERP_SAME_WAREHOUSE: T("Склады «откуда» и «куда» должны отличаться", "From and to must be different", "Kho đi và kho đến phải khác nhau"),
     ERP_RECIPE_CYCLE: T("Рецептура не может содержать саму себя", "A recipe cannot contain itself", "Công thức không thể chứa chính nó"),
+    ERP_UNIT_MISMATCH: T(
+      "Единица строки не совпадает с единицей продукта",
+      "This line uses a unit that does not match the product",
+      "Đơn vị dòng không khớp với sản phẩm",
+    ),
     ERP_RECIPE_LOCKED: T("Изменять можно только черновик рецептуры", "Only a draft recipe can be changed", "Chỉ có thể sửa bản nháp"),
     ERP_RECIPE_UNRESOLVED: T(
       "Есть ингредиенты без привязки к продукту",

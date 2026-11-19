@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  canCutCompositionLine,
   canCutParts,
   cutsPlaqueOpen,
   filledParts,
@@ -44,14 +45,16 @@ export function LinePartsButton({
   open,
   disabled,
   onToggle,
+  productType,
 }: {
   parts: LinePart[];
   unit: string | null;
   open: boolean;
   disabled?: boolean;
   onToggle: () => void;
+  productType?: string | null;
 }) {
-  if (!canCutParts(unit)) return null;
+  if (productType != null ? !canCutCompositionLine(unit, productType) : !canCutParts(unit)) return null;
   const count = filledParts(parts).length;
   if (disabled && !count) return null;
   return (

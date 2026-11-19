@@ -1,6 +1,7 @@
 "use client";
 
-import { compositionYieldCost, costLine, liveCatalogName } from "@/lib/erp/costing";
+import { compositionYieldCost, costLine, liveCatalogName, stockCostContext } from "@/lib/erp/costing";
+import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
 import { filledParts, parseLineParts } from "@/lib/erp/lineParts";
 import type { ErpRecipe, ErpState } from "@/lib/erp/types";
 import { netOf } from "./losses";
@@ -75,7 +76,7 @@ export function YieldComposition({
   recipe: ErpRecipe | null | undefined;
   heading?: boolean;
 }) {
-  const ctx = costContextOf(state);
+  const ctx = stockCostContext(costContextOf(state));
   const title = yieldCompositionTitle();
   if (!recipe?.lines.length) {
     return (
@@ -106,7 +107,7 @@ export function YieldComposition({
               const unit = unitOf(state, line.product_id);
               const net = netOf(state, line);
               const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty).cost : null;
-              const prep = state.products.find((item) => item.id === line.product_id)?.type === "semi_finished";
+              const prep = isCompositionPrepType(state.products.find((item) => item.id === line.product_id)?.type);
               const cuts = filledParts(parseLineParts(line.parts));
               const small = unit === "l" ? T("мл", "ml", "ml") : T("г", "g", "g");
               return (

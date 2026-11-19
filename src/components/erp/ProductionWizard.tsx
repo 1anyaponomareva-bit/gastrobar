@@ -2,7 +2,7 @@
 
 import { useErpRouter } from "./erpHref";
 import { useEffect, useMemo, useState } from "react";
-import { buildCostContext, costLine, productTitle } from "@/lib/erp/costing";
+import { buildCostContext, costLine, productTitle, stockCostContext } from "@/lib/erp/costing";
 import type { ErpDocument, ErpDocumentLine, ErpRecipe, ErpState } from "@/lib/erp/types";
 import { StatusBadge } from "./docs";
 import { useErp } from "./ErpShell";
@@ -91,7 +91,10 @@ export function ProductionWizard({ id }: { id: string }) {
   const [baseline, setBaseline] = useState("");
   const [step, setStep] = useState<Step>(1);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  const ctx = useMemo(
+    () => (state ? stockCostContext(buildCostContext(state.products, state.recipes, { quotes: state.costSources })) : null),
+    [state],
+  );
 
   const loadSaved = (saved: ErpDocument) => {
     setDoc(saved);

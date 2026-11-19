@@ -20,6 +20,8 @@ import {
   netFactor,
   processedUnitCost,
   productTitle,
+  recipeYieldUnitCost,
+  stockCostContext,
   summarize,
   usableWeight,
   type CostProduct,
@@ -37,7 +39,13 @@ import {
 import { setErpLang } from "../../src/components/erp/i18n";
 import { categoryLabel, dishInitials, lossPercentsText, posterDishMarkup, posterStockQty, productBrandFieldLabel, productCodeFieldLabel } from "../../src/components/erp/menuFields";
 import { recipeForProduct } from "../../src/components/erp/YieldComposition";
-import { filterCompositionIngredients, ingredientNameMatches } from "../../src/lib/erp/ingredientSearch";
+import {
+  filterCompositionComponents,
+  filterCompositionIngredients,
+  ingredientNameMatches,
+  isCompositionPrepType,
+} from "../../src/lib/erp/ingredientSearch";
+import { wouldRecipeCycle } from "../../src/lib/erp/recipeBom";
 import {
   closeCutsDraft,
   cutsPlaqueOpen,
@@ -3628,7 +3636,7 @@ async function main() {
     assert.equal(recipeForProduct(state as never, "missing"), null);
   });
 
-  await test("yield composition picker is ingredients only, prefix search, and category filter", async () => {
+  await test("yield composition picker is ingredients and preps, prefix search, and category filter", async () => {
     const sausage = {
       id: "prep-chicken-sausage",
       type: "semi_finished",
@@ -3669,9 +3677,19 @@ async function main() {
     };
     const catalog = [sausage, goods, bones, flour];
 
-    const all = filterCompositionIngredients(catalog, "");
-    assert.deepEqual(all.map((row) => row.id).sort(), ["11111111-aaaa-bbbb", "ing-flour"]);
-    assert.ok(!all.some((row) => row.id === sausage.id || row.id === goods.id));
+    const ingredientsOnly = filterCompositionIngredients(catalog, "");
+    assert.deepEqual(ingredientsOnly.map((row) => row.id).sort(), ["11111111-aaaa-bbbb", "ing-flour"]);
+    assert.ok(!ingredientsOnly.some((row) => row.id === sausage.id || row.id === goods.id));
+
+    const all = filterCompositionComponents(catalog, "");
+    assert.deepEqual(all.map((row) => row.id).sort(), ["11111111-aaaa-bbbb", "ing-flour", sausage.id]);
+    assert.ok(!all.some((row) => row.id === goods.id), "finished goods stay out of the picker");
+    assert.equal(isCompositionPrepType(sausage.type), true);
+
+    const preps = filterCompositionComponents(catalog, "", { kind: "prep" });
+    assert.deepEqual(preps.map((row) => row.id), [sausage.id]);
+    const hiddenSelf = filterCompositionComponents(catalog, "", { excludeIds: [sausage.id] });
+    assert.ok(!hiddenSelf.some((row) => row.id === sausage.id));
 
     assert.equal(ingredientNameMatches(bones, "Chi"), true);
     assert.equal(ingredientNameMatches(bones, "chicken b"), true);
@@ -3688,6 +3706,8 @@ async function main() {
     assert.deepEqual(meat.map((row) => row.id), [bones.id]);
     const dryChi = filterCompositionIngredients(catalog, "Chi", "dry");
     assert.equal(dryChi.length, 0);
+    const sausageName = filterCompositionComponents(catalog, "Xúc");
+    assert.deepEqual(sausageName.map((row) => row.id), [sausage.id]);
   });
 
   await test("cut plaque stays closed until Нарезка", async () => {
@@ -4625,6 +4645,11 @@ async function main() {
     assert.match(menu, /LinePartsButton/);
     assert.match(picker, /erpIngCats/);
     assert.match(picker, /erpIngChip/);
+    assert.match(picker, /composition-kind-tabs/);
+    assert.match(picker, /erpIngKind/);
+    assert.match(picker, /excludeIds/);
+    assert.match(preps, /excludeIds=\{blockedComponents\}/);
+    assert.match(preps, /isCompositionPrepType/);
     assert.equal(losses.includes("<details"), false);
     assert.match(losses, /erpMethodsDrop/);
     assert.match(css, /\.erpMethodsDrop\s*\{[\s\S]*?position:\s*absolute/);
@@ -4777,6 +4802,228 @@ async function main() {
     await q("select public.erp_delete_finance_transaction($1, $2)", [incomeId, ACTOR]);
     await q("select public.erp_restore_finance_transaction($1, $2)", [incomeId, ACTOR]);
     assert.ok(expenseId);
+  });
+
+  await test("nested prep BOM: one-level produce, SKU cost, cycles, units, dishes", async () => {
+    const kitchen = await wh("prep-kitchen");
+    const meat = await saveProduct({ type: "ingredient", name_en: "Nested BOM chicken meat", base_unit: "kg" });
+    const skin = await saveProduct({ type: "ingredient", name_en: "Nested BOM chicken skin", base_unit: "kg" });
+    const spice = await saveProduct({ type: "ingredient", name_en: "Nested BOM spices", base_unit: "kg" });
+    const casing = await saveProduct({ type: "ingredient", name_en: "Nested BOM pork casing", base_unit: "pcs" });
+    const mix = await saveProduct({ type: "semi_finished", name_en: "Nested BOM meat mix", base_unit: "kg" });
+    const sausage = await saveProduct({ type: "semi_finished", name_en: "Nested BOM chicken sausage", base_unit: "pcs" });
+
+    assert.equal(n(await value("select public.erp_to_base(800, 'g', 'kg')")), 0.8);
+    assert.equal(await value("select public.erp_to_base(1, 'pcs', 'kg')"), null);
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({ product_id: mix, yield_qty: 1, lines: [{ product_id: meat, qty: 1, raw_unit: "pcs" }] }),
+        ACTOR,
+      ]),
+      "ERP_UNIT_MISMATCH",
+    );
+
+    const mixRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: mix,
+        yield_qty: 1,
+        lines: [
+          { product_id: meat, qty: 0.8, raw_unit: "g" },
+          { product_id: skin, qty: 0.15 },
+          { product_id: spice, qty: 0.02 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [mixRecipe, ACTOR]);
+
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({ product_id: mix, yield_qty: 1, lines: [{ product_id: mix, qty: 1 }] }),
+        ACTOR,
+      ]),
+      "ERP_RECIPE_CYCLE",
+    );
+
+    const sausageRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: sausage,
+        yield_qty: 10,
+        yield_pieces: 10,
+        lines: [
+          { product_id: mix, qty: 0.8, methods: ["clean"], net_qty: 0.7, parts: [{ name: "dice", grams: 700 }] },
+          { product_id: casing, qty: 10 },
+        ],
+      }),
+      ACTOR,
+    ]);
+    const storedMixLine = await one<{ methods: string[]; parts: unknown; net_qty: string | null }>(
+      "select methods, parts, net_qty from public.erp_recipe_lines where recipe_id = $1 and product_id = $2",
+      [sausageRecipe, mix],
+    );
+    assert.deepEqual(storedMixLine.methods, []);
+    assert.deepEqual(typeof storedMixLine.parts === "string" ? JSON.parse(storedMixLine.parts) : storedMixLine.parts, []);
+    assert.equal(storedMixLine.net_qty, null);
+    await q("select public.erp_activate_recipe($1, $2)", [sausageRecipe, ACTOR]);
+
+    await expectError(
+      q("select public.erp_save_recipe($1::jsonb, $2)", [
+        JSON.stringify({ id: mixRecipe, yield_qty: 1, lines: [{ product_id: sausage, qty: 1 }] }),
+        ACTOR,
+      ]),
+      "ERP_RECIPE_CYCLE",
+    );
+    assert.equal(
+      wouldRecipeCycle(
+        [
+          { product_id: mix, status: "active", lines: [{ product_id: meat }] },
+          { product_id: sausage, status: "active", lines: [{ product_id: mix }, { product_id: casing }] },
+        ],
+        mix,
+        sausage,
+      ),
+      true,
+    );
+    assert.equal(
+      wouldRecipeCycle(
+        [{ product_id: mix, status: "active", lines: [{ product_id: meat }] }],
+        sausage,
+        mix,
+      ),
+      false,
+    );
+
+    await post(
+      await saveDoc({
+        doc_type: "receipt",
+        warehouse_id: kitchen,
+        lines: [
+          { product_id: meat, qty: 10, unit_price: 100000 },
+          { product_id: skin, qty: 5, unit_price: 40000 },
+          { product_id: spice, qty: 1, unit_price: 200000 },
+          { product_id: casing, qty: 100, unit_price: 1000 },
+        ],
+      }),
+    );
+
+    const mixBatch = await saveDoc({
+      doc_type: "production",
+      warehouse_id: kitchen,
+      target_warehouse_id: kitchen,
+      recipe_id: mixRecipe,
+      output_product_id: mix,
+      output_qty: 2,
+      lines: [
+        { product_id: meat, qty: 1.6 },
+        { product_id: skin, qty: 0.3 },
+        { product_id: spice, qty: 0.04 },
+      ],
+    });
+    const mixPosted = await post(mixBatch);
+    assert.equal(n(mixPosted.total_cost), 180000);
+    assert.equal(await stock(mix, kitchen), 2);
+    assert.equal(n(await value("select est_unit_cost from public.erp_products where id = $1", [mix])), 90000);
+
+    const meatAfterMix = (await stock(meat, kitchen))!;
+    const sausageLines = processingComposition({
+      recipes: [
+        {
+          id: sausageRecipe,
+          product_id: sausage,
+          status: "active",
+          yield_qty: 10,
+          lines: [
+            { id: "m", recipe_id: sausageRecipe, line_no: 1, product_id: mix, qty: 0.8, note: null, raw_name: null, raw_amount: null, raw_unit: null },
+            { id: "c", recipe_id: sausageRecipe, line_no: 2, product_id: casing, qty: 10, note: null, raw_name: null, raw_amount: null, raw_unit: null },
+          ],
+        },
+      ],
+      outputId: sausage,
+      outputQty: 10,
+    });
+    assert.deepEqual(
+      sausageLines.lines.map((line) => line.product_id).sort(),
+      [casing, mix].sort(),
+    );
+    assert.ok(!sausageLines.lines.some((line) => line.product_id === meat));
+
+    const sausageBatch = await saveDoc({
+      doc_type: "production",
+      warehouse_id: kitchen,
+      target_warehouse_id: kitchen,
+      recipe_id: sausageRecipe,
+      output_product_id: sausage,
+      output_qty: 10,
+      lines: sausageLines.lines.map((line) => ({ product_id: line.product_id, qty: line.qty })),
+    });
+    const sausagePosted = await post(sausageBatch);
+    assert.equal(n(sausagePosted.total_cost), 82000);
+    assert.equal(await stock(sausage, kitchen), 10);
+    assert.equal(await stock(mix, kitchen), 1.2);
+    assert.equal(await stock(casing, kitchen), 90);
+    assert.equal(await stock(meat, kitchen), meatAfterMix, "sausage produce must not write off raw meat again");
+    assert.equal(n(await value("select est_unit_cost from public.erp_products where id = $1", [sausage])), 8200);
+    assert.equal(
+      n(await value("select unit_cost from public.erp_lots where source_document_id = $1 and product_id = $2", [sausageBatch, sausage])),
+      8200,
+    );
+
+    const skuCtx = stockCostContext(
+      buildCostContext(
+        [
+          { id: mix, type: "semi_finished", name_en: "mix", name_vn: "", base_unit: "kg", est_unit_cost: 90000, est_cost_source: "receipt" },
+          { id: casing, type: "ingredient", name_en: "casing", name_vn: "", base_unit: "pcs", est_unit_cost: 1000, est_cost_source: "receipt" },
+          { id: sausage, type: "semi_finished", name_en: "sausage", name_vn: "", base_unit: "pcs", est_unit_cost: 8200, est_cost_source: "receipt" },
+          { id: meat, type: "ingredient", name_en: "meat", name_vn: "", base_unit: "kg", est_unit_cost: 100000, est_cost_source: "receipt" },
+        ],
+        [
+          {
+            id: sausageRecipe,
+            product_id: sausage,
+            status: "active",
+            yield_qty: 10,
+            lines: [
+              { product_id: mix, qty: 0.8 },
+              { product_id: casing, qty: 10 },
+            ],
+          },
+        ],
+      ),
+    );
+    assert.equal(recipeYieldUnitCost(skuCtx, skuCtx.activeRecipes.get(sausage)!), 8200);
+    assert.equal(costLine(skuCtx, mix, 0.8).cost, 72000);
+    assert.equal(costLine(skuCtx, mix, 0.8).children, undefined);
+
+    const onlyMeat = await saveProduct({ type: "semi_finished", name_en: "Nested BOM ingredient-only mix", base_unit: "kg" });
+    const onlyMeatRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({ product_id: onlyMeat, yield_qty: 1, lines: [{ product_id: meat, qty: 1 }] }),
+      ACTOR,
+    ]);
+    await q("select public.erp_activate_recipe($1, $2)", [onlyMeatRecipe, ACTOR]);
+    const onlyBatch = await saveDoc({
+      doc_type: "production",
+      warehouse_id: kitchen,
+      target_warehouse_id: kitchen,
+      recipe_id: onlyMeatRecipe,
+      output_product_id: onlyMeat,
+      output_qty: 0.5,
+      lines: [{ product_id: meat, qty: 0.5 }],
+    });
+    await post(onlyBatch);
+    assert.equal(await stock(onlyMeat, kitchen), 0.5);
+
+    const hotDog = await value<string>("select public.erp_save_dish($1::jsonb, $2)", [
+      JSON.stringify({
+        name_en: "Nested BOM hot dog",
+        sale_price: 45000,
+        lines: [{ product_id: sausage, qty: 1 }],
+      }),
+      ACTOR,
+    ]);
+    assert.equal(
+      await value("select product_id from public.erp_dish_lines where dish_id = $1", [hotDog]),
+      sausage,
+    );
   });
 
   console.log(`\n${passed} checks passed`);

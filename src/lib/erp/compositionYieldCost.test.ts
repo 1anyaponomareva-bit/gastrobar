@@ -40,6 +40,50 @@ test("cut parts are not extra purchases in the yield cost", () => {
   assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 1 }]), 20_000);
 });
 
+test("nested prep yield cost uses the prep SKU, not a second explosion", () => {
+  const mix: CostProduct = {
+    id: "mix",
+    type: "semi_finished",
+    name_en: "Meat mix",
+    name_vn: "Thịt xay",
+    base_unit: "kg",
+    est_unit_cost: 90_000,
+    est_cost_source: "receipt",
+  };
+  const casing: CostProduct = {
+    id: "casing",
+    type: "ingredient",
+    name_en: "Casing",
+    name_vn: "Vỏ",
+    base_unit: "pcs",
+    est_unit_cost: 1_000,
+    est_cost_source: "manual",
+  };
+  const exploded = buildCostContext(
+    [onion, mix, casing],
+    [{ id: "mix-r", product_id: "mix", status: "active", yield_qty: 1, lines: [{ product_id: "onion", qty: 1 }] }],
+  );
+  const sku = buildCostContext(
+    [onion, mix, casing],
+    [{ id: "mix-r", product_id: "mix", status: "active", yield_qty: 1, lines: [{ product_id: "onion", qty: 1 }] }],
+    { explodeRecipes: false },
+  );
+  assert.equal(
+    compositionYieldCost(exploded, [
+      { product_id: "mix", qty: 0.8 },
+      { product_id: "casing", qty: 10 },
+    ]),
+    0.8 * 20_000 + 10_000,
+  );
+  assert.equal(
+    compositionYieldCost(sku, [
+      { product_id: "mix", qty: 0.8 },
+      { product_id: "casing", qty: 10 },
+    ]),
+    0.8 * 90_000 + 10_000,
+  );
+});
+
 test("missing price makes yield cost incomplete; blank rows are skipped", () => {
   const ctx = buildCostContext([{ ...onion, est_unit_cost: null, est_cost_source: null }, oil], []);
   assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 1 }]), null);

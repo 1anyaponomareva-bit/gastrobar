@@ -545,7 +545,13 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                           {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
                         </td>
                         <td className="num erpComposeActs">
-                          <LinePartsButton parts={line.parts} unit={unit} open={cuts} onToggle={() => toggleCuts(index)} />
+                          <LinePartsButton
+                            parts={line.parts}
+                            unit={unit}
+                            open={cuts}
+                            productType={product?.type}
+                            onToggle={() => toggleCuts(index)}
+                          />
                           <button
                             type="button"
                             className="erpIconBtn"

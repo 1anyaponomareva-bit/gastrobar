@@ -47,9 +47,13 @@ export function partsIssue(parts: LinePart[] | undefined, parentSmall: number | 
   return null;
 }
 
-/** Cuts exist only for weighed products. Pieces never get a нарезка plaque. */
+/** Cuts exist only for weighed raw ingredients. Pieces and nested preps never get a нарезка plaque. */
 export function canCutParts(unit: string | null | undefined): boolean {
   return unit === "kg" || unit === "l";
+}
+
+export function canCutCompositionLine(unit: string | null | undefined, type: string | null | undefined): boolean {
+  return canCutParts(unit) && (type === "ingredient" || type === "packaging" || type === "consumable");
 }
 
 /** Plaque stays hidden until the cook presses Нарезка. Saved parts do not auto-open it. */
