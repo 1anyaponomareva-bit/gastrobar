@@ -23,6 +23,7 @@ import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDr
 import { makePrepSheetPdf } from "@/lib/erp/prepSheetPdf";
 import {
   prepSheetFileName,
+  recipeInstructionSource,
   staffRecipeCardUrl,
   type PrepPublishInput,
 } from "@/lib/erp/prepStaffRecipe";
@@ -35,7 +36,7 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
-import { PrepCardHeader, PrepStepsEditor, type PrepCardKind } from "./PrepCardFields";
+import { PrepCardHeader, PrepCoverField, PrepStepsEditor, type PrepCardKind } from "./PrepCardFields";
 import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
 import {
   Empty,
@@ -282,12 +283,14 @@ function NewPrep({ from }: { from?: string }) {
   const [nameEn, setNameEn] = useState("");
   const [nameVn, setNameVn] = useState("");
   const [unit, setUnit] = useState<ErpUnit | "">("");
-  useDirtyGuard(Boolean(nameEn || nameVn));
+  const [photo, setPhoto] = useState("");
+  useDirtyGuard(Boolean(nameEn || nameVn || photo));
   return (
     <>
       <BackLink from={from} />
       <PageHead title={T("Новый полуфабрикат", "New semi-finished product", "Bán thành phẩm mới")} />
       <div className="erpCard">
+        <PrepCoverField url={photo} onChange={setPhoto} />
         <div className="erpGrid">
           <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
             <input
@@ -330,8 +333,15 @@ function NewPrep({ from }: { from?: string }) {
                 T("Полуфабрикат создан — добавьте состав", "Created — now add the ingredients", "Đã tạo — thêm nguyên liệu"),
               );
               if (result) {
+                if (photo) {
+                  await act(
+                    { action: "saveRecipe", recipe: { product_id: result.id, kind: "prep", photo, lines: [] } },
+                    false,
+                  );
+                }
                 setNameEn("");
                 setNameVn("");
+                setPhoto("");
                 router.replace(withMenuListReturn(`/erp/preps/recipe/${result.id}`, from ?? ""));
               }
             }}
@@ -393,7 +403,7 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
     shelf_life_days: recipe?.shelf_life_days ?? product.shelf_life_days ?? null,
     storage_conditions: recipe?.storage_conditions ?? product.storage_conditions ?? "",
     note: recipe?.note ?? "",
-    steps: parseRecipeInstructions(recipe?.instructions),
+    steps: parseRecipeInstructions(recipe ? recipeInstructionSource(recipe) : undefined),
     lines: (recipe?.lines ?? []).map((line) => ({
       product_id: line.product_id,
       qty: line.qty,
@@ -574,13 +584,13 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const openInApp = async () => {
     const href = staffRecipeCardUrl(product.id);
     const needsSave = dirty || productDirty || viewed?.status === "draft" || !viewed;
-    if (!needsSave) {
-      window.location.assign(href);
-      return;
-    }
     setAppBusy(true);
     try {
-      if (!(await save())) return;
+      if (needsSave) {
+        if (!(await save())) return;
+      } else {
+        await act({ action: "publishPrepToStaff", productId: product.id }, false);
+      }
       window.location.assign(href);
     } finally {
       setAppBusy(false);

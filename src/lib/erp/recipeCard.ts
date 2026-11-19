@@ -65,6 +65,12 @@ export function emptyRecipeStep(): RecipeStepDraft {
   return { titleEn: "", titleVn: "", photo: "", itemsEn: "", itemsVn: "" };
 }
 
+function stepPhotoOf(row: Record<string, unknown>): string {
+  if (typeof row.photo === "string" && row.photo.trim()) return row.photo.trim();
+  if (typeof row.image === "string" && row.image.trim()) return row.image.trim();
+  return "";
+}
+
 function asDraft(titleEn: string, titleVn: string, photo: string, items: RecipeCardLang[]): RecipeStepDraft | null {
   if (!titleEn && !titleVn && !items.length && !photo) return null;
   return {
@@ -91,7 +97,7 @@ export function parseRecipeInstructions(raw: ErpRecipe["instructions"] | null | 
     const wrapper = raw.steps ?? raw.cooking ?? (raw.title == null && raw.items == null ? raw.instructions : undefined);
     if (wrapper != null && wrapper !== raw) return parseRecipeInstructions(wrapper);
     const title = langOf(raw.title);
-    const draft = asDraft(title.en, title.vn, typeof raw.photo === "string" ? raw.photo : "", itemsFromStep(raw));
+    const draft = asDraft(title.en, title.vn, stepPhotoOf(raw), itemsFromStep(raw));
     return draft ? [draft] : [];
   }
   if (!Array.isArray(raw)) return [];
@@ -102,7 +108,7 @@ export function parseRecipeInstructions(raw: ErpRecipe["instructions"] | null | 
     }
     const row = isObj(step) ? step : {};
     const title = langOf(row.title);
-    const draft = asDraft(title.en, title.vn, typeof row.photo === "string" ? row.photo : "", itemsFromStep(row));
+    const draft = asDraft(title.en, title.vn, stepPhotoOf(row), itemsFromStep(row));
     return draft ? [draft] : [];
   });
 }

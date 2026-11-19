@@ -33,11 +33,13 @@ function PhotoField({
   url,
   disabled,
   small,
+  cover,
   onChange,
 }: {
   url: string;
   disabled: boolean;
   small?: boolean;
+  cover?: boolean;
   onChange: (url: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -58,20 +60,33 @@ function PhotoField({
     }
   };
 
+  const openPicker = () => {
+    if (disabled || busy) return;
+    input.current?.click();
+  };
+
   return (
-    <div className={`erpPhotoField ${small ? "small" : ""}`}>
-      {url ? <img src={url} alt="" /> : null}
+    <div className={`erpPhotoField ${small ? "small" : ""} ${cover ? "cover" : ""}`}>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        hidden
+        disabled={disabled || busy}
+        onChange={(event) => void pick(event.target.files?.[0])}
+      />
+      <button
+        type="button"
+        className="erpPhotoPreview"
+        disabled={disabled || busy}
+        onClick={openPicker}
+        aria-label={T("Обложка", "Cover", "Ảnh bìa")}
+      >
+        {url ? <img src={url} alt="" /> : <span className="erpPhotoPlaceholder">{cover ? "📷" : "+"}</span>}
+      </button>
       <div className="erpPhotoActs">
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          hidden
-          disabled={disabled || busy}
-          onChange={(event) => void pick(event.target.files?.[0])}
-        />
         {!disabled ? (
-          <button type="button" className="erpBtn" disabled={busy} onClick={() => input.current?.click()}>
+          <button type="button" className="erpBtn" disabled={busy} onClick={openPicker}>
             {busy
               ? T("Загрузка…", "Uploading…", "Đang tải…")
               : url
@@ -86,6 +101,30 @@ function PhotoField({
         ) : null}
       </div>
       {error ? <p className="erpHint warn">{error}</p> : null}
+    </div>
+  );
+}
+
+export function PrepCoverField({
+  url,
+  disabled,
+  onChange,
+}: {
+  url: string;
+  disabled?: boolean;
+  onChange: (url: string) => void;
+}) {
+  return (
+    <div className="erpField wide" data-testid="prep-cover">
+      <span>{T("Обложка", "Cover", "Ảnh bìa")}</span>
+      <PhotoField url={url} disabled={Boolean(disabled)} cover onChange={onChange} />
+      <small>
+        {T(
+          "Картинка блюда в списке и карточке Recipes",
+          "Dish photo on the Recipes list and card",
+          "Ảnh món trên danh sách và thẻ Recipes",
+        )}
+      </small>
     </div>
   );
 }
@@ -123,6 +162,7 @@ export function PrepCardHeader({
 }) {
   return (
     <div className="erpCard erpPrepHeader">
+      <PrepCoverField url={photo} disabled={readOnly} onChange={onPhoto} />
       <div className="erpGrid">
         <Field label={T("Вкладка", "Tab", "Mục")}>
           <select
@@ -152,7 +192,6 @@ export function PrepCardHeader({
           <input type="date" value={cardDate} disabled={readOnly} onChange={(event) => onCardDate(event.target.value)} />
         </Field>
       </div>
-      <PhotoField url={photo} disabled={readOnly} onChange={onPhoto} />
     </div>
   );
 }

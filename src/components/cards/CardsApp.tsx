@@ -7,6 +7,7 @@ import {
   mainIngredientIndexes,
   mergeRecipes,
   recipeCookingSteps,
+  recipeCoverPhoto,
   recipeText,
   type Recipe,
   type RecipeFactIcon,
@@ -82,7 +83,7 @@ function mainProducts(recipe: Recipe) {
 function mainIngredientLine(recipe: Recipe, lang: RecipeLang): string {
   const main = mainProducts(recipe);
   if (!main) return "";
-  const names = main.mains.map((ingredient) => ingredient.name[lang]).join(" + ");
+  const names = main.mains.map((ingredient) => recipeText(ingredient.name, lang)).join(" + ");
   return `${formatAmount(main.base, lang)} ${unitLabel(main.baseUnit, lang)} — ${names}`;
 }
 
@@ -187,13 +188,13 @@ export function CardsApp({ initialCard = null }: { initialCard?: string | null }
             <div className="recipeList">
               {visible.map((recipe) => (
                 <button key={recipe.id} type="button" className="recipeItem" onClick={() => openRecipe(recipe)}>
-                  {recipe.photo ? (
-                    <img src={getAssetUrl(recipe.photo)} alt="" className="recipeThumb" />
+                  {recipeCoverPhoto(recipe) ? (
+                    <img src={getAssetUrl(recipeCoverPhoto(recipe) ?? "")} alt="" className="recipeThumb" />
                   ) : (
                     <span className="recipeThumb placeholder">🍳</span>
                   )}
                   <span className="recipeItemText">
-                    <b>{recipe.name[recipeLang]}</b>
+                    <b>{recipeText(recipe.name, recipeLang)}</b>
                     <span>{mainIngredientLine(recipe, recipeLang)}</span>
                     {recipe.example ? <span className="exampleBadge">{t("recipes_example_short")}</span> : null}
                   </span>
@@ -253,8 +254,8 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
       <div className="tcHeader">
         <div className="tcTitleRow">
           <div className="tcTitle">
-            <h1>{recipe.name[lang]}</h1>
-            <span>{recipe.name[second]}</span>
+            <h1>{recipeText(recipe.name, lang)}</h1>
+            <span>{recipeText(recipe.name, second)}</span>
           </div>
           <div className="tcKind">
             {t(recipe.kind === "dish" ? "recipes_category_dish" : "recipes_category_prep")}
@@ -278,8 +279,8 @@ function RecipeDetail({ recipe, lang, t, onBack }: DetailProps) {
         ) : null}
       </div>
 
-      {recipe.photo ? (
-        <img src={getAssetUrl(recipe.photo)} alt={recipe.name[lang]} className="recipePhoto" />
+      {recipeCoverPhoto(recipe) ? (
+        <img src={getAssetUrl(recipeCoverPhoto(recipe) ?? "")} alt={recipeText(recipe.name, lang)} className="recipePhoto" />
       ) : null}
 
       {recipe.facts?.length ? (

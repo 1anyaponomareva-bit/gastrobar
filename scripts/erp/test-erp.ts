@@ -8,7 +8,8 @@ import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
 import { PDFDocument } from "pdf-lib";
 import { DEFAULT_STAFF_CATALOG, sanitizeStaffCatalog, type StaffCatalog } from "../../src/data/staffCatalog";
-import { RECIPES, recipeCookingSteps, recipeText } from "../../src/data/recipes";
+import { mergeRecipes, RECIPES, recipeCookingSteps, recipeCoverPhoto, recipeText } from "../../src/data/recipes";
+import { sanitizeRecipe } from "../../src/lib/recipes-admin/recipeInput";
 import {
   buildCostContext,
   channelResult,
@@ -113,6 +114,7 @@ import {
 import { CANONICAL_ERP_ORIGIN, movedErpPagePath, publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
 import { findRecipeByCard, recipeCardFromPathname, staffRecipePath } from "../../src/lib/recipes/cardUrl";
 import {
+  prepPublishFromSaved,
   staffRecipeCardUrl,
   staffRecipeFromPrep,
   staffRecipeId,
@@ -573,6 +575,57 @@ async function main() {
     assert.match(mapped.ingredients[0].note?.en ?? "", /mince 270 g/);
     assert.equal(mapped.steps.length, 1);
     assert.equal(mapped.steps[0].items[1].vn, "Khuấy");
+    assert.equal(mapped.photo, "https://example.test/erp-photos/preps/hero.jpg");
+    const stepPhoto = "https://example.test/storage/v1/object/public/erp-photos/preps/step-1.jpg";
+    const withPhotos = staffRecipeFromPrep({
+      ...input,
+      steps: [{ ...input.steps[0], photo: stepPhoto }],
+    });
+    assert.equal(withPhotos.steps[0].photo, stepPhoto);
+    const dataCover = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD";
+    assert.equal(staffRecipeFromPrep({ ...input, photo: dataCover }).photo, dataCover);
+    assert.equal(recipeCoverPhoto({ image: dataCover }), dataCover);
+    const fromImageStep = recipeCookingSteps({
+      ...mapped,
+      steps: [],
+      instructions: [{ title: { en: "Cook" }, items: [{ en: "Boil" }], image: stepPhoto }],
+    } as typeof mapped & Record<string, unknown>);
+    assert.equal(fromImageStep[0]?.photo, stepPhoto);
+    const sanitized = sanitizeRecipe({
+      ...mapped,
+      photo: dataCover,
+      steps: [{ title: { en: "Mix", vn: "Trộn" }, image: stepPhoto, method: "Add beef\nStir" }],
+    });
+    assert.equal(sanitized?.photo, dataCover);
+    assert.equal(sanitized?.steps[0].photo, stepPhoto);
+    const merged = mergeRecipes({
+      recipes: [{ ...mapped, photo: undefined, image: dataCover, steps: [], instructions: mapped.steps }],
+      deleted: [],
+    } as never);
+    assert.equal(merged.find((recipe) => recipe.id === mapped.id)?.photo, dataCover);
+    assert.equal(merged.find((recipe) => recipe.id === mapped.id)?.steps.length, 1);
+    const fromSaved = prepPublishFromSaved(
+      { id: productId, name_en: "Beef mix", name_vn: "Thịt bò xay", type: "semi_finished", base_unit: "kg" } as never,
+      {
+        product_id: productId,
+        kind: "prep",
+        photo: "",
+        image: "https://example.test/erp-photos/preps/hero.jpg",
+        instructions: [],
+        steps: [{ title: { en: "Mix" }, items: [{ en: "Add beef" }], photo: stepPhoto }],
+        yield_qty: 1.2,
+        yield_pieces: 10,
+        shelf_life_days: 3,
+        storage_conditions: "0…4 °C",
+        version: 1,
+        card_no: "GF-PR-088",
+        card_date: "2026-11-19",
+        lines: [],
+      } as never,
+      [],
+    );
+    assert.equal(fromSaved.photo, "https://example.test/erp-photos/preps/hero.jpg");
+    assert.equal(fromSaved.steps[0].photo, stepPhoto);
     assert.equal(recipeCookingSteps(mapped).length, 1);
     assert.equal(recipeText(mapped.steps[0].items[0], "ru"), "Add beef");
     const fromInstructions = recipeCookingSteps({
@@ -4755,6 +4808,14 @@ async function main() {
     assert.match(preps, /PrepCardHeader/);
     assert.match(preps, /PrepStepsEditor/);
     const header = await readFile(path.join(process.cwd(), "src/components/erp/PrepCardFields.tsx"), "utf8");
+    assert.match(header, /data-testid="prep-cover"/);
+    assert.match(header, /Обложка/);
+    assert.ok(header.indexOf('data-testid="prep-cover"') < header.indexOf('data-testid="prep-name"'));
+    assert.match(preps, /PrepCoverField/);
+    assert.match(preps, /publishPrepToStaff/);
+    const recipesApp = await readFile(path.join(process.cwd(), "src/components/recipes/RecipesApp.tsx"), "utf8");
+    assert.match(recipesApp, /recipeCoverPhoto/);
+    assert.match(recipesApp, /recipeCookingSteps/);
     assert.match(header, /data-testid="prep-kind"/);
     assert.match(header, /value=\{kind\}/);
     assert.match(header, /option value="sauce"/);

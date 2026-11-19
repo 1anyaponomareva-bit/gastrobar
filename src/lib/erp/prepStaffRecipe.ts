@@ -102,10 +102,16 @@ export function lineNetQty(line: PrepPublishLine, product: PrepPublishProduct | 
 
 function staffPhoto(url: string | null | undefined): string | undefined {
   const value = (url ?? "").trim();
-  if (!value || value.startsWith("data:")) return undefined;
+  if (!value) return undefined;
+  if (value.startsWith("data:image/")) return value;
   if (value.startsWith("/") && !value.startsWith("//")) return value;
   if (value.startsWith("https://") || value.startsWith("http://")) return value;
   return undefined;
+}
+
+function recipeCoverUrl(recipe: ErpRecipe): string {
+  const extra = recipe as ErpRecipe & { image?: string | null };
+  return (recipe.photo || extra.image || "").trim();
 }
 
 function catalogOf(catalog: PrepPublishProduct[], id: string | null): PrepPublishProduct | undefined {
@@ -312,7 +318,7 @@ export function prepPublishFromSaved(
     cardNo: recipe.card_no ?? "",
     cardDate: (recipe.card_date ?? "").slice(0, 10),
     cardRevision: recipe.card_revision ?? undefined,
-    photo: recipe.photo ?? "",
+    photo: recipeCoverUrl(recipe),
     yieldQty: recipe.yield_qty,
     yieldPieces: recipe.yield_pieces,
     shelfLifeDays: recipe.shelf_life_days,
@@ -332,10 +338,20 @@ export function prepPublishFromSaved(
   };
 }
 
-function recipeInstructionSource(recipe: ErpRecipe): unknown {
-  const extra = recipe as ErpRecipe & { steps?: unknown; method?: unknown; cooking?: unknown };
-  if (recipe.instructions != null && recipe.instructions !== "") return recipe.instructions;
-  return extra.steps ?? extra.method ?? extra.cooking;
+function hasInstructionContent(value: unknown): boolean {
+  if (value == null || value === "") return false;
+  if (typeof value === "string") return Boolean(value.trim());
+  if (Array.isArray(value)) return value.length > 0;
+  return typeof value === "object";
+}
+
+/** Cooking text on the ERP row: `instructions`, else `steps` / `method` / `cooking`. */
+export function recipeInstructionSource(recipe: ErpRecipe): unknown {
+  const extra = recipe as ErpRecipe & { steps?: unknown; method?: unknown; cooking?: unknown; technology?: unknown };
+  for (const candidate of [recipe.instructions, extra.steps, extra.method, extra.cooking, extra.technology]) {
+    if (hasInstructionContent(candidate)) return candidate;
+  }
+  return recipe.instructions;
 }
 
 export function prepSheetFileName(input: PrepPublishInput): string {

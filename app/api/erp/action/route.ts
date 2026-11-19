@@ -179,9 +179,24 @@ export async function POST(request: Request) {
         });
         return timing.json({ id, recipesCardId, patch: { recipes: data.recipes } });
       }
-      case "activateRecipe":
-        await rpc("erp_activate_recipe", { p_id: uuid(a.id), p_actor: actor });
-        return timing.json({ ok: true, patch: await fresh(["recipes"]) });
+      case "activateRecipe": {
+        const id = uuid(a.id);
+        await rpc("erp_activate_recipe", { p_id: id, p_actor: actor });
+        const data = await fresh(["recipes", "products"]);
+        const recipesCardId = await publishPrepStateToStaff(id, {
+          recipes: data.recipes ?? [],
+          products: data.products ?? [],
+        });
+        return timing.json({ ok: true, recipesCardId, patch: { recipes: data.recipes } });
+      }
+      case "publishPrepToStaff": {
+        const data = await fresh(["recipes", "products"]);
+        const recipesCardId = await publishProductPrepToStaff(uuid(a.productId), {
+          recipes: data.recipes ?? [],
+          products: data.products ?? [],
+        });
+        return timing.json({ recipesCardId, patch: {} });
+      }
       case "resolveRecipeLine": {
         const applied = await rpc("erp_resolve_recipe_line", {
           p_line: uuid(a.lineId),

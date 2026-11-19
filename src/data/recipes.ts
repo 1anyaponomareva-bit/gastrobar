@@ -68,6 +68,16 @@ export function recipeText(value: LocalizedText | undefined, lang: RecipeLang): 
   return (value[lang] || value.en || value.vn || value.ru || "").trim();
 }
 
+/** Cover for list thumbnails and the detail hero: `photo` or legacy `image`. */
+export function recipeCoverPhoto(recipe: { photo?: string } | Record<string, unknown>): string | undefined {
+  const extra = recipe as Record<string, unknown>;
+  for (const key of ["photo", "image"] as const) {
+    const value = extra[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
 function asLocalized(value: unknown): LocalizedText | undefined {
   if (typeof value === "string") {
     const text = value.trim();
@@ -97,8 +107,9 @@ function parseCookingStep(value: unknown): RecipeStep | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
   const title = asLocalized(row.title);
-  const photo = typeof row.photo === "string" && row.photo.trim() ? row.photo.trim() : undefined;
-  const rawItems = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions;
+  const photoRaw = row.photo ?? row.image;
+  const photo = typeof photoRaw === "string" && photoRaw.trim() ? photoRaw.trim() : undefined;
+  const rawItems = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions ?? row.cooking;
   let items: LocalizedText[] = [];
   if (typeof rawItems === "string") {
     items = rawItems
@@ -124,6 +135,16 @@ function normalizeCookingStep(step: RecipeStep): RecipeStep | null {
   return { ...(title ? { title } : {}), ...(photo ? { photo } : {}), items };
 }
 
+function firstCookingSource(extra: Record<string, unknown>): unknown {
+  for (const key of ["instructions", "method", "cooking", "technology", "cookingSteps"] as const) {
+    const value = extra[key];
+    if (value == null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    return value;
+  }
+  return undefined;
+}
+
 /**
  * Cooking technology for the VN/staff viewer. Canonical key is `steps`;
  * ERP/admin payloads sometimes stored the same text as instructions/method.
@@ -134,7 +155,7 @@ export function recipeCookingSteps(recipe: Recipe | (Recipe & Record<string, unk
     ? recipe.steps.map(normalizeCookingStep).filter((step): step is RecipeStep => Boolean(step))
     : [];
   if (direct.length) return direct;
-  const alt = extra.instructions ?? extra.method ?? extra.cooking ?? extra.technology ?? extra.cookingSteps;
+  const alt = firstCookingSource(extra);
   if (alt == null || alt === "") return [];
   if (typeof alt === "string") {
     const step = parseCookingStep(alt);
@@ -164,7 +185,10 @@ export function mergeRecipes(stored: StoredRecipes | null): Recipe[] {
   );
   const builtInIds = new Set(RECIPES.map((recipe) => recipe.id));
   const created = stored.recipes.filter((recipe) => !builtInIds.has(recipe.id) && !deleted.has(recipe.id));
-  return [...builtIn, ...created].map((recipe) => ({ ...recipe, steps: recipeCookingSteps(recipe) }));
+  return [...builtIn, ...created].map((recipe) => {
+    const photo = recipeCoverPhoto(recipe);
+    return { ...recipe, ...(photo ? { photo } : {}), steps: recipeCookingSteps(recipe) };
+  });
 }
 
 export type IngredientOverride = { amount?: number };

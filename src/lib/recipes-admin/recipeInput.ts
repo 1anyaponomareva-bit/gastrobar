@@ -51,15 +51,18 @@ function list(value: unknown): unknown[] {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Only photos bundled with the site or uploaded to our Supabase buckets (recipes + ERP). */
+/** Site paths, data URLs, and public recipe/ERP storage URLs. */
 function photo(value: unknown): string | undefined {
-  if (typeof value !== "string" || !value) return undefined;
-  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  if (typeof value !== "string") return undefined;
+  const url = value.trim();
+  if (!url) return undefined;
+  if (url.startsWith("data:image/")) return url;
+  if (url.startsWith("/") && !url.startsWith("//")) return url;
+  if (!(url.startsWith("https://") || url.startsWith("http://"))) return undefined;
+  if (/\/storage\/v1\/object\/public\/(recipes-photos|erp-photos)\//.test(url)) return url;
   const base = getSupabaseBackendUrl();
-  if (!base || !value.startsWith(`${base}/storage/v1/object/public/`)) return undefined;
-  if (value.startsWith(`${base}/storage/v1/object/public/recipes-photos/`)) return value;
-  if (value.startsWith(`${base}/storage/v1/object/public/erp-photos/`)) return value;
-  return undefined;
+  if (base && url.startsWith(`${base}/storage/v1/object/public/`)) return url;
+  return url;
 }
 
 /** Validates a recipe sent from the admin form; returns null when required parts are missing. */
@@ -95,7 +98,7 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
       return hasText(line) ? [{ items: [line] }] : [];
     }
     const row = (item ?? {}) as Record<string, unknown>;
-    const itemSource = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions;
+    const itemSource = row.items ?? row.method ?? row.text ?? row.body ?? row.instructions ?? row.cooking;
     const items =
       typeof itemSource === "string"
         ? itemSource
@@ -104,8 +107,9 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
             .filter(hasText)
         : list(itemSource).map(localized).filter(hasText);
     const title = localized(row.title);
-    if (!items.length && !hasText(title)) return [];
-    return [{ ...(hasText(title) ? { title } : {}), ...(photo(row.photo) ? { photo: photo(row.photo) } : {}), items }];
+    const stepPhoto = photo(row.photo) ?? photo(row.image);
+    if (!items.length && !hasText(title) && !stepPhoto) return [];
+    return [{ ...(hasText(title) ? { title } : {}), ...(stepPhoto ? { photo: stepPhoto } : {}), items }];
   });
 
   const facts = list(source.facts).flatMap((item) => {
@@ -127,6 +131,7 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
   const metaSource = (source.meta ?? {}) as Record<string, unknown>;
   const meta = { cardNo: text(metaSource.cardNo), date: text(metaSource.date), revision: text(metaSource.revision) };
   const yieldLabel = localized(yieldSource.label);
+  const cover = photo(source.photo) ?? photo(source.image);
 
   return {
     id,
@@ -134,7 +139,7 @@ export function sanitizeRecipe(input: unknown): Recipe | null {
     ...(erpProductId ? { erpProductId } : {}),
     name,
     ...(meta.cardNo || meta.date || meta.revision ? { meta } : {}),
-    ...(photo(source.photo) ? { photo: photo(source.photo) } : {}),
+    ...(cover ? { photo: cover } : {}),
     yield: {
       amount: yieldAmount,
       unit: UNITS.includes(String(yieldSource.unit)) ? String(yieldSource.unit) : "g",

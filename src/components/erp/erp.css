@@ -3559,7 +3559,7 @@ button.erpBack {
 }
 
 .erpPrepHeader .erpPhotoField {
-  margin: 12px 0 4px;
+  margin: 0 0 12px;
 }
 
 .erpPhotoField {
@@ -3569,7 +3569,20 @@ button.erpBack {
   gap: 10px;
 }
 
-.erpPhotoField img {
+.erpPhotoPreview {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.erpPhotoPreview:disabled {
+  cursor: default;
+}
+
+.erpPhotoField img,
+.erpPhotoPlaceholder {
   width: 160px;
   height: 100px;
   object-fit: cover;
@@ -3577,7 +3590,22 @@ button.erpBack {
   background: var(--erp-bg);
 }
 
-.erpPhotoField.small img {
+.erpPhotoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #d0d0d0;
+  font-size: 22px;
+}
+
+.erpPhotoField.cover img,
+.erpPhotoField.cover .erpPhotoPlaceholder {
+  width: 220px;
+  height: 140px;
+}
+
+.erpPhotoField.small img,
+.erpPhotoField.small .erpPhotoPlaceholder {
   width: 120px;
   height: 76px;
 }

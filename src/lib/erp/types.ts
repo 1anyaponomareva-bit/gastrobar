@@ -422,6 +422,7 @@ export type ErpAction =
   | { action: "deleteDraft"; id: string }
   | { action: "saveRecipe"; recipe: Record<string, unknown> }
   | { action: "activateRecipe"; id: string }
+  | { action: "publishPrepToStaff"; productId: string }
   | { action: "resolveRecipeLine"; lineId: string; productId: string; qty: number; remember: boolean }
   | { action: "saveDish"; dish: Record<string, unknown> }
   | { action: "staffCatalogMerge"; apply: boolean }
