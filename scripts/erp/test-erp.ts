@@ -122,9 +122,12 @@ import {
 import {
   buildPrepSheetModel,
   makePrepSheetPdf,
+  parsePrepSheetStepItems,
+  PREP_SHEET_BRAND_LOCKUP,
   prepSheetCopy,
   prepSheetLang,
   setPrepSheetPdfFonts,
+  type PrepSheetTrace,
 } from "../../src/lib/erp/prepSheetPdf";
 import { processingComposition } from "../../src/lib/erp/processing";
 import {
@@ -654,6 +657,133 @@ async function main() {
       assert.ok(pdf.getPageCount() >= 1);
       const enBlob = await makePrepSheetPdf(input, { lang: "ru" });
       assert.equal(new TextDecoder().decode(new Uint8Array(await enBlob.arrayBuffer()).slice(0, 5)), "%PDF-");
+    } finally {
+      setPrepSheetPdfFonts(null);
+    }
+  });
+
+  await test("tech-card PDF keeps step titles above photos and drops the page-1 brand lockup", async () => {
+    const parsed = parsePrepSheetStepItems([
+      "1. Thaw the chicken leg quarters in the refrigerator at a temperature of 0–4 °C.",
+      "10. Divide the prepared chicken meat into two portions:",
+      "- 270 g for grinding through a meat grinder with a 4 mm plate.",
+      "- 600 g for cutting with a meat slicer equipped with cutting discs spaced 5 mm apart.",
+    ]);
+    assert.equal(parsed[0]?.kind, "step");
+    assert.equal(parsed[1]?.kind, "step");
+    assert.equal(parsed[2]?.kind, "sub");
+    assert.equal(parsed[3]?.kind, "sub");
+    const auto = parsePrepSheetStepItems(["Add beef", "Stir"]);
+    assert.deepEqual(
+      auto.map((line) => [line.kind, line.kind === "step" ? line.n : "", line.text]),
+      [
+        ["step", "1", "Add beef"],
+        ["step", "2", "Stir"],
+      ],
+    );
+
+    const dotPng =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const productId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3";
+    const meatId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4";
+    const meatItems = [
+      "1. Thaw the chicken leg quarters in the refrigerator at a temperature of 0–4 °C.",
+      "2. After thawing, rinse each piece of chicken in a clean food-grade container.",
+      "3. Allow all excess water to drain completely.",
+      "4. Remove the skin from the chicken leg quarters. Set aside the required amount of skin for the recipe.",
+      "5. Separate the meat from the bones of the chicken leg quarters, including both the thigh and drumstick. Minimize meat loss during deboning.",
+      "6. Remove excess skin, remaining bone fragments, cartilage and any other unwanted parts.",
+      "7. Carefully trim the drumstick meat, removing all tough tendons.",
+      "8. Inspect all prepared chicken meat to ensure no bones, cartilage or tough tendons remain.",
+      "9. Weigh and prepare 870 g of cleaned, boneless chicken meat and 130 g of chicken skin.",
+      "10. Divide the prepared chicken meat into two portions:",
+      "- 270 g for grinding through a meat grinder with a 4 mm plate.",
+      "- 600 g for cutting with a meat slicer equipped with cutting discs spaced 5 mm apart.",
+    ];
+    const input: PrepPublishInput = {
+      product: { id: productId, name_en: "Chicken sausage mix", name_vn: "Xúc xích gà", base_unit: "kg" },
+      kind: "prep",
+      cardNo: "GF-PR-101",
+      cardDate: "2026-11-19",
+      photo: "",
+      yieldQty: 1,
+      yieldPieces: null,
+      shelfLifeDays: 3,
+      storageConditions: "0–4 °C",
+      version: 1,
+      lines: Array.from({ length: 8 }, (_, index) => ({
+        product_id: meatId,
+        qty: 0.2,
+        net_qty: 0.18,
+        methods: ["clean"],
+        is_main: index === 0,
+        raw_name: { en: `Chicken part ${index + 1}`, vn: `Phần gà ${index + 1}` },
+      })),
+      catalog: [
+        { id: productId, name_en: "Chicken sausage mix", name_vn: "Xúc xích gà", base_unit: "kg" },
+        { id: meatId, name_en: "Chicken leg quarter", name_vn: "Đùi gà góc tư", base_unit: "kg" },
+      ],
+      steps: [
+        {
+          titleEn: "MEAT PREPARATION",
+          titleVn: "SƠ CHẾ THỊT",
+          photo: dotPng,
+          itemsEn: meatItems.join("\n"),
+          itemsVn: meatItems.join("\n"),
+        },
+        {
+          titleEn: "GRINDING",
+          titleVn: "XAY",
+          photo: dotPng,
+          itemsEn: "1. Grind the 270 g portion.\n2. Keep the mince cold.\n3. Mix with the sliced meat.",
+          itemsVn: "1. Xay 270 g.\n2. Giữ thịt xay lạnh.\n3. Trộn với thịt thái.",
+        },
+      ],
+      batchCost: 90000,
+    };
+
+    const fontsDir = path.join(process.cwd(), "public", "fonts");
+    const toAb = (buf: Buffer) => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    setPrepSheetPdfFonts({
+      regular: toAb(await readFile(path.join(fontsDir, "NotoSans-Regular.ttf"))),
+      bold: toAb(await readFile(path.join(fontsDir, "NotoSans-Bold.ttf"))),
+    });
+    try {
+      const trace: PrepSheetTrace = { texts: [], images: [] };
+      const blob = await makePrepSheetPdf(input, { lang: "en", trace });
+      const pdf = await PDFDocument.load(new Uint8Array(await blob.arrayBuffer()));
+      assert.ok(pdf.getPageCount() >= 2, "cooking should continue onto a second page");
+
+      const page1 = trace.texts.filter((op) => op.page === 1);
+      assert.ok(page1.some((op) => op.text.includes("Chicken sausage mix")));
+      assert.ok(page1.some((op) => op.text.includes("GF-PR-101")));
+      assert.ok(
+        !page1.some((op) => op.text === PREP_SHEET_BRAND_LOCKUP || op.text.includes(PREP_SHEET_BRAND_LOCKUP)),
+        "page 1 must not draw the GASTROFOOD brand lockup",
+      );
+      assert.ok(!page1.some((op) => op.text === "Semi-finished" || op.text === "Bán thành phẩm"));
+      assert.ok(!trace.texts.some((op) => op.text === PREP_SHEET_BRAND_LOCKUP));
+
+      const title = trace.texts.find((op) => op.text.includes("MEAT PREPARATION"));
+      assert.ok(title, "step title is drawn");
+      const image = trace.images.find((op) => op.page === title!.page);
+      assert.ok(image, "step photo is drawn on the title page");
+      assert.ok(
+        title!.y > image!.y + image!.height + 8,
+        `title baseline ${title!.y} must sit above the photo top ${image!.y + image!.height}`,
+      );
+
+      const page2 = trace.texts.filter((op) => op.page === 2);
+      assert.ok(page2.length > 0);
+      assert.ok(!page2.some((op) => op.text === PREP_SHEET_BRAND_LOCKUP));
+      assert.ok(
+        page2.some(
+          (op) =>
+            /Chicken sausage mix|GF-PR-101|Thaw|GRINDING|Grind|Ingredient|Card/.test(op.text) || /^\d+ \/ \d+$/.test(op.text),
+        ),
+        "page 2 continues the tech card instead of a branded blank sheet",
+      );
+      assert.ok(trace.texts.some((op) => op.page === 1 && /^\d+ \/ \d+$/.test(op.text)), "footer page numbers");
     } finally {
       setPrepSheetPdfFonts(null);
     }

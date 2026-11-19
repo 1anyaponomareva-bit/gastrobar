@@ -19,13 +19,20 @@ const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN_X = 40;
 const MARGIN_TOP = 36;
-const MARGIN_BOTTOM = 40;
+const MARGIN_BOTTOM = 48;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 
 const FONT_SIZE = 9;
-const TITLE_SIZE = 18;
+const TITLE_SIZE = 16;
 const LINE_GAP = 3;
 const ROW_PAD_Y = 7;
+const STEP_TITLE_SIZE = 12;
+const STEP_BODY_SIZE = 10;
+const TITLE_PHOTO_GAP = 10;
+const PHOTO_TEXT_GAP = 12;
+const ITEM_BLOCK_GAP = 9;
+const PHOTO_BOX_W = 210;
+const PHOTO_BOX_H = 128;
 
 const COLORS = {
   text: rgb(0.07, 0.07, 0.07),
@@ -131,6 +138,47 @@ export function pickSheetText(en: string, vn: string, lang: PrepSheetLang): stri
   const primary = (lang === "vn" ? vn : en).trim();
   const fallback = (lang === "vn" ? en : vn).trim();
   return primary || fallback;
+}
+
+/** Never drawn on the tech-card. Page 1 must not print this brand lockup. */
+export const PREP_SHEET_BRAND_LOCKUP = "GASTROFOOD";
+
+export type PrepSheetStepLine =
+  | { kind: "step"; n: string; text: string }
+  | { kind: "sub"; text: string }
+  | { kind: "text"; text: string };
+
+export type PrepSheetTrace = {
+  texts: { page: number; text: string; x: number; y: number; size: number }[];
+  images: { page: number; x: number; y: number; width: number; height: number }[];
+};
+
+/** Numbered instructions stay numbered; leading dashes become nested bullets. */
+export function parsePrepSheetStepItems(items: string[]): PrepSheetStepLine[] {
+  const cleaned = items.map((item) => item.replace(/^[•●]\s+/, "").trim()).filter(Boolean);
+  const numbered = cleaned.filter((item) => /^\d+[.)]\s+\S/.test(item)).length;
+  const auto = numbered === 0;
+  const lines: PrepSheetStepLine[] = [];
+  let n = 0;
+  for (const item of cleaned) {
+    const asNumber = item.match(/^(\d+)[.)]\s+(.*)$/);
+    if (asNumber) {
+      lines.push({ kind: "step", n: asNumber[1], text: asNumber[2].trim() });
+      continue;
+    }
+    const asSub = item.match(/^[-–—]\s+(.*)$/);
+    if (asSub) {
+      lines.push({ kind: "sub", text: asSub[1].trim() });
+      continue;
+    }
+    if (auto) {
+      n += 1;
+      lines.push({ kind: "step", n: String(n), text: item });
+    } else {
+      lines.push({ kind: "text", text: item });
+    }
+  }
+  return lines;
 }
 
 type SheetRow = { name: string; qty: string; unit: string; note: string; main: boolean };
@@ -322,17 +370,44 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines.length ? lines : [""];
 }
 
+type StepGroup = {
+  lead: PrepSheetStepLine;
+  extras: Extract<PrepSheetStepLine, { kind: "sub" }>[];
+};
+
 type DrawState = {
   doc: PDFDocument;
   page: PDFPage;
+  pageIndex: number;
   y: number;
   font: PDFFont;
   bold: PDFFont;
+  model: PrepSheetModel;
+  trace?: PrepSheetTrace;
 };
+
+function groupStepLines(lines: PrepSheetStepLine[]): StepGroup[] {
+  const groups: StepGroup[] = [];
+  for (const line of lines) {
+    if (line.kind === "sub") {
+      if (groups.length) groups[groups.length - 1].extras.push(line);
+      else groups.push({ lead: { kind: "text", text: line.text }, extras: [] });
+      continue;
+    }
+    groups.push({ lead: line, extras: [] });
+  }
+  return groups;
+}
+
+function linesHeight(count: number, size: number, gap = LINE_GAP): number {
+  if (count <= 0) return 0;
+  return count * size + Math.max(0, count - 1) * gap;
+}
 
 function newPage(state: DrawState): void {
   state.page = state.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  state.y = PAGE_HEIGHT - MARGIN_TOP;
+  state.pageIndex += 1;
+  drawRunningHeader(state);
 }
 
 function ensure(state: DrawState, height: number): void {
@@ -351,13 +426,15 @@ function drawTextLine(
   opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {},
 ): void {
   if (!value) return;
+  const size = opts.size ?? FONT_SIZE;
   state.page.drawText(value, {
     x,
     y,
-    size: opts.size ?? FONT_SIZE,
+    size,
     font: opts.bold ? state.bold : state.font,
     color: opts.color ?? COLORS.text,
   });
+  state.trace?.texts.push({ page: state.pageIndex, text: value, x, y, size });
 }
 
 function wrappedHeight(lines: number, size = FONT_SIZE): number {
@@ -379,6 +456,22 @@ function drawWrapped(
   }
 }
 
+function drawLinesFromTop(
+  state: DrawState,
+  lines: string[],
+  x: number,
+  topY: number,
+  opts: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb> } = {},
+): number {
+  const size = opts.size ?? FONT_SIZE;
+  let baseline = topY - size;
+  for (const line of lines) {
+    drawTextLine(state, line, x, baseline, opts);
+    baseline -= size + LINE_GAP;
+  }
+  return linesHeight(lines.length, size);
+}
+
 function section(state: DrawState, title: string): void {
   const height = 22;
   ensure(state, height + 10);
@@ -394,16 +487,23 @@ function section(state: DrawState, title: string): void {
   state.y = top - height - 8;
 }
 
+function decodeDataImage(url: string): Uint8Array | null {
+  const comma = url.indexOf(",");
+  if (comma < 0) return null;
+  const binary = atob(url.slice(comma + 1));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function embedPhoto(doc: PDFDocument, url: string | undefined): Promise<PDFImage | null> {
   if (!url) return null;
   try {
     let bytes: Uint8Array;
     if (url.startsWith("data:image/")) {
-      const comma = url.indexOf(",");
-      if (comma < 0) return null;
-      const binary = atob(url.slice(comma + 1));
-      bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const decoded = decodeDataImage(url);
+      if (!decoded) return null;
+      bytes = decoded;
     } else {
       const response = await fetch(url);
       if (!response.ok) return null;
@@ -417,52 +517,56 @@ async function embedPhoto(doc: PDFDocument, url: string | undefined): Promise<PD
   return null;
 }
 
-function drawImage(state: DrawState, image: PDFImage, maxW: number, maxH: number): void {
-  const scale = Math.min(maxW / image.width, maxH / image.height, 1);
-  const w = image.width * scale;
-  const h = image.height * scale;
-  ensure(state, h + 8);
-  state.page.drawImage(image, { x: MARGIN_X, y: state.y - h, width: w, height: h });
-  state.y -= h + 12;
+function fitPhoto(image: PDFImage, maxW: number, maxH: number): { w: number; h: number } {
+  const scale = Math.min(maxW / image.width, maxH / image.height);
+  return { w: image.width * scale, h: image.height * scale };
 }
 
-function drawHeader(state: DrawState, model: PrepSheetModel, logo: PDFImage | null): void {
+function drawRunningHeader(state: DrawState): void {
+  const top = PAGE_HEIGHT - 16;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: PAGE_HEIGHT - 8,
+    width: CONTENT_WIDTH,
+    height: 3,
+    color: COLORS.goldBar,
+  });
+  const line = `${state.model.name}  ·  ${state.model.copy.cardNo} ${state.model.cardNo}  ·  ${state.model.copy.date} ${state.model.date}`;
+  const clipped = wrapText(line, state.font, 8, CONTENT_WIDTH);
+  drawTextLine(state, clipped[0] ?? line, MARGIN_X, top - 14, { size: 8, color: COLORS.muted });
+  state.page.drawLine({
+    start: { x: MARGIN_X, y: top - 22 },
+    end: { x: PAGE_WIDTH - MARGIN_X, y: top - 22 },
+    thickness: 0.4,
+    color: COLORS.line,
+  });
+  state.y = top - 34;
+}
+
+function drawPageOneHeader(state: DrawState): void {
+  const model = state.model;
   const copy = model.copy;
-  const nameLines = wrapText(model.name, state.bold, TITLE_SIZE, CONTENT_WIDTH - (logo ? 90 : 0));
+  const nameLines = wrapText(model.name, state.bold, TITLE_SIZE, CONTENT_WIDTH);
   const meta = [
     `${copy.cardNo} ${model.cardNo}`,
     `${copy.date} ${model.date}`,
     `${copy.rev} ${model.revision}`,
   ];
-  const logoH = logo ? Math.min(36, (36 / logo.width) * logo.height) : 0;
-  const headerH = 10 + Math.max(logoH, 14) + 8 + nameLines.length * (TITLE_SIZE + 2) + 18 + 36 + 8;
+  const metaH = 30;
+  const headerH = 6 + nameLines.length * (TITLE_SIZE + 3) + 12 + metaH + 10;
   ensure(state, headerH);
   const top = state.y;
   state.page.drawRectangle({
     x: MARGIN_X,
-    y: top - 4,
+    y: top - 3,
     width: CONTENT_WIDTH,
-    height: 4,
+    height: 3,
     color: COLORS.goldBar,
   });
-  let y = top - 14;
-  if (logo) {
-    const w = (logoH / logo.height) * logo.width;
-    state.page.drawImage(logo, { x: MARGIN_X, y: y - logoH + 8, width: w, height: logoH });
-    drawTextLine(state, "GASTROFOOD", MARGIN_X + w + 10, y - 4, { size: 11, bold: true, color: COLORS.gold });
-  } else {
-    drawTextLine(state, "GASTROFOOD", MARGIN_X, y - 4, { size: 11, bold: true, color: COLORS.gold });
-  }
-  y -= Math.max(logoH, 16) + 2;
-  drawTextLine(state, model.kind, MARGIN_X, y, { size: 9, color: COLORS.muted });
-  y -= 16;
-  for (const line of nameLines) {
-    drawTextLine(state, line, MARGIN_X, y - TITLE_SIZE + 4, { size: TITLE_SIZE, bold: true });
-    y -= TITLE_SIZE + 2;
-  }
-  y -= 10;
+  let y = top - 12;
+  const nameH = drawLinesFromTop(state, nameLines, MARGIN_X, y, { size: TITLE_SIZE, bold: true });
+  y -= nameH + 10;
   const cellW = CONTENT_WIDTH / 3;
-  const metaH = 32;
   state.page.drawRectangle({
     x: MARGIN_X,
     y: y - metaH,
@@ -482,9 +586,192 @@ function drawHeader(state: DrawState, model: PrepSheetModel, logo: PDFImage | nu
         color: COLORS.line,
       });
     }
-    drawTextLine(state, label, x + 10, y - 20, { size: 9, color: COLORS.muted });
+    drawTextLine(state, label, x + 10, y - 19, { size: 9, color: COLORS.muted });
   });
-  state.y = y - metaH - 14;
+  state.y = y - metaH - 12;
+}
+
+function stampFooters(state: DrawState): void {
+  const pages = state.doc.getPages();
+  const total = pages.length;
+  const savedPage = state.page;
+  const savedIndex = state.pageIndex;
+  pages.forEach((page, index) => {
+    state.page = page;
+    state.pageIndex = index + 1;
+    page.drawLine({
+      start: { x: MARGIN_X, y: 34 },
+      end: { x: PAGE_WIDTH - MARGIN_X, y: 34 },
+      thickness: 0.5,
+      color: COLORS.line,
+    });
+    const left = `${state.model.name}  ·  ${state.model.copy.cardNo} ${state.model.cardNo}`;
+    const right = `${index + 1} / ${total}`;
+    const leftLines = wrapText(left, state.font, 8, CONTENT_WIDTH - 56);
+    drawTextLine(state, leftLines[0] ?? left, MARGIN_X, 20, { size: 8, color: COLORS.muted });
+    const rightW = state.font.widthOfTextAtSize(right, 8);
+    drawTextLine(state, right, PAGE_WIDTH - MARGIN_X - rightW, 20, { size: 8, color: COLORS.muted });
+  });
+  state.page = savedPage;
+  state.pageIndex = savedIndex;
+}
+
+function stepLabelWidth(state: DrawState, n: string, size: number): number {
+  return Math.max(state.bold.widthOfTextAtSize("00.", size), state.bold.widthOfTextAtSize(`${n}.`, size)) + 6;
+}
+
+function groupInnerWidth(width: number, labelW: number, extra = 0): number {
+  return Math.max(40, width - 10 - labelW - extra);
+}
+
+function measureGroup(state: DrawState, group: StepGroup, width: number): number {
+  const size = STEP_BODY_SIZE;
+  const labelW = group.lead.kind === "step" ? stepLabelWidth(state, group.lead.n, size) : 0;
+  const leadLines = wrapText(group.lead.text, state.font, size, groupInnerWidth(width, labelW));
+  let height = 5 + linesHeight(leadLines.length, size);
+  for (const extra of group.extras) {
+    const subLines = wrapText(extra.text, state.font, size, groupInnerWidth(width, labelW, 16));
+    height += 5 + linesHeight(subLines.length, size);
+  }
+  return height + 4;
+}
+
+function drawGroup(state: DrawState, group: StepGroup, x: number, topY: number, width: number): number {
+  const size = STEP_BODY_SIZE;
+  const height = measureGroup(state, group, width);
+  state.page.drawRectangle({
+    x,
+    y: topY - height,
+    width: 2.2,
+    height,
+    color: COLORS.goldBar,
+  });
+  const textX = x + 8;
+  const labelW = group.lead.kind === "step" ? stepLabelWidth(state, group.lead.n, size) : 0;
+  if (group.lead.kind === "step") {
+    drawTextLine(state, `${group.lead.n}.`, textX, topY - 5 - size, { size, bold: true });
+  }
+  const leadLines = wrapText(group.lead.text, state.font, size, groupInnerWidth(width, labelW));
+  let y = topY - 5;
+  y -= drawLinesFromTop(state, leadLines, textX + labelW, y, { size });
+  for (const extra of group.extras) {
+    y -= 5;
+    const bulletX = textX + labelW;
+    drawTextLine(state, "–", bulletX, y - size, { size, color: COLORS.muted });
+    const subLines = wrapText(extra.text, state.font, size, groupInnerWidth(width, labelW, 16));
+    y -= drawLinesFromTop(state, subLines, bulletX + 12, y, { size, color: COLORS.muted });
+  }
+  return height;
+}
+
+function drawPhotoBox(state: DrawState, image: PDFImage, topY: number): { w: number; h: number } {
+  const pad = 4;
+  const fitted = fitPhoto(image, PHOTO_BOX_W - pad * 2, PHOTO_BOX_H - pad * 2);
+  const boxW = fitted.w + pad * 2;
+  const boxH = fitted.h + pad * 2;
+  const boxBottom = topY - boxH;
+  state.page.drawRectangle({
+    x: MARGIN_X,
+    y: boxBottom,
+    width: boxW,
+    height: boxH,
+    color: COLORS.white,
+    borderColor: COLORS.line,
+    borderWidth: 0.7,
+  });
+  const imgY = boxBottom + pad;
+  state.page.drawImage(image, {
+    x: MARGIN_X + pad,
+    y: imgY,
+    width: fitted.w,
+    height: fitted.h,
+  });
+  state.trace?.images.push({
+    page: state.pageIndex,
+    x: MARGIN_X + pad,
+    y: imgY,
+    width: fitted.w,
+    height: fitted.h,
+  });
+  return { w: boxW, h: boxH };
+}
+
+async function drawCookingStep(
+  state: DrawState,
+  step: PrepSheetModel["steps"][number],
+  index: number,
+): Promise<void> {
+  const title = `${index + 1}.  ${step.title}`;
+  const titleLines = wrapText(title, state.bold, STEP_TITLE_SIZE, CONTENT_WIDTH);
+  const titleH = linesHeight(titleLines.length, STEP_TITLE_SIZE);
+  const photo = await embedPhoto(state.doc, step.photo || undefined);
+  const photoSize = photo ? fitPhoto(photo, PHOTO_BOX_W - 8, PHOTO_BOX_H - 8) : null;
+  const photoBoxH = photoSize ? photoSize.h + 8 : 0;
+  const photoBoxW = photoSize ? photoSize.w + 8 : 0;
+  const minBlock = titleH + TITLE_PHOTO_GAP + (photo ? photoBoxH + 8 : STEP_BODY_SIZE + 8);
+  ensure(state, minBlock);
+
+  const titleTop = state.y;
+  drawLinesFromTop(state, titleLines, MARGIN_X, titleTop, { size: STEP_TITLE_SIZE, bold: true });
+  state.y = titleTop - titleH - 4;
+  state.page.drawLine({
+    start: { x: MARGIN_X, y: state.y },
+    end: { x: PAGE_WIDTH - MARGIN_X, y: state.y },
+    thickness: 0.4,
+    color: COLORS.line,
+  });
+  state.y -= TITLE_PHOTO_GAP;
+
+  let photoBottom = state.y;
+  const photoPage = state.pageIndex;
+  if (photo) {
+    const box = drawPhotoBox(state, photo, state.y);
+    photoBottom = state.y - box.h;
+  }
+
+  const groups = groupStepLines(parsePrepSheetStepItems(step.items));
+  const sideX = MARGIN_X + photoBoxW + PHOTO_TEXT_GAP;
+  const sideW = CONTENT_WIDTH - photoBoxW - PHOTO_TEXT_GAP;
+  let y = state.y;
+  let beside = Boolean(photo && sideW >= 200);
+
+  const place = (groupH: number): { x: number; width: number; y: number } => {
+    if (beside && y - groupH < photoBottom - 1) {
+      beside = false;
+      y = Math.min(y, photoBottom) - 10;
+    }
+    if (y - groupH < MARGIN_BOTTOM) {
+      newPage(state);
+      y = state.y;
+      beside = false;
+    }
+    return beside ? { x: sideX, width: sideW, y } : { x: MARGIN_X, width: CONTENT_WIDTH, y };
+  };
+
+  for (const group of groups) {
+    let width = beside ? sideW : CONTENT_WIDTH;
+    let groupH = measureGroup(state, group, width);
+    const spot = place(groupH);
+    if (spot.width !== width) {
+      width = spot.width;
+      groupH = measureGroup(state, group, width);
+    }
+    if (spot.y - groupH < MARGIN_BOTTOM) {
+      newPage(state);
+      y = state.y;
+      beside = false;
+      width = CONTENT_WIDTH;
+      groupH = measureGroup(state, group, width);
+      drawGroup(state, group, MARGIN_X, y, width);
+      y -= groupH + ITEM_BLOCK_GAP;
+      continue;
+    }
+    drawGroup(state, group, spot.x, spot.y, width);
+    y = spot.y - groupH - ITEM_BLOCK_GAP;
+  }
+
+  const belowPhoto = photo && state.pageIndex === photoPage ? Math.min(y, photoBottom) : y;
+  state.y = belowPhoto - 12;
 }
 
 function drawTableHeader(state: DrawState, copy: PrepSheetCopy): void {
@@ -543,7 +830,7 @@ function drawTableRow(state: DrawState, row: SheetRow, zebra: boolean, copy: Pre
 
 export async function makePrepSheetPdf(
   input: PrepPublishInput,
-  options?: { lang?: ErpLang },
+  options?: { lang?: ErpLang; trace?: PrepSheetTrace },
 ): Promise<Blob> {
   const model = buildPrepSheetModel(input, options?.lang ?? erpLang());
   const { regular, bold } = await loadFontBytes();
@@ -554,18 +841,15 @@ export async function makePrepSheetPdf(
   const state: DrawState = {
     doc,
     page: doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
+    pageIndex: 1,
     y: PAGE_HEIGHT - MARGIN_TOP,
     font,
     bold: fontBold,
+    model,
+    trace: options?.trace,
   };
 
-  const logo =
-    (await embedPhoto(doc, getAssetUrl("/food/menu/GASTROFOOD-line.png"))) ||
-    (await embedPhoto(doc, getAssetUrl("/food/menu/GASTROFOOD.png")));
-  drawHeader(state, model, logo);
-
-  const hero = await embedPhoto(doc, input.photo.trim() || undefined);
-  if (hero) drawImage(state, hero, 220, 130);
+  drawPageOneHeader(state);
 
   if (model.facts.length) {
     const factText = model.facts.join("    ");
@@ -602,26 +886,11 @@ export async function makePrepSheetPdf(
   if (model.steps.length) {
     section(state, model.copy.cooking);
     for (const [index, step] of model.steps.entries()) {
-      const title = `${index + 1}.  ${step.title}`;
-      const titleLines = wrapText(title, fontBold, 11, CONTENT_WIDTH - 8);
-      const itemBlocks = step.items.map((item) => wrapText(`•  ${item}`, font, 9, CONTENT_WIDTH - 22));
-      const blockH =
-        wrappedHeight(titleLines.length, 11) +
-        itemBlocks.reduce((sum, lines) => sum + lines.length * 12, 0) +
-        10;
-      ensure(state, blockH);
-      drawWrapped(state, titleLines, MARGIN_X, state.y, { size: 11, bold: true });
-      state.y -= wrappedHeight(titleLines.length, 11) - ROW_PAD_Y;
-      const photo = await embedPhoto(doc, step.photo || undefined);
-      if (photo) drawImage(state, photo, 180, 110);
-      for (const lines of itemBlocks) {
-        drawWrapped(state, lines, MARGIN_X + 14, state.y, { size: 9 });
-        state.y -= lines.length * 12 + 2;
-      }
-      state.y -= 8;
+      await drawCookingStep(state, step, index);
     }
   }
 
+  stampFooters(state);
   const bytes = await doc.save();
   return new Blob([Uint8Array.from(bytes)], { type: "application/pdf" });
 }
