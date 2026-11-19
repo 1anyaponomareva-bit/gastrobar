@@ -36,15 +36,13 @@ export function androidChromeIntentUrl(href: string): string {
   return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;end`;
 }
 
-function hasTouchScreen(): boolean {
-  if (typeof navigator === "undefined") return false;
-  if (navigator.maxTouchPoints > 0) return true;
-  return window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
-}
-
-/** Phones and tablets should attempt the native share sheet when `canShare` is missing. */
+/**
+ * Native share only on phones/tablets. Windows (including touch laptops) must
+ * download — `navigator.share` there is "Поделиться", not a file save.
+ */
 export function isMobileOrTouchShareTarget(): boolean {
   if (typeof navigator === "undefined") return false;
+  if (/Windows NT/i.test(navigator.userAgent)) return false;
   if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return true;
   if (isIosDevice()) return true;
   if (
@@ -53,22 +51,22 @@ export function isMobileOrTouchShareTarget(): boolean {
   ) {
     return true;
   }
-  return hasTouchScreen();
+  return false;
 }
 
 /**
- * Download only when Web Share + files is unavailable (typical desktop).
- * Never use this after a share attempt — AbortError / NotAllowedError must not download.
+ * Desktop always downloads via `<a download>` blob — never `navigator.share`.
+ * Share only on phones/tablets. AbortError / NotAllowedError must not download.
  */
 export function choosePdfDelivery(input: {
   hasShare: boolean;
   canShareFiles: boolean | null;
   mobileOrTouch: boolean;
 }): PdfDeliveryChoice {
+  if (!input.mobileOrTouch) return "download";
   if (!input.hasShare) return "download";
-  if (input.canShareFiles === true) return "share";
   if (input.canShareFiles === false) return "download";
-  return input.mobileOrTouch ? "share" : "download";
+  return "share";
 }
 
 export function interpretShareError(error: unknown): "cancelled" | "failed" {
@@ -143,7 +141,7 @@ function sharePayload(file: File, meta?: DeliverPdfShareMeta): ShareData {
 
 /**
  * Phones/tablets: native share sheet with a real PDF file attachment only.
- * Desktop: download the PDF file.
+ * Desktop: `<a download>` blob — never Windows Share / `navigator.share`.
  * Share is always from the in-memory File in this turn — no network before navigator.share.
  */
 export async function deliverPdfFile(

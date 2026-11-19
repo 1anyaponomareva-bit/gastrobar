@@ -41,6 +41,13 @@ test("desktop with share but no canShare API downloads", () => {
   );
 });
 
+test("Windows desktop with Web Share + files downloads, never native share", () => {
+  assert.equal(
+    choosePdfDelivery({ hasShare: true, canShareFiles: true, mobileOrTouch: false }),
+    "download",
+  );
+});
+
 test("user cancelling the share sheet is not a download", () => {
   assert.equal(interpretShareError({ name: "AbortError" }), "cancelled");
   assert.equal(interpretShareError(Object.assign(new Error("AbortError"), { name: "AbortError" })), "cancelled");
