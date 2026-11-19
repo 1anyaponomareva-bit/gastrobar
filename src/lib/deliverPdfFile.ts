@@ -104,7 +104,8 @@ function buildPdfFileFromBlob(blob: Blob, fileName: string): File {
   });
 }
 
-function downloadPdfFile(blob: Blob, fileName: string): void {
+/** Always `<a download>` a blob URL. Never `navigator.share` / Windows Share. */
+export function downloadPdfFile(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

@@ -7,7 +7,7 @@ import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } fr
 import { buildCostContext, compositionYieldCost, costLine, liveCatalogName, plannedUnitCost, productTitle, type ErpUnit } from "@/lib/erp/costing";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
-import { deliverPdfFile } from "@/lib/deliverPdfFile";
+import { downloadPdfFile } from "@/lib/deliverPdfFile";
 import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDraft } from "@/lib/erp/recipeCard";
 import { makePrepSheetPdf } from "@/lib/erp/prepSheetPdf";
 import {
@@ -548,7 +548,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     try {
       const input = publishInput();
       const blob = await makePrepSheetPdf(input);
-      await deliverPdfFile(blob, prepSheetFileName(input), { title: nameEn.trim() || "Tech card" });
+      downloadPdfFile(blob, prepSheetFileName(input));
     } catch {
       window.alert(T("Не удалось сохранить PDF", "Could not save the PDF", "Không lưu được PDF"));
     } finally {

@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import {
   beginShareThenPersist,
   choosePdfDelivery,
+  downloadPdfFile,
   interpretShareError,
 } from "./deliverPdfFile";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 test("desktop without Web Share downloads instead of sharing", () => {
   assert.equal(
@@ -46,6 +52,72 @@ test("Windows desktop with Web Share + files downloads, never native share", () 
     choosePdfDelivery({ hasShare: true, canShareFiles: true, mobileOrTouch: false }),
     "download",
   );
+});
+
+test("downloadPdfFile clicks <a download> blob and never navigator.share", () => {
+  const src = readFileSync(join(here, "deliverPdfFile.ts"), "utf8");
+  const start = src.indexOf("export function downloadPdfFile");
+  const end = src.indexOf("function readCanShareFiles");
+  const fn = src.slice(start, end);
+  assert.match(fn, /anchor\.download/);
+  assert.match(fn, /createObjectURL/);
+  assert.doesNotMatch(fn, /navigator\.share/);
+  assert.doesNotMatch(fn, /choosePdfDelivery/);
+
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const origCreate = URL.createObjectURL;
+  const origRevoke = URL.revokeObjectURL;
+  const origSetTimeout = globalThis.setTimeout;
+  const clicks: Array<{ href: string; download: string }> = [];
+  const anchor = {
+    href: "",
+    download: "",
+    rel: "",
+    style: { display: "" },
+    click() {
+      clicks.push({ href: this.href, download: this.download });
+    },
+  };
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      createElement: (tag: string) => {
+        assert.equal(tag, "a");
+        return anchor;
+      },
+      body: { appendChild() {}, removeChild() {} },
+    },
+  });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { setTimeout: () => 0 },
+  });
+  URL.createObjectURL = () => "blob:prep-pdf";
+  URL.revokeObjectURL = () => undefined;
+  globalThis.setTimeout = (() => 0) as typeof setTimeout;
+
+  try {
+    downloadPdfFile(new Blob(["%PDF"], { type: "application/pdf" }), "tech-card.pdf");
+    assert.equal(clicks.length, 1);
+    assert.equal(clicks[0]?.href, "blob:prep-pdf");
+    assert.equal(clicks[0]?.download, "tech-card.pdf");
+  } finally {
+    URL.createObjectURL = origCreate;
+    URL.revokeObjectURL = origRevoke;
+    globalThis.setTimeout = origSetTimeout;
+    if (previousDocument) Object.defineProperty(globalThis, "document", previousDocument);
+    else Reflect.deleteProperty(globalThis, "document");
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
+test("PrepsPage Save PDF uses downloadPdfFile and never deliverPdfFile or navigator.share", () => {
+  const src = readFileSync(join(here, "../components/erp/PrepsPage.tsx"), "utf8");
+  assert.match(src, /\bdownloadPdfFile\s*\(/);
+  assert.doesNotMatch(src, /\bdeliverPdfFile\s*\(/);
+  assert.doesNotMatch(src, /navigator\.share/);
 });
 
 test("user cancelling the share sheet is not a download", () => {
