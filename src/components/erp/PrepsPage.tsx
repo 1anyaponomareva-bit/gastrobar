@@ -22,6 +22,7 @@ import { downloadPdfFile } from "@/lib/deliverPdfFile";
 import { parseRecipeInstructions, serializeRecipeInstructions, type RecipeStepDraft } from "@/lib/erp/recipeCard";
 import { makePrepSheetPdf } from "@/lib/erp/prepSheetPdf";
 import {
+  prepCoverUrl,
   prepSheetFileName,
   recipeInstructionSource,
   staffRecipeCardUrl,
@@ -397,7 +398,7 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
     kind: recipeKind(recipe?.kind),
     card_no: recipe?.card_no ?? "",
     card_date: (recipe?.card_date ?? "").slice(0, 10) || (recipe ? "" : today()),
-    photo: recipe?.photo ?? "",
+    photo: prepCoverUrl(recipe, product),
     yield_qty: recipe?.yield_qty ?? null,
     yield_pieces: recipe?.yield_pieces ?? null,
     shelf_life_days: recipe?.shelf_life_days ?? product.shelf_life_days ?? null,
@@ -644,7 +645,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         onNameVn={setNameVn}
         onCardNo={(value) => set("card_no", value)}
         onCardDate={(value) => set("card_date", value)}
-        onPhoto={(value) => set("photo", value)}
+        onPhoto={(value) => {
+          setEditing(true);
+          set("photo", value);
+        }}
       />
       <p className="erpHint">
         {T(

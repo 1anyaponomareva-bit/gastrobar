@@ -114,7 +114,11 @@ import {
 import { CANONICAL_ERP_ORIGIN, movedErpPagePath, publicErpHref, toInternalErpPathname, toPublicErpPathname } from "../../src/lib/erp/publicPath";
 import { findRecipeByCard, recipeCardFromPathname, staffRecipePath } from "../../src/lib/recipes/cardUrl";
 import {
+  mergeErpPrepsIntoStored,
+  prepCoverUrl,
   prepPublishFromSaved,
+  publishedPrepRecipe,
+  staffCardsFromErpPreps,
   staffRecipeCardUrl,
   staffRecipeFromPrep,
   staffRecipeId,
@@ -626,6 +630,16 @@ async function main() {
     );
     assert.equal(fromSaved.photo, "https://example.test/erp-photos/preps/hero.jpg");
     assert.equal(fromSaved.steps[0].photo, stepPhoto);
+    assert.equal(prepCoverUrl({ photo: "" }, { photo: "https://product.test/hero.jpg" }), "https://product.test/hero.jpg");
+    assert.equal(prepCoverUrl({ photo: null, image: "https://recipe.test/image.jpg" }, { photo: "https://product.test/hero.jpg" }), "https://recipe.test/image.jpg");
+    assert.equal(
+      prepPublishFromSaved(
+        { id: productId, name_en: "Beef mix", name_vn: "Thịt bò xay", type: "semi_finished", base_unit: "kg", photo: "https://product.test/hero.jpg" } as never,
+        { product_id: productId, photo: "", instructions: [], lines: [], yield_qty: 1, yield_pieces: null, shelf_life_days: null, storage_conditions: "", version: 1, card_no: "", card_date: "", kind: "prep" } as never,
+        [],
+      ).photo,
+      "https://product.test/hero.jpg",
+    );
     assert.equal(recipeCookingSteps(mapped).length, 1);
     assert.equal(recipeText(mapped.steps[0].items[0], "ru"), "Add beef");
     const fromInstructions = recipeCookingSteps({
@@ -695,6 +709,52 @@ async function main() {
     assert.equal(findRecipeByCard(second.stored.recipes, "GF-PR-088")?.id, mapped.id);
     assert.equal(findRecipeByCard(second.stored.recipes, productId)?.id, mapped.id);
     assert.equal(findRecipeByCard(second.stored.recipes, "chicken-sausage")?.id, "chicken-sausage");
+
+    const mixId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const mixProduct = {
+      id: mixId,
+      type: "semi_finished",
+      name_en: "CHICKEN SAUSAGE MEAT MIX",
+      name_vn: "Thịt xay xúc xích gà",
+      base_unit: "kg",
+      archived_at: null,
+      shelf_life_days: null,
+      storage_conditions: null,
+      photo: "https://example.test/erp-photos/preps/mix.jpg",
+    } as never;
+    const cards = staffCardsFromErpPreps([mixProduct], []);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0].id, staffRecipeId(mixId));
+    assert.equal(cards[0].name.en, "CHICKEN SAUSAGE MEAT MIX");
+    assert.equal(cards[0].kind, "prep");
+    assert.equal(cards[0].photo, "https://example.test/erp-photos/preps/mix.jpg");
+    const listed = mergeRecipes(mergeErpPrepsIntoStored({ recipes: [sausage!], deleted: [] }, cards));
+    assert.ok(listed.some((recipe) => recipe.id === "chicken-sausage"));
+    assert.ok(listed.some((recipe) => recipe.erpProductId === mixId && recipe.name.en === "CHICKEN SAUSAGE MEAT MIX"));
+    const activeMix = {
+      id: "recipe-mix",
+      product_id: mixId,
+      status: "active",
+      version: 1,
+      yield_qty: 1,
+      yield_pieces: null,
+      instructions: [],
+      shelf_life_days: null,
+      storage_conditions: "",
+      card_no: "GF-CHKN-MIX",
+      card_date: "2026-11-19",
+      lines: [{ product_id: beefId, qty: 1, methods: [], parts: [], is_main: true }],
+    } as never;
+    const draftMix = { ...activeMix, id: "recipe-mix-draft", status: "draft", version: 2, yield_qty: 9 };
+    assert.equal(publishedPrepRecipe([draftMix, activeMix], mixId)?.id, "recipe-mix");
+    const withTech = staffCardsFromErpPreps(
+      [mixProduct, { id: beefId, type: "ingredient", name_en: "Beef chuck", name_vn: "Thịt bò vai", base_unit: "kg", archived_at: null } as never],
+      [draftMix, activeMix],
+    );
+    assert.equal(withTech[0].yield.amount, 1000);
+    assert.equal(withTech[0].ingredients[0].name.en, "Beef chuck");
+    const archivedOut = staffCardsFromErpPreps([{ ...mixProduct, archived_at: "2026-11-01" } as never], []);
+    assert.equal(archivedOut.length, 0);
 
     const fontsDir = path.join(process.cwd(), "public", "fonts");
     const toAb = (buf: Buffer) => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
@@ -4846,6 +4906,28 @@ async function main() {
     assert.match(css, /\.erpMethodsDrop\s*\{[\s\S]*?position:\s*absolute/);
     assert.match(parts, /must sum to the parent net/);
     assert.match(parts, /Plaque stays hidden until the cook presses/);
+  });
+
+  await test("existing active prep tech card always shows cover upload", async () => {
+    const preps = await readFile(path.join(process.cwd(), "src/components/erp/PrepsPage.tsx"), "utf8");
+    const header = await readFile(path.join(process.cwd(), "src/components/erp/PrepCardFields.tsx"), "utf8");
+    const headerFn = header.slice(header.indexOf("export function PrepCardHeader"), header.indexOf("export function PrepStepsEditor"));
+    assert.match(header, /data-testid="prep-cover"/);
+    assert.match(headerFn, /<PrepCoverField url=\{photo\} onChange=\{onPhoto\} \/>/);
+    assert.equal(headerFn.includes("PrepCoverField url={photo} disabled"), false, "cover stays on for active/view-only cards");
+    assert.match(header, /data-testid=\{cover \? "prep-cover-add"/);
+    assert.match(header, /Добавить фото/);
+    assert.match(preps, /<PrepCardHeader[\s\S]*photo=\{form\.photo\}[\s\S]*readOnly=\{readOnly\}/);
+    assert.match(preps, /photo: prepCoverUrl\(recipe, product\)/);
+    assert.match(
+      preps,
+      /onPhoto=\{\(value\) => \{\s*setEditing\(true\);\s*set\("photo", value\);/,
+    );
+    assert.match(preps, /useState<boolean>\(!viewed \|\| viewed\.status === "draft"\)/);
+    assert.match(preps, /data-testid="prep-get-in-app"/);
+    const recipesApi = await readFile(path.join(process.cwd(), "app/api/recipes/overrides/route.ts"), "utf8");
+    assert.match(recipesApi, /applyErpPrepsToStoredRecipes/);
+    assert.match(recipesApi, /loadState\(\["products", "recipes"\]\)/);
   });
 
   await test("poster finance: deal date vs cash date, balances, pnl and cashflow", async () => {

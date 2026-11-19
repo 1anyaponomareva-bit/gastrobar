@@ -109,9 +109,16 @@ function staffPhoto(url: string | null | undefined): string | undefined {
   return undefined;
 }
 
-function recipeCoverUrl(recipe: ErpRecipe): string {
-  const extra = recipe as ErpRecipe & { image?: string | null };
-  return (recipe.photo || extra.image || "").trim();
+type CoverFields = { photo?: string | null; image?: string | null };
+
+/** Cover URL from the recipe, then legacy `image`, then a product photo if the form never stored one. */
+export function prepCoverUrl(recipe?: CoverFields | null, product?: object | null): string {
+  const extra = (product ?? {}) as CoverFields;
+  return (recipe?.photo || recipe?.image || extra.photo || extra.image || "").trim();
+}
+
+function recipeCoverUrl(recipe: ErpRecipe, product?: object | null): string {
+  return prepCoverUrl(recipe, product);
 }
 
 function catalogOf(catalog: PrepPublishProduct[], id: string | null): PrepPublishProduct | undefined {
@@ -270,6 +277,66 @@ export function staffRecipeFromPrep(input: PrepPublishInput): Recipe {
   };
 }
 
+/** Active tech card for kitchen, else the newest version. Drafts are not preferred. */
+export function publishedPrepRecipe(recipes: ErpRecipe[] | undefined, productId: string): ErpRecipe | null {
+  const list = (recipes ?? []).filter((recipe) => recipe.product_id === productId);
+  if (!list.length) return null;
+  return list.find((recipe) => recipe.status === "active") ?? [...list].sort((a, b) => b.version - a.version)[0];
+}
+
+function emptyRecipeForProduct(product: ErpProduct): ErpRecipe {
+  return {
+    id: product.id,
+    product_id: product.id,
+    version: 0,
+    status: "draft",
+    yield_qty: 1,
+    yield_pieces: null,
+    instructions: [],
+    shelf_life_days: product.shelf_life_days,
+    storage_conditions: product.storage_conditions,
+    note: null,
+    photo: product.photo ?? null,
+    kind: "prep",
+    legacy_recipe_id: null,
+    created_at: "",
+    created_by: null,
+    activated_at: null,
+    lines: [],
+  };
+}
+
+/** One Recipes card for an ERP semi-finished product, even when the tech card is still empty. */
+export function staffRecipeForErpProduct(
+  product: ErpProduct,
+  recipes: ErpRecipe[],
+  catalog: ErpProduct[],
+): Recipe {
+  const recipe = publishedPrepRecipe(recipes, product.id) ?? emptyRecipeForProduct(product);
+  return staffRecipeFromPrep(prepPublishFromSaved(product, recipe, catalog));
+}
+
+export function staffCardsFromErpPreps(products: ErpProduct[], recipes: ErpRecipe[]): Recipe[] {
+  return products
+    .filter((product) => !product.archived_at && product.type === "semi_finished")
+    .map((product) => staffRecipeForErpProduct(product, recipes, products));
+}
+
+/** Insert/update ERP prep cards in the staff JSON. Built-in recipes stay as they are. */
+export function mergeErpPrepsIntoStored(stored: StoredRecipes, cards: Recipe[]): StoredRecipes {
+  const live = new Set(cards.map((card) => card.erpProductId).filter((id): id is string => Boolean(id)));
+  let next: StoredRecipes = {
+    recipes: stored.recipes.map((recipe) =>
+      recipe.erpProductId && !live.has(recipe.erpProductId) ? { ...recipe, hidden: true } : recipe,
+    ),
+    deleted: stored.deleted.filter((id) => !cards.some((card) => card.id === id)),
+  };
+  for (const card of cards) {
+    next = upsertStaffRecipe(next, { ...card, hidden: false }).stored;
+  }
+  return next;
+}
+
 /**
  * Insert or replace the ERP-linked card only. Built-in / admin recipes without
  * this erpProductId are left untouched — never reverse-imported into ERP.
@@ -318,7 +385,7 @@ export function prepPublishFromSaved(
     cardNo: recipe.card_no ?? "",
     cardDate: (recipe.card_date ?? "").slice(0, 10),
     cardRevision: recipe.card_revision ?? undefined,
-    photo: recipeCoverUrl(recipe),
+    photo: recipeCoverUrl(recipe, product),
     yieldQty: recipe.yield_qty,
     yieldPieces: recipe.yield_pieces,
     shelfLifeDays: recipe.shelf_life_days,

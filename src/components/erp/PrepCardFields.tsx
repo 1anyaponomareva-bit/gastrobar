@@ -86,7 +86,13 @@ function PhotoField({
       </button>
       <div className="erpPhotoActs">
         {!disabled ? (
-          <button type="button" className="erpBtn" disabled={busy} onClick={openPicker}>
+          <button
+            type="button"
+            className="erpBtn"
+            disabled={busy}
+            onClick={openPicker}
+            data-testid={cover ? "prep-cover-add" : undefined}
+          >
             {busy
               ? T("Загрузка…", "Uploading…", "Đang tải…")
               : url
@@ -162,7 +168,7 @@ export function PrepCardHeader({
 }) {
   return (
     <div className="erpCard erpPrepHeader">
-      <PrepCoverField url={photo} disabled={readOnly} onChange={onPhoto} />
+      <PrepCoverField url={photo} onChange={onPhoto} />
       <div className="erpGrid">
         <Field label={T("Вкладка", "Tab", "Mục")}>
           <select
