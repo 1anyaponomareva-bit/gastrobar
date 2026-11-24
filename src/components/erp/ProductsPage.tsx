@@ -84,7 +84,10 @@ export function ProductsPage() {
   const [archived, setArchived] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = usePageSize();
-  const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  const ctx = useMemo(
+    () => (state ? buildCostContext(state.products, state.recipes, { quotes: state.costSources }) : null),
+    [state],
+  );
   useEffect(() => setPage(0), [query, type, category, supplier, archived, pageSize]);
   if (!state || !ctx) return null;
 

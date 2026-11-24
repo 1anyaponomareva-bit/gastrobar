@@ -27,7 +27,7 @@ const ENTITY_PART: Record<string, StatePart> = {
   pack: "packs",
 };
 /** Posting and cancelling move lots and may update product costs. */
-const STOCK_PARTS: StatePart[] = ["stock", "products"];
+const STOCK_PARTS: StatePart[] = ["stock", "products", "costSources"];
 const FINANCE_PARTS: StatePart[] = [
   "financeAccounts",
   "financeCategories",
@@ -91,14 +91,19 @@ export async function POST(request: Request) {
         const id = await rpc<string>("erp_save_product", { p: payload, p_actor: actor });
         await applyExtraNames(rpc, "product", id, payload);
         mirrorStaffLater();
-        const patch = await fresh(["products", "packs", "productPacks", "recipes"]);
+        const patch = await fresh(["products", "packs", "productPacks", "recipes", "costSources"]);
         const product = patch.products?.find((row) => row.id === id);
         if (product && (product.type === "semi_finished" || product.type === "finished")) {
           await publishProductPrepToStaff(id, { recipes: patch.recipes ?? [], products: patch.products ?? [] });
         }
         return timing.json({
           id,
-          patch: { products: patch.products, packs: patch.packs, productPacks: patch.productPacks },
+          patch: {
+            products: patch.products,
+            packs: patch.packs,
+            productPacks: patch.productPacks,
+            costSources: patch.costSources,
+          },
         });
       }
       case "savePack": {

@@ -5,13 +5,12 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
-  buildCostContext,
   compositionYieldCost,
   costLine,
   liveCatalogName,
+  prepCompositionCostContext,
   productTitle,
   recipeYieldUnitCost,
-  stockCostContext,
   type ErpUnit,
 } from "@/lib/erp/costing";
 import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
@@ -85,7 +84,10 @@ export function PrepsPage() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = usePageSize();
-  const ctx = useMemo(() => (state ? buildCostContext(state.products, state.recipes) : null), [state]);
+  const ctx = useMemo(
+    () => (state ? prepCompositionCostContext(state.products, state.recipes, state.costSources) : null),
+    [state],
+  );
   useEffect(() => setPage(0), [query, pageSize]);
   if (!state || !ctx) return null;
 
@@ -445,7 +447,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [sheetBusy, setSheetBusy] = useState(false);
   const [appBusy, setAppBusy] = useState(false);
-  const ctx = useMemo(() => stockCostContext(buildCostContext(state.products, state.recipes)), [state]);
+  const ctx = useMemo(
+    () => prepCompositionCostContext(state.products, state.recipes, state.costSources),
+    [state],
+  );
   const blockedComponents = useMemo(
     () => cyclicComponentIds(state.recipes, product.id, state.products.map((item) => item.id)),
     [state.recipes, state.products, product.id],
@@ -838,7 +843,19 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                           <NetCell state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
                         </td>
                         <td className="num" data-label={T("Стоимость", "Cost", "Chi phí")}>
-                          {!cost ? "—" : cost.cost === null ? <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span> : vnd(cost.cost)}
+                          {!line.product_id ? (
+                            <span className="erpMuted">{T("нет связи", "not linked", "chưa liên kết")}</span>
+                          ) : !cost ? (
+                            "—"
+                          ) : cost.cost === null ? (
+                            <span className="erpBadge warn">
+                              {cost.issue === "unresolved"
+                                ? T("нет в каталоге", "not in catalog", "không có trong danh mục")
+                                : T("нет цены", "no price", "chưa có giá")}
+                            </span>
+                          ) : (
+                            vnd(cost.cost)
+                          )}
                         </td>
                         <td className="num erpComposeActs">
                           <LinePartsButton

@@ -212,17 +212,19 @@ export const isPackaging = (type: ErpProductType) => type === "packaging" || typ
 
 function leafPrice(ctx: CostContext, product: CostProduct): { unitCost: number | null; source: CostSource | null } {
   const quote = ctx.quotes.get(product.id);
+  const reference = asMoney(quote?.reference) ?? asMoney(product.est_unit_cost);
+  const lastLot = asMoney(quote?.last_lot);
+  const fifo = asMoney(quote?.fifo_remaining);
   if (ctx.priceSource === "last_lot") {
-    const unitCost = quote ? asMoney(quote.last_lot) : null;
-    return { unitCost, source: unitCost === null ? null : "last_lot" };
+    return lastLot == null ? { unitCost: null, source: null } : { unitCost: lastLot, source: "last_lot" };
   }
   if (ctx.priceSource === "fifo_remaining") {
-    const unitCost = quote ? asMoney(quote.fifo_remaining) : null;
-    return { unitCost, source: unitCost === null ? null : "fifo_remaining" };
+    return fifo == null ? { unitCost: null, source: null } : { unitCost: fifo, source: "fifo_remaining" };
   }
-  const unitCost = quote ? asMoney(quote.reference) : asMoney(product.est_unit_cost);
-  if (unitCost === null) return { unitCost: null, source: null };
-  return { unitCost, source: product.est_cost_source ?? "manual" };
+  if (reference != null) return { unitCost: reference, source: product.est_cost_source ?? "manual" };
+  if (lastLot != null) return { unitCost: lastLot, source: "last_lot" };
+  if (fifo != null) return { unitCost: fifo, source: "fifo_remaining" };
+  return { unitCost: null, source: null };
 }
 
 /**
@@ -305,6 +307,15 @@ export function compositionYieldCost(
 /** Value each listed component as a warehouse SKU (nested preps are not exploded). */
 export function stockCostContext(ctx: CostContext): CostContext {
   return { ...ctx, explodeRecipes: false };
+}
+
+/** Prep composition: catalog prices + lots, nested preps as SKUs. */
+export function prepCompositionCostContext(
+  products: CostProduct[],
+  recipes: CostRecipe[],
+  quotes?: Iterable<ProductCostQuoteInput>,
+): CostContext {
+  return stockCostContext(buildCostContext(products, recipes, { quotes }));
 }
 
 /**

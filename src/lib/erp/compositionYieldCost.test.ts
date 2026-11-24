@@ -84,6 +84,20 @@ test("nested prep yield cost uses the prep SKU, not a second explosion", () => {
   );
 });
 
+test("stale quote rows still use the product card price", () => {
+  const ctx = buildCostContext([onion], [], {
+    quotes: [{ product_id: "onion", last_lot: null, fifo_remaining: null, reference: null }],
+  });
+  assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 1 }]), 20_000);
+});
+
+test("prep composition uses the latest lot when the card price is empty", () => {
+  const ctx = buildCostContext([{ ...onion, est_unit_cost: null, est_cost_source: null }], [], {
+    quotes: [{ product_id: "onion", last_lot: 15_000, fifo_remaining: null, reference: null }],
+  });
+  assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 2 }]), 30_000);
+});
+
 test("missing price makes yield cost incomplete; blank rows are skipped", () => {
   const ctx = buildCostContext([{ ...onion, est_unit_cost: null, est_cost_source: null }, oil], []);
   assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 1 }]), null);
