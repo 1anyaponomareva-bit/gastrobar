@@ -515,14 +515,14 @@ function ProductEditor({
       {unit === "pcs" ? (
         <>
           <Field
-            label={T("Вес брутто 1 шт, кг", "Gross weight of 1 pc, kg", "Khối lượng brutto 1 cái, kg")}
-            hint={T("Вес штуки как на складе / в закупке", "Piece weight as stocked / purchased", "Khối lượng 1 cái khi nhập / tồn")}
+            label={T("Вес 1 шт — брутто, кг", "Weight of 1 pc — gross, kg", "Khối lượng 1 cái — brutto, kg")}
+            hint={T("Как на складе / в закупке", "As stocked / purchased", "Khi nhập / tồn kho")}
           >
             <NumberInput value={form.unit_weight_kg} onChange={(v) => set("unit_weight_kg", v)} />
           </Field>
           <Field
-            label={T("Вес нетто 1 шт, кг", "Net weight of 1 pc, kg", "Khối lượng netto 1 cái, kg")}
-            hint={T("Полезный вес после очистки; если пусто — берётся брутто", "Usable weight after prep; if empty, gross is used", "Khối lượng dùng được; nếu trống thì dùng brutto")}
+            label={T("Вес 1 шт — нетто, кг", "Weight of 1 pc — net, kg", "Khối lượng 1 cái — netto, kg")}
+            hint={T("После очистки; если пусто — берётся брутто", "After prep; if empty, gross is used", "Sau sơ chế; nếu trống thì dùng brutto")}
           >
             <NumberInput value={form.unit_net_weight_kg} onChange={(v) => set("unit_net_weight_kg", v)} />
           </Field>
