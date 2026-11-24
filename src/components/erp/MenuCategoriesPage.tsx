@@ -19,11 +19,17 @@ export function MenuCategoriesPage({ kind }: { kind: "products" | "ingredients" 
       <PageHead title={title} />
       <MenuMobileNav active={products ? MENU_HREFS.productCategories : MENU_HREFS.ingredientCategories} />
       <p className="erpHint">
-        {T(
-          "Пока один справочник erp_categories: блюда и ингредиенты делят его. Отдельные деревья Poster — после контракта данных.",
-          "There is one erp_categories list for now: dishes and ingredients share it. Poster's two trees wait on the data contract.",
-          "Hiện một danh mục erp_categories dùng chung. Hai cây riêng của Poster chờ hợp đồng dữ liệu.",
-        )}
+        {products
+          ? T(
+              "Эти категории ставятся на товары и на блюда — один список для обоих. Категории ингредиентов — отдельный пункт меню.",
+              "These categories are assigned to products and to dishes — one list for both. Ingredient categories are a separate menu item.",
+              "Các nhóm này gắn cho hàng hóa và món — một danh sách dùng chung. Nhóm nguyên liệu là mục menu riêng.",
+            )
+          : T(
+              "Категории для сырья и ингредиентов. Товары и блюда используют другой список в меню.",
+              "Categories for raw ingredients. Products and dishes use the other list in the menu.",
+              "Nhóm cho nguyên liệu. Hàng hóa và món dùng danh sách khác trong menu.",
+            )}
       </p>
       <RefList<ErpCategory>
         entity="category"
