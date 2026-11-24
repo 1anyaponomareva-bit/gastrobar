@@ -68,6 +68,38 @@ async function applyExtraNames(
 }
 
 /**
+ * Older live SQL still drops typed net on nested prep SKUs.
+ * Net may be greater than brutto (soak / cook gain) — that is allowed.
+ * Re-apply payload nets by line_no after save so the card keeps what was typed.
+ */
+async function applyTypedLineNets(
+  table: "erp_recipe_lines" | "erp_dish_lines",
+  parentColumn: "recipe_id" | "dish_id",
+  parentId: string,
+  payload: Record<string, unknown>,
+) {
+  const lines = Array.isArray(payload.lines) ? payload.lines : [];
+  const db = erpDb();
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!isObject(line) || !Object.prototype.hasOwnProperty.call(line, "net_qty")) continue;
+    const raw = line.net_qty;
+    const net =
+      raw === null || raw === undefined || raw === ""
+        ? null
+        : Number(raw);
+    if (net !== null && !Number.isFinite(net)) continue;
+    check(
+      await db
+        .from(table)
+        .update({ net_qty: net })
+        .eq(parentColumn, parentId)
+        .eq("line_no", index + 1),
+    );
+  }
+}
+
+/**
  * All ERP writes. Every action requires an admin session; the email is stored as the author.
  * Responses carry `patch` — the screen data the action changed, read after the write — and, for
  * documents, the saved `document`, so the client needs no follow-up requests. Actions without a
@@ -198,7 +230,9 @@ export async function POST(request: Request) {
         await rpc("erp_delete_draft", { p_id: uuid(a.id), p_actor: actor });
         return timing.json({ ok: true, patch: {} });
       case "saveRecipe": {
-        const id = await rpc<string>("erp_save_recipe", { p: object(a.recipe, "recipe"), p_actor: actor });
+        const recipe = object(a.recipe, "recipe");
+        const id = await rpc<string>("erp_save_recipe", { p: recipe, p_actor: actor });
+        await timing.time("db", applyTypedLineNets("erp_recipe_lines", "recipe_id", id, recipe));
         const data = await fresh(["recipes", "products"]);
         const recipesCardId = await publishPrepStateToStaff(id, {
           recipes: data.recipes ?? [],
@@ -237,6 +271,7 @@ export async function POST(request: Request) {
       case "saveDish": {
         const dish = object(a.dish, "dish");
         const id = await rpc<string>("erp_save_dish", { p: dish, p_actor: actor });
+        await timing.time("db", applyTypedLineNets("erp_dish_lines", "dish_id", id, dish));
         await applyExtraNames(rpc, "dish", id, dish);
         return timing.json({ id, patch: await fresh(["dishes"]) });
       }

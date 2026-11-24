@@ -205,7 +205,7 @@ export const netWeightText = (weight: { kg: number; partial: boolean }) =>
 
 export const lossHint = () =>
   T(
-    "Брутто — сколько берётся со склада. Нетто можно ввести вручную. Если выбрана обработка, каждый следующий % потерь считается от оставшегося веса. Себестоимость 1 кг нетто = цена покупки ÷ нетто.",
-    "Gross is taken from stock. Net can be typed. If processing is chosen, each next loss % applies to the remaining weight. Cost per usable kg = purchase cost ÷ net.",
-    "Brutto lấy từ kho. Netto có thể nhập tay. Nếu chọn sơ chế, mỗi % hao hụt sau áp vào phần còn lại. Giá 1 kg netto = giá mua ÷ netto.",
+    "Брутто — сколько берётся со склада. Нетто можно ввести вручную и оно может быть больше брутто (например после замачивания). Если выбрана обработка, каждый следующий % потерь считается от оставшегося веса. Себестоимость 1 кг нетто = цена покупки ÷ нетто.",
+    "Gross is taken from stock. Net can be typed and may be greater than gross (for example after soaking). If processing is chosen, each next loss % applies to the remaining weight. Cost per usable kg = purchase cost ÷ net.",
+    "Brutto lấy từ kho. Netto có thể nhập tay và có thể lớn hơn brutto (ví dụ sau khi ngâm). Nếu chọn sơ chế, mỗi % hao hụt sau áp vào phần còn lại. Giá 1 kg netto = giá mua ÷ netto.",
   );
