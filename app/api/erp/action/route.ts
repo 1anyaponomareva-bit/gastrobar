@@ -61,7 +61,8 @@ async function applyExtraNames(
   try {
     await rpc("erp_set_extra_names", { p_kind: kind, p_id: id, p_names: extra });
   } catch (error) {
-    if (error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED" && !Object.keys(extra).length) return;
+    // Extra-language SQL is additive and may lag the app. Do not block EN/VN save.
+    if (error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED") return;
     throw error;
   }
 }
