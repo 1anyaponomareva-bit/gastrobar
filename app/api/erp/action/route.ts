@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { extraNamesOnly } from "@/lib/erp/contentLang";
 import { publishPrepStateToStaff, publishProductPrepToStaff } from "@/lib/erp/publishPrepToStaff";
 import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
@@ -56,7 +57,13 @@ async function applyExtraNames(
   payload: Record<string, unknown>,
 ) {
   if (!Object.prototype.hasOwnProperty.call(payload, "names")) return;
-  await rpc("erp_set_extra_names", { p_kind: kind, p_id: id, p_names: payload.names ?? {} });
+  const extra = extraNamesOnly(isObject(payload.names) ? (payload.names as Record<string, string>) : {});
+  try {
+    await rpc("erp_set_extra_names", { p_kind: kind, p_id: id, p_names: extra });
+  } catch (error) {
+    if (error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED" && !Object.keys(extra).length) return;
+    throw error;
+  }
 }
 
 /**
