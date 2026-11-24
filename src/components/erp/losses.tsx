@@ -34,12 +34,23 @@ export const netOf = (state: ErpState, line: LossLine): number | null => {
   return roundQty(usableWeight(line.qty, productOf(state, line.product_id), line.methods));
 };
 
+/**
+ * Brutto and netto stay independent until processing is chosen.
+ * With processing, changing brutto recalculates netto from loss %.
+ * Without processing, editing brutto must NOT wipe a typed netto.
+ */
 export function grossPatch(state: ErpState, line: LossLine, qty: number | null): Partial<LossLine> {
   const methods = line.methods ?? [];
-  if (!methods.length || qty === null) return { qty, net_qty: null };
+  if (!methods.length) return { qty };
+  if (qty === null) return { qty, net_qty: null };
   return { qty, net_qty: roundQty(usableWeight(qty, productOf(state, line.product_id), methods)) };
 }
 
+/**
+ * Without processing: only store typed netto (or clear it so display follows brutto).
+ * With processing: typed netto also back-calculates brutto from the same loss %.
+ * Net 0 is a real value and must not rewrite brutto.
+ */
 export function netPatch(state: ErpState, line: LossLine, net: number | null): Partial<LossLine> {
   const methods = line.methods ?? [];
   if (!methods.length || net == null || net === 0) return { net_qty: net };

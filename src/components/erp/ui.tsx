@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
 import { useErpHref } from "./erpHref";
 import { productTitle, type CostSource, type ErpProductType, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpDocType, ErpProduct, ErpState, ErpWarehouse } from "@/lib/erp/types";
@@ -277,7 +277,9 @@ export function NumberInput({
   disabled?: boolean;
 }) {
   const [text, setText] = useState(value === null || value === undefined ? "" : String(value));
+  const focused = useRef(false);
   useEffect(() => {
+    if (focused.current) return;
     if (num(text) !== (value ?? null)) setText(value === null || value === undefined ? "" : String(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
@@ -287,6 +289,13 @@ export function NumberInput({
       value={text}
       placeholder={placeholder}
       disabled={disabled}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onBlur={() => {
+        focused.current = false;
+        setText(value === null || value === undefined ? "" : String(value));
+      }}
       onChange={(event) => {
         setText(event.target.value);
         onChange(num(event.target.value));

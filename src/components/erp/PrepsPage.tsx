@@ -636,6 +636,11 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const readOnly = !editing;
   const net = netWeight(state, form.lines);
   const netYield = unit === "kg" || unit === "l" ? net.kg : null;
+  const suggestedPieces =
+    unit === "pcs" && pieceWeight && pieceWeight > 0 && net.kg > 0
+      ? Math.max(1, Math.round(net.kg / pieceWeight))
+      : null;
+  const activateYield = form.yield_qty ?? netYield ?? suggestedPieces;
 
   const activate = async () => {
     const lines = form.lines.filter(recipeLineHasContent);
@@ -654,14 +659,20 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       window.alert(T("Добавьте хотя бы один ингредиент.", "Add at least one ingredient.", "Thêm ít nhất một nguyên liệu."));
       return;
     }
-    const yieldQty = form.yield_qty ?? netYield;
+    const yieldQty = activateYield;
     if (!yieldQty) {
       window.alert(
-        T(
-          "Укажите вес готового / выход, затем снова нажмите «Сделать действующей».",
-          "Enter the finished yield, then press Make active again.",
-          "Nhập sản lượng thành phẩm, rồi bấm Áp dụng công thức.",
-        ),
+        unit === "pcs"
+          ? T(
+              "Укажите выход в штуках (и при желании вес 1 штуки), затем снова нажмите «Сделать действующей».",
+              "Enter the finished yield in pieces (and optionally the weight of 1 piece), then press Make active again.",
+              "Nhập sản lượng theo cái (và khối lượng 1 cái nếu cần), rồi bấm Áp dụng công thức.",
+            )
+          : T(
+              "Укажите вес готового / выход, затем снова нажмите «Сделать действующей».",
+              "Enter the finished yield, then press Make active again.",
+              "Nhập sản lượng thành phẩm, rồi bấm Áp dụng công thức.",
+            ),
       );
       return;
     }
@@ -790,6 +801,62 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
             )}
           </div>
         ) : null}
+        <div className="erpGrid two" style={{ marginBottom: 12 }}>
+          <Field
+            label={
+              unit === "pcs"
+                ? T("Выход готового, шт", "Finished yield, pcs", "Sản lượng thành phẩm, cái")
+                : T("Вес готового / выход", "Finished yield", "Thành phẩm / sản lượng")
+            }
+            hint={
+              unit === "pcs"
+                ? T(
+                    "Сколько штук получается из этого состава. Для активации рецептуры поле обязательно.",
+                    "How many pieces this composition makes. Required to make the recipe active.",
+                    "Số cái từ thành phần này. Bắt buộc để áp dụng công thức.",
+                  )
+                : T(
+                    "Нормативный выход этой карты. Можно подставить сумму нетто состава.",
+                    "Standard yield of this card. You can use the total net of the ingredients.",
+                    "Sản lượng chuẩn của thẻ. Có thể dùng tổng netto thành phần.",
+                  )
+            }
+          >
+            {unit === "pcs" ? (
+              <NumberInput
+                value={form.yield_qty}
+                disabled={readOnly}
+                onChange={(v) => set("yield_qty", v === null ? null : Math.max(0, Math.round(v)))}
+              />
+            ) : (
+              <QtyInput base={unit} value={form.yield_qty} disabled={readOnly} defaultSmall onChange={(v) => set("yield_qty", v)} />
+            )}
+          </Field>
+          {net.kg > 0 ? (
+            <Field label={T("Сумма нетто состава", "Total net of composition", "Tổng netto thành phần")}>
+              <strong>{netWeightText(net)}</strong>
+              {!readOnly && unit !== "pcs" && form.yield_qty !== net.kg ? (
+                <button type="button" className="erpLink" style={{ display: "block", marginTop: 6 }} onClick={() => set("yield_qty", net.kg)}>
+                  {T("Подставить в вес готового", "Use as finished yield", "Dùng làm trọng lượng thành phẩm")}
+                </button>
+              ) : null}
+              {!readOnly && unit === "pcs" && suggestedPieces && form.yield_qty !== suggestedPieces ? (
+                <button
+                  type="button"
+                  className="erpLink"
+                  style={{ display: "block", marginTop: 6 }}
+                  onClick={() => set("yield_qty", suggestedPieces)}
+                >
+                  {T(
+                    `Подставить ${suggestedPieces} шт по весу 1 штуки`,
+                    `Use ${suggestedPieces} pcs from the piece weight`,
+                    `Dùng ${suggestedPieces} cái theo khối lượng 1 cái`,
+                  )}
+                </button>
+              ) : null}
+            </Field>
+          ) : null}
+        </div>
         {form.lines.length ? (
           <MainIngredientChips
             labels={form.lines.map((line, index) =>
@@ -967,19 +1034,15 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
             </button>
           </div>
         ) : null}
-        {form.lines.length ? <p className="erpHint">{lossHint()}</p> : null}
-        {netYield ? (
-          <div className="erpNotice">
-            {T("Сумма нетто по составу", "Total net weight of the ingredients", "Tổng netto của thành phần")}: <strong>{netWeightText(net)}</strong>
-            {!readOnly && form.yield_qty !== netYield ? (
-              <>
-                {" "}
-                <button type="button" className="erpLink" onClick={() => set("yield_qty", netYield)}>
-                  {T("Подставить в вес готового", "Use as finished yield", "Dùng làm trọng lượng thành phẩm")}
-                </button>
-              </>
-            ) : null}
-          </div>
+        {form.lines.length ? (
+          <p className="erpHint">
+            {lossHint()}{" "}
+            {T(
+              "Брутто и нетто меняются отдельно, пока не выбрана обработка.",
+              "Gross and net stay independent until processing is chosen.",
+              "Brutto và netto độc lập cho đến khi chọn sơ chế.",
+            )}
+          </p>
         ) : null}
 
         </details>
