@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildCostContext, compositionYieldCost, type CostProduct } from "./costing";
+import {
+  buildCostContext,
+  compositionYieldCost,
+  compositionYieldCostEstimate,
+  recipeYieldUnitCostEstimate,
+  type CostProduct,
+} from "./costing";
 
 const onion: CostProduct = {
   id: "onion",
@@ -128,6 +134,30 @@ test("missing price makes yield cost incomplete; blank rows are skipped", () => 
   );
   assert.equal(compositionYieldCost(buildCostContext([onion], []), [{ product_id: "onion", qty: null }]), null);
   assert.equal(compositionYieldCost(buildCostContext([onion], []), []), null);
+});
+
+test("estimate keeps known prices when some ingredients are unpriced", () => {
+  const ctx = buildCostContext([{ ...onion, est_unit_cost: null, est_cost_source: null }, oil], []);
+  assert.deepEqual(
+    compositionYieldCostEstimate(ctx, [
+      { product_id: "onion", qty: 1 },
+      { product_id: "oil", qty: 0.5 },
+    ]),
+    { amount: 20_000, complete: false },
+  );
+  assert.deepEqual(
+    recipeYieldUnitCostEstimate(ctx, {
+      id: "r1",
+      product_id: "mix",
+      status: "draft",
+      yield_qty: 2,
+      lines: [
+        { product_id: "onion", qty: 1 },
+        { product_id: "oil", qty: 0.5 },
+      ],
+    }),
+    { amount: 10_000, complete: false },
+  );
 });
 
 test("typed net 0 is a known cost of 0, not a missing line", () => {

@@ -312,6 +312,13 @@ export function compositionLineQty(line: {
   return asMoney(line.net_qty);
 }
 
+export type YieldCostEstimate = {
+  /** Sum of priced gross lines only. Null when there is nothing to cost. */
+  amount: number | null;
+  /** False when at least one linked line has qty but no price. */
+  complete: boolean;
+};
+
 /**
  * Cost of the recipe/dish yield: sum of GROSS line costs (stock take).
  * Cut parts split the same net and are not extra purchases.
@@ -321,17 +328,36 @@ export function compositionYieldCost(
   ctx: CostContext,
   lines: readonly { product_id: string | null | undefined; qty?: unknown; net_qty?: unknown }[],
 ): number | null {
+  const estimate = compositionYieldCostEstimate(ctx, lines);
+  return estimate.complete ? estimate.amount : null;
+}
+
+/**
+ * Same as compositionYieldCost, but keeps the sum of known prices when some lines are unpriced.
+ * UI can show that amount in red as an approximate cost.
+ */
+export function compositionYieldCostEstimate(
+  ctx: CostContext,
+  lines: readonly { product_id: string | null | undefined; qty?: unknown; net_qty?: unknown }[],
+): YieldCostEstimate {
   const ready = lines
     .map((line) => ({ productId: line.product_id, qty: compositionLineQty(line) }))
     .filter((line): line is { productId: string; qty: number } => Boolean(line.productId) && line.qty != null);
-  if (!ready.length) return null;
+  if (!ready.length) return { amount: null, complete: true };
   let sum = 0;
+  let priced = 0;
+  let complete = true;
   for (const line of ready) {
     const cost = costLine(ctx, line.productId, line.qty).cost;
-    if (cost === null) return null;
+    if (cost === null) {
+      complete = false;
+      continue;
+    }
+    priced += 1;
     sum += cost;
   }
-  return sum;
+  if (!priced && !complete) return { amount: 0, complete: false };
+  return { amount: sum, complete };
 }
 
 /**
@@ -356,10 +382,17 @@ export function prepCompositionCostContext(
  * Nested preps use their stock/reference price, not a second explosion of their own recipe.
  */
 export function recipeYieldUnitCost(ctx: CostContext, recipe: CostRecipe): number | null {
+  const estimate = recipeYieldUnitCostEstimate(ctx, recipe);
+  return estimate.complete ? estimate.amount : null;
+}
+
+/** Unit cost that still returns a partial sum when some ingredient prices are missing. */
+export function recipeYieldUnitCostEstimate(ctx: CostContext, recipe: CostRecipe): YieldCostEstimate {
   const yieldQty = asMoney(recipe.yield_qty);
-  if (yieldQty == null || yieldQty <= 0) return null;
-  const total = compositionYieldCost(stockCostContext(ctx), recipe.lines);
-  return total === null ? null : total / yieldQty;
+  if (yieldQty == null || yieldQty <= 0) return { amount: null, complete: true };
+  const total = compositionYieldCostEstimate(stockCostContext(ctx), recipe.lines);
+  if (total.amount === null) return total;
+  return { amount: total.amount / yieldQty, complete: total.complete };
 }
 
 export type CostSummary = {

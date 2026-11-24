@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { productTitle, recipeYieldUnitCost } from "@/lib/erp/costing";
+import { productTitle, recipeYieldUnitCostEstimate } from "@/lib/erp/costing";
 import { withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct } from "@/lib/erp/types";
 import { CatalogTable, Caret, StubFilter, type CatalogColumn } from "./CatalogTable";
@@ -13,7 +13,12 @@ import { MENU_HREFS } from "./menuNav";
 import { NavLink, qtyText, T, unitLabel, vnd } from "./ui";
 import { recipeForProduct, YieldComposition } from "./YieldComposition";
 
-type Row = ErpProduct & { yieldText: string; cost: number | null; recipeStatus: string };
+type Row = ErpProduct & {
+  yieldText: string;
+  cost: number | null;
+  costComplete: boolean;
+  recipeStatus: string;
+};
 
 export function MenuPrepsList() {
   return (
@@ -40,15 +45,18 @@ function MenuPrepsTable() {
       const recipes = state.recipes.filter((r) => r.product_id === p.id);
       const active = recipes.find((r) => r.status === "active");
       const draft = recipes.find((r) => r.status === "draft");
-      const yieldText = !active?.yield_qty
+      const costRecipe = active ?? draft;
+      const yieldText = !costRecipe?.yield_qty
         ? "—"
-        : active.yield_pieces && p.base_unit !== "pcs"
-          ? `${qtyText(active.yield_qty, p.base_unit)} · ${active.yield_pieces} ${unitLabel("pcs")}`
-          : qtyText(active.yield_qty, p.base_unit);
+        : costRecipe.yield_pieces && p.base_unit !== "pcs"
+          ? `${qtyText(costRecipe.yield_qty, p.base_unit)} · ${costRecipe.yield_pieces} ${unitLabel("pcs")}`
+          : qtyText(costRecipe.yield_qty, p.base_unit);
+      const estimate = costRecipe ? recipeYieldUnitCostEstimate(ctx, costRecipe) : { amount: null, complete: true };
       return {
         ...p,
         yieldText,
-        cost: active ? recipeYieldUnitCost(ctx, active) : null,
+        cost: estimate.amount,
+        costComplete: estimate.complete,
         recipeStatus: !active ? (draft ? T("черновик", "draft", "nháp") : T("нет рецептуры", "no recipe", "chưa có công thức")) : "",
       };
     });
@@ -74,12 +82,23 @@ function MenuPrepsTable() {
       label: T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị"),
       num: true,
       cell: (row) =>
-        row.recipeStatus && !row.cost ? (
+        row.cost == null ? (
           "—"
-        ) : row.cost === null ? (
-          <span className="erpBadge warn">{T("не все цены известны", "some prices missing", "thiếu giá")}</span>
         ) : (
-          `${vnd(row.cost)} / ${unitLabel(row.base_unit)}`
+          <span
+            className={row.costComplete ? undefined : "erpCostApprox"}
+            title={
+              row.costComplete
+                ? undefined
+                : T(
+                    "Приблизительно: не у всех ингредиентов есть цена",
+                    "Approximate: some ingredients have no price",
+                    "Tạm tính: một số nguyên liệu chưa có giá",
+                  )
+            }
+          >
+            {vnd(row.cost)} / {unitLabel(row.base_unit)}
+          </span>
         ),
       text: (row) => (row.cost == null ? "" : String(Math.round(row.cost))),
     },

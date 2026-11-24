@@ -11,7 +11,7 @@ import {
   liveCatalogName,
   prepCompositionCostContext,
   productTitle,
-  recipeYieldUnitCost,
+  recipeYieldUnitCostEstimate,
   type ErpUnit,
 } from "@/lib/erp/costing";
 import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
@@ -166,7 +166,7 @@ export function PrepsPage() {
                     const active = recipes.find((r) => r.status === "active");
                     const draft = recipes.find((r) => r.status === "draft");
                     const costRecipe = active ?? draft;
-                    const cost = costRecipe ? recipeYieldUnitCost(ctx, costRecipe) : null;
+                    const estimate = costRecipe ? recipeYieldUnitCostEstimate(ctx, costRecipe) : { amount: null, complete: true };
                     return (
                       <tr key={p.id}>
                         <td className="main">
@@ -181,14 +181,25 @@ export function PrepsPage() {
                             <span className="erpCellSub">{T("есть новый черновик", "a new draft exists", "có bản nháp mới")}</span>
                           ) : null}
                         </td>
-                        <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(active, p.base_unit)}</td>
+                        <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(costRecipe, p.base_unit)}</td>
                         <td className="num" data-label={T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}>
-                          {!costRecipe ? (
+                          {estimate.amount == null ? (
                             "—"
-                          ) : cost === null ? (
-                            <span className="erpBadge warn">{T("не все цены известны", "some prices missing", "thiếu giá")}</span>
                           ) : (
-                            `${vnd(cost)} / ${unitLabel(p.base_unit)}`
+                            <span
+                              className={estimate.complete ? undefined : "erpCostApprox"}
+                              title={
+                                estimate.complete
+                                  ? undefined
+                                  : T(
+                                      "Приблизительно: не у всех ингредиентов есть цена",
+                                      "Approximate: some ingredients have no price",
+                                      "Tạm tính: một số nguyên liệu chưa có giá",
+                                    )
+                              }
+                            >
+                              {vnd(estimate.amount)} / {unitLabel(p.base_unit)}
+                            </span>
                           )}
                         </td>
                         <td className="num">
