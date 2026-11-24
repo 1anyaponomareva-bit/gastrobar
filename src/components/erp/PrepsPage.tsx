@@ -7,6 +7,7 @@ import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } fr
 import {
   compositionLineQty,
   compositionYieldCost,
+  compositionYieldCostEstimate,
   costLine,
   liveCatalogName,
   prepCompositionCostContext,
@@ -529,6 +530,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const qty = compositionLineQty(line);
     return line.product_id && qty != null ? costLine(ctx, line.product_id, qty) : null;
   });
+  const batchEstimate = compositionYieldCostEstimate(ctx, form.lines);
   const batchCost = compositionYieldCost(ctx, form.lines);
 
   const storagePayload = serializeStorageOptions(form.storageOptions);
@@ -983,7 +985,20 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                                 : T("нет цены", "no price", "chưa có giá")}
                             </span>
                           ) : (
-                            vnd(cost.cost)
+                            <span
+                              className={cost.issue ? "erpCostApprox" : undefined}
+                              title={
+                                cost.issue
+                                  ? T(
+                                      "Приблизительно: не у всех ингредиентов есть цена",
+                                      "Approximate: some ingredients have no price",
+                                      "Tạm tính: một số nguyên liệu chưa có giá",
+                                    )
+                                  : undefined
+                              }
+                            >
+                              {vnd(cost.cost)}
+                            </span>
                           )}
                         </td>
                         <td className="num erpComposeActs">
@@ -1028,8 +1043,9 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               <YieldCostFooter
                 colSpan={6}
                 yieldText={yieldDisplayText(form.yield_qty, unit, form.yield_pieces)}
-                cost={batchCost}
-                perUnit={yieldPerUnitText(batchCost, form.yield_qty, unit, form.yield_pieces)}
+                cost={batchEstimate.amount}
+                approximate={!batchEstimate.complete}
+                perUnit={yieldPerUnitText(batchEstimate.amount, form.yield_qty, unit, form.yield_pieces)}
               />
             </table>
           </div>

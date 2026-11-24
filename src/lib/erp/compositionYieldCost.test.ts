@@ -4,6 +4,7 @@ import {
   buildCostContext,
   compositionYieldCost,
   compositionYieldCostEstimate,
+  costLine,
   recipeYieldUnitCostEstimate,
   type CostProduct,
 } from "./costing";
@@ -106,6 +107,53 @@ test("nested prep without a card price uses its active recipe cost", () => {
     { explodeRecipes: false },
   );
   assert.equal(compositionYieldCost(sku, [{ product_id: "mix", qty: 0.125 }]), 0.125 * 20_000);
+});
+
+test("nested draft prep still costs a parent pack; incomplete children stay approximate", () => {
+  const sausage: CostProduct = {
+    id: "sausage",
+    type: "semi_finished",
+    name_en: "Chicken sausage",
+    name_vn: "",
+    base_unit: "pcs",
+    est_unit_cost: null,
+    est_cost_source: null,
+  };
+  const bag: CostProduct = {
+    id: "bag",
+    type: "packaging",
+    name_en: "Vacuum bag",
+    name_vn: "",
+    base_unit: "kg",
+    est_unit_cost: null,
+    est_cost_source: null,
+  };
+  const ctx = buildCostContext(
+    [onion, sausage, bag],
+    [
+      {
+        id: "sausage-draft",
+        product_id: "sausage",
+        status: "draft",
+        yield_qty: 1,
+        lines: [
+          { product_id: "onion", qty: 0.1 },
+          { product_id: "bag", qty: 0.001 },
+        ],
+      },
+    ],
+    { explodeRecipes: false },
+  );
+  const two = costLine(ctx, "sausage", 2);
+  assert.equal(two.cost, 2 * 0.1 * 20_000);
+  assert.equal(two.issue, "no_recipe_price");
+  assert.deepEqual(
+    compositionYieldCostEstimate(ctx, [
+      { product_id: "sausage", qty: 2 },
+      { product_id: "bag", qty: 0.008 },
+    ]),
+    { amount: 4_000, complete: false },
+  );
 });
 
 test("stale quote rows still use the product card price", () => {

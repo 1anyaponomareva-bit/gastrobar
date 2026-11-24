@@ -1,6 +1,12 @@
 "use client";
 
-import { compositionLineQty, compositionYieldCost, costLine, liveCatalogName, stockCostContext } from "@/lib/erp/costing";
+import {
+  compositionLineQty,
+  compositionYieldCostEstimate,
+  costLine,
+  liveCatalogName,
+  stockCostContext,
+} from "@/lib/erp/costing";
 import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
 import { filledParts, parseLineParts } from "@/lib/erp/lineParts";
 import type { ErpRecipe, ErpState } from "@/lib/erp/types";
@@ -23,11 +29,14 @@ export function YieldCostFooter({
   yieldText,
   cost,
   perUnit,
+  approximate = false,
 }: {
   colSpan: number;
   yieldText: string;
   cost: number | null;
   perUnit?: string | null;
+  /** True when some ingredient prices are missing — show the known sum in red. */
+  approximate?: boolean;
 }) {
   return (
     <tfoot>
@@ -39,7 +48,20 @@ export function YieldCostFooter({
             </span>
             <span className="erpYieldCostMoney">
               {T("Себестоимость выхода", "Cost of the yield", "Giá vốn sản lượng")}:{" "}
-              <strong>{cost === null ? T("неполная", "incomplete", "chưa đủ") : vnd(cost)}</strong>
+              <strong
+                className={approximate && cost != null ? "erpCostApprox" : undefined}
+                title={
+                  approximate && cost != null
+                    ? T(
+                        "Приблизительно: не у всех ингредиентов есть цена",
+                        "Approximate: some ingredients have no price",
+                        "Tạm tính: một số nguyên liệu chưa có giá",
+                      )
+                    : undefined
+                }
+              >
+                {cost === null ? T("неполная", "incomplete", "chưa đủ") : vnd(cost)}
+              </strong>
               {cost !== null && perUnit ? <span className="erpMuted"> · {perUnit}</span> : null}
             </span>
           </div>
@@ -88,7 +110,7 @@ export function YieldComposition({
   }
   const product = state.products.find((item) => item.id === recipe.product_id);
   const yieldUnit = product?.base_unit ?? null;
-  const yieldCost = compositionYieldCost(ctx, recipe.lines);
+  const yieldEstimate = compositionYieldCostEstimate(ctx, recipe.lines);
   return (
     <div className="erpMenuUsageBlock">
       {heading ? <h3>{title}</h3> : null}
@@ -133,12 +155,27 @@ export function YieldComposition({
                   <td className="num">
                     {!line.product_id ? (
                       <span className="erpMuted">{T("нет связи", "not linked", "chưa liên kết")}</span>
-                    ) : priced?.issue === "no_price" || priced?.issue === "no_recipe_price" ? (
-                      <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span>
                     ) : cost == null ? (
-                      "—"
+                      <span className="erpBadge warn">
+                        {priced?.issue === "unresolved"
+                          ? T("нет в каталоге", "not in catalog", "không có trong danh mục")
+                          : T("нет цены", "no price", "chưa có giá")}
+                      </span>
                     ) : (
-                      vnd(cost)
+                      <span
+                        className={priced?.issue ? "erpCostApprox" : undefined}
+                        title={
+                          priced?.issue
+                            ? T(
+                                "Приблизительно: не у всех ингредиентов есть цена",
+                                "Approximate: some ingredients have no price",
+                                "Tạm tính: một số nguyên liệu chưa có giá",
+                              )
+                            : undefined
+                        }
+                      >
+                        {vnd(cost)}
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -148,8 +185,9 @@ export function YieldComposition({
           <YieldCostFooter
             colSpan={4}
             yieldText={yieldDisplayText(recipe.yield_qty, yieldUnit, recipe.yield_pieces)}
-            cost={yieldCost}
-            perUnit={yieldPerUnitText(yieldCost, recipe.yield_qty, yieldUnit, recipe.yield_pieces)}
+            cost={yieldEstimate.amount}
+            approximate={!yieldEstimate.complete}
+            perUnit={yieldPerUnitText(yieldEstimate.amount, recipe.yield_qty, yieldUnit, recipe.yield_pieces)}
           />
         </table>
       </div>

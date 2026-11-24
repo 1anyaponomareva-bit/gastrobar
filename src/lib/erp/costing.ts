@@ -148,11 +148,21 @@ export function quotesFromRows(rows: Iterable<ProductCostQuoteInput> | null | un
 }
 
 export function buildCostContext(products: CostProduct[], recipes: CostRecipe[], options?: CostContextOptions): CostContext {
+  // Prefer the active card; if none, use a draft so nested prep SKUs still get a planned cost.
+  const activeRecipes = new Map<string, CostRecipe>();
+  for (const recipe of recipes) {
+    if (recipe.status === "active") activeRecipes.set(recipe.product_id, recipe);
+  }
+  for (const recipe of recipes) {
+    if (recipe.status === "draft" && !activeRecipes.has(recipe.product_id)) {
+      activeRecipes.set(recipe.product_id, recipe);
+    }
+  }
   return {
     products: new Map(
       products.map((product) => [product.id, { ...product, est_unit_cost: asMoney(product.est_unit_cost) }]),
     ),
-    activeRecipes: new Map(recipes.filter((recipe) => recipe.status === "active").map((recipe) => [recipe.product_id, recipe])),
+    activeRecipes,
     quotes: quotesFromRows(options?.quotes),
     priceSource: options?.priceSource ?? DEFAULT_MENU_PRICE_SOURCE,
     explodeRecipes: options?.explodeRecipes !== false,
@@ -263,15 +273,24 @@ export function costLine(ctx: CostContext, productId: string, qty: number, stack
         ? costLine(ctx, line.product_id, childQty * scale, [...stack, productId])
         : { ...base, name: "?", qty: 0, children: undefined, issue: "unresolved" as const };
     });
-    const known = children.every((child) => child.cost !== null);
-    const cost = known ? children.reduce((sum, child) => sum + (child.cost ?? 0), 0) : null;
+    let sum = 0;
+    let priced = 0;
+    let complete = true;
+    for (const child of children) {
+      if (child.cost === null || child.issue) complete = false;
+      if (child.cost === null) continue;
+      priced += 1;
+      sum += child.cost;
+    }
+    // Keep the sum of known children so parents (e.g. 2-pack) still show an approximate cost.
+    const cost = priced > 0 || complete ? sum : null;
     return {
       ...base,
       children,
       source: "recipe",
       cost,
       unitCost: cost === null || qty === 0 ? null : cost / qty,
-      issue: known ? undefined : "no_recipe_price",
+      issue: complete ? undefined : "no_recipe_price",
     };
   };
 
@@ -348,13 +367,11 @@ export function compositionYieldCostEstimate(
   let priced = 0;
   let complete = true;
   for (const line of ready) {
-    const cost = costLine(ctx, line.productId, line.qty).cost;
-    if (cost === null) {
-      complete = false;
-      continue;
-    }
+    const pricedLine = costLine(ctx, line.productId, line.qty);
+    if (pricedLine.cost === null || pricedLine.issue) complete = false;
+    if (pricedLine.cost === null) continue;
     priced += 1;
-    sum += cost;
+    sum += pricedLine.cost;
   }
   if (!priced && !complete) return { amount: 0, complete: false };
   return { amount: sum, complete };
