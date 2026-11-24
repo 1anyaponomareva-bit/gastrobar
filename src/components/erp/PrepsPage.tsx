@@ -891,7 +891,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           />
         ) : null}
         {form.lines.length ? (
-          <div className="erpTableWrap erpYieldWrap">
+          <div className="erpTableWrap scroll erpYieldWrap">
             <table className="erpTable stack erpComposeTable">
               <thead>
                 <tr>

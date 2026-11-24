@@ -474,7 +474,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           />
         ) : null}
         {form.lines.length ? (
-          <div className="erpTableWrap">
+          <div className="erpTableWrap scroll">
             <table className="erpTable stack erpComposeTable">
               <thead>
                 <tr>

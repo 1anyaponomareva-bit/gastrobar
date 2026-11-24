@@ -1936,6 +1936,18 @@ button.erpBack {
   justify-content: flex-end;
   gap: 6px;
   white-space: nowrap;
+  min-width: 7.5rem;
+}
+
+/* Wide composition tables (dish / prep) scroll instead of clipping × / Нарезка. */
+.erpTableWrap:has(.erpComposeTable),
+.erpTableWrap.erpYieldWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.erpTable.erpComposeTable {
+  min-width: 920px;
 }
 
 .erpCutsBtn {
@@ -2077,13 +2089,22 @@ button.erpBack {
 
 @media (min-width: 761px) {
   .erpTable.erpComposeTable tbody tr.erpComposeLine > td {
-    white-space: nowrap;
     vertical-align: middle;
   }
 
+  .erpTable.erpComposeTable tbody tr.erpComposeLine > td.edit,
+  .erpTable.erpComposeTable tbody tr.erpComposeLine > td.erpComposeActs {
+    white-space: nowrap;
+  }
+
   .erpTable.erpComposeTable tbody tr.erpComposeLine > td.main {
-    min-width: 220px;
-    max-width: 360px;
+    min-width: 200px;
+    max-width: 280px;
+  }
+
+  .erpTable.erpComposeTable tbody tr.erpComposeLine > td.num {
+    white-space: normal;
+    max-width: 9.5rem;
   }
 
   .erpTable.erpComposeTable tbody tr.erpCutsPlaqueRow > td {
