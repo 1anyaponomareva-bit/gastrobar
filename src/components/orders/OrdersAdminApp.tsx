@@ -7,7 +7,14 @@ import { ErpFormHost } from "@/components/erp/ErpFormHost";
 import { ProductCard } from "@/components/erp/ProductsPage";
 import { archiveAdmin, getAdminCatalog, saveAdminSupplier } from "@/lib/orders/api";
 import { ORDERS_ADMIN_PATH } from "@/lib/erp/menuListQuery";
-import { ALL_CATEGORY_TAB, catalogCategoryChips, compareCatalogNames, filterByCategory, sortCatalogProducts } from "@/lib/orders/orderList";
+import {
+  ALL_CATEGORY_TAB,
+  catalogCategoryChips,
+  compareCatalogNames,
+  filterByCategory,
+  sortCatalogProducts,
+  withVisibleCategories,
+} from "@/lib/orders/orderList";
 import { OrderCategoryTabs } from "./OrderCategoryTabs";
 import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
@@ -137,7 +144,11 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
     }),
     [lang],
   );
-  const categoryChips = useMemo(() => catalogCategoryChips(products, lang, categoryLabels), [products, lang, categoryLabels]);
+  const visibleProducts = useMemo(() => withVisibleCategories(products, lang), [products, lang]);
+  const categoryChips = useMemo(
+    () => catalogCategoryChips(visibleProducts, lang, categoryLabels),
+    [visibleProducts, lang, categoryLabels],
+  );
 
   useEffect(() => {
     if (category === ALL_CATEGORY_TAB) return;
@@ -147,14 +158,14 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = query
-      ? products.filter((product) =>
+      ? visibleProducts.filter((product) =>
           [product.nameEn, product.nameVn, product.brand ?? "", product.itemNo ?? "", product.categoryName ?? "", product.categoryNameVn ?? ""].some((text) =>
             text.toLowerCase().includes(query),
           ),
         )
-      : products;
+      : visibleProducts;
     return sortCatalogProducts(filterByCategory(filtered, category), lang);
-  }, [products, search, lang, category]);
+  }, [visibleProducts, search, lang, category]);
 
   const sortedSuppliers = useMemo(
     () => [...suppliers].sort((a, b) => compareCatalogNames(a.name, b.name) || a.id.localeCompare(b.id)),

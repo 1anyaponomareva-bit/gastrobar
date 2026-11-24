@@ -108,11 +108,40 @@ export function filterByCategory<T extends { categoryId: string | null }>(produc
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** True when the on-screen category title is a real name, not empty / not a DB id. */
+export function isUsableCategoryName(name: string | null | undefined): boolean {
+  const trimmed = (name ?? "").trim();
+  return Boolean(trimmed) && !UUID_RE.test(trimmed);
+}
+
 /** Never show raw DB ids in chips — empty / UUID-looking names fall back to a label. */
 export function catalogCategoryLabel(name: string | null | undefined, fallback: string): string {
-  const trimmed = (name ?? "").trim();
-  if (!trimmed || UUID_RE.test(trimmed)) return fallback;
-  return trimmed;
+  return isUsableCategoryName(name) ? (name ?? "").trim() : fallback;
+}
+
+function resolvedCategoryName(
+  product: { categoryName: string | null; categoryNameVn?: string | null },
+  locale: ProductNameLocale,
+): string {
+  return productDisplayName({
+    locale,
+    nameEn: product.categoryName,
+    nameVn: product.categoryNameVn,
+  }).trim();
+}
+
+/**
+ * Products whose category has no human name (or the name is a UUID) are treated as
+ * uncategorized for chips/filters — staff must not see raw database ids.
+ */
+export function withVisibleCategories<
+  T extends { categoryId: string | null; categoryName: string | null; categoryNameVn?: string | null },
+>(products: T[], locale: ProductNameLocale = "ru"): T[] {
+  return products.map((product) => {
+    if (!product.categoryId) return product;
+    if (isUsableCategoryName(resolvedCategoryName(product, locale))) return product;
+    return { ...product, categoryId: null, categoryName: null, categoryNameVn: null };
+  });
 }
 
 /** Category chips/headers A–Z by the language-switcher name. */
@@ -122,13 +151,9 @@ export function catalogCategories(
   unnamed = "—",
 ): CatalogCategory[] {
   const seen = new Map<string, CatalogCategory>();
-  for (const product of products) {
+  for (const product of withVisibleCategories(products, locale)) {
     if (!product.categoryId || seen.has(product.categoryId)) continue;
-    const name = productDisplayName({
-      locale,
-      nameEn: product.categoryName,
-      nameVn: product.categoryNameVn,
-    });
+    const name = resolvedCategoryName(product, locale);
     seen.set(product.categoryId, {
       id: product.categoryId,
       name: catalogCategoryLabel(name, unnamed),
@@ -145,9 +170,9 @@ export function catalogCategoryChips(
   locale: ProductNameLocale = "ru",
   labels: CategoryChipLabels,
 ): CatalogCategory[] {
-  const unnamed = labels.unnamed ?? labels.uncategorized;
-  const chips: CatalogCategory[] = [{ id: ALL_CATEGORY_TAB, name: labels.all }, ...catalogCategories(products, locale, unnamed)];
-  if (products.some((product) => !product.categoryId)) {
+  const visible = withVisibleCategories(products, locale);
+  const chips: CatalogCategory[] = [{ id: ALL_CATEGORY_TAB, name: labels.all }, ...catalogCategories(visible, locale, labels.unnamed ?? labels.uncategorized)];
+  if (visible.some((product) => !product.categoryId)) {
     chips.push({ id: UNCATEGORIZED_CATEGORY_TAB, name: labels.uncategorized });
   }
   return chips;

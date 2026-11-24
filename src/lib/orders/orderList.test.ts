@@ -176,7 +176,7 @@ test("supplier tab filters catalog to that supplier; All keeps every row", () =>
   );
 });
 
-test("category chips never show raw UUID when the category has no name", () => {
+test("nameless / UUID category chips are hidden; products go to Uncategorized", () => {
   const products = [
     {
       id: "ketchup",
@@ -184,14 +184,26 @@ test("category chips never show raw UUID when the category has no name", () => {
       categoryName: null,
       categoryNameVn: null,
     },
+    {
+      id: "sauce",
+      categoryId: "5e06c57e-b9dc-408c-bced-30518cef9065",
+      categoryName: "5e06c57e-b9dc-408c-bced-30518cef9065",
+      categoryNameVn: "",
+    },
+    {
+      id: "egg",
+      categoryId: "dairy",
+      categoryName: "Dairy",
+      categoryNameVn: "Sữa",
+    },
   ];
-  assert.deepEqual(catalogCategories(products, "ru", "Без названия").map((row) => row.name), ["Без названия"]);
   assert.deepEqual(
     catalogCategoryChips(products, "ru", { all: "Все", uncategorized: "Без категории", unnamed: "Без названия" }).map(
       (row) => row.name,
     ),
-    ["Все", "Без названия"],
+    ["Все", "Dairy", "Без категории"],
   );
+  assert.equal(catalogCategories(products, "ru").length, 1);
 });
 
 test("category chips follow the language switcher: RU/EN English, VN Vietnamese", () => {

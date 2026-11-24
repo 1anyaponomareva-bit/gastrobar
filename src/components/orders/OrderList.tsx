@@ -6,6 +6,7 @@ import {
   ALL_CATEGORY_TAB,
   ALL_SUPPLIER_TAB,
   catalogCategoryChips,
+  withVisibleCategories,
   clearQuantities,
   defaultPackId,
   filterByCategory,
@@ -128,13 +129,14 @@ export function OrderList({ initialTab }: Props) {
     () => ({ all: t("category_all"), uncategorized: t("category_none"), unnamed: t("category_unnamed") }),
     [t],
   );
+  const visibleItems = useMemo(() => withVisibleCategories(supplierItems, lang), [supplierItems, lang]);
   const categoryChips = useMemo(
-    () => catalogCategoryChips(supplierItems, lang, categoryLabels),
-    [supplierItems, lang, categoryLabels],
+    () => catalogCategoryChips(visibleItems, lang, categoryLabels),
+    [visibleItems, lang, categoryLabels],
   );
   const allVisible = useMemo(
-    () => filterByCategory(supplierItems.filter(matchesSearch), category),
-    [supplierItems, matchesSearch, category],
+    () => filterByCategory(visibleItems.filter(matchesSearch), category),
+    [visibleItems, matchesSearch, category],
   );
 
   useEffect(() => {
@@ -220,7 +222,7 @@ export function OrderList({ initialTab }: Props) {
           <SupplierOrderList
             key={supplier.id}
             supplier={supplier}
-            products={supplierItems}
+            products={visibleItems}
             warehouses={warehouses}
             defaultWarehouseId={defaultWarehouseId}
             selection={selection}
