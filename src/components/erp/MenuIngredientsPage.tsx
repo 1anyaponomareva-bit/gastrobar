@@ -233,19 +233,19 @@ function MenuIngredientsList() {
       num: true,
       cell: (row) => {
         const gross = row.unit_weight_kg;
-        const net = row.unit_net_weight_kg;
-        if (gross == null && net == null) return "—";
-        if (net == null) return posterStockQty(gross, "kg");
-        if (gross == null) return posterStockQty(net, "kg");
-        return `${posterStockQty(gross, "kg")} / ${posterStockQty(net, "kg")}`;
+        const net = row.unit_net_weight_kg ?? null;
+        if (gross != null && net != null) return `${posterStockQty(gross, "kg")} / ${posterStockQty(net, "kg")}`;
+        if (gross != null) return posterStockQty(gross, "kg");
+        if (net != null) return posterStockQty(net, "kg");
+        return "—";
       },
       text: (row) => {
         const gross = row.unit_weight_kg;
-        const net = row.unit_net_weight_kg;
-        if (gross == null && net == null) return "";
-        if (net == null) return String(gross);
-        if (gross == null) return String(net);
-        return `${gross} / ${net}`;
+        const net = row.unit_net_weight_kg ?? null;
+        if (gross != null && net != null) return `${gross} / ${net}`;
+        if (gross != null) return String(gross);
+        if (net != null) return String(net);
+        return "";
       },
     },
     {
