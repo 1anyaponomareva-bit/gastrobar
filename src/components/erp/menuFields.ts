@@ -15,7 +15,7 @@ import { T, erpLang, locale } from "./i18n";
  *
  * Poster tab            → existing source
  * Товары                → erp_products.type = finished (resale; Agent 1 tovary.md). Sale price is not on products yet.
- * Тех. карты            → erp_dishes + erp_dish_lines (sellable menu item; price lives here)
+ * Блюда (Dishes)        → erp_dishes + erp_dish_lines (sellable menu item; price lives here)
  * Полуфабрикаты         → erp_products.type = semi_finished + erp_recipes
  * Ингредиенты           → erp_products (ingredient/packaging/consumable); classify by category + pack supplier, not type
  * Контроль фудкоста     → dishCost / menuCostContext (`src/lib/erp/menu.ts`)

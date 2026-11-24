@@ -477,8 +477,8 @@ export function ProcessingPage() {
                         <strong>{T("Здесь будут переработки", "Processing documents will appear here", "Chứng từ chế biến sẽ hiện ở đây")}</strong>
                         <span>
                           {T(
-                            "Переработка списывает исходные продукты и приходует полученные. Если это тех. карта или полуфабрикат — состав берётся из текущей карточки.",
-                            "Processing writes off source products and receives the result. For a recipe or prep, ingredients come from the current tech card.",
+                            "Переработка списывает исходные продукты и приходует полученные. Если это блюдо или полуфабрикат — состав берётся из текущей карточки.",
+                            "Processing writes off source products and receives the result. For a dish or prep, ingredients come from the current card.",
                             "Chế biến trừ nguyên liệu đầu và nhập thành phẩm. Công thức lấy từ thẻ kỹ thuật hiện tại.",
                           )}
                         </span>

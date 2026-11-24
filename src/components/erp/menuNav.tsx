@@ -21,12 +21,12 @@ export const MENU_HREFS = {
 export function menuNavItems() {
   return [
     { href: MENU_HREFS.goods, label: T("Товары", "Products", "Hàng hóa") },
-    { href: MENU_HREFS.recipes, label: T("Тех. карты", "Recipes", "Công thức") },
+    { href: MENU_HREFS.recipes, label: T("Блюда", "Dishes", "Món") },
     { href: MENU_HREFS.preps, label: T("Полуфабрикаты", "Semi-finished", "Bán thành phẩm") },
     { href: MENU_HREFS.processing, label: T("Переработки", "Processing", "Chế biến") },
     { href: MENU_HREFS.ingredients, label: T("Ингредиенты", "Ingredients", "Nguyên liệu") },
     { href: MENU_HREFS.foodcost, label: T("Контроль фудкоста", "Food cost", "Kiểm soát food cost") },
-    { href: MENU_HREFS.productCategories, label: T("Категории товаров и тех. карт", "Product & recipe categories", "Nhóm món và công thức") },
+    { href: MENU_HREFS.productCategories, label: T("Категории товаров и блюд", "Product & dish categories", "Nhóm hàng và món") },
     { href: MENU_HREFS.ingredientCategories, label: T("Категории ингредиентов", "Ingredient categories", "Nhóm nguyên liệu") },
     { href: MENU_HREFS.locations, label: T("Точки продаж", "Sales locations", "Điểm bán") },
   ];

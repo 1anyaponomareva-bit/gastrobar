@@ -575,8 +575,8 @@ function CountTable({
 
       <div className="erpInvTabs" role="tablist">
         <span className="on">{T("Продукты", "Products", "Sản phẩm")}</span>
-        <span title={T("Вкладка Poster «Тех. карты и полуфабрикаты» ждёт контракт логики", "Poster's Recipes & preps tab waits for the logic contract", "Tab công thức chờ logic")}>
-          {T("Тех. карты и полуфабрикаты", "Recipes & preps", "Công thức & BTP")}
+        <span title={T("Вкладка Poster «Блюда и полуфабрикаты» ждёт контракт логики", "Poster's Dishes & preps tab waits for the logic contract", "Tab món & BTP chờ logic")}>
+          {T("Блюда и полуфабрикаты", "Dishes & preps", "Món & BTP")}
         </span>
         <span title={T("Вкладка Poster «Производства» ждёт контракт логики", "Poster's Production tab waits for the logic contract", "Tab sản xuất chờ logic")}>
           {T("Производства", "Production", "Sản xuất")}

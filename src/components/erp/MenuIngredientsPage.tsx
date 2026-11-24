@@ -77,11 +77,11 @@ function prepUsage(state: ErpState, productId: string): UsageRow[] {
 function IngredientUsage({ dishes, preps }: { dishes: UsageRow[]; preps: UsageRow[] }) {
   return (
     <div className="erpMenuUsageBlock">
-      <h3>{T("Используется в тех. картах:", "Used in recipes:", "Dùng trong công thức:")}</h3>
+      <h3>{T("Используется в блюдах:", "Used in dishes:", "Dùng trong món:")}</h3>
       {dishes.length ? (
         <UsageMiniTable rows={dishes} price />
       ) : (
-        <p className="erpHint">{T("Не используется в тех. картах", "Not used in recipes", "Không dùng trong công thức")}</p>
+        <p className="erpHint">{T("Не используется в блюдах", "Not used in dishes", "Không dùng trong món")}</p>
       )}
       {preps.length ? (
         <>

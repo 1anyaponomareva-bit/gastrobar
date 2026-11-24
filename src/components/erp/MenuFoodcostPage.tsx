@@ -120,7 +120,7 @@ export function MenuFoodcostPage() {
             searchable
           />
           <label className="erpFilterBtn on">
-            <span>{T("Цена техкарты", "Tech-card price", "Giá thẻ KT")}</span>
+            <span>{T("Цена блюда", "Dish price", "Giá món")}</span>
             <select value={priceSource} onChange={(e) => setPriceSource(e.target.value as MenuPriceSource)}>
               <option value="reference">{T("плановая (карточка)", "reference (card)", "tham chiếu")}</option>
               <option value="last_lot">{T("последняя партия", "last lot", "lô gần nhất")}</option>

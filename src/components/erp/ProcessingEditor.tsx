@@ -270,9 +270,9 @@ export function ProcessingEditor({ id }: { id: string }) {
           </h1>
           <p className="erpSub">
             {T(
-              "Списывает исходные продукты и приходует полученные. Для тех. карты или полуфабриката состав берётся из текущей карточки.",
-              "Writes off source products and receives the result. For a recipe or prep, ingredients come from the current tech card.",
-              "Trừ nguyên liệu đầu và nhập thành phẩm. Công thức lấy từ thẻ kỹ thuật hiện tại.",
+              "Списывает исходные продукты и приходует полученные. Для блюда или полуфабриката состав берётся из текущей карточки.",
+              "Writes off source products and receives the result. For a dish or prep, ingredients come from the current card.",
+              "Trừ nguyên liệu đầu và nhập thành phẩm. Thành phần lấy từ thẻ món hoặc bán thành phẩm hiện tại.",
             )}
           </p>
         </div>
@@ -325,9 +325,9 @@ export function ProcessingEditor({ id }: { id: string }) {
                     <span className="erpName">{liveCatalogName(state.products, doc.output_product_id)}</span>
                   )}
                   {composition?.source === "recipe" ? (
-                    <span className="erpCellSub">{T("Состав из текущей тех. карты", "Composition from the current tech card", "Thành phần từ thẻ kỹ thuật hiện tại")}</span>
+                    <span className="erpCellSub">{T("Состав из текущей карточки", "Composition from the current card", "Thành phần từ thẻ hiện tại")}</span>
                   ) : composition?.source === "dish" ? (
-                    <span className="erpCellSub">{T("Состав из тех. карты блюда", "Composition from the dish tech card", "Thành phần từ công thức món")}</span>
+                    <span className="erpCellSub">{T("Состав из карточки блюда", "Composition from the dish card", "Thành phần từ thẻ món")}</span>
                   ) : null}
                 </td>
                 <td className="edit" data-label={T("Количество", "Quantity", "Số lượng")}>
@@ -353,7 +353,7 @@ export function ProcessingEditor({ id }: { id: string }) {
         <p className="erpHint">
           {T("Склад", "Location", "Kho")}: <b>{state.warehouses.find((w) => w.id === doc.warehouse_id)?.name ?? "—"}</b>
           {composition?.source
-            ? ` · ${T("подставлено из тех. карты, количество можно поправить", "filled from the tech card; you can adjust quantities", "điền từ thẻ kỹ thuật, có thể sửa số lượng")}`
+            ? ` · ${T("подставлено из карточки блюда, количество можно поправить", "filled from the dish card; you can adjust quantities", "điền từ thẻ món, có thể sửa số lượng")}`
             : ""}
         </p>
         <div className="erpTableWrap">

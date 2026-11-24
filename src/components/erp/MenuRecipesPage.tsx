@@ -175,7 +175,7 @@ function MenuRecipesList() {
     },
     {
       id: "weighted",
-      label: T("Весовая тех. карта", "Weighted recipe", "Công thức theo kg"),
+      label: T("Весовое блюдо", "Weighted dish", "Món theo kg"),
       defaultHidden: true,
       sort: false,
       cell: () => T("нет", "no", "không"),
@@ -236,7 +236,7 @@ function MenuRecipesList() {
     <CatalogTable
       storeKey="gastrofood-erp-menu-recipes-v2"
       activeHref={MENU_HREFS.recipes}
-      title={T("Тех. карты", "Recipes", "Công thức")}
+      title={T("Блюда", "Dishes", "Món")}
       sheetName="menu-recipes"
       columns={columns}
       rows={rows}
@@ -248,7 +248,7 @@ function MenuRecipesList() {
       onSortChange={(sort, desc) => list.set({ sort, desc })}
       searchPlaceholder={T("Быстрый поиск", "Quick search", "Tìm nhanh")}
       catalogEmpty={!state.dishes.length}
-      emptyTitle={T("Тех. карт пока нет", "No recipes yet", "Chưa có công thức")}
+      emptyTitle={T("Блюд пока нет", "No dishes yet", "Chưa có món")}
       addHref="/erp/menu/new"
       addLabel={T("Добавить", "Add", "Thêm")}
       rowHref={(row) => `/erp/menu/${row.id}`}

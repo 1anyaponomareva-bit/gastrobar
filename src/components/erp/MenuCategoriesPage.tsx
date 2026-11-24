@@ -12,7 +12,7 @@ export function MenuCategoriesPage({ kind }: { kind: "products" | "ingredients" 
   if (!state) return null;
   const products = kind === "products";
   const title = products
-    ? T("Категории товаров и тех. карт", "Product & recipe categories", "Nhóm món và công thức")
+    ? T("Категории товаров и блюд", "Product & dish categories", "Nhóm hàng và món")
     : T("Категории ингредиентов", "Ingredient categories", "Nhóm nguyên liệu");
   return (
     <div className="erpMenu">
@@ -36,7 +36,7 @@ export function MenuCategoriesPage({ kind }: { kind: "products" | "ingredients" 
         emptyTitle={T("Категорий пока нет", "No categories yet", "Chưa có nhóm")}
         emptyText={
           products
-            ? T("Категории товаров помогают фильтровать блюда и тех. карты.", "Product categories filter dishes and recipes.", "Nhóm hàng giúp lọc món và công thức.")
+            ? T("Категории товаров помогают фильтровать товары и блюда.", "Product categories filter products and dishes.", "Nhóm hàng giúp lọc hàng hóa và món.")
             : T("Категории ингредиентов помогают фильтровать сырьё.", "Ingredient categories filter raw products.", "Nhóm nguyên liệu giúp lọc hàng.")
         }
       />
