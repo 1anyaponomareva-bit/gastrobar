@@ -266,10 +266,12 @@
 
 .erpLangMenu {
   position: absolute;
-  z-index: 30;
+  z-index: 80;
   top: calc(100% + 4px);
   left: 0;
   min-width: 220px;
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
   background: var(--erp-card);
   border: 1px solid var(--erp-line);
   border-radius: 12px;
@@ -277,6 +279,22 @@
   padding: 6px;
   display: flex;
   flex-direction: column;
+}
+
+/* Keep language picker above table edges when the list is long. */
+.erpLangAdd.open {
+  z-index: 81;
+}
+
+.erpTable td:has(.erpExtraNames),
+.erpTable td:has(.erpLangBar) {
+  position: relative;
+  overflow: visible;
+}
+
+.erpTable tr:has(.erpLangAdd.open),
+.erpTable td:has(.erpLangAdd.open) {
+  z-index: 9;
 }
 
 .erpLangMenu button {
@@ -881,7 +899,9 @@ button.erpBack {
 }
 
 .erpTableWrap:has(.erpIngPicker),
-.erpTableWrap:has(.erpMethods) {
+.erpTableWrap:has(.erpMethods),
+.erpTableWrap:has(.erpExtraNames),
+.erpTableWrap:has(.erpLangBar) {
   overflow: visible;
 }
 
