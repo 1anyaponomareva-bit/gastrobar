@@ -535,7 +535,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                             <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
                           )}
                         </td>
-                        <td className={line.methods.length ? "edit" : ""} data-label={T("Нетто", "Net", "Netto")}>
+                        <td className="edit" data-label={T("Нетто", "Net", "Netto")}>
                           <NetCell state={state} line={line} onChange={updateLine} />
                         </td>
                         <td className="num" data-label={T("Цена за единицу", "Unit cost", "Đơn giá")}>

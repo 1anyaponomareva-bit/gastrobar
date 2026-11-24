@@ -820,7 +820,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                             <span className="erpMuted">{T("сначала выберите продукт", "choose a product first", "chọn sản phẩm trước")}</span>
                           )}
                         </td>
-                        <td className={readOnly || !line.methods?.length ? "" : "edit"} data-label={T("Нетто", "Net", "Netto")}>
+                        <td className={readOnly ? "" : "edit"} data-label={T("Нетто", "Net", "Netto")}>
                           <NetCell state={state} line={line} disabled={readOnly} onChange={(patch) => setLine(index, patch)} />
                         </td>
                         <td className="num" data-label={T("Стоимость", "Cost", "Chi phí")}>

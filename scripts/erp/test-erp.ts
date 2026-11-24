@@ -4904,6 +4904,9 @@ async function main() {
     assert.match(picker, /excludeIds/);
     assert.match(preps, /excludeIds=\{blockedComponents\}/);
     assert.match(preps, /isCompositionPrepType/);
+    assert.match(preps, /td className=\{readOnly \? "" : "edit"\} data-label=\{T\("Нетто"/);
+    assert.match(losses, /if \(disabled \|\| !line.product_id\)/);
+    assert.equal(losses.includes("!line.methods?.length || !line.product_id"), false);
     assert.equal(losses.includes("<details"), false);
     assert.match(losses, /erpMethodsDrop/);
     assert.match(css, /\.erpMethodsDrop\s*\{[\s\S]*?position:\s*absolute/);
@@ -5139,7 +5142,25 @@ async function main() {
     );
     assert.deepEqual(storedMixLine.methods, []);
     assert.deepEqual(typeof storedMixLine.parts === "string" ? JSON.parse(storedMixLine.parts) : storedMixLine.parts, []);
-    assert.equal(storedMixLine.net_qty, null);
+    assert.equal(n(storedMixLine.net_qty), 0.7);
+
+    const typedNet = await saveProduct({ type: "semi_finished", name_en: "Nested BOM typed net mix", base_unit: "kg" });
+    const typedNetRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: typedNet,
+        yield_qty: 0.9,
+        lines: [{ product_id: meat, qty: 1, net_qty: 0.9 }],
+      }),
+      ACTOR,
+    ]);
+    const typedNetLine = await one<{ qty: string; net_qty: string | null; methods: string[] }>(
+      "select qty, net_qty, methods from public.erp_recipe_lines where recipe_id = $1",
+      [typedNetRecipe],
+    );
+    assert.equal(n(typedNetLine.qty), 1);
+    assert.equal(n(typedNetLine.net_qty), 0.9);
+    assert.deepEqual(typedNetLine.methods, []);
+
     await q("select public.erp_activate_recipe($1, $2)", [sausageRecipe, ACTOR]);
 
     await expectError(

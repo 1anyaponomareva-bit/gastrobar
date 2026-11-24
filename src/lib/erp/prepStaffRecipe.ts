@@ -95,9 +95,10 @@ function trimNum(value: number): string {
 }
 
 export function lineNetQty(line: PrepPublishLine, product: PrepPublishProduct | undefined): number | null {
+  if (line.net_qty != null) return line.net_qty;
   if (line.qty == null) return null;
   if (!line.methods?.length) return line.qty;
-  return line.net_qty ?? roundQty(usableWeight(line.qty, product, line.methods));
+  return roundQty(usableWeight(line.qty, product, line.methods));
 }
 
 function staffPhoto(url: string | null | undefined): string | undefined {

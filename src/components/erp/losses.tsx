@@ -26,11 +26,12 @@ export const canProcessProduct = (product: ErpProduct | undefined) =>
 
 const productOf = (state: ErpState, id: string | null) => (id ? state.products.find((p) => p.id === id) : undefined);
 
-/** Net is stored only when a method is chosen; without methods net = gross. */
+/** Typed net if set; else sequential losses; else gross. */
 export const netOf = (state: ErpState, line: LossLine): number | null => {
+  if (line.net_qty != null) return line.net_qty;
   if (line.qty === null) return null;
   if (!line.methods?.length) return line.qty;
-  return line.net_qty ?? roundQty(usableWeight(line.qty, productOf(state, line.product_id), line.methods));
+  return roundQty(usableWeight(line.qty, productOf(state, line.product_id), line.methods));
 };
 
 export function grossPatch(state: ErpState, line: LossLine, qty: number | null): Partial<LossLine> {
@@ -40,8 +41,10 @@ export function grossPatch(state: ErpState, line: LossLine, qty: number | null):
 }
 
 export function netPatch(state: ErpState, line: LossLine, net: number | null): Partial<LossLine> {
-  const factor = netFactor(productOf(state, line.product_id), line.methods ?? []);
+  const methods = line.methods ?? [];
+  if (!methods.length) return { net_qty: net };
   if (net === null) return { net_qty: null };
+  const factor = netFactor(productOf(state, line.product_id), methods);
   return { net_qty: net, qty: factor > 0 ? roundQty(net / factor) : net };
 }
 
@@ -153,7 +156,7 @@ export function MethodPicker({
   );
 }
 
-/** Net input when a method is chosen, otherwise net equals gross and is only shown. */
+/** Net is always an input in edit mode. Processing % is optional. */
 export function NetCell({
   state,
   line,
@@ -168,8 +171,8 @@ export function NetCell({
   const product = productOf(state, line.product_id);
   const unit = product?.base_unit ?? null;
   const net = netOf(state, line);
-  if (disabled || !line.methods?.length || !line.product_id) return <span>{qtyText(net, unit)}</span>;
-  return <QtyInput base={unit} value={net} defaultSmall onChange={(v) => onChange(netPatch(state, line, v))} />;
+  if (disabled || !line.product_id) return <span>{qtyText(net, unit)}</span>;
+  return <QtyInput base={unit} value={net} defaultSmall={unit !== "pcs"} onChange={(v) => onChange(netPatch(state, line, v))} />;
 }
 
 /** Sum of net weight over kg/l lines; pieces are counted only with a known piece weight. */
@@ -192,7 +195,7 @@ export const netWeightText = (weight: { kg: number; partial: boolean }) =>
 
 export const lossHint = () =>
   T(
-    "Брутто — сколько берётся со склада. Нетто — цепочка: каждый следующий % потерь от оставшегося веса. Себестоимость 1 кг нетто = цена покупки ÷ нетто.",
-    "Gross is taken from stock. Net is sequential: each next loss % applies to the remaining weight. Cost per usable kg = purchase cost ÷ net.",
-    "Brutto lấy từ kho. Netto theo chuỗi: mỗi % hao hụt sau áp vào phần còn lại. Giá 1 kg netto = giá mua ÷ netto.",
+    "Брутто — сколько берётся со склада. Нетто можно ввести вручную. Если выбрана обработка, каждый следующий % потерь считается от оставшегося веса. Себестоимость 1 кг нетто = цена покупки ÷ нетто.",
+    "Gross is taken from stock. Net can be typed. If processing is chosen, each next loss % applies to the remaining weight. Cost per usable kg = purchase cost ÷ net.",
+    "Brutto lấy từ kho. Netto có thể nhập tay. Nếu chọn sơ chế, mỗi % hao hụt sau áp vào phần còn lại. Giá 1 kg netto = giá mua ÷ netto.",
   );
