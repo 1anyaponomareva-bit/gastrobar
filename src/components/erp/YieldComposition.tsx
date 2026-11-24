@@ -1,6 +1,6 @@
 "use client";
 
-import { compositionYieldCost, costLine, liveCatalogName, stockCostContext } from "@/lib/erp/costing";
+import { compositionLineQty, compositionYieldCost, costLine, liveCatalogName, stockCostContext } from "@/lib/erp/costing";
 import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
 import { filledParts, parseLineParts } from "@/lib/erp/lineParts";
 import type { ErpRecipe, ErpState } from "@/lib/erp/types";
@@ -11,7 +11,7 @@ import { qtyText, T, unitLabel, unitOf, vnd } from "./ui";
 export function recipeForProduct(state: ErpState, productId: string | null | undefined) {
   if (!productId) return null;
   const recipes = state.recipes.filter((recipe) => recipe.product_id === productId);
-  return recipes.find((recipe) => recipe.status === "active") ?? recipes[0] ?? null;
+  return recipes.find((recipe) => recipe.status === "active") ?? recipes.find((recipe) => recipe.status === "draft") ?? recipes[0] ?? null;
 }
 
 export const yieldCompositionTitle = () =>
@@ -106,7 +106,9 @@ export function YieldComposition({
             {recipe.lines.map((line, index) => {
               const unit = unitOf(state, line.product_id);
               const net = netOf(state, line);
-              const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty).cost : null;
+              const qty = compositionLineQty(line);
+              const priced = line.product_id && qty != null ? costLine(ctx, line.product_id, qty) : null;
+              const cost = priced?.cost ?? null;
               const prep = isCompositionPrepType(state.products.find((item) => item.id === line.product_id)?.type);
               const cuts = filledParts(parseLineParts(line.parts));
               const small = unit === "l" ? T("мл", "ml", "ml") : T("г", "g", "g");
@@ -128,7 +130,17 @@ export function YieldComposition({
                   </td>
                   <td className="num">{qtyText(line.qty, unit)}</td>
                   <td className="num">{net == null || (unit === "pcs" && net === 0) ? "—" : qtyText(net, unit)}</td>
-                  <td className="num">{cost == null ? "—" : vnd(cost)}</td>
+                  <td className="num">
+                    {!line.product_id ? (
+                      <span className="erpMuted">{T("нет связи", "not linked", "chưa liên kết")}</span>
+                    ) : priced?.issue === "no_price" || priced?.issue === "no_recipe_price" ? (
+                      <span className="erpBadge warn">{T("нет цены", "no price", "chưa có giá")}</span>
+                    ) : cost == null ? (
+                      "—"
+                    ) : (
+                      vnd(cost)
+                    )}
+                  </td>
                 </tr>
               );
             })}

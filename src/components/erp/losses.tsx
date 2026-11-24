@@ -42,8 +42,7 @@ export function grossPatch(state: ErpState, line: LossLine, qty: number | null):
 
 export function netPatch(state: ErpState, line: LossLine, net: number | null): Partial<LossLine> {
   const methods = line.methods ?? [];
-  if (!methods.length) return { net_qty: net };
-  if (net === null) return { net_qty: null };
+  if (!methods.length || net == null || net === 0) return { net_qty: net };
   const factor = netFactor(productOf(state, line.product_id), methods);
   return { net_qty: net, qty: factor > 0 ? roundQty(net / factor) : net };
 }

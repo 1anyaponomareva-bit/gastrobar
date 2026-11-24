@@ -111,3 +111,14 @@ test("missing price makes yield cost incomplete; blank rows are skipped", () => 
   assert.equal(compositionYieldCost(buildCostContext([onion], []), [{ product_id: "onion", qty: null }]), null);
   assert.equal(compositionYieldCost(buildCostContext([onion], []), []), null);
 });
+
+test("typed net 0 is a known cost of 0, not a missing line", () => {
+  const ctx = buildCostContext([onion], []);
+  assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: 0 }]), 0);
+  assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: null, net_qty: 0 }]), 0);
+});
+
+test("postgres string amounts still cost the card", () => {
+  const ctx = buildCostContext([{ ...onion, est_unit_cost: "20000" as unknown as number }], []);
+  assert.equal(compositionYieldCost(ctx, [{ product_id: "onion", qty: "1.5" }]), 30_000);
+});

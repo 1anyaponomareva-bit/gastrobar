@@ -5,6 +5,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
+  compositionLineQty,
   compositionYieldCost,
   costLine,
   liveCatalogName,
@@ -162,7 +163,8 @@ export function PrepsPage() {
                     const recipes = state.recipes.filter((r) => r.product_id === p.id);
                     const active = recipes.find((r) => r.status === "active");
                     const draft = recipes.find((r) => r.status === "draft");
-                    const cost = active ? recipeYieldUnitCost(ctx, active) : null;
+                    const costRecipe = active ?? draft;
+                    const cost = costRecipe ? recipeYieldUnitCost(ctx, costRecipe) : null;
                     return (
                       <tr key={p.id}>
                         <td className="main">
@@ -179,7 +181,7 @@ export function PrepsPage() {
                         </td>
                         <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(active, p.base_unit)}</td>
                         <td className="num" data-label={T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}>
-                          {!active ? (
+                          {!costRecipe ? (
                             "—"
                           ) : cost === null ? (
                             <span className="erpBadge warn">{T("не все цены известны", "some prices missing", "thiếu giá")}</span>
@@ -379,6 +381,14 @@ type RecipeForm = {
 const recipeKind = (value: string | null | undefined): PrepCardKind =>
   value === "sauce" || value === "dish" ? "sauce" : "prep";
 
+function recipeLineHasContent(line: LineDraft): boolean {
+  const raw =
+    line.raw_name && typeof line.raw_name === "object" && !Array.isArray(line.raw_name)
+      ? String((line.raw_name as { en?: unknown }).en ?? "")
+      : "";
+  return Boolean(line.product_id || line.qty != null || line.net_qty != null || line.raw_amount != null || raw.trim());
+}
+
 /** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
 function prepNamePayload(
   product: ErpProduct,
@@ -501,7 +511,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     { bottomEdge: 160 },
   );
 
-  const costs = form.lines.map((line) => (line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null));
+  const costs = form.lines.map((line) => {
+    const qty = compositionLineQty(line);
+    return line.product_id && qty != null ? costLine(ctx, line.product_id, qty) : null;
+  });
   const batchCost = compositionYieldCost(ctx, form.lines);
 
   const publishInput = (): PrepPublishInput => ({
@@ -545,12 +558,14 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     return true;
   };
 
-  const save = async () => {
-    if (productDirty && !dirty) {
-      return Boolean(await saveNames());
+  const save = async (overrides?: Partial<Pick<RecipeForm, "yield_qty" | "lines">>): Promise<string | false> => {
+    if (productDirty && !dirty && !overrides) {
+      return (await saveNames()) ? product.id : false;
     }
     if (productDirty && !(await saveNames(true))) return false;
-    const partsError = form.lines.map((line) => compositionPartsMessage(state, line)).find(Boolean);
+    const nextLines = (overrides?.lines ?? form.lines).filter(recipeLineHasContent);
+    const nextYield = overrides?.yield_qty !== undefined ? overrides.yield_qty : form.yield_qty;
+    const partsError = nextLines.map((line) => compositionPartsMessage(state, line)).find(Boolean);
     if (partsError) {
       window.alert(partsError);
       return false;
@@ -562,13 +577,13 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       card_no: form.card_no.trim(),
       card_date: form.card_date,
       photo: form.photo,
-      yield_qty: form.yield_qty,
-      yield_pieces: unit === "pcs" ? form.yield_qty : form.yield_pieces,
+      yield_qty: nextYield,
+      yield_pieces: unit === "pcs" ? nextYield : form.yield_pieces,
       shelf_life_days: form.shelf_life_days,
       storage_conditions: form.storage_conditions,
       note: form.note,
       instructions: serializeRecipeInstructions(form.steps),
-      lines: form.lines.map((line) => ({
+      lines: nextLines.map((line) => ({
         ...line,
         parts: filledParts(line.parts).map((part) => ({ name: part.name.trim(), grams: part.grams })),
       })),
@@ -580,8 +595,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     if (result) {
       setViewId(result.id);
       setEditing(true);
-      setBaseline(JSON.stringify(form));
-      return true;
+      const savedForm = { ...form, yield_qty: nextYield, lines: nextLines };
+      setForm(savedForm);
+      setBaseline(JSON.stringify(savedForm));
+      return result.id;
     }
     return false;
   };
@@ -615,20 +632,47 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     }
   };
 
-  const activate = async () => {
-    if (!viewed || viewed.status !== "draft") return;
-    if (dirty || productDirty) {
-      window.alert(T("Сначала сохраните изменения.", "Save your changes first.", "Hãy lưu thay đổi trước."));
-      return;
-    }
-    if (await act({ action: "activateRecipe", id: viewed.id }, T("Рецептура действует", "Recipe is now active", "Công thức đã được áp dụng")))
-      setEditing(false);
-  };
-
-  const unlinked = form.lines.filter((line) => !line.product_id).length;
+  const unlinked = form.lines.filter(recipeLineHasContent).filter((line) => !line.product_id).length;
   const readOnly = !editing;
   const net = netWeight(state, form.lines);
   const netYield = unit === "kg" || unit === "l" ? net.kg : null;
+
+  const activate = async () => {
+    const lines = form.lines.filter(recipeLineHasContent);
+    const unlinkedFilled = lines.filter((line) => !line.product_id);
+    if (unlinkedFilled.length) {
+      window.alert(
+        T(
+          "Сначала привяжите все ингредиенты к продуктам.",
+          "Link every ingredient to a product first.",
+          "Hãy gắn mọi nguyên liệu với sản phẩm trước.",
+        ),
+      );
+      return;
+    }
+    if (!lines.length) {
+      window.alert(T("Добавьте хотя бы один ингредиент.", "Add at least one ingredient.", "Thêm ít nhất một nguyên liệu."));
+      return;
+    }
+    const yieldQty = form.yield_qty ?? netYield;
+    if (!yieldQty) {
+      window.alert(
+        T(
+          "Укажите вес готового / выход, затем снова нажмите «Сделать действующей».",
+          "Enter the finished yield, then press Make active again.",
+          "Nhập sản lượng thành phẩm, rồi bấm Áp dụng công thức.",
+        ),
+      );
+      return;
+    }
+    const id =
+      viewed?.status === "draft" && !dirty && !productDirty && form.yield_qty
+        ? viewed.id
+        : await save({ yield_qty: yieldQty, lines });
+    if (!id) return;
+    if (await act({ action: "activateRecipe", id }, T("Рецептура действует", "Recipe is now active", "Công thức đã được áp dụng")))
+      setEditing(false);
+  };
 
   return (
     <>
@@ -961,8 +1005,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
                   : T("Сохранить черновик", "Save draft", "Lưu nháp")}
           </button>
         ) : null}
-        {viewed?.status === "draft" ? (
-          <button type="button" className="erpBtn" disabled={busy || unlinked > 0 || !form.lines.length || !form.yield_qty} onClick={activate}>
+        {!viewed || viewed.status === "draft" ? (
+          <button type="button" className="erpBtn" disabled={busy} onClick={() => void activate()}>
             {T("Сделать действующей", "Make active", "Áp dụng công thức")}
           </button>
         ) : null}

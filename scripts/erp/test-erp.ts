@@ -4904,7 +4904,7 @@ async function main() {
     const header = await readFile(path.join(process.cwd(), "src/components/erp/PrepCardFields.tsx"), "utf8");
     assert.match(header, /data-testid="prep-cover"/);
     assert.match(header, /Обложка/);
-    assert.ok(header.indexOf('data-testid="prep-cover"') < header.indexOf('data-testid="prep-name"'));
+    assert.ok(header.indexOf('data-testid="prep-cover"') < header.indexOf('enTestId="prep-name"'));
     assert.match(preps, /PrepCoverField/);
     assert.match(preps, /publishPrepToStaff/);
     const recipesApp = await readFile(path.join(process.cwd(), "src/components/recipes/RecipesApp.tsx"), "utf8");
@@ -5191,6 +5191,22 @@ async function main() {
     assert.equal(n(typedNetLine.qty), 1);
     assert.equal(n(typedNetLine.net_qty), 0.9);
     assert.deepEqual(typedNetLine.methods, []);
+
+    const zeroNet = await saveProduct({ type: "semi_finished", name_en: "Nested BOM zero net mix", base_unit: "kg" });
+    const zeroNetRecipe = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: zeroNet,
+        yield_qty: 1,
+        lines: [{ product_id: meat, qty: 1, net_qty: 0 }],
+      }),
+      ACTOR,
+    ]);
+    const zeroNetLine = await one<{ qty: string; net_qty: string | null }>(
+      "select qty, net_qty from public.erp_recipe_lines where recipe_id = $1",
+      [zeroNetRecipe],
+    );
+    assert.equal(n(zeroNetLine.qty), 1);
+    assert.equal(n(zeroNetLine.net_qty), 0);
 
     await q("select public.erp_activate_recipe($1, $2)", [sausageRecipe, ACTOR]);
 

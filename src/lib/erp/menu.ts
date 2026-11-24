@@ -6,6 +6,7 @@
 import {
   buildCostContext,
   channelResult,
+  compositionLineQty,
   costLine,
   DEFAULT_MENU_PRICE_SOURCE,
   summarize,
@@ -46,7 +47,9 @@ export function dishCost(
   settings: PricingSettings,
   channels: ErpChannel[],
 ): DishCost {
-  const lines = dish.lines.filter((line) => line.product_id && line.qty).map((line) => costLine(ctx, line.product_id, line.qty));
+  const lines = dish.lines
+    .filter((line) => line.product_id && compositionLineQty(line) != null)
+    .map((line) => costLine(ctx, line.product_id as string, compositionLineQty(line) as number));
   const summary = summarize(lines);
   const results = channels
     .filter((channel) => !channel.archived_at)

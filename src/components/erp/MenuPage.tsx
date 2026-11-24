@@ -4,6 +4,7 @@ import { useErpRouter } from "./erpHref";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
+  compositionLineQty,
   costLine,
   DEFAULT_MENU_PRICE_SOURCE,
   isPackaging,
@@ -104,7 +105,7 @@ function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
 }
 
 function calculate(state: ErpState, ctx: CostContext, form: DishForm) {
-  const priced = form.lines.filter((l) => l.product_id && l.qty);
+  const priced = form.lines.filter((l) => compositionLineQty(l) != null);
   const { summary, channels, main } = dishCost(
     ctx,
     {
@@ -113,7 +114,7 @@ function calculate(state: ErpState, ctx: CostContext, form: DishForm) {
         dish_id: "",
         line_no: i + 1,
         product_id: l.product_id,
-        qty: l.qty!,
+        qty: compositionLineQty(l)!,
         note: null,
       })),
       sale_price: form.sale_price,
@@ -328,7 +329,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const isNew = !dish;
 
   const save = async () => {
-    const ready = form.lines.filter((l) => l.product_id && l.qty);
+    const ready = form.lines.filter((l) => compositionLineQty(l) != null);
     const partsError = ready.map((line) => compositionPartsMessage(state, line)).find(Boolean);
     if (partsError) {
       window.alert(partsError);
@@ -490,7 +491,8 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
                 {form.lines.map((line, index) => {
                   const unit = unitOf(state, line.product_id);
                   const product = line.product_id ? state.products.find((row) => row.id === line.product_id) : undefined;
-                  const cost = line.product_id && line.qty ? costLine(ctx, line.product_id, line.qty) : null;
+                  const qty = compositionLineQty(line);
+                  const cost = line.product_id && qty != null ? costLine(ctx, line.product_id, qty) : null;
                   const perUnit =
                     !cost || cost.unitCost === null ? null : processedUnitCost(cost.unitCost, product, line.methods);
                   const expanded = open.has(index);

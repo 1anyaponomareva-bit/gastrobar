@@ -149,7 +149,9 @@ export function quotesFromRows(rows: Iterable<ProductCostQuoteInput> | null | un
 
 export function buildCostContext(products: CostProduct[], recipes: CostRecipe[], options?: CostContextOptions): CostContext {
   return {
-    products: new Map(products.map((product) => [product.id, product])),
+    products: new Map(
+      products.map((product) => [product.id, { ...product, est_unit_cost: asMoney(product.est_unit_cost) }]),
+    ),
     activeRecipes: new Map(recipes.filter((recipe) => recipe.status === "active").map((recipe) => [recipe.product_id, recipe])),
     quotes: quotesFromRows(options?.quotes),
     priceSource: options?.priceSource ?? DEFAULT_MENU_PRICE_SOURCE,
@@ -250,13 +252,15 @@ export function costLine(ctx: CostContext, productId: string, qty: number, stack
   if (stack.includes(productId)) return { ...base, issue: "cycle" };
 
   const recipe = ctx.explodeRecipes ? ctx.activeRecipes.get(productId) : undefined;
-  if (recipe && recipe.yield_qty) {
-    const scale = qty / recipe.yield_qty;
-    const children = recipe.lines.map((line) =>
-      line.product_id && line.qty
-        ? costLine(ctx, line.product_id, line.qty * scale, [...stack, productId])
-        : { ...base, name: "?", qty: 0, children: undefined, issue: "unresolved" as const },
-    );
+  const recipeYield = asMoney(recipe?.yield_qty);
+  if (recipe && recipeYield && recipeYield > 0) {
+    const scale = qty / recipeYield;
+    const children = recipe.lines.map((line) => {
+      const childQty = asMoney(line.qty);
+      return line.product_id && childQty != null
+        ? costLine(ctx, line.product_id, childQty * scale, [...stack, productId])
+        : { ...base, name: "?", qty: 0, children: undefined, issue: "unresolved" as const };
+    });
     const known = children.every((child) => child.cost !== null);
     const cost = known ? children.reduce((sum, child) => sum + (child.cost ?? 0), 0) : null;
     return {
@@ -284,20 +288,34 @@ export function plannedUnitCost(ctx: CostContext, productId: string): number | n
   return costLine(ctx, productId, 1).unitCost;
 }
 
+/** Gross take for a composition line. 0 is a real amount; empty stays null. Falls back to typed net. */
+export function compositionLineQty(line: {
+  product_id?: string | null;
+  qty?: unknown;
+  net_qty?: unknown;
+}): number | null {
+  if (!line.product_id) return null;
+  const qty = asMoney(line.qty);
+  if (qty != null) return qty;
+  return asMoney(line.net_qty);
+}
+
 /**
  * Cost of the recipe/dish yield: sum of GROSS line costs (stock take).
  * Cut parts split the same net and are not extra purchases.
- * Unknown or empty lines make the whole yield cost incomplete (never 0).
+ * Unknown prices make the whole yield cost incomplete. Typed 0 is a known cost.
  */
 export function compositionYieldCost(
   ctx: CostContext,
-  lines: readonly { product_id: string | null | undefined; qty: number | null | undefined }[],
+  lines: readonly { product_id: string | null | undefined; qty?: unknown; net_qty?: unknown }[],
 ): number | null {
-  const ready = lines.filter((line) => line.product_id && line.qty);
+  const ready = lines
+    .map((line) => ({ productId: line.product_id, qty: compositionLineQty(line) }))
+    .filter((line): line is { productId: string; qty: number } => Boolean(line.productId) && line.qty != null);
   if (!ready.length) return null;
   let sum = 0;
   for (const line of ready) {
-    const cost = costLine(ctx, line.product_id as string, line.qty as number).cost;
+    const cost = costLine(ctx, line.productId, line.qty).cost;
     if (cost === null) return null;
     sum += cost;
   }
@@ -323,9 +341,10 @@ export function prepCompositionCostContext(
  * Nested preps use their stock/reference price, not a second explosion of their own recipe.
  */
 export function recipeYieldUnitCost(ctx: CostContext, recipe: CostRecipe): number | null {
-  if (!recipe.yield_qty) return null;
+  const yieldQty = asMoney(recipe.yield_qty);
+  if (yieldQty == null || yieldQty <= 0) return null;
   const total = compositionYieldCost(stockCostContext(ctx), recipe.lines);
-  return total === null ? null : total / recipe.yield_qty;
+  return total === null ? null : total / yieldQty;
 }
 
 export type CostSummary = {
