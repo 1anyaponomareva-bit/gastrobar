@@ -176,6 +176,24 @@ test("supplier tab filters catalog to that supplier; All keeps every row", () =>
   );
 });
 
+test("category chips never show raw UUID when the category has no name", () => {
+  const products = [
+    {
+      id: "ketchup",
+      categoryId: "0c873ad4-c338-45b3-b79f-9ef0a7b05ec8",
+      categoryName: null,
+      categoryNameVn: null,
+    },
+  ];
+  assert.deepEqual(catalogCategories(products, "ru", "Без названия").map((row) => row.name), ["Без названия"]);
+  assert.deepEqual(
+    catalogCategoryChips(products, "ru", { all: "Все", uncategorized: "Без категории", unnamed: "Без названия" }).map(
+      (row) => row.name,
+    ),
+    ["Все", "Без названия"],
+  );
+});
+
 test("category chips follow the language switcher: RU/EN English, VN Vietnamese", () => {
   const products = [
     { id: "butter", categoryId: "dairy", categoryName: "Dairy Products & Eggs", categoryNameVn: "Sữa và trứng" },

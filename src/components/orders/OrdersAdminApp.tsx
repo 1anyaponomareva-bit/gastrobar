@@ -130,7 +130,11 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
   };
 
   const categoryLabels = useMemo(
-    () => ({ all: ordersT(lang, "category_all"), uncategorized: ordersT(lang, "category_none") }),
+    () => ({
+      all: ordersT(lang, "category_all"),
+      uncategorized: ordersT(lang, "category_none"),
+      unnamed: ordersT(lang, "category_unnamed"),
+    }),
     [lang],
   );
   const categoryChips = useMemo(() => catalogCategoryChips(products, lang, categoryLabels), [products, lang, categoryLabels]);

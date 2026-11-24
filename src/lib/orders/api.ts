@@ -557,7 +557,13 @@ export async function getSupplierProducts(supplierId: string): Promise<SupplierP
   const products = listOf(data, ["products", "items"], productOf).filter((row) => row.id);
   const categoriesMap = new Map<string, OrderCategory>();
   for (const product of products) {
-    if (product.categoryId) categoriesMap.set(product.categoryId, { id: product.categoryId, name: product.categoryName ?? product.categoryId });
+    if (product.categoryId) {
+      const name = (product.categoryName ?? "").trim();
+      categoriesMap.set(product.categoryId, {
+        id: product.categoryId,
+        name: name && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(name) ? name : "—",
+      });
+    }
   }
   for (const category of listOf(pick(obj, "categories") ?? data, ["categories"], (raw) => ({ id: str(raw.id), name: str(raw.name ?? raw.label, str(raw.id)) }))) {
     if (category.id) categoriesMap.set(category.id, category);

@@ -125,7 +125,7 @@ export function OrderList({ initialTab }: Props) {
   }, [sortedProducts, tab, supplier]);
 
   const categoryLabels = useMemo(
-    () => ({ all: t("category_all"), uncategorized: t("category_none") }),
+    () => ({ all: t("category_all"), uncategorized: t("category_none"), unnamed: t("category_unnamed") }),
     [t],
   );
   const categoryChips = useMemo(

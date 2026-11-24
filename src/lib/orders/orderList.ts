@@ -106,10 +106,20 @@ export function filterByCategory<T extends { categoryId: string | null }>(produc
   return products.filter((product) => product.categoryId === categoryId);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Never show raw DB ids in chips — empty / UUID-looking names fall back to a label. */
+export function catalogCategoryLabel(name: string | null | undefined, fallback: string): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed || UUID_RE.test(trimmed)) return fallback;
+  return trimmed;
+}
+
 /** Category chips/headers A–Z by the language-switcher name. */
 export function catalogCategories(
   products: Array<{ categoryId: string | null; categoryName: string | null; categoryNameVn?: string | null }>,
   locale: ProductNameLocale = "ru",
+  unnamed = "—",
 ): CatalogCategory[] {
   const seen = new Map<string, CatalogCategory>();
   for (const product of products) {
@@ -121,13 +131,13 @@ export function catalogCategories(
     });
     seen.set(product.categoryId, {
       id: product.categoryId,
-      name: name || product.categoryId,
+      name: catalogCategoryLabel(name, unnamed),
     });
   }
   return [...seen.values()].sort((a, b) => compareCatalogNames(a.name, b.name, locale) || a.id.localeCompare(b.id));
 }
 
-export type CategoryChipLabels = { all: string; uncategorized: string };
+export type CategoryChipLabels = { all: string; uncategorized: string; unnamed?: string };
 
 /** Chip bar: All, named categories A–Z, Uncategorized last when any item has no category. */
 export function catalogCategoryChips(
@@ -135,7 +145,8 @@ export function catalogCategoryChips(
   locale: ProductNameLocale = "ru",
   labels: CategoryChipLabels,
 ): CatalogCategory[] {
-  const chips: CatalogCategory[] = [{ id: ALL_CATEGORY_TAB, name: labels.all }, ...catalogCategories(products, locale)];
+  const unnamed = labels.unnamed ?? labels.uncategorized;
+  const chips: CatalogCategory[] = [{ id: ALL_CATEGORY_TAB, name: labels.all }, ...catalogCategories(products, locale, unnamed)];
   if (products.some((product) => !product.categoryId)) {
     chips.push({ id: UNCATEGORIZED_CATEGORY_TAB, name: labels.uncategorized });
   }
