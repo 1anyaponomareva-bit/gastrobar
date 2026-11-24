@@ -260,6 +260,7 @@ type ProductForm = {
   category_id: string;
   base_unit: ErpUnit | "";
   unit_weight_kg: number | null;
+  unit_net_weight_kg: number | null;
   brand: string;
   est_unit_cost: number | null;
   storageOptions: StorageOption[];
@@ -273,6 +274,7 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   category_id: product?.category_id ?? "",
   base_unit: product?.base_unit ?? "",
   unit_weight_kg: product?.unit_weight_kg ?? null,
+  unit_net_weight_kg: product?.unit_net_weight_kg ?? null,
   brand: product?.brand ?? "",
   est_unit_cost: product?.est_unit_cost ?? null,
   storageOptions: parseStorageOptions(product?.storage_conditions, product?.shelf_life_days),
@@ -403,6 +405,8 @@ function ProductEditor({
           names: extraNamesOnly(form.names),
           base_unit: form.base_unit || null,
           category_id: form.category_id || null,
+          unit_weight_kg: form.base_unit === "pcs" ? form.unit_weight_kg : null,
+          unit_net_weight_kg: form.base_unit === "pcs" ? form.unit_net_weight_kg : null,
           shelf_life_days: storagePayload.shelf_life_days,
           storage_conditions: storagePayload.storage_conditions,
           packs,
@@ -509,9 +513,20 @@ function ProductEditor({
         <input value={form.brand} onChange={(e) => set("brand", e.target.value)} />
       </Field>
       {unit === "pcs" ? (
-        <Field label={T("Вес 1 шт, кг", "Weight of 1 pc, kg", "Khối lượng 1 cái, kg")} hint={T("Необязательно", "Optional", "Không bắt buộc")}>
-          <NumberInput value={form.unit_weight_kg} onChange={(v) => set("unit_weight_kg", v)} />
-        </Field>
+        <>
+          <Field
+            label={T("Вес брутто 1 шт, кг", "Gross weight of 1 pc, kg", "Khối lượng brutto 1 cái, kg")}
+            hint={T("Вес штуки как на складе / в закупке", "Piece weight as stocked / purchased", "Khối lượng 1 cái khi nhập / tồn")}
+          >
+            <NumberInput value={form.unit_weight_kg} onChange={(v) => set("unit_weight_kg", v)} />
+          </Field>
+          <Field
+            label={T("Вес нетто 1 шт, кг", "Net weight of 1 pc, kg", "Khối lượng netto 1 cái, kg")}
+            hint={T("Полезный вес после очистки; если пусто — берётся брутто", "Usable weight after prep; if empty, gross is used", "Khối lượng dùng được; nếu trống thì dùng brutto")}
+          >
+            <NumberInput value={form.unit_net_weight_kg} onChange={(v) => set("unit_net_weight_kg", v)} />
+          </Field>
+        </>
       ) : null}
     </div>
   );

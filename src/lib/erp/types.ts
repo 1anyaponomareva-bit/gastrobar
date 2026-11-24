@@ -99,7 +99,10 @@ export type ErpProduct = Archivable & LossPcts & {
   names?: Record<string, string>;
   category_id: string | null;
   base_unit: ErpUnit | null;
+  /** Gross weight of 1 piece (kg) when base_unit is pcs. */
   unit_weight_kg: number | null;
+  /** Net/usable weight of 1 piece (kg) when base_unit is pcs. Falls back to unit_weight_kg when null. */
+  unit_net_weight_kg?: number | null;
   brand: string | null;
   product_code?: string | null;
   est_unit_cost: number | null;

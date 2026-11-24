@@ -194,7 +194,11 @@ export function netWeight(state: ErpState, lines: LossLine[]): { kg: number; par
     const net = netOf(state, line);
     if (!product || net === null) continue;
     if (product.base_unit === "kg" || product.base_unit === "l") kg += net;
-    else if (product.base_unit === "pcs" && product.unit_weight_kg) kg += net * product.unit_weight_kg;
+    else if (product.base_unit === "pcs") {
+      const pieceKg = product.unit_net_weight_kg ?? product.unit_weight_kg;
+      if (pieceKg) kg += net * pieceKg;
+      else partial = true;
+    }
     else partial = true;
   }
   return { kg: roundQty(kg), partial };

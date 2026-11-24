@@ -228,11 +228,25 @@ function MenuIngredientsList() {
     },
     {
       id: "pieceWeight",
-      label: T("Вес штучного ингредиента", "Piece weight", "Khối lượng 1 cái"),
+      label: T("Вес брутто / нетто", "Gross / net weight", "Brutto / netto"),
       defaultHidden: true,
       num: true,
-      cell: (row) => (row.unit_weight_kg == null ? "—" : posterStockQty(row.unit_weight_kg, "kg")),
-      text: (row) => (row.unit_weight_kg == null ? "—" : String(row.unit_weight_kg)),
+      cell: (row) => {
+        const gross = row.unit_weight_kg;
+        const net = row.unit_net_weight_kg;
+        if (gross == null && net == null) return "—";
+        if (net == null) return posterStockQty(gross, "kg");
+        if (gross == null) return posterStockQty(net, "kg");
+        return `${posterStockQty(gross, "kg")} / ${posterStockQty(net, "kg")}`;
+      },
+      text: (row) => {
+        const gross = row.unit_weight_kg;
+        const net = row.unit_net_weight_kg;
+        if (gross == null && net == null) return "";
+        if (net == null) return String(gross);
+        if (gross == null) return String(net);
+        return `${gross} / ${net}`;
+      },
     },
     {
       id: "loss",

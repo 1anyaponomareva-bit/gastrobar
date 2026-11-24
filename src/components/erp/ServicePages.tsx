@@ -713,6 +713,7 @@ function UnitRow({ product }: { product: ErpProduct }) {
           category_id: product.category_id,
           base_unit: unit,
           unit_weight_kg: product.unit_weight_kg,
+          unit_net_weight_kg: product.unit_net_weight_kg ?? null,
           brand: product.brand,
           shelf_life_days: product.shelf_life_days,
           storage_conditions: product.storage_conditions,
