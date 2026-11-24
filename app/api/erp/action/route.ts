@@ -238,7 +238,11 @@ export async function POST(request: Request) {
           recipes: data.recipes ?? [],
           products: data.products ?? [],
         });
-        return timing.json({ id, recipesCardId, patch: { recipes: data.recipes } });
+        return timing.json({
+          id,
+          recipesCardId,
+          patch: { recipes: data.recipes, products: data.products },
+        });
       }
       case "activateRecipe": {
         const id = uuid(a.id);
@@ -248,7 +252,11 @@ export async function POST(request: Request) {
           recipes: data.recipes ?? [],
           products: data.products ?? [],
         });
-        return timing.json({ ok: true, recipesCardId, patch: { recipes: data.recipes } });
+        return timing.json({
+          ok: true,
+          recipesCardId,
+          patch: { recipes: data.recipes, products: data.products },
+        });
       }
       case "publishPrepToStaff": {
         const data = await fresh(["recipes", "products"]);

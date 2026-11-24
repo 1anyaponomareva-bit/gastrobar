@@ -1,7 +1,7 @@
 "use client";
 
 import { useErpRouter } from "./erpHref";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Pager, usePageSize } from "./Pager";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
@@ -442,16 +442,44 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
     lines: (recipe?.lines ?? []).map((line) => ({
       product_id: line.product_id,
       qty: line.qty,
-      note: line.note,
-      raw_name: line.raw_name,
-      raw_amount: line.raw_amount,
-      raw_unit: line.raw_unit,
+      note: line.note ?? null,
+      raw_name: line.raw_name ?? null,
+      raw_amount: line.raw_amount ?? null,
+      raw_unit: line.raw_unit ?? null,
       methods: line.methods ?? [],
       net_qty: line.net_qty ?? null,
       parts: parseLineParts(line.parts),
       is_main: Boolean(line.is_main),
     })),
   };
+}
+
+/** Stable snapshot for dirty checks — same shape after load and after save. */
+function normalizePrepForm(form: RecipeForm): RecipeForm {
+  const storage = serializeStorageOptions(form.storageOptions);
+  return {
+    ...form,
+    card_no: form.card_no.trim(),
+    photo: form.photo.trim(),
+    note: form.note ?? "",
+    storageOptions: parseStorageOptions(storage.storage_conditions, storage.shelf_life_days),
+    lines: form.lines.filter(recipeLineHasContent).map((line) => ({
+      product_id: line.product_id,
+      qty: line.qty ?? null,
+      note: line.note ?? null,
+      raw_name: line.raw_name ?? null,
+      raw_amount: line.raw_amount ?? null,
+      raw_unit: line.raw_unit ?? null,
+      methods: line.methods ?? [],
+      net_qty: line.net_qty ?? null,
+      parts: parseLineParts(line.parts),
+      is_main: Boolean(line.is_main),
+    })),
+  };
+}
+
+function prepFormBaseline(form: RecipeForm): string {
+  return JSON.stringify(normalizePrepForm(form));
 }
 
 function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpProduct; from?: string }) {
@@ -463,7 +491,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const viewed = recipes.find((r) => r.id === viewId) ?? null;
   const [editing, setEditing] = useState<boolean>(!viewed || viewed.status === "draft");
   const [form, setForm] = useState(() => formFrom(viewed, product));
-  const [baseline, setBaseline] = useState(() => JSON.stringify(formFrom(viewed, product)));
+  const [baseline, setBaseline] = useState(() => prepFormBaseline(formFrom(viewed, product)));
   const [nameEn, setNameEn] = useState(product.name_en);
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
   const [names, setNames] = useState<Record<string, string>>(() => extraNamesOnly(product.names));
@@ -472,6 +500,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [sheetBusy, setSheetBusy] = useState(false);
   const [appBusy, setAppBusy] = useState(false);
+  /** After save, reload form from the patched recipe once so leave-guard clears. */
+  const syncCleanAfterSave = useRef(false);
   const ctx = useMemo(
     () => prepCompositionCostContext(state.products, state.recipes, state.costSources),
     [state],
@@ -481,7 +511,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     [state.recipes, state.products, product.id],
   );
   const unit = product.base_unit;
-  const dirty = editing && JSON.stringify(form) !== baseline;
+  const dirty = editing && prepFormBaseline(form) !== baseline;
   const namesDirty =
     nameEn.trim() !== product.name_en.trim() ||
     nameVn.trim() !== (product.name_vn ?? "").trim() ||
@@ -490,13 +520,27 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const productDirty = namesDirty || pieceDirty;
   useDirtyGuard(dirty || productDirty);
 
+  useEffect(() => {
+    if (!syncCleanAfterSave.current || !viewId) return;
+    const recipe = recipes.find((row) => row.id === viewId);
+    if (!recipe) return;
+    syncCleanAfterSave.current = false;
+    const next = formFrom(recipe, product);
+    setForm(next);
+    setBaseline(prepFormBaseline(next));
+    setNameEn(product.name_en);
+    setNameVn(product.name_vn ?? "");
+    setNames(extraNamesOnly(product.names));
+    setPieceWeight(product.unit_weight_kg);
+  }, [recipes, product, viewId]);
+
   const open = (recipe: ErpRecipe) => {
     if ((dirty || productDirty) && !window.confirm(T("Есть несохранённые изменения. Открыть другую версию?", "Unsaved changes. Open another version?", "Có thay đổi chưa lưu. Mở phiên bản khác?"))) return;
     const next = formFrom(recipe, product);
     setViewId(recipe.id);
     setEditing(recipe.status === "draft");
     setForm(next);
-    setBaseline(JSON.stringify(next));
+    setBaseline(prepFormBaseline(next));
     setCutsOpen(new Set());
   };
 
@@ -565,14 +609,15 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const nextEn = nameEn.trim();
     const nextVn = nameVn.trim();
     if (!nextEn) return false;
+    const nextNames = extraNamesOnly(names);
     const result = await act<{ id: string }>(
-      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, names, pieceWeight) },
+      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, nextNames, pieceWeight) },
       quiet ? false : T("Карточка сохранена", "Card saved", "Đã lưu thẻ"),
     );
     if (!result) return false;
     setNameEn(nextEn);
     setNameVn(nextVn);
-    setNames(extraNamesOnly(names));
+    setNames(nextNames);
     return true;
   };
 
@@ -606,6 +651,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         parts: filledParts(line.parts).map((part) => ({ name: part.name.trim(), grams: part.grams })),
       })),
     };
+    syncCleanAfterSave.current = true;
     const result = await act<{ id: string }>(
       { action: "saveRecipe", recipe: payload },
       T("Черновик рецептуры сохранён", "Recipe draft saved", "Đã lưu bản nháp"),
@@ -613,11 +659,12 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     if (result) {
       setViewId(result.id);
       setEditing(true);
-      const savedForm = { ...form, yield_qty: nextYield, lines: nextLines };
+      const savedForm = normalizePrepForm({ ...form, yield_qty: nextYield, lines: nextLines });
       setForm(savedForm);
-      setBaseline(JSON.stringify(savedForm));
+      setBaseline(prepFormBaseline(savedForm));
       return result.id;
     }
+    syncCleanAfterSave.current = false;
     return false;
   };
 
@@ -1114,8 +1161,11 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
             onClick={() => {
               const next = formFrom(viewed, product);
               setForm(next);
-              setBaseline(JSON.stringify(next));
+              setBaseline(prepFormBaseline(next));
               setEditing(false);
+              setNameEn(product.name_en);
+              setNameVn(product.name_vn ?? "");
+              setNames(extraNamesOnly(product.names));
               setPieceWeight(product.unit_weight_kg);
             }}
           >
