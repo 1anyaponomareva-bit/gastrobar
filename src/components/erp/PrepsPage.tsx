@@ -834,7 +834,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           </Field>
           {net.kg > 0 ? (
             <Field label={T("Сумма нетто состава", "Total net of composition", "Tổng netto thành phần")}>
-              <strong>{netWeightText(net)}</strong>
+              <strong className="erpNetSumValue">{netWeightText(net)}</strong>
               {!readOnly && unit !== "pcs" && form.yield_qty !== net.kg ? (
                 <button type="button" className="erpLink" style={{ display: "block", marginTop: 6 }} onClick={() => set("yield_qty", net.kg)}>
                   {T("Подставить в вес готового", "Use as finished yield", "Dùng làm trọng lượng thành phẩm")}

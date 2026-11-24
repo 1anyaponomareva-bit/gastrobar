@@ -1976,6 +1976,16 @@ button.erpBack {
   font-variant-numeric: tabular-nums;
 }
 
+.erpNetSumValue {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
 .erpYieldCostMoney {
   margin-left: auto;
   text-align: right;
