@@ -656,8 +656,9 @@ async function main() {
     } as typeof mapped & Record<string, unknown>);
     assert.equal(fromMethod[0].items[0].en, "Sear both sides");
     const ruOnly = parseRecipeInstructions([{ title: { ru: "Обжарить" }, items: [{ ru: "На сильном огне" }] }]);
-    assert.equal(ruOnly[0].titleEn, "Обжарить");
-    assert.match(ruOnly[0].itemsEn, /На сильном огне/);
+    assert.equal(ruOnly[0].titleEn, "");
+    assert.equal(ruOnly[0].extra?.ru?.title, "Обжарить");
+    assert.match(ruOnly[0].extra?.ru?.items ?? "", /На сильном огне/);
     assert.equal(prepSheetLang("vn"), "vn");
     assert.equal(prepSheetLang("en"), "en");
     assert.equal(prepSheetLang("ru"), "en");
@@ -4646,6 +4647,36 @@ async function main() {
     const parsed = parseRecipeInstructions(row.instructions);
     assert.equal(parsed[0].itemsEn.split("\n").length, 2);
     assert.equal(serializeRecipeInstructions(parsed)[0].items?.[1].vn, "Khuấy");
+
+    const extraId = await value<string>("select public.erp_save_recipe($1::jsonb, $2)", [
+      JSON.stringify({
+        product_id: sauce,
+        instructions: [
+          {
+            title: { en: "Fry", ru: "Обжарить", zh: "煎" },
+            items: [{ en: "High heat", ru: "Сильный огонь", zh: "大火" }],
+          },
+        ],
+        lines: [{ product_id: salt, qty: 0.01 }],
+      }),
+      ACTOR,
+    ]);
+    const extraRow = await one<{ instructions: { title: Record<string, string>; items: Record<string, string>[] }[] }>(
+      "select instructions from public.erp_recipes where id = $1",
+      [extraId],
+    );
+    assert.equal(extraRow.instructions[0].title.ru, "Обжарить");
+    assert.equal(extraRow.instructions[0].title.zh, "煎");
+    assert.equal(extraRow.instructions[0].items[0].zh, "大火");
+    await q("select public.erp_set_extra_names($1, $2, $3::jsonb)", [
+      "product",
+      sauce,
+      JSON.stringify({ ru: "Соус", zh: "酱", en: "ignored" }),
+    ]);
+    const named = await one<{ names: Record<string, string> }>("select names from public.erp_products where id = $1", [sauce]);
+    assert.equal(named.names.ru, "Соус");
+    assert.equal(named.names.zh, "酱");
+    assert.equal(named.names.en, undefined);
 
     const defaultKind = await value<string>("select kind from public.erp_recipes where id = $1", [id]);
     assert.equal(defaultKind, "prep");

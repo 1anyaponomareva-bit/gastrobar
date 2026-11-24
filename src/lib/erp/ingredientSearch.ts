@@ -13,6 +13,7 @@ export type SearchableIngredient = {
   name_en?: string | null;
   name_vn?: string | null;
   name_ru?: string | null;
+  names?: Record<string, string> | null;
   brand?: string | null;
   category_id?: string | null;
   base_unit?: string | null;
@@ -50,7 +51,9 @@ export function foldSearchText(value: string): string {
 }
 
 function nameFields(product: SearchableIngredient): string[] {
-  return [product.name_en, product.name_vn, product.name_ru, product.brand].map((part) => (part ?? "").trim()).filter(Boolean);
+  return [product.name_en, product.name_vn, product.name_ru, product.brand, ...Object.values(product.names ?? {})]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean);
 }
 
 /** Prefix or substring on EN / VN / RU names and brand. Does not search id, SKU or catalog code. */

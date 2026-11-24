@@ -13,7 +13,8 @@ import {
   type PrepPublishLine,
   type PrepPublishProduct,
 } from "./prepStaffRecipe";
-import type { RecipeStepDraft } from "./recipeCard";
+import { pickContentText } from "./contentLang";
+import { stepItemsMap, stepTitleMap, type RecipeStepDraft } from "./recipeCard";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -221,10 +222,15 @@ function catalogOf(input: PrepPublishInput, id: string | null): PrepPublishProdu
   return id ? input.catalog.find((row) => row.id === id) : undefined;
 }
 
-function lineTitle(line: PrepPublishLine, product: PrepPublishProduct | undefined, lang: PrepSheetLang): string {
+function lineTitle(
+  line: PrepPublishLine,
+  product: PrepPublishProduct | undefined,
+  lang: PrepSheetLang,
+  uiLang: ErpLang,
+): string {
   const en = (product?.name_en || line.raw_name?.en || line.raw_name?.ru || "").trim();
   const vn = (product?.name_vn || line.raw_name?.vn || "").trim();
-  return pickSheetText(en, vn, lang) || "—";
+  return pickContentText({ ...(product?.names ?? {}), en, vn }, uiLang) || pickSheetText(en, vn, lang) || "—";
 }
 
 function cutsText(line: PrepPublishLine, copy: PrepSheetCopy): string {
@@ -238,18 +244,28 @@ function lineNote(line: PrepPublishLine, lang: PrepSheetLang, copy: PrepSheetCop
   return [methods, cuts].filter(Boolean).join(" · ");
 }
 
-function stepBlock(step: RecipeStepDraft, lang: PrepSheetLang, index: number, copy: PrepSheetCopy): {
+function stepBlock(
+  step: RecipeStepDraft,
+  lang: PrepSheetLang,
+  uiLang: ErpLang,
+  index: number,
+  copy: PrepSheetCopy,
+): {
   title: string;
   items: string[];
   photo: string;
 } {
-  const title = pickSheetText(step.titleEn, step.titleVn, lang);
-  const enLines = step.itemsEn.split(/\r?\n/).map((line) => line.trim());
-  const vnLines = step.itemsVn.split(/\r?\n/).map((line) => line.trim());
-  const count = Math.max(enLines.length, vnLines.length);
+  const title = pickContentText(stepTitleMap(step), uiLang) || pickSheetText(step.titleEn, step.titleVn, lang);
+  const itemMaps = stepItemsMap(step);
+  const lines = Object.fromEntries(
+    Object.entries(itemMaps).map(([code, text]) => [code, text.split(/\r?\n/).map((line) => line.trim())]),
+  );
+  const count = Math.max(0, ...Object.values(lines).map((row) => row.length));
   const items: string[] = [];
   for (let i = 0; i < count; i += 1) {
-    const line = pickSheetText(enLines[i] ?? "", vnLines[i] ?? "", lang);
+    const map: Record<string, string> = {};
+    for (const [code, row] of Object.entries(lines)) map[code] = row[i] ?? "";
+    const line = pickContentText(map, uiLang) || pickSheetText(map.en ?? "", map.vn ?? "", lang);
     if (line) items.push(line);
   }
   return { title: title || `${copy.step} ${index + 1}`, items, photo: step.photo.trim() };
@@ -260,7 +276,13 @@ export function buildPrepSheetModel(input: PrepPublishInput, uiLang: ErpLang = e
   const lang = prepSheetLang(uiLang);
   const copy = prepSheetCopy(lang);
   const date = formatVietnamDate(input.cardDate) || input.cardDate.trim() || "—";
-  const name = pickSheetText(input.product.name_en, input.product.name_vn ?? "", lang) || "—";
+  const name =
+    pickContentText(
+      { ...(input.product.names ?? {}), en: input.product.name_en, vn: input.product.name_vn ?? "" },
+      uiLang,
+    ) ||
+    pickSheetText(input.product.name_en, input.product.name_vn ?? "", lang) ||
+    "—";
   const facts: string[] = [];
   if (input.product.unit_weight_kg && input.product.unit_weight_kg > 0) {
     const piece = qtyAndUnit(input.product.unit_weight_kg, "kg", copy);
@@ -279,7 +301,7 @@ export function buildPrepSheetModel(input: PrepPublishInput, uiLang: ErpLang = e
     const amount = qtyAndUnit(net, unit, copy);
     return [
       {
-        name: lineTitle(line, product, lang),
+        name: lineTitle(line, product, lang, uiLang),
         qty: amount.qty,
         unit: amount.unit,
         note: lineNote(line, lang, copy),
@@ -306,7 +328,7 @@ export function buildPrepSheetModel(input: PrepPublishInput, uiLang: ErpLang = e
     yieldLine,
     costLine: `${copy.cost}: ${formatVnd(input.batchCost ?? null)}`,
     steps: input.steps
-      .map((step, index) => stepBlock(step, lang, index, copy))
+      .map((step, index) => stepBlock(step, lang, uiLang, index, copy))
       .filter((step) => step.title || step.items.length),
   };
 }

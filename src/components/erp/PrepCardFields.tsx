@@ -1,8 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { contentLangLabel, shownContentLangs } from "@/lib/erp/contentLang";
 import type { RecipeStepDraft } from "@/lib/erp/recipeCard";
-import { emptyRecipeStep } from "@/lib/erp/recipeCard";
+import {
+  addLangToSteps,
+  emptyRecipeStep,
+  langsUsedInSteps,
+  removeLangFromSteps,
+} from "@/lib/erp/recipeCard";
+import { ContentLangBar } from "./ContentLangBar";
+import { ExtraNameFields } from "./ExtraNameFields";
+import { erpLang } from "./i18n";
 import { Field, T } from "./ui";
 
 async function downscaleImage(file: File): Promise<Blob> {
@@ -141,6 +150,7 @@ export function PrepCardHeader({
   kind,
   nameEn,
   nameVn,
+  names,
   cardNo,
   cardDate,
   photo,
@@ -148,6 +158,7 @@ export function PrepCardHeader({
   onKind,
   onNameEn,
   onNameVn,
+  onNames,
   onCardNo,
   onCardDate,
   onPhoto,
@@ -155,6 +166,7 @@ export function PrepCardHeader({
   kind: PrepCardKind;
   nameEn: string;
   nameVn: string;
+  names: Record<string, string>;
   cardNo: string;
   cardDate: string;
   photo: string;
@@ -162,6 +174,7 @@ export function PrepCardHeader({
   onKind: (value: PrepCardKind) => void;
   onNameEn: (value: string) => void;
   onNameVn: (value: string) => void;
+  onNames: (value: Record<string, string>) => void;
   onCardNo: (value: string) => void;
   onCardDate: (value: string) => void;
   onPhoto: (value: string) => void;
@@ -182,14 +195,16 @@ export function PrepCardHeader({
           </select>
         </Field>
       </div>
-      <div className="erpGrid two">
-        <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-          <input value={nameEn} onChange={(event) => onNameEn(event.target.value)} maxLength={200} data-testid="prep-name" />
-        </Field>
-        <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-          <input value={nameVn} onChange={(event) => onNameVn(event.target.value)} maxLength={200} data-testid="prep-name-vn" />
-        </Field>
-      </div>
+      <ExtraNameFields
+        en={nameEn}
+        vn={nameVn}
+        names={names}
+        onEn={onNameEn}
+        onVn={onNameVn}
+        onNames={onNames}
+        enTestId="prep-name"
+        vnTestId="prep-name-vn"
+      />
       <div className="erpGrid two">
         <Field label={T("Карта №", "Card No.", "Số thẻ")}>
           <input value={cardNo} disabled={readOnly} maxLength={80} onChange={(event) => onCardNo(event.target.value)} />
@@ -211,18 +226,36 @@ export function PrepStepsEditor({
   readOnly: boolean;
   onChange: (steps: RecipeStepDraft[]) => void;
 }) {
+  const langs = shownContentLangs(langsUsedInSteps(steps));
+  const ui = erpLang();
+  const extraLangs = langs.filter((code) => code !== "en" && code !== "vn");
   const setStep = (index: number, patch: Partial<RecipeStepDraft>) =>
     onChange(steps.map((step, i) => (i === index ? { ...step, ...patch } : step)));
+  const setExtra = (index: number, code: string, patch: Partial<{ title: string; items: string }>) => {
+    const current = steps[index].extra?.[code] ?? { title: "", items: "" };
+    setStep(index, { extra: { ...steps[index].extra, [code]: { ...current, ...patch } } });
+  };
 
   return (
     <div className="erpPrepSteps">
       <h2>{T("Технология приготовления", "Cooking technology", "Quy trình chế biến")}</h2>
+      {!readOnly ? (
+        <ContentLangBar
+          langs={langs}
+          onAdd={(code) => onChange(addLangToSteps(steps.length ? steps : [emptyRecipeStep()], code))}
+          onRemove={(code) => onChange(removeLangFromSteps(steps, code))}
+        />
+      ) : extraLangs.length ? (
+        <p className="erpHint">
+          {T("Языки", "Languages", "Ngôn ngữ")}: {langs.map((code) => contentLangLabel(code, ui)).join(" · ")}
+        </p>
+      ) : null}
       {steps.map((step, index) => (
         <section key={index} className="erpCard erpPrepStep">
           <div className="erpPrepStepHead">
             <span className="erpPrepStepNum">{index + 1}</span>
             <div className="erpGrid two">
-              <Field label={T("Заголовок шага (EN)", "Step title (EN)", "Tiêu đề bước (EN)")}>
+              <Field label={`${T("Заголовок шага", "Step title", "Tiêu đề bước")} (${contentLangLabel("en", ui)})`}>
                 <input
                   value={step.titleEn}
                   disabled={readOnly}
@@ -230,7 +263,7 @@ export function PrepStepsEditor({
                   onChange={(event) => setStep(index, { titleEn: event.target.value })}
                 />
               </Field>
-              <Field label={T("Заголовок шага (VN)", "Step title (VN)", "Tiêu đề bước (VN)")}>
+              <Field label={`${T("Заголовок шага", "Step title", "Tiêu đề bước")} (${contentLangLabel("vn", ui)})`}>
                 <input
                   value={step.titleVn}
                   disabled={readOnly}
@@ -238,6 +271,19 @@ export function PrepStepsEditor({
                   onChange={(event) => setStep(index, { titleVn: event.target.value })}
                 />
               </Field>
+              {extraLangs.map((code) => (
+                <Field
+                  key={code}
+                  label={`${T("Заголовок шага", "Step title", "Tiêu đề bước")} (${contentLangLabel(code, ui)})`}
+                >
+                  <input
+                    value={step.extra?.[code]?.title ?? ""}
+                    disabled={readOnly}
+                    maxLength={200}
+                    onChange={(event) => setExtra(index, code, { title: event.target.value })}
+                  />
+                </Field>
+              ))}
             </div>
             {!readOnly ? (
               <button
@@ -251,7 +297,9 @@ export function PrepStepsEditor({
             ) : null}
           </div>
           <PhotoField url={step.photo} disabled={readOnly} small onChange={(photo) => setStep(index, { photo })} />
-          <Field label={T("Пункты EN — каждый с новой строки", "EN lines — one per row", "Các dòng EN — mỗi dòng một ý")}>
+          <Field
+            label={`${T("Пункты", "Lines", "Các dòng")} ${contentLangLabel("en", ui)} — ${T("каждый с новой строки", "one per row", "mỗi dòng một ý")}`}
+          >
             <textarea
               rows={Math.max(3, step.itemsEn.split("\n").length + 1)}
               value={step.itemsEn}
@@ -259,7 +307,9 @@ export function PrepStepsEditor({
               onChange={(event) => setStep(index, { itemsEn: event.target.value })}
             />
           </Field>
-          <Field label={T("Пункты VN — каждый с новой строки", "VN lines — one per row", "Các dòng VN — mỗi dòng một ý")}>
+          <Field
+            label={`${T("Пункты", "Lines", "Các dòng")} ${contentLangLabel("vn", ui)} — ${T("каждый с новой строки", "one per row", "mỗi dòng một ý")}`}
+          >
             <textarea
               rows={Math.max(3, step.itemsVn.split("\n").length + 1)}
               value={step.itemsVn}
@@ -267,6 +317,19 @@ export function PrepStepsEditor({
               onChange={(event) => setStep(index, { itemsVn: event.target.value })}
             />
           </Field>
+          {extraLangs.map((code) => (
+            <Field
+              key={code}
+              label={`${T("Пункты", "Lines", "Các dòng")} ${contentLangLabel(code, ui)} — ${T("каждый с новой строки", "one per row", "mỗi dòng một ý")}`}
+            >
+              <textarea
+                rows={Math.max(3, (step.extra?.[code]?.items ?? "").split("\n").length + 1)}
+                value={step.extra?.[code]?.items ?? ""}
+                disabled={readOnly}
+                onChange={(event) => setExtra(index, code, { items: event.target.value })}
+              />
+            </Field>
+          ))}
         </section>
       ))}
       {!readOnly ? (

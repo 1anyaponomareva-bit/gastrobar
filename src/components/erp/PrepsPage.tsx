@@ -16,6 +16,7 @@ import {
 } from "@/lib/erp/costing";
 import { isCompositionPrepType } from "@/lib/erp/ingredientSearch";
 import { cyclicComponentIds } from "@/lib/erp/recipeBom";
+import { extraNamesOnly, namesEqual, namesHaystack } from "@/lib/erp/contentLang";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import type { ErpProduct, ErpRecipe, ErpRecipeLine, ErpState } from "@/lib/erp/types";
 import { downloadPdfFile } from "@/lib/deliverPdfFile";
@@ -37,6 +38,7 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { MenuMobileNav, MENU_HREFS } from "./menuNav";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState } from "@/lib/erp/lineParts";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
+import { ExtraNameFields } from "./ExtraNameFields";
 import { PrepCardHeader, PrepCoverField, PrepStepsEditor, type PrepCardKind } from "./PrepCardFields";
 import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
 import {
@@ -91,7 +93,7 @@ export function PrepsPage() {
     .filter((p) => !p.archived_at && (p.type === "semi_finished" || p.type === "finished"))
     .sort((a, b) => a.name_en.localeCompare(b.name_en));
   const q = query.trim().toLowerCase();
-  const list = all.filter((p) => !q || `${p.name_en} ${p.name_vn}`.toLowerCase().includes(q));
+  const list = all.filter((p) => !q || namesHaystack(p).toLowerCase().includes(q));
   const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(page, pages - 1);
   const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
@@ -283,9 +285,10 @@ function NewPrep({ from }: { from?: string }) {
   const router = useErpRouter();
   const [nameEn, setNameEn] = useState("");
   const [nameVn, setNameVn] = useState("");
+  const [names, setNames] = useState<Record<string, string>>({});
   const [unit, setUnit] = useState<ErpUnit | "">("");
   const [photo, setPhoto] = useState("");
-  useDirtyGuard(Boolean(nameEn || nameVn || photo));
+  useDirtyGuard(Boolean(nameEn || nameVn || Object.keys(names).length || photo));
   return (
     <>
       <BackLink from={from} />
@@ -293,24 +296,17 @@ function NewPrep({ from }: { from?: string }) {
       <div className="erpCard">
         <PrepCoverField url={photo} onChange={setPhoto} />
         <div className="erpGrid">
-          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-            <input
-              value={nameEn}
-              onChange={(event) => setNameEn(event.target.value)}
-              placeholder="Beef patty"
-              maxLength={200}
-              data-testid="prep-name"
-            />
-          </Field>
-          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-            <input
-              value={nameVn}
-              onChange={(event) => setNameVn(event.target.value)}
-              placeholder="Chả bò"
-              maxLength={200}
-              data-testid="prep-name-vn"
-            />
-          </Field>
+          <ExtraNameFields
+            en={nameEn}
+            vn={nameVn}
+            names={names}
+            onEn={setNameEn}
+            onVn={setNameVn}
+            onNames={setNames}
+            autoFocus
+            enTestId="prep-name"
+            vnTestId="prep-name-vn"
+          />
           <Field
             label={T("Единица учёта *", "Unit *", "Đơn vị *")}
             hint={T("В чём считаете готовый полуфабрикат", "How the finished product is counted", "Đơn vị đếm thành phẩm")}
@@ -330,7 +326,10 @@ function NewPrep({ from }: { from?: string }) {
             disabled={busy || !nameEn.trim() || !unit}
             onClick={async () => {
               const result = await act<{ id: string }>(
-                { action: "saveProduct", product: { type: "semi_finished", name_en: nameEn, name_vn: nameVn, base_unit: unit } },
+                {
+                  action: "saveProduct",
+                  product: { type: "semi_finished", name_en: nameEn, name_vn: nameVn, names, base_unit: unit },
+                },
                 T("Полуфабрикат создан — добавьте состав", "Created — now add the ingredients", "Đã tạo — thêm nguyên liệu"),
               );
               if (result) {
@@ -342,6 +341,7 @@ function NewPrep({ from }: { from?: string }) {
                 }
                 setNameEn("");
                 setNameVn("");
+                setNames({});
                 setPhoto("");
                 router.replace(withMenuListReturn(`/erp/preps/recipe/${result.id}`, from ?? ""));
               }
@@ -378,12 +378,19 @@ const recipeKind = (value: string | null | undefined): PrepCardKind =>
   value === "sauce" || value === "dish" ? "sauce" : "prep";
 
 /** Identity fields for a name-only save. Omits packs/cost/losses so those stay as stored. */
-function prepNamePayload(product: ErpProduct, nameEn: string, nameVn: string, pieceWeight = product.unit_weight_kg) {
+function prepNamePayload(
+  product: ErpProduct,
+  nameEn: string,
+  nameVn: string,
+  names: Record<string, string>,
+  pieceWeight = product.unit_weight_kg,
+) {
   return {
     id: product.id,
     type: product.type,
     name_en: nameEn.trim(),
     name_vn: nameVn.trim(),
+    names: extraNamesOnly(names),
     base_unit: product.base_unit,
     category_id: product.category_id,
     unit_weight_kg: pieceWeight,
@@ -432,6 +439,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [baseline, setBaseline] = useState(() => JSON.stringify(formFrom(viewed, product)));
   const [nameEn, setNameEn] = useState(product.name_en);
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
+  const [names, setNames] = useState<Record<string, string>>(() => extraNamesOnly(product.names));
   const [pieceWeight, setPieceWeight] = useState<number | null>(product.unit_weight_kg);
   const [composeOpen, setComposeOpen] = useState(true);
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
@@ -444,7 +452,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   );
   const unit = product.base_unit;
   const dirty = editing && JSON.stringify(form) !== baseline;
-  const namesDirty = nameEn.trim() !== product.name_en.trim() || nameVn.trim() !== (product.name_vn ?? "").trim();
+  const namesDirty =
+    nameEn.trim() !== product.name_en.trim() ||
+    nameVn.trim() !== (product.name_vn ?? "").trim() ||
+    !namesEqual(names, product.names);
   const pieceDirty = (pieceWeight ?? null) !== (product.unit_weight_kg ?? null);
   const productDirty = namesDirty || pieceDirty;
   useDirtyGuard(dirty || productDirty);
@@ -489,7 +500,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const batchCost = compositionYieldCost(ctx, form.lines);
 
   const publishInput = (): PrepPublishInput => ({
-    product: { ...product, name_en: nameEn, name_vn: nameVn, unit_weight_kg: pieceWeight },
+    product: { ...product, name_en: nameEn, name_vn: nameVn, names, unit_weight_kg: pieceWeight },
     kind: form.kind,
     cardNo: form.card_no,
     cardDate: form.card_date,
@@ -519,12 +530,13 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     const nextVn = nameVn.trim();
     if (!nextEn) return false;
     const result = await act<{ id: string }>(
-      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, pieceWeight) },
+      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, names, pieceWeight) },
       quiet ? false : T("Карточка сохранена", "Card saved", "Đã lưu thẻ"),
     );
     if (!result) return false;
     setNameEn(nextEn);
     setNameVn(nextVn);
+    setNames(extraNamesOnly(names));
     return true;
   };
 
@@ -617,7 +629,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     <>
       <BackLink from={from} />
       <PageHead
-        title={productTitle({ ...product, name_en: nameEn, name_vn: nameVn })}
+        title={productTitle({ ...product, name_en: nameEn, name_vn: nameVn, names })}
         sub={
           active
             ? `${T("Действующая версия", "Active version", "Phiên bản đang dùng")} v${active.version} · ${T("выход", "yield", "sản lượng")} ${yieldText(active, unit)}`
@@ -636,6 +648,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         kind={form.kind}
         nameEn={nameEn}
         nameVn={nameVn}
+        names={names}
         cardNo={form.card_no}
         cardDate={form.card_date}
         photo={form.photo}
@@ -643,6 +656,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
         onKind={(value) => set("kind", value)}
         onNameEn={setNameEn}
         onNameVn={setNameVn}
+        onNames={setNames}
         onCardNo={(value) => set("card_no", value)}
         onCardDate={(value) => set("card_date", value)}
         onPhoto={(value) => {

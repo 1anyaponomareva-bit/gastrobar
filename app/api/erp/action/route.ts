@@ -49,6 +49,16 @@ function object(value: unknown, name: string): Record<string, unknown> {
   return value;
 }
 
+async function applyExtraNames(
+  rpc: <T = unknown>(fn: string, args: Record<string, unknown>) => Promise<T>,
+  kind: "product" | "dish" | "category",
+  id: string,
+  payload: Record<string, unknown>,
+) {
+  if (!Object.prototype.hasOwnProperty.call(payload, "names")) return;
+  await rpc("erp_set_extra_names", { p_kind: kind, p_id: id, p_names: payload.names ?? {} });
+}
+
 /**
  * All ERP writes. Every action requires an admin session; the email is stored as the author.
  * Responses carry `patch` — the screen data the action changed, read after the write — and, for
@@ -70,7 +80,9 @@ export async function POST(request: Request) {
 
     switch (a.action) {
       case "saveProduct": {
-        const id = await rpc<string>("erp_save_product", { p: object(a.product, "product"), p_actor: actor });
+        const payload = object(a.product, "product");
+        const id = await rpc<string>("erp_save_product", { p: payload, p_actor: actor });
+        await applyExtraNames(rpc, "product", id, payload);
         mirrorStaffLater();
         const patch = await fresh(["products", "packs", "productPacks", "recipes"]);
         const product = patch.products?.find((row) => row.id === id);
@@ -97,7 +109,9 @@ export async function POST(request: Request) {
       case "saveRef":
         if (!REF_ENTITIES.has(a.entity)) throw new ErpHttpError(400, "ERP_INVALID", "entity");
         {
-          const id = await rpc("erp_save_ref", { p_entity: a.entity, p: object(a.value, "value"), p_actor: actor });
+          const value = object(a.value, "value");
+          const id = await rpc<string>("erp_save_ref", { p_entity: a.entity, p: value, p_actor: actor });
+          if (a.entity === "category") await applyExtraNames(rpc, "category", id, value);
           if (CATALOG_ENTITIES.has(a.entity)) mirrorStaffLater();
           return timing.json({ id, patch: await fresh([ENTITY_PART[a.entity]]) });
         }
@@ -208,7 +222,9 @@ export async function POST(request: Request) {
         return timing.json({ applied, patch: await fresh(["recipes"]) });
       }
       case "saveDish": {
-        const id = await rpc("erp_save_dish", { p: object(a.dish, "dish"), p_actor: actor });
+        const dish = object(a.dish, "dish");
+        const id = await rpc<string>("erp_save_dish", { p: dish, p_actor: actor });
+        await applyExtraNames(rpc, "dish", id, dish);
         return timing.json({ id, patch: await fresh(["dishes"]) });
       }
       case "staffCatalogMerge": {

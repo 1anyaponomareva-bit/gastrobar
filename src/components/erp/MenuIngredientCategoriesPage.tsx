@@ -15,12 +15,14 @@ import {
 } from "@/lib/erp/ingredientCategoryStats";
 import { stockByProduct, stockOf, stockValue } from "@/lib/erp/stockView";
 import type { IngredientCategoryStat } from "@/lib/erp/ingredientCategoryStats";
+import { extraNamesOnly } from "@/lib/erp/contentLang";
 import { CatalogTable, type CatalogColumn } from "./CatalogTable";
+import { ExtraNameFields } from "./ExtraNameFields";
 import { useErp } from "./ErpShell";
 import { MenuFormShell } from "./MenuFormShell";
 import { categoryLabel, sortCategoriesByLabel } from "./menuFields";
 import { MENU_HREFS } from "./menuNav";
-import { dateTimeText, Empty, Field, NavLink, packQtyText, T, unitLabel, vnd } from "./ui";
+import { dateTimeText, Empty, NavLink, packQtyText, T, unitLabel, vnd } from "./ui";
 
 const pcs = () => T("шт.", "pcs", "cái");
 const dash = "";
@@ -223,6 +225,7 @@ function MenuIngredientCategoryForm({ category }: { category?: ErpCategory }) {
   const router = useErpRouter();
   const [nameEn, setNameEn] = useState(category?.name_en ?? "");
   const [nameVn, setNameVn] = useState(category?.name_vn ?? "");
+  const [names, setNames] = useState<Record<string, string>>(() => extraNamesOnly(category?.names));
   const title = category
     ? T("Редактирование категории ингредиентов", "Edit ingredient category", "Sửa nhóm nguyên liệu")
     : T("Добавление категории ингредиентов", "Add ingredient category", "Thêm nhóm nguyên liệu");
@@ -245,7 +248,7 @@ function MenuIngredientCategoryForm({ category }: { category?: ErpCategory }) {
               {
                 action: "saveRef",
                 entity: "category",
-                value: { id: category?.id, name_en: english, name_vn: nameVn.trim() },
+                value: { id: category?.id, name_en: english, name_vn: nameVn.trim(), names },
               },
               category
                 ? T("Категория сохранена", "Category saved", "Đã lưu nhóm")
@@ -259,23 +262,15 @@ function MenuIngredientCategoryForm({ category }: { category?: ErpCategory }) {
       }
     >
       <section className="erpCard">
-        <div className="erpGrid two">
-          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-            <input
-              value={nameEn}
-              onChange={(e) => setNameEn(e.target.value)}
-              autoFocus
-              placeholder={T("Например, «Vegetables» или «Meat»", "For example, “Vegetables” or “Meat”", "Ví dụ: “Vegetables” hoặc “Meat”")}
-            />
-          </Field>
-          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-            <input
-              value={nameVn}
-              onChange={(e) => setNameVn(e.target.value)}
-              placeholder={T("Например, «Rau» или «Thịt»", "For example, “Rau” or “Thịt”", "Ví dụ: “Rau” hoặc “Thịt”")}
-            />
-          </Field>
-        </div>
+        <ExtraNameFields
+          en={nameEn}
+          vn={nameVn}
+          names={names}
+          onEn={setNameEn}
+          onVn={setNameVn}
+          onNames={setNames}
+          autoFocus
+        />
       </section>
     </MenuFormShell>
   );

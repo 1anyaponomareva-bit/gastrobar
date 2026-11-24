@@ -16,6 +16,7 @@ import {
   type MenuPriceSource,
 } from "@/lib/erp/costing";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
+import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
@@ -27,6 +28,7 @@ import { IngredientPicker } from "./IngredientPicker";
 import { YieldCostFooter } from "./YieldComposition";
 import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./LineParts";
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState, type LinePart } from "@/lib/erp/lineParts";
+import { ExtraNameFields } from "./ExtraNameFields";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
 import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
@@ -51,6 +53,7 @@ import {
 type DishForm = {
   name_en: string;
   name_vn: string;
+  names: Record<string, string>;
   category_id: string;
   sale_price: number | null;
   vat_rate: number | null;
@@ -83,6 +86,7 @@ function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
   return {
     name_en: dish?.name_en ?? "",
     name_vn: dish?.name_vn ?? "",
+    names: extraNamesOnly(dish?.names),
     category_id: dish?.category_id ?? defaultCategory,
     sale_price: dish?.sale_price ?? null,
     vat_rate: dish?.vat_rate ?? null,
@@ -164,7 +168,7 @@ export function MenuPage() {
 
   const q = query.trim().toLowerCase();
   const pool = state.dishes.filter((d) => Boolean(d.archived_at) === archived);
-  const dishes = pool.filter((d) => !q || `${d.name_en} ${d.name_vn}`.toLowerCase().includes(q)).sort((a, b) => a.name_en.localeCompare(b.name_en));
+  const dishes = pool.filter((d) => !q || namesHaystack(d).toLowerCase().includes(q)).sort((a, b) => a.name_en.localeCompare(b.name_en));
 
   return (
     <>
@@ -335,6 +339,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
         action: "saveDish",
         dish: {
           ...form,
+          names: extraNamesOnly(form.names),
           id: dish?.id,
           lines: ready.map((line) => ({
             ...line,
@@ -426,12 +431,15 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
       <section className="erpCard">
         <h2>{T("Основное", "Basics", "Cơ bản")}</h2>
         <div className="erpGrid two">
-          <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-            <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} autoFocus={isNew} />
-          </Field>
-          <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-            <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} />
-          </Field>
+          <ExtraNameFields
+            en={form.name_en}
+            vn={form.name_vn}
+            names={form.names}
+            onEn={(value) => set("name_en", value)}
+            onVn={(value) => set("name_vn", value)}
+            onNames={(value) => set("names", value)}
+            autoFocus={isNew}
+          />
           <Field label={T("Цена в меню, ₫", "Menu price, ₫", "Giá trên menu, ₫")}>
             <NumberInput value={form.sale_price} onChange={(v) => set("sale_price", v)} />
           </Field>

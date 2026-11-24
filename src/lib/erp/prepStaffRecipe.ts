@@ -10,6 +10,7 @@ export type PrepPublishProduct = {
   id: string;
   name_en: string;
   name_vn?: string | null;
+  names?: Record<string, string> | null;
   base_unit: ErpUnit | null;
   unit_weight_kg?: number | null;
 } & Partial<LossPcts>;
@@ -63,10 +64,17 @@ export function staffRecipeCardUrl(productId: string): string {
   return `${CANONICAL_ERP_ORIGIN}${staffRecipePath(staffRecipeId(productId))}`;
 }
 
-function loc(en: string, vn = ""): LocalizedText {
+function loc(en: string, vn = "", extra: Record<string, string> = {}): LocalizedText {
   const english = en.trim();
-  const vietnamese = vn.trim() || english;
-  return { ru: english, en: english, vn: vietnamese };
+  const vietnamese = vn.trim();
+  const russian = (extra.ru ?? "").trim();
+  const other =
+    Object.entries(extra)
+      .filter(([code]) => code !== "ru")
+      .map(([, text]) => text.trim())
+      .find(Boolean) ?? "";
+  const fallback = english || russian || vietnamese || other;
+  return { ru: russian || fallback, en: english || fallback, vn: vietnamese || fallback };
 }
 
 function round2(value: number): number {
@@ -126,10 +134,10 @@ function catalogOf(catalog: PrepPublishProduct[], id: string | null): PrepPublis
   return id ? catalog.find((row) => row.id === id) : undefined;
 }
 
-function lineNames(line: PrepPublishLine, product: PrepPublishProduct | undefined): { en: string; vn: string } {
+function lineNames(line: PrepPublishLine, product: PrepPublishProduct | undefined): { en: string; vn: string; extra: Record<string, string> } {
   const en = (product?.name_en || line.raw_name?.en || line.raw_name?.ru || "").trim();
   const vn = (product?.name_vn || line.raw_name?.vn || "").trim();
-  return { en: en || "Ingredient", vn };
+  return { en: en || "Ingredient", vn, extra: product?.names ?? {} };
 }
 
 function cutsNote(line: PrepPublishLine): LocalizedText | undefined {
@@ -169,20 +177,29 @@ function staffSteps(steps: RecipeStepDraft[]): RecipeStep[] {
   return steps.flatMap((step) => {
     const titleEn = step.titleEn.trim();
     const titleVn = step.titleVn.trim();
+    const extraTitles: Record<string, string> = {};
+    const extraItems: Record<string, string[]> = {};
+    for (const [code, row] of Object.entries(step.extra ?? {})) {
+      extraTitles[code] = row.title.trim();
+      extraItems[code] = row.items.split(/\r?\n/).map((line) => line.trim());
+    }
     const itemsEn = step.itemsEn.split(/\r?\n/).map((line) => line.trim());
     const itemsVn = step.itemsVn.split(/\r?\n/).map((line) => line.trim());
-    const length = Math.max(itemsEn.length, itemsVn.length);
+    const length = Math.max(itemsEn.length, itemsVn.length, ...Object.values(extraItems).map((row) => row.length));
     const items: LocalizedText[] = [];
     for (let i = 0; i < length; i += 1) {
       const en = itemsEn[i] ?? "";
       const vn = itemsVn[i] ?? "";
-      if (en || vn) items.push(loc(en || vn, vn));
+      const extra: Record<string, string> = {};
+      for (const [code, row] of Object.entries(extraItems)) extra[code] = row[i] ?? "";
+      if (en || vn || Object.values(extra).some((text) => text.trim())) items.push(loc(en, vn, extra));
     }
     const photo = staffPhoto(step.photo);
-    if (!titleEn && !titleVn && !items.length && !photo) return [];
+    const titleExtra = Object.values(extraTitles).some(Boolean);
+    if (!titleEn && !titleVn && !titleExtra && !items.length && !photo) return [];
     return [
       {
-        ...(titleEn || titleVn ? { title: loc(titleEn || titleVn, titleVn) } : {}),
+        ...(titleEn || titleVn || titleExtra ? { title: loc(titleEn, titleVn, extraTitles) } : {}),
         ...(photo ? { photo } : {}),
         items,
       },
@@ -212,7 +229,7 @@ export function staffRecipeFromPrep(input: PrepPublishInput): Recipe {
     const note = joinNotes([methodsNote(line.methods), cutsNote(line), grossNote]);
     return [
       {
-        name: loc(names.en, names.vn),
+        name: loc(names.en, names.vn, names.extra),
         amount,
         unit: staffUnit,
         ...(line.is_main ? { main: true as const } : {}),
@@ -259,7 +276,7 @@ export function staffRecipeFromPrep(input: PrepPublishInput): Recipe {
     id: staffRecipeId(productId),
     erpProductId: productId,
     kind: "prep",
-    name: loc(input.product.name_en, input.product.name_vn ?? ""),
+    name: loc(input.product.name_en, input.product.name_vn ?? "", input.product.names ?? {}),
     ...(cardNo || date
       ? { meta: { cardNo, date, revision: revisionOf(input) } }
       : {}),

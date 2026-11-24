@@ -40,6 +40,14 @@ test("brand stays on the title; still one language", () => {
   assert.equal(productTitle({ name_en: "Salt", name_vn: "Muối", brand: "Mlekpol" }, "vn"), "Muối · Mlekpol");
 });
 
+test("extra names appear for that UI language, otherwise English", () => {
+  const named = { name_en: "Salt", name_vn: "Muối", names: { ru: "Соль", zh: "盐" } };
+  assert.equal(productDisplayName(named, "ru"), "Соль");
+  assert.equal(productDisplayName(named, "en"), "Salt");
+  assert.equal(productDisplayName(named, "vn"), "Muối");
+  assert.equal(productTitle({ ...named, brand: "Mlekpol" }, "ru"), "Соль · Mlekpol");
+});
+
 test("composition lines read live catalog names, not a snapshot", () => {
   const products = [{ id: "prep-1", name_en: "New sauce", name_vn: "Sốt mới" }];
   assert.equal(liveCatalogName(products, "prep-1", "en"), "New sauce");

@@ -39,6 +39,7 @@ export type ErpCategory = Archivable & {
   code: string;
   name_en: string;
   name_vn: string;
+  names?: Record<string, string>;
   sort: number;
   deleted_at?: string | null;
 };
@@ -95,6 +96,7 @@ export type ErpProduct = Archivable & LossPcts & {
   type: ErpProductType;
   name_en: string;
   name_vn: string;
+  names?: Record<string, string>;
   category_id: string | null;
   base_unit: ErpUnit | null;
   unit_weight_kg: number | null;
@@ -141,9 +143,9 @@ export type ErpRecipeLine = {
 };
 
 export type ErpRecipeStep = {
-  title?: { en?: string; vn?: string; ru?: string };
+  title?: Record<string, string>;
   photo?: string;
-  items?: { en?: string; vn?: string; ru?: string }[];
+  items?: Record<string, string>[];
 };
 
 export type ErpRecipe = {
@@ -212,6 +214,7 @@ export type ErpDish = Archivable & {
   code: string;
   name_en: string;
   name_vn: string;
+  names?: Record<string, string>;
   category_id: string | null;
   sale_price: number | null;
   vat_rate: number | null;

@@ -224,6 +224,79 @@
   color: #fff;
 }
 
+.erpLangBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.erpLangChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.erpLangChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--erp-soft);
+  border: 1px solid var(--erp-line);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.erpLangChipX {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  color: var(--erp-muted);
+  padding: 0 0 0 2px;
+}
+
+.erpLangAdd {
+  position: relative;
+}
+
+.erpLangMenu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: var(--erp-card);
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.erpLangMenu button {
+  text-align: left;
+  font: inherit;
+  border: none;
+  background: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.erpLangMenu button:hover {
+  background: var(--erp-soft);
+}
+
+.erpExtraNames {
+  grid-column: 1 / -1;
+}
+
 .erpTop,
 .erpBottomNav {
   display: none;

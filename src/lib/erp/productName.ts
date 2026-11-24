@@ -1,4 +1,5 @@
 import { erpLang, type ErpLang } from "../../components/erp/i18n";
+import { pickContentText } from "./contentLang";
 
 /** UI language of the name, not a translation of the stored string. */
 export type ProductNameLocale = "ru" | "en" | "vn";
@@ -11,6 +12,7 @@ export type ProductNameFields = {
   nameEn?: string | null;
   nameVn?: string | null;
   name?: string | null;
+  names?: Record<string, string> | null;
 };
 
 function englishName(product: ProductNameFields) {
@@ -31,8 +33,9 @@ export function productDisplayName(product: ProductNameFields, lang: ProductName
 export function productDisplayName(product: ProductNameFields, lang?: ProductNameLocale): string {
   const locale = product.locale ?? lang ?? "ru";
   const en = englishName(product);
-  if (locale === "vn") return vietnameseName(product) || en;
-  return en;
+  const vn = vietnameseName(product);
+  if (locale === "vn") return vn || en;
+  return pickContentText({ ...(product.names ?? {}), en, vn }, locale) || en;
 }
 
 export function productDisplayTitle(product: ProductNameFields & { brand?: string | null }, lang: ProductNameLocale): string {

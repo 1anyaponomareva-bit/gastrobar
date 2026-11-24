@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
+import { extraNamesOnly } from "@/lib/erp/contentLang";
+import { ExtraNameFields } from "./ExtraNameFields";
 import { useErp } from "./ErpShell";
 import { Empty, NumberInput, T, useDirtyGuard } from "./ui";
 
@@ -61,8 +63,11 @@ export function RefList<Row extends RefRow>({
     const payload: Record<string, unknown> = { ...values };
     for (const column of columns) if (column.readOnly) delete payload[column.key];
     if ("name_en" in payload) payload.name = payload.name_en;
+    if (entity === "category") payload.names = extraNamesOnly(payload.names as Record<string, string> | undefined);
     return payload;
   };
+  const namesOf = (row: Row) =>
+    extraNamesOnly((drafts[row.id]?.names as Record<string, string> | undefined) ?? (row as Row & { names?: Record<string, string> }).names);
   const filled = (values: Record<string, unknown>) => String(values[columns[0].key] ?? "").trim() !== "";
 
   const input = (value: string | number, onChange: (v: unknown) => void, column: RefColumn<Row>) =>
@@ -116,7 +121,8 @@ export function RefList<Row extends RefRow>({
             </thead>
             <tbody>
               {visible.map((row) => (
-                <tr key={row.id} className={row.archived_at ? "muted" : ""}>
+                <Fragment key={row.id}>
+                <tr className={row.archived_at ? "muted" : ""}>
                   {columns.map((column, index) => (
                     <td key={column.key} className={index === 0 ? "main" : column.readOnly ? "" : "edit"} data-label={index === 0 ? undefined : column.label}>
                       {column.readOnly ? (
@@ -136,7 +142,14 @@ export function RefList<Row extends RefRow>({
                             disabled={busy}
                             onClick={async () => {
                               const values = Object.fromEntries(columns.map((c) => [c.key, valueOf(row, c.key)]));
-                              if (await act({ action: "saveRef", entity, value: { id: row.id, ...toPayload(values) } })) dropDraft(row.id);
+                              if (
+                                await act({
+                                  action: "saveRef",
+                                  entity,
+                                  value: { id: row.id, ...toPayload({ ...values, names: namesOf(row) }) },
+                                })
+                              )
+                                dropDraft(row.id);
                             }}
                           >
                             {T("Сохранить", "Save", "Lưu")}
@@ -162,8 +175,25 @@ export function RefList<Row extends RefRow>({
                     </div>
                   </td>
                 </tr>
+                {entity === "category" ? (
+                  <tr className={row.archived_at ? "muted" : ""}>
+                    <td colSpan={columns.length + 1}>
+                      <ExtraNameFields
+                        omitLocked
+                        en={String(valueOf(row, "name_en") ?? "")}
+                        vn={String(valueOf(row, "name_vn") ?? "")}
+                        names={namesOf(row)}
+                        onEn={(value) => edit(row.id, "name_en", value)}
+                        onVn={(value) => edit(row.id, "name_vn", value)}
+                        onNames={(value) => edit(row.id, "names", value)}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
               {adding ? (
+                <>
                 <tr>
                   {columns.map((column, index) => (
                     <td key={column.key} className={index === 0 ? "main" : column.readOnly ? "" : "edit"} data-label={index === 0 ? undefined : column.label}>
@@ -192,6 +222,22 @@ export function RefList<Row extends RefRow>({
                     </div>
                   </td>
                 </tr>
+                {entity === "category" ? (
+                  <tr>
+                    <td colSpan={columns.length + 1}>
+                      <ExtraNameFields
+                        omitLocked
+                        en={String(adding.name_en ?? "")}
+                        vn={String(adding.name_vn ?? "")}
+                        names={extraNamesOnly(adding.names as Record<string, string> | undefined)}
+                        onEn={(value) => setAdding((prev) => ({ ...prev, name_en: value }))}
+                        onVn={(value) => setAdding((prev) => ({ ...prev, name_vn: value }))}
+                        onNames={(value) => setAdding((prev) => ({ ...prev, names: value }))}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+                </>
               ) : null}
             </tbody>
           </table>

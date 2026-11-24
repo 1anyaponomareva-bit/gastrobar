@@ -17,9 +17,11 @@ import {
 } from "@/lib/erp/costing";
 import { compatiblePacks, packDisplayName } from "@/lib/erp/packs";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
+import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { effectiveInputVatRate } from "@/lib/erp/vat";
 import { notImplemented } from "./CatalogTable";
+import { ExtraNameFields } from "./ExtraNameFields";
 import { useErp } from "./ErpShell";
 import { DropMenu } from "./filters";
 import { methodLabel } from "./losses";
@@ -94,7 +96,7 @@ export function ProductsPage() {
       if (type && p.type !== type) return false;
       if (category && p.category_id !== category) return false;
       if (supplier && !productSuppliers(state, p).includes(supplier)) return false;
-      return !q || `${p.name_en} ${p.name_vn} ${p.brand ?? ""} ${p.code}`.toLowerCase().includes(q);
+      return !q || `${namesHaystack(p)} ${p.code}`.toLowerCase().includes(q);
     })
     .sort((a, b) => a.name_en.localeCompare(b.name_en));
   const pages = Math.max(1, Math.ceil(list.length / pageSize));
@@ -248,6 +250,7 @@ type PackDraft = { id?: string; pack_id?: string; label: string; qty_base: numbe
 type ProductForm = {
   name_en: string;
   name_vn: string;
+  names: Record<string, string>;
   type: ErpProductType;
   category_id: string;
   base_unit: ErpUnit | "";
@@ -261,6 +264,7 @@ type ProductForm = {
 const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): ProductForm => ({
   name_en: product?.name_en ?? "",
   name_vn: product?.name_vn ?? "",
+  names: extraNamesOnly(product?.names),
   type: product?.type ?? "ingredient",
   category_id: product?.category_id ?? "",
   base_unit: product?.base_unit ?? "",
@@ -391,6 +395,7 @@ function ProductEditor({
         product: {
           ...form,
           id: product?.id,
+          names: extraNamesOnly(form.names),
           base_unit: form.base_unit || null,
           category_id: form.category_id || null,
           packs,
@@ -425,12 +430,17 @@ function ProductEditor({
 
   const basics = (
     <div className="erpGrid two">
-      <Field label={T("Название (English) *", "Name (English) *", "Tên (English) *")}>
-        <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} autoFocus={isNew} maxLength={200} data-testid="product-name" />
-      </Field>
-      <Field label={T("Название (Tiếng Việt)", "Name (Tiếng Việt)", "Tên (Tiếng Việt)")}>
-        <input value={form.name_vn} onChange={(e) => set("name_vn", e.target.value)} maxLength={200} data-testid="product-name-vn" />
-      </Field>
+      <ExtraNameFields
+        en={form.name_en}
+        vn={form.name_vn}
+        names={form.names}
+        onEn={(value) => set("name_en", value)}
+        onVn={(value) => set("name_vn", value)}
+        onNames={(value) => set("names", value)}
+        autoFocus={isNew}
+        enTestId="product-name"
+        vnTestId="product-name-vn"
+      />
       {ingredientCard ? (
         <Field
           label={T("Поставщик", "Supplier", "Nhà cung cấp")}
@@ -794,7 +804,7 @@ function ProductEditor({
         title={
           <>
             {product
-              ? productTitle({ ...product, name_en: form.name_en, name_vn: form.name_vn })
+              ? productTitle({ ...product, name_en: form.name_en, name_vn: form.name_vn, names: form.names })
               : goodsMode
                 ? T("Добавление товара", "Add product", "Thêm hàng hóa")
                 : T("Новый продукт", "New product", "Sản phẩm mới")}
