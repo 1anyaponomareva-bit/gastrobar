@@ -251,11 +251,13 @@ export function costLine(ctx: CostContext, productId: string, qty: number, stack
   };
   if (stack.includes(productId)) return { ...base, issue: "cycle" };
 
-  const recipe = ctx.explodeRecipes ? ctx.activeRecipes.get(productId) : undefined;
+  const recipe = ctx.activeRecipes.get(productId);
   const recipeYield = asMoney(recipe?.yield_qty);
-  if (recipe && recipeYield && recipeYield > 0) {
-    const scale = qty / recipeYield;
-    const children = recipe.lines.map((line) => {
+  const canExplode = Boolean(recipe && recipeYield && recipeYield > 0);
+
+  const explode = (): CostLine => {
+    const scale = qty / (recipeYield as number);
+    const children = (recipe as CostRecipe).lines.map((line) => {
       const childQty = asMoney(line.qty);
       return line.product_id && childQty != null
         ? costLine(ctx, line.product_id, childQty * scale, [...stack, productId])
@@ -271,16 +273,26 @@ export function costLine(ctx: CostContext, productId: string, qty: number, stack
       unitCost: cost === null || qty === 0 ? null : cost / qty,
       issue: known ? undefined : "no_recipe_price",
     };
+  };
+
+  // Menu / tech-card: explode preps into ingredients (do not also add the prep's own lots).
+  if (ctx.explodeRecipes && canExplode) return explode();
+
+  // Prep composition / stock SKU view: prefer card or lot price.
+  const quoted = leafPrice(ctx, product);
+  if (quoted.unitCost !== null) {
+    return {
+      ...base,
+      unitCost: quoted.unitCost,
+      cost: quoted.unitCost * qty,
+      source: quoted.source,
+    };
   }
 
-  const quoted = leafPrice(ctx, product);
-  if (quoted.unitCost === null) return { ...base, issue: "no_price" };
-  return {
-    ...base,
-    unitCost: quoted.unitCost,
-    cost: quoted.unitCost * qty,
-    source: quoted.source,
-  };
+  // Nested prep with no card/lot price yet: use its active recipe planned cost.
+  if (!ctx.explodeRecipes && canExplode) return explode();
+
+  return { ...base, issue: "no_price" };
 }
 
 /** Planned cost of one base unit (per kg / l / pcs). */
@@ -322,12 +334,15 @@ export function compositionYieldCost(
   return sum;
 }
 
-/** Value each listed component as a warehouse SKU (nested preps are not exploded). */
+/**
+ * Value listed components as warehouse SKUs first.
+ * If a nested prep has no card/lot price, costLine still falls back to its active recipe.
+ */
 export function stockCostContext(ctx: CostContext): CostContext {
   return { ...ctx, explodeRecipes: false };
 }
 
-/** Prep composition: catalog prices + lots, nested preps as SKUs. */
+/** Prep composition: card/lot prices; nested preps without a SKU price use their active recipe. */
 export function prepCompositionCostContext(
   products: CostProduct[],
   recipes: CostRecipe[],

@@ -84,6 +84,24 @@ test("nested prep yield cost uses the prep SKU, not a second explosion", () => {
   );
 });
 
+test("nested prep without a card price uses its active recipe cost", () => {
+  const mix: CostProduct = {
+    id: "mix",
+    type: "semi_finished",
+    name_en: "Meat mix",
+    name_vn: "Thịt xay",
+    base_unit: "kg",
+    est_unit_cost: null,
+    est_cost_source: null,
+  };
+  const sku = buildCostContext(
+    [onion, mix],
+    [{ id: "mix-r", product_id: "mix", status: "active", yield_qty: 1, lines: [{ product_id: "onion", qty: 1 }] }],
+    { explodeRecipes: false },
+  );
+  assert.equal(compositionYieldCost(sku, [{ product_id: "mix", qty: 0.125 }]), 0.125 * 20_000);
+});
+
 test("stale quote rows still use the product card price", () => {
   const ctx = buildCostContext([onion], [], {
     quotes: [{ product_id: "onion", last_lot: null, fifo_remaining: null, reference: null }],
