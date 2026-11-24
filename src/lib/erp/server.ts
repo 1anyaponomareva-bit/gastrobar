@@ -116,6 +116,9 @@ export function check<T>(result: { data: T | null; error: DbError | null }): T {
   }
   if (result.error.code === "23505") throw new ErpHttpError(400, "ERP_DUPLICATE", result.error.details || message);
   if (result.error.code === "23514" || result.error.code === "22P02" || result.error.code === "23502") {
+    if (/net_qty/i.test(message) || /net_qty/i.test(result.error.details ?? "")) {
+      throw new ErpHttpError(400, "ERP_NET_QTY_ZERO", message);
+    }
     throw new ErpHttpError(400, "ERP_INVALID", message);
   }
   throw new Error(`[erp] ${message}`);

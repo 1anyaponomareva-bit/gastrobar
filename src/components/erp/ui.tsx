@@ -182,6 +182,11 @@ export function errorText(code: string, detail?: string): string {
     ERP_COUNT_HAS_DEPENDENTS: T("Сначала откройте более поздние инвентаризации", "Reopen later stock counts first", "Hãy mở lại các phiếu kiểm sau trước"),
     ERP_COUNT_UNKNOWN_COST: T("У излишка нет цены партии и нет справочной цены — укажите оценку, ноль подставлять нельзя", "This surplus has no lot price and no reference price — enter an estimate; do not use zero", "Hàng thừa chưa có giá — hãy nhập giá ước tính, không dùng 0"),
     ERP_INVALID: T("Проверьте заполнение полей", "Check the fields", "Kiểm tra lại thông tin"),
+    ERP_NET_QTY_ZERO: T(
+      "Нетто 0 пока нельзя сохранить: в базе старое ограничение. Нужно применить миграцию net_qty ≥ 0.",
+      "Net 0 cannot be saved yet: the database still rejects zero. Apply the net_qty ≥ 0 migration.",
+      "Chưa lưu được netto 0: database vẫn chặn số 0. Cần chạy migration net_qty ≥ 0.",
+    ),
     ERP_PACK_UNIT: T(
       "Фасовка в другой единице — выберите совместимую",
       "This pack uses another unit — pick a compatible one",
@@ -205,6 +210,9 @@ export function errorText(code: string, detail?: string): string {
     };
     const missing = (detail ?? "").split(",").filter(Boolean).map((f) => fields[f] ?? f).join(", ");
     return `${T("Чтобы показать продукт в Staff, заполните", "To show the product in Staff, fill in", "Để hiện trong Staff, hãy điền")}: ${missing}`;
+  }
+  if (code === "ERP_INVALID" && /net_qty/i.test(detail ?? "")) {
+    return texts.ERP_NET_QTY_ZERO;
   }
   if (code === "ERP_DUPLICATE" && detail?.startsWith("item:")) {
     return T(
