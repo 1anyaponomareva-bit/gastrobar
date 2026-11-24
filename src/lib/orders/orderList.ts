@@ -263,8 +263,6 @@ export function sortOrdersForHistory<T extends HistorySortable>(orders: T[]): T[
   });
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function asUuid(value: unknown): string {
   const text = String(value ?? "").trim();
   return UUID_RE.test(text) ? text : "";
