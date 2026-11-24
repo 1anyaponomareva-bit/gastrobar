@@ -22,7 +22,9 @@ import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
 import { effectiveInputVatRate } from "@/lib/erp/vat";
 import { notImplemented } from "./CatalogTable";
 import { ExtraNameFields } from "./ExtraNameFields";
+import { StorageOptionsEditor } from "./StorageOptionsEditor";
 import { useErp } from "./ErpShell";
+import { parseStorageOptions, serializeStorageOptions, type StorageOption } from "@/lib/erp/storageOptions";
 import { DropMenu } from "./filters";
 import { methodLabel } from "./losses";
 import { categoryLabel, selectableCategories, sortCategoriesByLabel, POSTER_WORKSHOPS, productBrandFieldLabel, productCodeFieldLabel } from "./menuFields";
@@ -260,8 +262,7 @@ type ProductForm = {
   unit_weight_kg: number | null;
   brand: string;
   est_unit_cost: number | null;
-  shelf_life_days: number | null;
-  storage_conditions: string;
+  storageOptions: StorageOption[];
 } & LossPcts;
 
 const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): ProductForm => ({
@@ -274,8 +275,7 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   unit_weight_kg: product?.unit_weight_kg ?? null,
   brand: product?.brand ?? "",
   est_unit_cost: product?.est_unit_cost ?? null,
-  shelf_life_days: product?.shelf_life_days ?? null,
-  storage_conditions: product?.storage_conditions ?? "",
+  storageOptions: parseStorageOptions(product?.storage_conditions, product?.shelf_life_days),
   ...Object.fromEntries(LOSS_METHODS.map((m) => [`loss_${m}_pct`, product?.[`loss_${m}_pct`] ?? null])),
   ...preset,
 });
@@ -392,15 +392,19 @@ function ProductEditor({
   const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
+    const { storageOptions, ...formRest } = form;
+    const storagePayload = serializeStorageOptions(storageOptions);
     const result = await act<{ id: string }>(
       {
         action: "saveProduct",
         product: {
-          ...form,
+          ...formRest,
           id: product?.id,
           names: extraNamesOnly(form.names),
           base_unit: form.base_unit || null,
           category_id: form.category_id || null,
+          shelf_life_days: storagePayload.shelf_life_days,
+          storage_conditions: storagePayload.storage_conditions,
           packs,
         },
       },
@@ -750,14 +754,17 @@ function ProductEditor({
 
   const storage = (
     <>
-      <div className="erpGrid two">
-        <Field label={T("Срок годности, дней", "Shelf life, days", "Hạn dùng, ngày")} hint={T("Используется для даты «годен до» в партиях", "Used for the use-by date of batches", "Dùng để tính hạn dùng của lô")}>
-          <NumberInput value={form.shelf_life_days} onChange={(v) => set("shelf_life_days", v === null ? null : Math.round(v))} />
-        </Field>
-        <Field label={T("Условия хранения", "Storage conditions", "Điều kiện bảo quản")}>
-          <input value={form.storage_conditions} placeholder={T("Например, 0…4 °C", "e.g. 0…4 °C", "VD: 0…4 °C")} onChange={(e) => set("storage_conditions", e.target.value)} />
-        </Field>
-      </div>
+      <p className="erpHint">
+        {T(
+          "Кратчайший срок из вариантов используется для даты «годен до» в партиях.",
+          "The shortest option is used for the use-by date of batches.",
+          "Hạn ngắn nhất dùng cho ngày «dùng đến» của lô.",
+        )}
+      </p>
+      <StorageOptionsEditor
+        options={form.storageOptions}
+        onChange={(value) => set("storageOptions", value)}
+      />
       {product ? (
         <>
           <h3>{T("Остатки", "In stock", "Tồn kho")}</h3>

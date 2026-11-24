@@ -40,7 +40,9 @@ import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsS
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText } from "./losses";
 import { ExtraNameFields } from "./ExtraNameFields";
 import { PrepCardHeader, PrepCoverField, PrepStepsEditor, type PrepCardKind } from "./PrepCardFields";
+import { StorageOptionsEditor } from "./StorageOptionsEditor";
 import { YieldCostFooter, yieldDisplayText, yieldPerUnitText } from "./YieldComposition";
+import { parseStorageOptions, serializeStorageOptions, type StorageOption } from "@/lib/erp/storageOptions";
 import {
   Empty,
   Field,
@@ -371,8 +373,7 @@ type RecipeForm = {
   photo: string;
   yield_qty: number | null;
   yield_pieces: number | null;
-  shelf_life_days: number | null;
-  storage_conditions: string;
+  storageOptions: StorageOption[];
   note: string;
   steps: RecipeStepDraft[];
   lines: LineDraft[];
@@ -420,8 +421,10 @@ function formFrom(recipe: ErpRecipe | null, product: ErpProduct): RecipeForm {
     photo: prepCoverUrl(recipe, product),
     yield_qty: recipe?.yield_qty ?? null,
     yield_pieces: recipe?.yield_pieces ?? null,
-    shelf_life_days: recipe?.shelf_life_days ?? product.shelf_life_days ?? null,
-    storage_conditions: recipe?.storage_conditions ?? product.storage_conditions ?? "",
+    storageOptions: parseStorageOptions(
+      recipe?.storage_conditions ?? product.storage_conditions,
+      recipe?.shelf_life_days ?? product.shelf_life_days,
+    ),
     note: recipe?.note ?? "",
     steps: parseRecipeInstructions(recipe ? recipeInstructionSource(recipe) : undefined),
     lines: (recipe?.lines ?? []).map((line) => ({
@@ -517,6 +520,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   });
   const batchCost = compositionYieldCost(ctx, form.lines);
 
+  const storagePayload = serializeStorageOptions(form.storageOptions);
+
   const publishInput = (): PrepPublishInput => ({
     product: { ...product, name_en: nameEn, name_vn: nameVn, names, unit_weight_kg: pieceWeight },
     kind: form.kind,
@@ -525,8 +530,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     photo: form.photo,
     yieldQty: form.yield_qty,
     yieldPieces: unit === "pcs" ? form.yield_qty : form.yield_pieces,
-    shelfLifeDays: form.shelf_life_days,
-    storageConditions: form.storage_conditions,
+    shelfLifeDays: storagePayload.shelf_life_days,
+    storageConditions: storagePayload.storage_conditions,
     version: viewed?.version,
     lines: form.lines.map((line, index) => ({
       product_id: line.product_id,
@@ -579,8 +584,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
       photo: form.photo,
       yield_qty: nextYield,
       yield_pieces: unit === "pcs" ? nextYield : form.yield_pieces,
-      shelf_life_days: form.shelf_life_days,
-      storage_conditions: form.storage_conditions,
+      shelf_life_days: storagePayload.shelf_life_days,
+      storage_conditions: storagePayload.storage_conditions,
       note: form.note,
       instructions: serializeRecipeInstructions(form.steps),
       lines: nextLines.map((line) => ({
@@ -778,12 +783,14 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               <NumberInput value={form.yield_pieces} disabled={readOnly} onChange={(v) => set("yield_pieces", v === null ? null : Math.round(v))} />
             </Field>
           ) : null}
-          <Field label={T("Срок годности, дней", "Shelf life, days", "Hạn dùng, ngày")}>
-            <NumberInput value={form.shelf_life_days} disabled={readOnly} onChange={(v) => set("shelf_life_days", v === null ? null : Math.round(v))} />
-          </Field>
-          <Field label={T("Условия хранения", "Storage", "Bảo quản")}>
-            <input value={form.storage_conditions} disabled={readOnly} placeholder="0…4 °C" onChange={(event) => set("storage_conditions", event.target.value)} />
-          </Field>
+        </div>
+        <div className="erpStorageBlock">
+          <h3 className="erpStorageTitle">{T("Сроки и условия хранения", "Shelf life and storage", "Hạn dùng và bảo quản")}</h3>
+          <StorageOptionsEditor
+            options={form.storageOptions}
+            disabled={readOnly}
+            onChange={(value) => set("storageOptions", value)}
+          />
         </div>
       </div>
 

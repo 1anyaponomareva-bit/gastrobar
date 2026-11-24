@@ -4,6 +4,7 @@ import { staffRecipePath } from "@/lib/recipes/cardUrl";
 import { parseRecipeInstructions, type RecipeStepDraft } from "./recipeCard";
 import { formatVietnamDate } from "@/lib/orders/datetime";
 import { roundQty, usableWeight, type ErpUnit, type LossMethod, type LossPcts } from "./costing";
+import { parseStorageOptions, storageOptionIcon } from "./storageOptions";
 import type { ErpProduct, ErpRecipe } from "./types";
 
 export type PrepPublishProduct = {
@@ -248,25 +249,42 @@ export function staffRecipeFromPrep(input: PrepPublishInput): Recipe {
       value: loc(`${grams} g`, `${grams} g`),
     });
   }
-  if (input.shelfLifeDays && input.shelfLifeDays > 0) {
+  const storageOptions = parseStorageOptions(input.storageConditions, input.shelfLifeDays).filter(
+    (row) => row.conditions.trim() || (row.days != null && row.days > 0),
+  );
+  if (storageOptions.length === 1 && storageOptions[0].days != null && storageOptions[0].days > 0) {
     facts.push({
       icon: "storage",
       label: loc("Storage", "Bảo quản"),
-      value: loc(`${input.shelfLifeDays} days`, `${input.shelfLifeDays} ngày`),
+      value: loc(`${storageOptions[0].days} days`, `${storageOptions[0].days} ngày`),
     });
+  } else if (storageOptions.length > 1) {
+    const shortest = storageOptions
+      .map((row) => row.days)
+      .filter((d): d is number => d != null && d > 0);
+    if (shortest.length) {
+      facts.push({
+        icon: "storage",
+        label: loc("Storage", "Bảo quản"),
+        value: loc(
+          `from ${Math.min(...shortest)} days`,
+          `từ ${Math.min(...shortest)} ngày`,
+        ),
+      });
+    }
   }
 
-  const storage: Recipe["storage"] = [];
-  const storageText = input.storageConditions.trim();
-  if (storageText || (input.shelfLifeDays && input.shelfLifeDays > 0)) {
-    storage.push({
-      icon: "fridge",
-      title: loc(storageText || "Storage", storageText || "Bảo quản"),
-      ...(input.shelfLifeDays && input.shelfLifeDays > 0
-        ? { text: loc(`${input.shelfLifeDays} days`, `${input.shelfLifeDays} ngày`) }
+  const storage: Recipe["storage"] = storageOptions.map((row) => {
+    const titleText = row.conditions.trim() || "Storage";
+    const titleVn = row.conditions.trim() || "Bảo quản";
+    return {
+      icon: storageOptionIcon(row.conditions),
+      title: loc(titleText, titleVn),
+      ...(row.days != null && row.days > 0
+        ? { text: loc(`${row.days} days`, `${row.days} ngày`) }
         : {}),
-    });
-  }
+    };
+  });
 
   const photo = staffPhoto(input.photo);
   const date = formatVietnamDate(input.cardDate) || input.cardDate.trim();

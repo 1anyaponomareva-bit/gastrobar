@@ -15,6 +15,7 @@ import {
 } from "./prepStaffRecipe";
 import { pickContentText } from "./contentLang";
 import { stepItemsMap, stepTitleMap, type RecipeStepDraft } from "./recipeCard";
+import { formatStorageOptionLine, parseStorageOptions } from "./storageOptions";
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
@@ -288,10 +289,13 @@ export function buildPrepSheetModel(input: PrepPublishInput, uiLang: ErpLang = e
     const piece = qtyAndUnit(input.product.unit_weight_kg, "kg", copy);
     facts.push(`${copy.piece}: ${piece.qty} ${piece.unit}`.trim());
   }
-  if (input.shelfLifeDays && input.shelfLifeDays > 0) {
-    facts.push(`${copy.shelfLife}: ${input.shelfLifeDays} ${copy.days}`);
+  const storageOptions = parseStorageOptions(input.storageConditions, input.shelfLifeDays).filter(
+    (row) => row.conditions.trim() || (row.days != null && row.days > 0),
+  );
+  for (const row of storageOptions) {
+    const line = formatStorageOptionLine(row, copy.days);
+    if (line) facts.push(`${copy.shelfLife}: ${line}`);
   }
-  if (input.storageConditions.trim()) facts.push(input.storageConditions.trim());
 
   const rows = input.lines.flatMap((line) => {
     const product = catalogOf(input, line.product_id);
