@@ -97,6 +97,23 @@ export type ErpVatDeductionStatus = "pending" | "deductible" | "partial" | "non_
 
 /** Invoice / tax-document check on a receipt header. missing ≠ deductible. */
 export type ErpVatVerificationStatus = "missing" | "pending" | "verified" | "rejected";
+
+/** Receipt acquisition fee kinds (Phase 8C). */
+export type ErpAcquisitionKind = "transport" | "delivery" | "handling" | "other";
+
+export type ErpAcquisitionCost = {
+  kind: ErpAcquisitionKind;
+  /** Entered amount (net or gross per vat_included). */
+  amount: number | null;
+  vat_rate?: number | null;
+  vat_included?: boolean;
+  vat_deduction_status?: ErpVatDeductionStatus | string | null;
+  deductible_vat_pct?: number | null;
+  net_amount?: number | null;
+  vat_amount?: number | null;
+  /** Inventory-includable total for this fee (net + non-deductible + pending VAT). */
+  inventory_amount?: number | null;
+};
 export type ErpLocation = {
   id: string;
   name: string;
@@ -414,6 +431,8 @@ export type ErpDocumentLine = {
   deductible_vat_pct?: number | null;
   deductible_vat_amount?: number | null;
   non_deductible_vat_amount?: number | null;
+  pending_vat_amount?: number | null;
+  allocated_acquisition_cost?: number | null;
   effective_inventory_cost?: number | null;
   net_unit_price?: number | null;
   gross_unit_price?: number | null;
@@ -467,6 +486,8 @@ export type ErpDocument = {
   invoice_attachment_url?: string | null;
   vat_verification_status?: ErpVatVerificationStatus | string | null;
   payment_status?: string | null;
+  /** Phase 8C acquisition fees on receipts (allocated into line/lot cost on post). */
+  acquisition_costs?: ErpAcquisitionCost[];
   recipe_id?: string | null;
   output_product_id?: string | null;
   plan_output_qty?: number | null;

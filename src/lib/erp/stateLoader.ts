@@ -214,12 +214,23 @@ async function loadPart(part: StatePart): Promise<unknown> {
 /** One document with its lines, or null. */
 export async function loadDocument(id: string): Promise<ErpDocument | null> {
   const db = erpDb();
-  const [document, lines] = await Promise.all([
+  const [document, lines, acquisition] = await Promise.all([
     db.from("erp_documents").select("*").eq("id", id).maybeSingle(),
     db.from("erp_document_lines").select("*").eq("document_id", id).order("line_no"),
+    db.from("erp_document_acquisition_costs").select("*").eq("document_id", id),
   ]);
   const doc = check(document) as Omit<ErpDocument, "lines"> | null;
-  return doc ? { ...doc, lines: check(lines) } : null;
+  if (!doc) return null;
+  // Acquisition table is Phase 8C — ignore until migration is applied.
+  const acquisition_costs =
+    !acquisition.error && Array.isArray(acquisition.data)
+      ? (acquisition.data as NonNullable<ErpDocument["acquisition_costs"]>)
+      : undefined;
+  return {
+    ...doc,
+    lines: check(lines),
+    ...(acquisition_costs && acquisition_costs.length ? { acquisition_costs } : {}),
+  };
 }
 
 /**

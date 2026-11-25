@@ -29,7 +29,7 @@ Modernize **Склад → Поставки** (`DocumentEditor` receipts). No se
 
 ## Not in this phase
 
-- Phase 8C–G (adjustments, reports, FIFO revaluation UI, etc.)
+- Phase 8D–G (VAT adjustment docs, reports, etc.) — see `PHASE8C_INVENTORY_COST_FIFO.md` for lot snapshots
 - Production SQL apply
 
 ## Verify locally

@@ -6,8 +6,21 @@ import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
 import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packDisplayName, packPrice, packToBase } from "@/lib/erp/packs";
-import { calculatePurchaseLineVat, type VatDeductionStatus } from "@/lib/erp/purchaseVat";
-import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState, ErpVatVerificationStatus } from "@/lib/erp/types";
+import {
+  acquisitionInventoryAmount,
+  allocateAcquisitionCosts,
+  calculatePurchaseLineVat,
+  type VatDeductionStatus,
+} from "@/lib/erp/purchaseVat";
+import type {
+  ErpAcquisitionCost,
+  ErpAcquisitionKind,
+  ErpDocType,
+  ErpDocument,
+  ErpDocumentLine,
+  ErpState,
+  ErpVatVerificationStatus,
+} from "@/lib/erp/types";
 import { catalogOrFallbackRates, effectiveInputVatRate } from "@/lib/erp/vat";
 import { vietnamNowTime } from "@/lib/orders/datetime";
 import { StatusBadge } from "./docs";
@@ -84,7 +97,7 @@ function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | 
   };
 }
 
-function receiptLineVat(state: ErpState, doc: ErpDocument, line: ErpDocumentLine) {
+function receiptLineVat(state: ErpState, doc: ErpDocument, line: ErpDocumentLine, allocatedAcquisition = 0) {
   const product = productById(state, line.product_id);
   const rate =
     line.vat_rate ??
@@ -99,7 +112,28 @@ function receiptLineVat(state: ErpState, doc: ErpDocument, line: ErpDocumentLine
     pricesIncludeVat: include,
     vatDeductionStatus: (line.vat_deduction_status as VatDeductionStatus) ?? "pending",
     deductibleVatPct: line.deductible_vat_pct ?? null,
+    allocatedAcquisitionCost: allocatedAcquisition || line.allocated_acquisition_cost || 0,
   });
+}
+
+const ACQ_KINDS: { kind: ErpAcquisitionKind; label: string }[] = [
+  { kind: "transport", label: "Transportation" },
+  { kind: "delivery", label: "Delivery" },
+  { kind: "handling", label: "Handling" },
+  { kind: "other", label: "Other" },
+];
+
+function acquisitionPreviewAllocations(state: ErpState, doc: ErpDocument): number[] {
+  const nets = doc.lines.map((line) => receiptLineVat(state, doc, line, 0).netTotal ?? 0);
+  const total = (doc.acquisition_costs ?? []).reduce((sum, row) => sum + acquisitionInventoryAmount({
+    kind: row.kind,
+    amount: row.amount,
+    vatRate: row.vat_rate,
+    vatIncluded: row.vat_included,
+    vatDeductionStatus: row.vat_deduction_status as VatDeductionStatus,
+    deductibleVatPct: row.deductible_vat_pct,
+  }), 0);
+  return allocateAcquisitionCosts(nets, total);
 }
 
 /** A new write-off with the warehouse, reason, comment and lines of another one. */
@@ -332,6 +366,10 @@ export function DocumentEditor({ id }: { id: string }) {
         <Header state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
       </section>
 
+      {type === "receipt" && state.settings.input_vat_enabled ? (
+        <AcquisitionCostsPanel doc={doc} editable={editable} set={set} taxRates={catalogOrFallbackRates(state.taxRates)} />
+      ) : null}
+
       <Lines state={state} doc={doc} editable={editable} set={set} setLines={setLines} />
 
       {editable ? (
@@ -397,6 +435,171 @@ function countLines(state: ErpState, warehouseId: string): ErpDocumentLine[] {
     .filter((row) => row.warehouse_id === warehouseId && row.qty !== 0 && state.products.some((p) => p.id === row.product_id && !p.archived_at))
     .sort((a, b) => (productById(state, a.product_id)?.name_en ?? "").localeCompare(productById(state, b.product_id)?.name_en ?? ""))
     .map((row) => ({ product_id: row.product_id, qty: row.qty }));
+}
+
+function AcquisitionCostsPanel({
+  doc,
+  editable,
+  set,
+  taxRates,
+}: {
+  doc: ErpDocument;
+  editable: boolean;
+  set: SetDoc;
+  taxRates: { id?: string; rate: number; name?: string }[];
+}) {
+  const rows = ACQ_KINDS.map((meta) => {
+    const existing = (doc.acquisition_costs ?? []).find((r) => r.kind === meta.kind);
+    return {
+      kind: meta.kind,
+      label: meta.label,
+      amount: existing?.amount ?? null,
+      vat_rate: existing?.vat_rate ?? null,
+      vat_included: existing?.vat_included ?? false,
+      vat_deduction_status: (existing?.vat_deduction_status as VatDeductionStatus) ?? "pending",
+      deductible_vat_pct: existing?.deductible_vat_pct ?? null,
+    };
+  });
+  const patch = (kind: ErpAcquisitionKind, next: Partial<ErpAcquisitionCost>) => {
+    const map = new Map((doc.acquisition_costs ?? []).map((r) => [r.kind, r]));
+    const prev = map.get(kind) ?? { kind, amount: null, vat_deduction_status: "pending" };
+    const merged = { ...prev, ...next, kind };
+    if (!(merged.amount != null && merged.amount > 0)) map.delete(kind);
+    else map.set(kind, merged);
+    set("acquisition_costs", [...map.values()]);
+  };
+  const inventoryTotal = rows.reduce(
+    (sum, row) =>
+      sum +
+      acquisitionInventoryAmount({
+        kind: row.kind,
+        amount: row.amount,
+        vatRate: row.vat_rate,
+        vatIncluded: row.vat_included,
+        vatDeductionStatus: row.vat_deduction_status,
+        deductibleVatPct: row.deductible_vat_pct,
+      }),
+    0,
+  );
+
+  return (
+    <section className="erpCard" data-testid="receipt-acquisition-costs">
+      <h2>{T("Доп. расходы приобретения", "Acquisition costs", "Chi phí mua hàng")}</h2>
+      <p className="erpHint">
+        {T(
+          "Транспорт, доставка, обработка и прочее. Возмещаемый НДС по этим расходам не входит в складскую себестоимость. Распределение по строкам — пропорционально Net при проведении.",
+          "Transport, delivery, handling, other. Deductible VAT on these fees is excluded from inventory cost. Allocated to lines by Net weight on post.",
+          "Vận chuyển, giao hàng, xử lý, khác. VAT được khấu trừ không vào giá vốn. Phân bổ theo Net khi ghi sổ.",
+        )}
+      </p>
+      <div className="erpTableWrap">
+        <table className="erpTable stack">
+          <thead>
+            <tr>
+              <th>{T("Вид", "Kind", "Loại")}</th>
+              <th>{T("Сумма", "Amount", "Số tiền")}</th>
+              <th>{T("НДС, %", "VAT, %", "VAT, %")}</th>
+              <th>{T("Режим", "Mode", "Chế độ")}</th>
+              <th>{T("Вычет", "Deduction", "Khấu trừ")}</th>
+              <th className="num">{T("В себестоимость", "To inventory", "Vào giá vốn")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const inv = acquisitionInventoryAmount({
+                kind: row.kind,
+                amount: row.amount,
+                vatRate: row.vat_rate,
+                vatIncluded: row.vat_included,
+                vatDeductionStatus: row.vat_deduction_status,
+                deductibleVatPct: row.deductible_vat_pct,
+              });
+              return (
+                <tr key={row.kind}>
+                  <td>{row.label}</td>
+                  <td className="edit">
+                    {editable ? (
+                      <NumberInput value={row.amount} onChange={(v) => patch(row.kind, { amount: v })} />
+                    ) : (
+                      vnd(row.amount)
+                    )}
+                  </td>
+                  <td className="edit">
+                    {editable ? (
+                      <select
+                        className="erpVatSelect"
+                        value={row.vat_rate ?? ""}
+                        onChange={(e) => patch(row.kind, { vat_rate: e.target.value === "" ? null : Number(e.target.value) })}
+                      >
+                        <option value="">0%</option>
+                        {taxRates.map((r) => (
+                          <option key={r.id ?? r.rate} value={r.rate}>
+                            {r.rate}%
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      `${row.vat_rate ?? 0}%`
+                    )}
+                  </td>
+                  <td className="edit">
+                    {editable ? (
+                      <select
+                        value={row.vat_included ? "incl" : "excl"}
+                        onChange={(e) => patch(row.kind, { vat_included: e.target.value === "incl" })}
+                      >
+                        <option value="excl">{T("без НДС", "excl. VAT", "chưa VAT")}</option>
+                        <option value="incl">{T("с НДС", "incl. VAT", "gồm VAT")}</option>
+                      </select>
+                    ) : row.vat_included ? (
+                      T("с НДС", "incl. VAT", "gồm VAT")
+                    ) : (
+                      T("без НДС", "excl. VAT", "chưa VAT")
+                    )}
+                  </td>
+                  <td className="edit">
+                    {editable ? (
+                      <div className="erpPackLine">
+                        <select
+                          value={row.vat_deduction_status}
+                          onChange={(e) =>
+                            patch(row.kind, {
+                              vat_deduction_status: e.target.value as VatDeductionStatus,
+                              deductible_vat_pct: e.target.value === "partial" ? (row.deductible_vat_pct ?? 100) : null,
+                            })
+                          }
+                        >
+                          {DEDUCTION_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                        {row.vat_deduction_status === "partial" ? (
+                          <NumberInput
+                            value={row.deductible_vat_pct}
+                            onChange={(v) => patch(row.kind, { deductible_vat_pct: v == null ? null : Math.min(100, Math.max(0, v)) })}
+                          />
+                        ) : null}
+                      </div>
+                    ) : (
+                      row.vat_deduction_status
+                    )}
+                  </td>
+                  <td className="num">{vnd(inv)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {inventoryTotal > 0 ? (
+        <p className="erpHint">
+          {T("Итого в складскую себестоимость", "Total to inventory cost", "Tổng vào giá vốn")}: <b>{vnd(inventoryTotal)}</b>
+        </p>
+      ) : null}
+    </section>
+  );
 }
 
 function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc: ErpDocument; editable: boolean; set: SetDoc; setLines: SetLines }) {
@@ -625,18 +828,20 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
   const missingPrice = priced && doc.lines.some((line) => line.product_id && (line.unit_price === null || line.unit_price === undefined));
   const qtyLabel = type === "count" ? T("Фактически", "Counted", "Thực tế") : type === "receipt" ? T("Принято", "Received", "Đã nhận") : T("Количество", "Quantity", "Số lượng");
   const stockLabel = type === "count" ? T("По учёту", "On record", "Theo sổ") : T("Есть на складе", "In stock", "Tồn kho");
+  const acqAlloc = vatOn ? acquisitionPreviewAllocations(state, doc) : [];
   const purchasePreview = vatOn
     ? doc.lines.reduce(
-        (acc, line) => {
-          const r = receiptLineVat(state, doc, line);
+        (acc, line, i) => {
+          const r = receiptLineVat(state, doc, line, acqAlloc[i] ?? 0);
           return {
             net: acc.net + (r.netTotal ?? 0),
             vat: acc.vat + (r.vatTotal ?? 0),
             gross: acc.gross + (r.grossTotal ?? 0),
             effective: acc.effective + (r.effectiveInventoryCost ?? 0),
+            acquisition: acc.acquisition + (r.allocatedAcquisitionCost ?? 0),
           };
         },
-        { net: 0, vat: 0, gross: 0, effective: 0 },
+        { net: 0, vat: 0, gross: 0, effective: 0, acquisition: 0 },
       )
     : null;
   const total = purchasePreview ? purchasePreview.gross : doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
@@ -687,7 +892,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                   effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions, {
                     categoryId: product?.category_id ?? null,
                   });
-                const lineVat = vatOn ? receiptLineVat(state, doc, line) : null;
+                const lineVat = vatOn ? receiptLineVat(state, doc, line, acqAlloc[index] ?? 0) : null;
                 const deduction = (line.vat_deduction_status as VatDeductionStatus) || "pending";
                 return (
                   <tr key={line.id ?? index} className={short ? "short" : ""}>
@@ -997,10 +1202,11 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
             <>
               {" "}
               · Net {vnd(purchasePreview.net)} · VAT {vnd(purchasePreview.vat)} · Gross {vnd(purchasePreview.gross)}
+              {purchasePreview.acquisition > 0 ? ` · Acq ${vnd(purchasePreview.acquisition)}` : ""}
               <br />
               {T("Эффективная складская себестоимость", "Effective inventory cost", "Giá vốn kho hiệu lực")}: <b>{vnd(purchasePreview.effective)}</b>
               {" · "}
-              {T("Pending включает НДС в себестоимость до подтверждения вычета", "Pending keeps VAT in inventory cost until deduction is confirmed", "Pending giữ VAT trong giá vốn đến khi xác nhận khấu trừ")}
+              {T("Net + non-deductible VAT + pending VAT + acquisition (без двойного учёта)", "Net + non-deductible + pending VAT + acquisition (no double-count)", "Net + VAT không khấu trừ + pending + chi phí mua (không đếm đôi)")}
             </>
           ) : null}
           {missingPrice ? ` · ${T("у строк без цены себестоимость будет неизвестна", "lines without a price will have unknown cost", "dòng chưa có giá sẽ chưa rõ giá vốn")}` : ""}
