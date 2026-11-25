@@ -15,6 +15,7 @@ import {
   type ErpUnit,
   type LossPcts,
 } from "@/lib/erp/costing";
+import { buildIngredientCostCard } from "@/lib/erp/recipeCosting";
 import { compatiblePacks, packDisplayName } from "@/lib/erp/packs";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
@@ -391,6 +392,19 @@ function ProductEditor({
   const remainingFrom1 = usableWeight(1, form, LOSS_METHODS);
   const hasProcessingLoss = LOSS_METHODS.some((m) => Number(form[`loss_${m}_pct`] ?? 0) > 0);
   const usableCost = finalCostPerKg(form.est_unit_cost, remainingFrom1);
+  const inputVatRate = effectiveInputVatRate(product?.id, state.settings, state.vatExceptions, {
+    categoryId: product?.category_id ?? form.category_id,
+  });
+  const ingredientCostCard = buildIngredientCostCard({
+    baseUnit: form.base_unit,
+    unitWeightKg: form.unit_weight_kg,
+    unitNetWeightKg: form.unit_net_weight_kg,
+    estUnitCost: form.est_unit_cost,
+    estCostSource: product?.est_cost_source ?? null,
+    estCostAt: product?.est_cost_at ?? null,
+    purchaseVatRate: inputVatRate,
+    purchaseUnitLabel: packs[0]?.label?.trim() || form.base_unit,
+  });
   const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
@@ -559,15 +573,55 @@ function ProductEditor({
           }
         >
           <span className="erpVatReadout" data-testid="product-vat">
-            {effectiveInputVatRate(product?.id, state.settings, state.vatExceptions, {
-              categoryId: product?.category_id ?? form.category_id,
-            })}
-            %
+            {inputVatRate}%
           </span>
           <NavLink href="/erp/service" className="erpLink">
             {T("Список исключений в настройках", "Exception list in settings", "Danh sách ngoại lệ trong cài đặt")}
           </NavLink>
         </Field>
+      </div>
+      <div className="erpKpis" data-testid="ingredient-cost-card" style={{ marginTop: 8 }}>
+        <div className="erpKpi">
+          <span>{T("Закуп. ед. / Склад / Рецепт", "Purchase / Inventory / Recipe unit", "Đơn vị mua / kho / CT")}</span>
+          <strong>
+            {[ingredientCostCard.purchaseUnit, ingredientCostCard.inventoryUnit, ingredientCostCard.recipeUnit]
+              .filter(Boolean)
+              .join(" · ") || "—"}
+          </strong>
+        </div>
+        {ingredientCostCard.grossWeightKg != null || ingredientCostCard.netUsableWeightKg != null ? (
+          <div className="erpKpi">
+            <span>{T("Брутто / нетто, кг", "Gross / net usable, kg", "Brutto / netto, kg")}</span>
+            <strong>
+              {ingredientCostCard.grossWeightKg ?? "—"} / {ingredientCostCard.netUsableWeightKg ?? "—"}
+            </strong>
+          </div>
+        ) : null}
+        {ingredientCostCard.usableYieldPercentage != null ? (
+          <div className="erpKpi">
+            <span>{T("Потери / выход", "Loss / usable yield", "Hao hụt / tỷ lệ dùng")}</span>
+            <strong>
+              {ingredientCostCard.lossPercentage?.toFixed(2)}% / {ingredientCostCard.usableYieldPercentage.toFixed(2)}%
+            </strong>
+          </div>
+        ) : null}
+        <div className="erpKpi">
+          <span>{T("Net / Gross закупка", "Purchase net / gross", "Mua net / gross")}</span>
+          <strong>
+            {vnd(ingredientCostCard.purchasePriceNet)} / {vnd(ingredientCostCard.purchasePriceGross)}
+          </strong>
+        </div>
+        <div className="erpKpi">
+          <span>{T("Эфф. складская себест.", "Effective inventory cost", "Giá vốn tồn hiệu lực")}</span>
+          <strong>{vnd(ingredientCostCard.effectiveInventoryCost)}</strong>
+        </div>
+        <div className="erpKpi">
+          <span>{T("Источник / обновление", "Cost source / last update", "Nguồn / cập nhật")}</span>
+          <strong>
+            {(ingredientCostCard.costSource ? costSourceLabel(ingredientCostCard.costSource as "receipt" | "manual") : "—") +
+              (ingredientCostCard.lastCostUpdate ? ` · ${dateText(ingredientCostCard.lastCostUpdate)}` : "")}
+          </strong>
+        </div>
       </div>
       <h3>{T("Фасовки для закупки", "Purchase packs", "Quy cách mua")}</h3>
       <p className="erpHint">

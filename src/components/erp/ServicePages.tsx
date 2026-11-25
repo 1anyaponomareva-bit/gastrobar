@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, ErpTaxRate, StaffMergeResult } from "@/lib/erp/types";
+import { DEFAULT_RECIPE_COST_SOURCE, RECIPE_COST_SOURCE_LABELS, type RecipeCostSourcePolicy } from "@/lib/erp/recipeCosting";
 import {
   DEFAULT_VAT_RATE,
   VAT_ACCOUNTING_METHODS,
@@ -123,6 +124,27 @@ export function SettingsPage() {
               onChange={(v) => set("default_output_vat_rate", v)}
             />
           </Field>
+          <Field
+            label={T("Источник себестоимости техкарт", "Tech-card cost source", "Nguồn giá vốn công thức")}
+            hint={T(
+              "Прогноз для меню. Фактическое списание сырья — только FIFO. Отсутствие цены ≠ 0.",
+              "Forecast for menu cards. Actual ingredient write-off stays FIFO. Missing price is never zero.",
+              "Dự báo cho thẻ món. Xuất nguyên liệu thực tế vẫn FIFO. Thiếu giá không thành 0.",
+            )}
+          >
+            <select
+              className="erpVatSelect"
+              data-testid="recipe-cost-source"
+              value={form.recipe_cost_source ?? DEFAULT_RECIPE_COST_SOURCE}
+              onChange={(e) => set("recipe_cost_source", (e.target.value || DEFAULT_RECIPE_COST_SOURCE) as RecipeCostSourcePolicy)}
+            >
+              {(Object.keys(RECIPE_COST_SOURCE_LABELS) as RecipeCostSourcePolicy[]).map((key) => (
+                <option key={key} value={key}>
+                  {RECIPE_COST_SOURCE_LABELS[key]}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
         <p className="erpHint">
           {T(
@@ -143,6 +165,7 @@ export function SettingsPage() {
                 default_output_vat_rate: form.default_output_vat_rate ?? DEFAULT_VAT_RATE,
                 purchase_prices_include_vat_default: form.purchase_prices_include_vat_default ?? true,
                 vat_accounting_method: form.vat_accounting_method || null,
+                recipe_cost_source: form.recipe_cost_source ?? DEFAULT_RECIPE_COST_SOURCE,
               };
               if (await act({ action: "saveSettings", settings }, T("Настройки сохранены", "Settings saved", "Đã lưu cài đặt"))) {
                 setForm(settings);

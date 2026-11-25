@@ -19,18 +19,32 @@ import {
   type PricingSettings,
   type ProductCostQuoteInput,
 } from "./costing";
-import type { ErpChannel, ErpDish, ErpRecipe } from "./types";
+import {
+  recipeCostSourceToMenuPriceSource,
+  resolveRecipeCostSource,
+  type RecipeCostSourcePolicy,
+} from "./recipeCosting";
+import type { ErpChannel, ErpDish, ErpRecipe, ErpSettings } from "./types";
 
 export { DEFAULT_MENU_PRICE_SOURCE, type MenuPriceSource };
+export { resolveRecipeCostSource, recipeCostSourceToMenuPriceSource, type RecipeCostSourcePolicy };
 
 export function menuCostContext(
-  state: { products: CostProduct[]; recipes: CostRecipe[]; costSources?: Iterable<ProductCostQuoteInput> },
-  priceSource: MenuPriceSource = DEFAULT_MENU_PRICE_SOURCE,
+  state: {
+    products: CostProduct[];
+    recipes: CostRecipe[];
+    costSources?: Iterable<ProductCostQuoteInput>;
+    settings?: Pick<ErpSettings, "recipe_cost_source"> | null;
+  },
+  priceSource?: MenuPriceSource,
   explodeRecipes = true,
 ): CostContext {
+  const resolved =
+    priceSource ??
+    recipeCostSourceToMenuPriceSource(resolveRecipeCostSource(state.settings ?? null));
   return buildCostContext(state.products, state.recipes, {
     quotes: state.costSources,
-    priceSource,
+    priceSource: resolved,
     explodeRecipes,
   });
 }

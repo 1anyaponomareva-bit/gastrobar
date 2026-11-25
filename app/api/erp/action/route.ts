@@ -312,6 +312,20 @@ export async function POST(request: Request) {
         await applyExtraNames(rpc, "dish", id, dish);
         return timing.json({ id, patch: await fresh(["dishes"]) });
       }
+      case "recordDishCostSnapshot": {
+        const id = await rpc<number>("erp_record_dish_cost_snapshot", {
+          p: object(a.snapshot, "snapshot"),
+          p_actor: actor,
+        });
+        return timing.json({ id, patch: {} });
+      }
+      case "loadDishCostHistory": {
+        const history = await rpc("erp_dish_cost_history", {
+          p_dish: uuid(a.dishId),
+          p_limit: a.limit == null ? 20 : Number(a.limit),
+        });
+        return timing.json({ history, patch: {} });
+      }
       case "staffCatalogMerge": {
         const result = await mergeOldStaffCatalog(a.apply === true, actor);
         return timing.json(a.apply === true ? result : { ...result, patch: {} });

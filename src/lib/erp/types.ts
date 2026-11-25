@@ -31,6 +31,28 @@ export type ErpSettings = {
   default_input_tax_rate_id?: string | null;
   default_output_tax_rate_id?: string | null;
   timezone?: string;
+  /**
+   * Phase 8F: planned tech-card cost policy.
+   * Actual warehouse write-off remains FIFO (`erp_consume`).
+   */
+  recipe_cost_source?: "manual_estimated" | "last_purchase" | "weighted_average" | "estimated_fifo" | null;
+};
+
+export type ErpDishCostSnapshot = {
+  id: number;
+  dish_id: string;
+  calculated_at: string;
+  calculated_by?: string | null;
+  cost_source?: string | null;
+  food_cost?: number | null;
+  packaging_cost?: number | null;
+  total_product_cost?: number | null;
+  cost_complete?: boolean;
+  change_reason?: string | null;
+  changed_ingredients?: unknown;
+  line_breakdown?: unknown;
+  previous_total?: number | null;
+  notes?: string | null;
 };
 
 /**
@@ -584,6 +606,23 @@ export type ErpAction =
   | { action: "publishPrepToStaff"; productId: string }
   | { action: "resolveRecipeLine"; lineId: string; productId: string; qty: number; remember: boolean }
   | { action: "saveDish"; dish: Record<string, unknown> }
+  | {
+      action: "recordDishCostSnapshot";
+      snapshot: {
+        dish_id: string;
+        cost_source?: string | null;
+        food_cost?: number | null;
+        packaging_cost?: number | null;
+        total_product_cost?: number | null;
+        cost_complete?: boolean;
+        change_reason?: string | null;
+        changed_ingredients?: unknown;
+        line_breakdown?: unknown;
+        previous_total?: number | null;
+        notes?: string | null;
+      };
+    }
+  | { action: "loadDishCostHistory"; dishId: string; limit?: number }
   | { action: "staffCatalogMerge"; apply: boolean }
   | { action: "importRecipes" }
   | { action: "previewCount"; preview: Record<string, unknown> }

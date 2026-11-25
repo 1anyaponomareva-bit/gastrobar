@@ -1,5 +1,5 @@
 /**
- * Phase 8C/8D/8E SQL+RPC checks on in-memory PGlite. Never touches production.
+ * Phase 8C/8D/8E/8F SQL+RPC checks on in-memory PGlite. Never touches production.
  * Run: npx tsx scripts/erp/test-phase8-vat.ts
  */
 import assert from "node:assert/strict";
@@ -381,6 +381,65 @@ async function main() {
       [adjId],
     );
     close(unalloc, 0, 1);
+  });
+
+  await test("8F recipe_cost_source setting + dish cost snapshot history", async () => {
+    await q(`select public.erp_save_settings($1::jsonb, $2)`, [
+      JSON.stringify({ recipe_cost_source: "last_purchase" }),
+      ACTOR,
+    ]);
+    const src = await value<string>(`select recipe_cost_source from public.erp_settings where id = 1`);
+    assert.equal(src, "last_purchase");
+
+    const dishId = await value<string>(`select public.erp_save_dish($1::jsonb, $2)`, [
+      JSON.stringify({
+        name_en: "Phase8F Snapshot Dish",
+        name_vn: "P8F",
+        sale_price: 99000,
+        lines: [],
+      }),
+      ACTOR,
+    ]);
+    const snapId = await value<number>(`select public.erp_record_dish_cost_snapshot($1::jsonb, $2)`, [
+      JSON.stringify({
+        dish_id: dishId,
+        cost_source: "manual_estimated",
+        food_cost: 24750,
+        packaging_cost: 3152,
+        total_product_cost: 27902,
+        cost_complete: true,
+        change_reason: "test_seed",
+        changed_ingredients: ["Mustard"],
+        line_breakdown: [{ name: "Mustard", cost: 1218.75 }],
+      }),
+      ACTOR,
+    ]);
+    assert.ok(Number(snapId) > 0);
+    const hist = await value<unknown>(`select public.erp_dish_cost_history($1, 5)`, [dishId]);
+    assert.ok(Array.isArray(hist) && hist.length >= 1);
+    const row = (hist as { total_product_cost: number; previous_total: number | null }[])[0];
+    close(row.total_product_cost, 27902, 0.1);
+
+    await q(`select public.erp_record_dish_cost_snapshot($1::jsonb, $2)`, [
+      JSON.stringify({
+        dish_id: dishId,
+        cost_source: "manual_estimated",
+        food_cost: 25000,
+        packaging_cost: 3152,
+        total_product_cost: 28152,
+        cost_complete: true,
+        change_reason: "ingredient_cost_change",
+      }),
+      ACTOR,
+    ]);
+    const hist2 = await value<unknown>(`select public.erp_dish_cost_history($1, 5)`, [dishId]);
+    const latest = (hist2 as { previous_total: number }[])[0];
+    close(latest.previous_total, 27902, 0.1);
+
+    await q(`select public.erp_save_settings($1::jsonb, $2)`, [
+      JSON.stringify({ recipe_cost_source: "manual_estimated" }),
+      ACTOR,
+    ]);
   });
 
   console.log(`\n${passed} phase-8 checks passed`);

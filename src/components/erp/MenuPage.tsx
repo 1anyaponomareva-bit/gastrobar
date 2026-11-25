@@ -1,12 +1,11 @@
 "use client";
 
 import { useErpRouter } from "./erpHref";
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { compositionChipLabel, moveListItem, moveOpenIndexes, withMainFlags } from "@/lib/erp/compositionLines";
 import {
   compositionLineQty,
   costLine,
-  DEFAULT_MENU_PRICE_SOURCE,
   isPackaging,
   liveCatalogName,
   processedUnitCost,
@@ -16,9 +15,17 @@ import {
   type MenuPriceSource,
 } from "@/lib/erp/costing";
 import { dishMainChannelFinance, DishChannelFinancePanel } from "./DishChannelFinance";
-import { dishCost, menuCostContext } from "@/lib/erp/menu";
+import { dishCost, menuCostContext, resolveRecipeCostSource, recipeCostSourceToMenuPriceSource } from "@/lib/erp/menu";
+import {
+  buildDishRecipeCostBlock,
+  compareDishCostSnapshots,
+  RECIPE_COST_SOURCE_LABELS,
+  menuPriceSourceToRecipeCostSource,
+  type RecipeCostSourcePolicy,
+  type RecipeCostWarning,
+} from "@/lib/erp/recipeCosting";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
-import type { ErpDish, ErpState } from "@/lib/erp/types";
+import type { ErpDish, ErpDishCostSnapshot, ErpState } from "@/lib/erp/types";
 import { classifyDishVatField, defaultOutputVatRate, effectiveOutputVatRate } from "@/lib/erp/vat";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
@@ -67,6 +74,33 @@ const marginNote = () =>
     "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses (commission, advertising). Not Net Profit: wages, rent and other costs are excluded.",
     "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Không phải Net Profit.",
   );
+
+function recipeCostWarningLabel(warning: RecipeCostWarning): string {
+  switch (warning) {
+    case "missing_ingredient_cost":
+      return T("Missing Ingredient Cost", "Missing Ingredient Cost", "Thiếu giá nguyên liệu");
+    case "missing_unit_conversion":
+      return T("Missing Unit Conversion", "Missing Unit Conversion", "Thiếu quy đổi đơn vị");
+    case "missing_usable_yield":
+      return T("Missing Usable Yield", "Missing Usable Yield", "Thiếu tỷ lệ dùng được");
+    case "pending_input_vat":
+      return T("Pending Input VAT", "Pending Input VAT", "VAT đầu vào đang chờ");
+    case "incomplete_production_cost":
+      return T("Incomplete Production Cost", "Incomplete Production Cost", "Giá sản xuất chưa đủ");
+    case "outdated_estimated_cost":
+      return T("Outdated Estimated Cost", "Outdated Estimated Cost", "Giá ước tính cũ");
+    case "missing_channel_settings":
+      return T("Missing Channel Settings", "Missing Channel Settings", "Thiếu cài đặt kênh");
+    case "below_minimum_margin":
+      return T("Below Minimum Margin", "Below Minimum Margin", "Dưới biên tối thiểu");
+    case "cost_conversion_incomplete":
+      return T("Cost Conversion Incomplete", "Cost Conversion Incomplete", "Quy đổi giá vốn chưa đủ");
+    case "cycle_detected":
+      return T("Cycle Detected", "Cycle Detected", "Phát hiện vòng lặp");
+    default:
+      return warning;
+  }
+}
 
 const isPackagingId = (state: ErpState, id: string | null) => {
   const product = id ? state.products.find((p) => p.id === id) : undefined;
@@ -320,12 +354,14 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const [baseline, setBaseline] = useState(() => JSON.stringify(toForm(dish, defaultCategory)));
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
-  const [priceSource, setPriceSource] = useState<MenuPriceSource>(DEFAULT_MENU_PRICE_SOURCE);
+  const defaultPolicy = resolveRecipeCostSource(state.settings);
+  const [priceSource, setPriceSource] = useState<MenuPriceSource>(() => recipeCostSourceToMenuPriceSource(defaultPolicy));
   const [workshop, setWorkshop] = useState<string>(POSTER_WORKSHOPS[0]);
   const [barcode, setBarcode] = useState("");
   const [weighted, setWeighted] = useState(false);
   const [venuePrices, setVenuePrices] = useState(false);
   const [noDiscount, setNoDiscount] = useState(false);
+  const [costHistory, setCostHistory] = useState<ErpDishCostSnapshot[]>([]);
   const ctx = useMemo(() => menuCostContext(state, priceSource), [state, priceSource]);
   const dirty = JSON.stringify(form) !== baseline;
   useDirtyGuard(dirty);
@@ -336,6 +372,40 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const showMainCm = Boolean(main && main.mode !== "incomplete" && mainCm?.complete);
   const portion = netWeight(state, form.lines.filter((l) => !isPackagingId(state, l.product_id)));
   const isNew = !dish;
+  const policy = menuPriceSourceToRecipeCostSource(priceSource);
+  const recipeCostBlock = useMemo(
+    () => buildDishRecipeCostBlock({ summary, policy }),
+    [summary, policy],
+  );
+  const historyCompare = useMemo(() => {
+    const prev = costHistory[0];
+    if (!prev) return null;
+    return compareDishCostSnapshots({
+      previousTotal: prev.total_product_cost ?? null,
+      currentTotal: summary.totalCost,
+      changeReason: prev.change_reason ?? null,
+      costSource: prev.cost_source ?? policy,
+      calculationDate: prev.calculated_at,
+    });
+  }, [costHistory, summary.totalCost, policy]);
+
+  useEffect(() => {
+    if (!dish?.id) {
+      setCostHistory([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const result = await act<{ history: ErpDishCostSnapshot[] }>(
+        { action: "loadDishCostHistory", dishId: dish.id, limit: 10 },
+        false,
+      );
+      if (!cancelled && result?.history) setCostHistory(Array.isArray(result.history) ? result.history : []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dish?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     const ready = form.lines.filter((l) => compositionLineQty(l) != null);
@@ -362,7 +432,35 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
     );
     if (!result) return;
     setBaseline(JSON.stringify(form));
-    if (isNew) router.replace(withMenuListReturn(`/erp/menu/${result.id}`, from ?? ""));
+    const dishId = result.id;
+    await act(
+      {
+        action: "recordDishCostSnapshot",
+        snapshot: {
+          dish_id: dishId,
+          cost_source: policy,
+          food_cost: summary.foodCost,
+          packaging_cost: summary.packagingCost,
+          total_product_cost: summary.totalCost,
+          cost_complete: summary.complete,
+          change_reason: "dish_saved",
+          changed_ingredients: summary.missing,
+          line_breakdown: summary.lines.map((line) => ({
+            name: line.name,
+            cost: line.cost,
+            source: line.source,
+          })),
+          previous_total: costHistory[0]?.total_product_cost ?? null,
+        },
+      },
+      false,
+    );
+    const hist = await act<{ history: ErpDishCostSnapshot[] }>(
+      { action: "loadDishCostHistory", dishId, limit: 10 },
+      false,
+    );
+    if (hist?.history) setCostHistory(Array.isArray(hist.history) ? hist.history : []);
+    if (isNew) router.replace(withMenuListReturn(`/erp/menu/${dishId}`, from ?? ""));
   };
 
   const toggle = (index: number) =>
@@ -675,7 +773,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           </div>
         ) : null}
 
-        <div className="erpKpis">
+        <div className="erpKpis" data-testid="recipe-cost-block">
           <div className="erpKpi">
             <span>{T("Продукты", "Food", "Thực phẩm")}</span>
             <strong>{summary.foodCost === null ? `≥ ${vnd(summary.knownFood)}` : vnd(summary.foodCost)}</strong>
@@ -687,6 +785,20 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           <div className="erpKpi main">
             <span>{T("Себестоимость порции", "Portion cost", "Giá vốn mỗi phần")}</span>
             <strong>{summary.totalCost === null ? T("неполная", "incomplete", "chưa đủ") : vnd(summary.totalCost)}</strong>
+          </div>
+          <div className="erpKpi">
+            <span>{T("Источник себестоимости", "Cost source", "Nguồn giá vốn")}</span>
+            <strong>{RECIPE_COST_SOURCE_LABELS[policy]}</strong>
+          </div>
+          <div className="erpKpi">
+            <span>{T("Полнота расчёта", "Cost completeness", "Độ đầy đủ")}</span>
+            <strong>
+              {recipeCostBlock.costCompleteness === "complete"
+                ? T("полная", "complete", "đầy đủ")
+                : recipeCostBlock.costCompleteness === "partial"
+                  ? T("частичная", "partial", "một phần")
+                  : T("нет данных", "unknown", "chưa có")}
+            </strong>
           </div>
           <div className="erpKpi">
             <span>{T("Цена продажи", "Sale price", "Giá bán")}</span>
@@ -711,6 +823,38 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
             </div>
           ) : null}
         </div>
+        <div className="erpGrid two" style={{ marginTop: 12 }}>
+          <Field
+            label={T("Политика расчёта (техкарта)", "Tech-card cost policy", "Chính sách giá vốn công thức")}
+            hint={T(
+              "Только прогноз. Фактическое списание — FIFO. Не меняет цены продажи.",
+              "Forecast only. Actual write-off stays FIFO. Does not change sale prices.",
+              "Chỉ dự báo. Xuất kho thực tế vẫn FIFO. Không đổi giá bán.",
+            )}
+          >
+            <select
+              value={policy}
+              onChange={(e) => setPriceSource(recipeCostSourceToMenuPriceSource(e.target.value as RecipeCostSourcePolicy))}
+              data-testid="dish-cost-source"
+            >
+              {(Object.keys(RECIPE_COST_SOURCE_LABELS) as RecipeCostSourcePolicy[]).map((key) => (
+                <option key={key} value={key}>
+                  {RECIPE_COST_SOURCE_LABELS[key]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        {recipeCostBlock.warnings.length ? (
+          <div className="erpNotice warn" data-testid="recipe-cost-warnings">
+            <strong>{T("Предупреждения себестоимости", "Cost warnings", "Cảnh báo giá vốn")}</strong>
+            <ul>
+              {recipeCostBlock.warnings.map((w) => (
+                <li key={w}>{recipeCostWarningLabel(w)}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <DishChannelFinancePanel
@@ -726,6 +870,64 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
         onChannelPrice={(channelId, price) => set("channel_prices", { ...form.channel_prices, [channelId]: price })}
         defaultDetailed={false}
       />
+
+      <section className="erpCard" data-testid="dish-cost-history">
+        <h2>{T("История себестоимости", "Cost history", "Lịch sử giá vốn")}</h2>
+        <p className="erpHint">
+          {T(
+            "Прогнозные снимки. Историческая себестоимость проведённых продаж не изменяется.",
+            "Forecast snapshots only. Historical cost of posted sales is never rewritten.",
+            "Chỉ ảnh chụp dự báo. Giá vốn bán đã ghi sổ không bị sửa.",
+          )}
+        </p>
+        {historyCompare ? (
+          <div className="erpKpis">
+            <div className="erpKpi">
+              <span>{T("Предыдущая", "Previous", "Trước")}</span>
+              <strong>{vnd(historyCompare.previousCost)}</strong>
+            </div>
+            <div className="erpKpi">
+              <span>{T("Текущая", "Current", "Hiện tại")}</span>
+              <strong>{vnd(historyCompare.currentCost)}</strong>
+            </div>
+            <div className="erpKpi">
+              <span>{T("Изменение", "Change", "Thay đổi")}</span>
+              <strong>
+                {vnd(historyCompare.costDifference)}
+                {historyCompare.costDifferencePercentage != null
+                  ? ` · ${pct(historyCompare.costDifferencePercentage)}`
+                  : ""}
+              </strong>
+            </div>
+          </div>
+        ) : (
+          <p className="erpHint">{T("После сохранения появится снимок для сравнения.", "A snapshot for comparison appears after save.", "Sau khi lưu sẽ có ảnh để so sánh.")}</p>
+        )}
+        {costHistory.length ? (
+          <div className="erpTableWrap scroll">
+            <table className="erpTable stack">
+              <thead>
+                <tr>
+                  <th>{T("Дата", "Date", "Ngày")}</th>
+                  <th className="num">{T("Себестоимость", "Cost", "Giá vốn")}</th>
+                  <th>{T("Источник", "Source", "Nguồn")}</th>
+                  <th>{T("Причина", "Reason", "Lý do")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {costHistory.map((row) => (
+                  <tr key={row.id}>
+                    <td>{new Date(row.calculated_at).toLocaleString()}</td>
+                    <td className="num">{vnd(row.total_product_cost ?? null)}</td>
+                    <td>{row.cost_source ?? "—"}</td>
+                    <td>{row.change_reason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
 
       <div className="erpActions split">
         <div className="erpRow">
