@@ -7,8 +7,9 @@
  * 0% standard, VAT Exempt, and Not Subject stay distinct catalog rows — never merge.
  *
  * Phase 4: Input and Output exceptions are independent (`direction`).
- * Priority per direction: 1) item exception  2) legacy dish.vat_rate (output)
- * 3) category exception  4) company default.
+ * Output priority (Release 1): dish exception → category exception → (channel in
+ * dishChannelFinance) → company default. Legacy `dish.vat_rate` is NOT a live
+ * override — use Output VAT Exceptions for individual rates.
  * Legacy rows without direction/scope_kind read as input/product.
  */
 
@@ -132,10 +133,27 @@ export function effectiveInputVatRate(
 }
 
 /**
- * Output VAT without sales-channel context (catalog / dish field readout).
- * Release 1: dish exception → explicit dish.vat_rate (≠ global) → product exception
- * → category exception → global. Auto-baseline dish.vat_rate (= global) is ignored.
- * For dish×channel finance use resolveDishOutputVatRate (adds channel before global).
+ * Classification of the legacy `erp_dishes.vat_rate` column (does not affect resolution).
+ * - inherited: null/empty, or equals current global (typical auto-seed) → ignored
+ * - legacy_field: non-null value that is not backed by a dish Output exception
+ * - explicit_override: dish-scoped Output VAT Exception exists (canonical individual source)
+ */
+export function classifyDishVatField(opts: {
+  dishVatRate?: number | null;
+  globalDefault: number;
+  hasDishOutputException: boolean;
+}): "inherited" | "legacy_field" | "explicit_override" {
+  if (opts.hasDishOutputException) return "explicit_override";
+  if (opts.dishVatRate == null || !Number.isFinite(Number(opts.dishVatRate))) return "inherited";
+  if (Number(opts.dishVatRate) === opts.globalDefault) return "inherited";
+  return "legacy_field";
+}
+
+/**
+ * Output VAT without sales-channel context (catalog / dish readout).
+ * Release 1: dish exception → product exception → category exception → global.
+ * Legacy `dish.vat_rate` / opts.dishVatRate do NOT participate (kept for API compat only).
+ * For dish×channel finance use resolveDishOutputVatRate (inserts channel before global).
  */
 export function effectiveOutputVatRate(
   settings?: { default_output_vat_rate?: number | null } | null,
@@ -144,6 +162,7 @@ export function effectiveOutputVatRate(
     dishId?: string | null;
     productId?: string | null;
     categoryId?: string | null;
+    /** @deprecated Ignored — individual overrides live in Output VAT Exceptions only. */
     dishVatRate?: number | null;
     asOf?: string | Date | null;
   },
@@ -153,13 +172,6 @@ export function effectiveOutputVatRate(
   if (opts?.dishId) {
     const dish = rows.find((row) => normalizeVatScope(row) === "dish" && row.dish_id === opts.dishId);
     if (dish) return asVatRate(dish.vat_rate, global);
-  }
-  if (
-    opts?.dishVatRate != null &&
-    Number.isFinite(Number(opts.dishVatRate)) &&
-    Number(opts.dishVatRate) !== global
-  ) {
-    return asVatRate(opts.dishVatRate, global);
   }
   if (opts?.productId) {
     const product = rows.find((row) => normalizeVatScope(row) === "product" && row.product_id === opts.productId);

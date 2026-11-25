@@ -65,16 +65,15 @@ export function channelCalcMode(channel: ErpChannel): ChannelCalcMode {
 }
 
 /**
- * Output VAT for dish×channel (Release 1 final):
- * 1) Individual Output VAT Exception (dish scope)
- * 2) Explicit individual dish.vat_rate — ONLY when it differs from the global default
- *    (auto-assigned 8%/global baseline is ignored so it cannot override category/channel)
- * 3) Category Output VAT Exception
- * 4) Sales Channel output_vat_rate
- * 5) Global default_output_vat_rate
+ * Output VAT for dish×channel (Release 1 — final):
+ * 1) Individual Output VAT Exception (dish scope) — sole individual source
+ * 2) Category Output VAT Exception
+ * 3) Sales Channel output_vat_rate
+ * 4) Global default_output_vat_rate
  *
- * Single individual source: prefer erp_vat_exceptions(dish); dish.vat_rate is a legacy
- * alias for the same priority when it is clearly not the auto baseline.
+ * Legacy `erp_dishes.vat_rate` / opts.dishVatRate do NOT participate in resolution.
+ * Changing global 8%→10% must inherit for dishes without an Output exception,
+ * even if the legacy column still stores 8%.
  * Input/purchase VAT never drives dish output VAT.
  */
 export function resolveDishOutputVatRate(opts: {
@@ -83,6 +82,7 @@ export function resolveDishOutputVatRate(opts: {
   channel?: Pick<ErpChannel, "output_vat_rate"> | null;
   dishId?: string | null;
   categoryId?: string | null;
+  /** @deprecated Ignored — use Output VAT Exceptions for individual rates. */
   dishVatRate?: number | null;
   asOf?: string | Date | null;
 }): number {
@@ -94,14 +94,6 @@ export function resolveDishOutputVatRate(opts: {
   if (opts.dishId) {
     const dish = rows.find((row) => normalizeVatScope(row) === "dish" && row.dish_id === opts.dishId);
     if (dish && dish.vat_rate != null) return Number(dish.vat_rate);
-  }
-  // Legacy dish.vat_rate: ignore when equal to global (typical auto-seed 8%).
-  if (
-    opts.dishVatRate != null &&
-    Number.isFinite(Number(opts.dishVatRate)) &&
-    Number(opts.dishVatRate) !== global
-  ) {
-    return Number(opts.dishVatRate);
   }
   if (opts.categoryId) {
     const cat = rows.find((row) => normalizeVatScope(row) === "category" && row.category_id === opts.categoryId);

@@ -19,7 +19,7 @@ import { dishMainChannelFinance, DishChannelFinancePanel } from "./DishChannelFi
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
-import { defaultOutputVatRate, effectiveOutputVatRate } from "@/lib/erp/vat";
+import { classifyDishVatField, defaultOutputVatRate, effectiveOutputVatRate } from "@/lib/erp/vat";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
 import { useErp } from "./ErpShell";
@@ -467,34 +467,48 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           </Field>
           {state.settings.output_vat_enabled ? (
             <Field
-              label={T("НДС, %", "VAT, %", "VAT, %")}
+              label={T("Исходящий НДС (эффективный)", "Output VAT (effective)", "VAT đầu ra (hiệu lực)")}
               hint={T(
-                `Эффективная ставка (без канала): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
-                  dishId: dish?.id,
-                  categoryId: form.category_id || null,
-                  dishVatRate: form.vat_rate,
-                })}%. Приоритет: исключение блюда → явное поле (≠${defaultOutputVatRate(state.settings)}%) → категория → канал → глобальная. Авто-${defaultOutputVatRate(state.settings)}% в поле не перекрывает категорию/канал.`,
-                `Effective rate (no channel): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
-                  dishId: dish?.id,
-                  categoryId: form.category_id || null,
-                  dishVatRate: form.vat_rate,
-                })}%. Priority: dish exception → explicit field (≠${defaultOutputVatRate(state.settings)}%) → category → channel → global. Auto-${defaultOutputVatRate(state.settings)}% field does not override category/channel.`,
-                `Thuế (không kênh): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
-                  dishId: dish?.id,
-                  categoryId: form.category_id || null,
-                  dishVatRate: form.vat_rate,
-                })}%. Ưu tiên: ngoại lệ món → field rõ (≠${defaultOutputVatRate(state.settings)}%) → danh mục → kênh → global.`,
+                `Приоритет: Output VAT Exception блюда → категории → канал → глобальная ${defaultOutputVatRate(state.settings)}%. Поле Legacy vat_rate не участвует в расчёте — индивидуальные ставки только через Служебное → VAT Exceptions.`,
+                `Priority: dish Output VAT Exception → category → channel → global ${defaultOutputVatRate(state.settings)}%. Legacy vat_rate is ignored — individual rates only via Admin → VAT Exceptions.`,
+                `Ưu tiên: ngoại lệ món → danh mục → kênh → global ${defaultOutputVatRate(state.settings)}%. Legacy vat_rate bị bỏ qua — chỉ dùng VAT Exceptions.`,
               )}
             >
-              <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />
               <span className="erpVatReadout" data-testid="dish-vat-effective">
                 {effectiveOutputVatRate(state.settings, state.vatExceptions, {
                   dishId: dish?.id,
                   categoryId: form.category_id || null,
-                  dishVatRate: form.vat_rate,
                 })}
                 %
               </span>
+              {(() => {
+                const kind = classifyDishVatField({
+                  dishVatRate: form.vat_rate,
+                  globalDefault: defaultOutputVatRate(state.settings),
+                  hasDishOutputException: Boolean(
+                    dish?.id &&
+                      (state.vatExceptions ?? []).some(
+                        (row) =>
+                          (row.direction === "output" || row.vat_direction === "output") &&
+                          (row.scope_kind === "dish" || row.scope === "dish") &&
+                          row.dish_id === dish.id,
+                      ),
+                  ),
+                });
+                return kind === "legacy_field" ? (
+                  <span className="erpBadge warn" title="Legacy vat_rate">
+                    Legacy VAT Rate
+                  </span>
+                ) : kind === "explicit_override" ? (
+                  <span className="erpBadge ok">Output Exception</span>
+                ) : (
+                  <span className="erpBadge">Inherited</span>
+                );
+              })()}
+              <details className="erpHint">
+                <summary>{T("Legacy поле vat_rate (не влияет на финансы)", "Legacy vat_rate field (ignored by finance)", "Trường legacy vat_rate (bỏ qua)")}</summary>
+                <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />
+              </details>
             </Field>
           ) : null}
         </div>

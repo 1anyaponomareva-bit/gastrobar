@@ -6,6 +6,7 @@ import {
   marginBandForChannel,
   resolveDishOutputVatRate,
 } from "./dishChannelFinance";
+import { classifyDishVatField, effectiveOutputVatRate } from "./vat";
 import type { ErpChannel } from "./types";
 
 const grab = (over: Partial<ErpChannel> = {}): ErpChannel =>
@@ -133,25 +134,123 @@ test("output VAT: dish exception wins over channel", () => {
   assert.equal(rate, 5);
 });
 
-test("output VAT: auto dish.vat_rate=global does not override category/channel", () => {
+test("output VAT: legacy dish.vat_rate never overrides category/channel", () => {
   const rate = resolveDishOutputVatRate({
     settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
     exceptions: [{ id: "1", category_id: "c1", vat_rate: 0, direction: "output", scope_kind: "category" } as never],
     channel: { output_vat_rate: 8 },
     categoryId: "c1",
-    dishVatRate: 8,
+    dishVatRate: 5,
   });
   assert.equal(rate, 0);
 });
 
-test("output VAT: explicit dish.vat_rate ≠ global acts as individual override", () => {
-  const rate = resolveDishOutputVatRate({
+test("output VAT: global 8→10 inherits even when legacy dish.vat_rate stays 8", () => {
+  const before = resolveDishOutputVatRate({
     settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
     exceptions: [],
-    channel: { output_vat_rate: 8 },
-    dishVatRate: 0,
+    channel: null,
+    dishVatRate: 8,
   });
-  assert.equal(rate, 0);
+  assert.equal(before, 8);
+  const after = resolveDishOutputVatRate({
+    settings: { output_vat_enabled: true, default_output_vat_rate: 10 },
+    exceptions: [],
+    channel: null,
+    dishVatRate: 8, // stale auto-seed — must NOT become an individual exception
+  });
+  assert.equal(after, 10);
+});
+
+test("output VAT: dish Output exception survives global change", () => {
+  const ex = [{ id: "1", dish_id: "d1", vat_rate: 0, direction: "output", scope_kind: "dish" }] as never[];
+  const at8 = resolveDishOutputVatRate({
+    settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
+    exceptions: ex,
+    channel: { output_vat_rate: 8 },
+    dishId: "d1",
+    dishVatRate: 8,
+  });
+  const at10 = resolveDishOutputVatRate({
+    settings: { output_vat_enabled: true, default_output_vat_rate: 10 },
+    exceptions: ex,
+    channel: { output_vat_rate: 10 },
+    dishId: "d1",
+    dishVatRate: 8,
+  });
+  assert.equal(at8, 0);
+  assert.equal(at10, 0);
+});
+
+test("output VAT: category exception then channel then global", () => {
+  assert.equal(
+    resolveDishOutputVatRate({
+      settings: { output_vat_enabled: true, default_output_vat_rate: 10 },
+      exceptions: [],
+      channel: { output_vat_rate: 8 },
+    }),
+    8,
+  );
+  assert.equal(
+    resolveDishOutputVatRate({
+      settings: { output_vat_enabled: true, default_output_vat_rate: 10 },
+      exceptions: [{ id: "1", category_id: "c1", vat_rate: 5, direction: "output", scope_kind: "category" } as never],
+      channel: { output_vat_rate: 8 },
+      categoryId: "c1",
+    }),
+    5,
+  );
+});
+
+test("classifyDishVatField: inherited vs legacy_field vs explicit_override", () => {
+  assert.equal(classifyDishVatField({ dishVatRate: 8, globalDefault: 8, hasDishOutputException: false }), "inherited");
+  assert.equal(classifyDishVatField({ dishVatRate: null, globalDefault: 8, hasDishOutputException: false }), "inherited");
+  assert.equal(classifyDishVatField({ dishVatRate: 8, globalDefault: 10, hasDishOutputException: false }), "legacy_field");
+  assert.equal(classifyDishVatField({ dishVatRate: 0, globalDefault: 8, hasDishOutputException: false }), "legacy_field");
+  assert.equal(classifyDishVatField({ dishVatRate: 8, globalDefault: 8, hasDishOutputException: true }), "explicit_override");
+});
+
+test("effectiveOutputVatRate ignores legacy dish.vat_rate after global change", () => {
+  assert.equal(
+    effectiveOutputVatRate(
+      { default_output_vat_rate: 10 },
+      [],
+      { dishId: "d1", dishVatRate: 8 },
+    ),
+    10,
+  );
+});
+
+test("legacy dish.vat_rate does not change channel finance when global moves 8→10", () => {
+  const ch = grab({ output_vat_rate: null });
+  const at8 = computeDishChannelFinance({
+    channel: ch,
+    grossSellingPrice: 109_000,
+    foodCost: 24_750,
+    packagingCost: 3_152,
+    outputVatRate: resolveDishOutputVatRate({
+      settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
+      exceptions: [],
+      channel: ch,
+      dishVatRate: 8,
+    }),
+  });
+  const at10 = computeDishChannelFinance({
+    channel: ch,
+    grossSellingPrice: 109_000,
+    foodCost: 24_750,
+    packagingCost: 3_152,
+    outputVatRate: resolveDishOutputVatRate({
+      settings: { output_vat_enabled: true, default_output_vat_rate: 10 },
+      exceptions: [],
+      channel: ch,
+      dishVatRate: 8,
+    }),
+  });
+  assert.ok(Math.abs(at8.result!.outputVatAmount! - 8_074.07) < 0.2);
+  // 109000 / 1.10
+  assert.ok(Math.abs(at10.result!.netRevenue! - 99_090.909) < 0.5);
+  assert.notEqual(at8.result!.contributionMarginPct, at10.result!.contributionMarginPct);
 });
 
 test("margin bands use channel thresholds", () => {
