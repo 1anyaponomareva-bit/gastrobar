@@ -1,7 +1,7 @@
 /**
  * Phase 6 — unified financial calculator (single source of formulas for ERP).
  * Pure TypeScript; no DB migration. Does not write tax registers or change FIFO.
- * Dish card UI integration is Phase 7; callers should import from here only.
+ * Dish card UI (Phase 7) imports from here only — do not duplicate formulas in components.
  */
 
 import { advertisingRateForScenario, splitRateWithVat, type VatDeductionStatus } from "./channelFinance";
