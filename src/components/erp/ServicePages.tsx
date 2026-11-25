@@ -17,8 +17,10 @@ import {
   defaultOutputVatRate,
   normalizeVatScope,
   taxRateLabel,
+  vatAccountingMethodLabel,
   vatRatesForSelect,
   visibleVatExceptions,
+  type VatAccountingMethod,
   type VatDirection,
   type VatExceptionScope,
 } from "@/lib/erp/vat";
@@ -68,24 +70,21 @@ export function SettingsPage() {
           <Field
             label={T("Метод налогового учёта", "VAT accounting method", "Phương pháp kế toán thuế GTGT")}
             hint={T(
-              "Пусто — ещё не подтверждено администратором или бухгалтером.",
-              "Empty means not yet confirmed by an administrator or accountant.",
-              "Để trống = chưa được quản trị viên/kế toán xác nhận.",
+              "Когда именно фиксируем НДС: по оплате, по документу или смешанно. Выбирает бухгалтер; пока не выбрано — «Не подтверждён».",
+              "When VAT is recognized: on payment, on the document, or mixed. Accountant chooses; until then leave Unconfirmed.",
+              "Khi nào ghi nhận VAT: theo tiền, theo chứng từ, hoặc hỗn hợp. Kế toán chọn; chưa chọn thì để Chưa xác nhận.",
             )}
           >
             <select
               className="erpVatSelect"
               value={form.vat_accounting_method ?? ""}
               onChange={(e) => set("vat_accounting_method", e.target.value || null)}
+              aria-label={T("Метод налогового учёта", "VAT accounting method", "Phương pháp kế toán thuế GTGT")}
             >
-              <option value="">{T("Не подтверждён", "Unconfirmed", "Chưa xác nhận")}</option>
+              <option value="">{vatAccountingMethodLabel("")}</option>
               {VAT_ACCOUNTING_METHODS.filter((m) => m !== "unconfirmed").map((method) => (
                 <option key={method} value={method}>
-                  {method === "cash"
-                    ? T("Кассовый", "Cash", "Tiền mặt")
-                    : method === "accrual"
-                      ? T("Начисление", "Accrual", "Dồn tích")
-                      : T("Смешанный", "Hybrid", "Hỗn hợp")}
+                  {vatAccountingMethodLabel(method as VatAccountingMethod)}
                 </option>
               ))}
             </select>

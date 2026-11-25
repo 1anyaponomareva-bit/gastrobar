@@ -13,6 +13,8 @@
  * Legacy rows without direction/scope_kind read as input/product.
  */
 
+import { T } from "@/components/erp/i18n";
+
 /** Hardcoded fallback when the tax-rates catalog is not loaded yet. */
 export const ERP_VAT_RATES = [0, 5, 8, 10] as const;
 export type ErpVatRate = (typeof ERP_VAT_RATES)[number];
@@ -56,6 +58,41 @@ export type TaxRateRow = {
 
 export const VAT_ACCOUNTING_METHODS = ["cash", "accrual", "hybrid", "unconfirmed"] as const;
 export type VatAccountingMethod = (typeof VAT_ACCOUNTING_METHODS)[number];
+
+/** Plain-language labels for the tax accounting method select (RU/EN/VN). */
+export function vatAccountingMethodLabel(method: VatAccountingMethod | "" | null | undefined): string {
+  switch (method) {
+    case "cash":
+      return T(
+        "Кассовый — НДС учитываем, когда деньги реально пришли или ушли",
+        "Cash — recognize VAT when money is actually paid or received",
+        "Tiền mặt — ghi nhận VAT khi tiền thực sự vào/ra",
+      );
+    case "accrual":
+      return T(
+        "Начисление — НДС по накладной/счёту, даже если ещё не платили",
+        "Accrual — recognize VAT on the invoice/document even if unpaid",
+        "Dồn tích — ghi nhận VAT theo hoá đơn dù chưa thanh toán",
+      );
+    case "hybrid":
+      return T(
+        "Смешанный — часть операций по оплате, часть по документам (как скажет бухгалтер)",
+        "Hybrid — some by payment, some by documents (per accountant)",
+        "Hỗn hợp — một phần theo tiền, một phần theo chứng từ (theo kế toán)",
+      );
+    case "unconfirmed":
+    case "":
+    case null:
+    case undefined:
+      return T(
+        "Не подтверждён — метод ещё не выбран бухгалтером",
+        "Unconfirmed — accountant has not chosen a method yet",
+        "Chưa xác nhận — kế toán chưa chọn phương pháp",
+      );
+    default:
+      return String(method);
+  }
+}
 
 export function isAllowedVatRate(value: unknown): value is ErpVatRate {
   const n = Number(value);
