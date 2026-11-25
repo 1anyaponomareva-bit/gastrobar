@@ -138,9 +138,9 @@ function ChannelCard({ channel }: { channel: ErpChannel }) {
       </div>
 
       {open ? (
-        <div className="erpStack" style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12 }}>
           {missingFinance ? (
-            <p className="erpBanner warn" role="status">
+            <p className="erpHint" role="status" style={{ color: "var(--erp-warn, #b45309)" }}>
               {missingFinance}
             </p>
           ) : null}
@@ -374,7 +374,7 @@ export function ChannelFinanceEditor({ channels }: { channels: ErpChannel[] }) {
     );
   }
   return (
-    <div className="erpStack" data-testid="channel-finance-editor">
+    <div data-testid="channel-finance-editor">
       <p className="erpHint">
         {T(
           "Новые поля комиссии/рекламы сохраняются в истории. Текущая маржа на карточке блюда до Phase 6 по-прежнему использует Legacy Rate (commission_pct). Вычисляемые net/gross не редактируются отдельно.",
