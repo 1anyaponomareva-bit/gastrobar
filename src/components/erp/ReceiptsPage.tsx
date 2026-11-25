@@ -663,7 +663,8 @@ export function ReceiptsPage() {
       <PageHead
         title={
           <>
-            {T("Поставки", "Deliveries", "Nhập hàng")} {rows ? <span className="erpHeadCount">{list.length}</span> : null}
+            {T("Поставки и входящий НДС", "Deliveries & input VAT", "Nhập hàng & VAT đầu vào")}{" "}
+            {rows ? <span className="erpHeadCount">{list.length}</span> : null}
           </>
         }
         actions={actions}

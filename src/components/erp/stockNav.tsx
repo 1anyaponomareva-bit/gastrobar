@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react";
 import { NavLink, T } from "./ui";
 
 export const stockNavItems = () => [
-  { href: "/erp/stock", label: T("Остатки", "Balances", "Tồn kho") },
-  { href: "/erp/stock/receipts", label: T("Поставки", "Deliveries", "Nhập hàng") },
+  { href: "/erp/stock", label: T("Остатки / FIFO", "Balances / FIFO", "Tồn kho / FIFO") },
+  { href: "/erp/stock/receipts", label: T("Поставки (вх. НДС)", "Deliveries (input VAT)", "Nhập hàng (VAT đầu vào)") },
   { href: "/erp/stock/vat-adjustments", label: T("Корректировки НДС", "VAT adjustments", "Điều chỉnh VAT") },
   { href: "/erp/purchasing/orders", label: T("Заказы поставщикам", "Supplier orders", "Đơn NCC") },
   { href: "/erp/stock/transfers", label: T("Перемещения", "Transfers", "Chuyển kho") },
+  { href: "/erp/menu/processing", label: T("Переработки", "Processing", "Chế biến") },
   { href: "/erp/stock/writeoffs", label: T("Списания", "Write-offs", "Xuất hủy") },
   { href: "/erp/stock/report", label: T("Отчёт по движению", "Movement report", "Báo cáo biến động") },
   { href: "/erp/stock/counts", label: T("Инвентаризации", "Stock counts", "Kiểm kê") },
@@ -20,6 +21,7 @@ export const stockNavItems = () => [
 export function activeStockHref(pathname: string | null): string | null {
   const path = pathname ?? "";
   if (path === "/erp/stock") return "/erp/stock";
+  if (path.startsWith("/erp/menu/processing")) return "/erp/menu/processing";
   return stockNavItems().find((item) => item.href !== "/erp/stock" && path.startsWith(item.href))?.href ?? null;
 }
 

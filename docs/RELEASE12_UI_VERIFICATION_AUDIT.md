@@ -155,32 +155,30 @@
 
 ---
 
-## 5. Unified fix & publish plan (await owner OK)
+## 5. Unified fix & publish plan
 
-Do **not** execute until confirmed.
-
-### A. Immediate clarification (no deploy)
+### A. Immediate clarification (owner)
 
 1. Owner login on **production** and verify §7–§9 paths (Menu → Preps / Processing / Danish Hot Dog → Sales channels → Detailed View → expand row).  
 2. Owner login on **Preview** (Vercel SSO + ERP admin) — expect R2 nav «Корректировки НДС» and Costing field on `/erp/service`.  
 3. Confirm Preview env Supabase project ≠ production before any stock writes.
 
-### B. Non-prod readiness
+### B. Non-prod readiness — **awaiting owner**
 
 1. Provision non-prod Supabase clone.  
 2. Apply migrations 8B→hardening via `npm run erp:r2-nonprod-gate`.  
 3. Point Preview env at clone.  
 4. Authenticated UI checklist for all nine items + screenshots.
 
-### C. UX gaps to fix in a follow-up change set (after OK)
+### C. UX gaps — **done on `erp-inventory` (owner OK 2026-11-25)**
 
-1. Rename or add nav hint: «Costing Policy» / «Политика себестоимости» → service field.  
-2. Optional stock nav note that Переработки live under Menu (or cross-link).  
-3. Decide whether a **Lots / FIFO journal** page is required for acceptance (currently missing).  
-4. Consider `defaultDetailed={true}` on Danish Hot Dog / dish finance so Recommended Price is visible.  
-5. Ensure dedicated `/erp/stock/vat-adjustments` route wins over `[kind]` (already true on branch; prod lacks page).
+1. Costing Policy label + aria on `/erp/service`.  
+2. Stock nav: «Поставки (вх. НДС)», «Остатки / FIFO», cross-link **Переработки** → `/erp/menu/processing`.  
+3. Balances title/hint clarify lots & FIFO; `/erp/stock/lots` and `/fifo` redirect to balances (full lots journal deferred).  
+4. Dish finance `defaultDetailed={true}` so Recommended Selling Price is visible.  
+5. Dedicated `/erp/stock/vat-adjustments` already on branch (still needs FE publish + SQL).
 
-### D. Production publish (only after B + owner OK)
+### D. Production publish (only after B + **separate** owner OK)
 
 1. Backup / PITR.  
 2. Apply SQL 8B→hardening.  

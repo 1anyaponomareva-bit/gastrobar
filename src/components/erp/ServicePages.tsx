@@ -125,16 +125,21 @@ export function SettingsPage() {
             />
           </Field>
           <Field
-            label={T("Источник себестоимости техкарт", "Tech-card cost source", "Nguồn giá vốn công thức")}
+            label={T(
+              "Costing Policy — источник себестоимости техкарт",
+              "Costing Policy — tech-card cost source",
+              "Costing Policy — nguồn giá vốn công thức",
+            )}
             hint={T(
-              "Прогноз для меню. Фактическое списание сырья — только FIFO. Отсутствие цены ≠ 0.",
-              "Forecast for menu cards. Actual ingredient write-off stays FIFO. Missing price is never zero.",
-              "Dự báo cho thẻ món. Xuất nguyên liệu thực tế vẫn FIFO. Thiếu giá không thành 0.",
+              "Политика себестоимости (Costing Policy): прогноз для меню. Фактическое списание сырья — только FIFO. Отсутствие цены ≠ 0. Не меняет цены продажи.",
+              "Costing Policy: forecast for menu cards. Actual ingredient write-off stays FIFO. Missing price is never zero. Does not change sale prices.",
+              "Costing Policy: dự báo cho thẻ món. Xuất nguyên liệu thực tế vẫn FIFO. Thiếu giá không thành 0. Không đổi giá bán.",
             )}
           >
             <select
               className="erpVatSelect"
               data-testid="recipe-cost-source"
+              aria-label="Costing Policy"
               value={form.recipe_cost_source ?? DEFAULT_RECIPE_COST_SOURCE}
               onChange={(e) => set("recipe_cost_source", (e.target.value || DEFAULT_RECIPE_COST_SOURCE) as RecipeCostSourcePolicy)}
             >

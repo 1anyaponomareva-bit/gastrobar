@@ -868,7 +868,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
         channelPrices={form.channel_prices}
         costs={{ foodCost: summary.foodCost, packagingCost: summary.packagingCost }}
         onChannelPrice={(channelId, price) => set("channel_prices", { ...form.channel_prices, [channelId]: price })}
-        defaultDetailed={false}
+        defaultDetailed={true}
       />
 
       <section className="erpCard" data-testid="dish-cost-history">

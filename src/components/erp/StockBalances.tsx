@@ -298,7 +298,10 @@ export function StockPage() {
 
   return (
     <>
-      <PageHead title={T("Остатки", "Balances", "Tồn kho")} actions={actions} />
+      <PageHead
+        title={T("Остатки / партии FIFO", "Balances / FIFO lots", "Tồn kho / lô FIFO")}
+        actions={actions}
+      />
       <StockMobileNav active="/erp/stock" />
 
       {!activeWarehouses.length ? (
@@ -355,9 +358,9 @@ export function StockPage() {
             )}
             {" · "}
             {T(
-              "Себестоимость — средняя по оставшимся партиям, только для показа: списание всегда идёт по FIFO, с самых старых партий по их цене; при нулевом остатке — справочная цена продукта",
-              "Unit cost is the average of the remaining lots, for display only: stock always leaves first-in, first-out, oldest lots at their own cost; with no stock, the product's reference price",
-              "Giá vốn = bình quân các lô còn lại, chỉ để hiển thị: xuất kho luôn theo FIFO, lô cũ nhất theo giá của lô; khi hết hàng là giá tham khảo",
+              "Партии и FIFO: в колонке — средняя по оставшимся партиям (только показ). Списание всегда FIFO — сначала самые старые партии по их цене. Отдельного журнала партий пока нет; подробности партии — в документе поступления. При нулевом остатке — справочная цена продукта.",
+              "Lots & FIFO: column shows average of remaining lots (display only). Write-off is always FIFO — oldest lots first at their own cost. No separate lots journal yet; lot detail is on the receipt document. With no stock, the product reference price is used.",
+              "Lô & FIFO: cột hiển thị bình quân lô còn lại. Xuất kho luôn FIFO — lô cũ nhất trước. Chưa có sổ lô riêng; chi tiết lô nằm trên phiếu nhập. Hết hàng thì dùng giá tham khảo.",
             )}
           </p>
 
