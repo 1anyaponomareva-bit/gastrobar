@@ -23,10 +23,12 @@ function loadEnvFile(path) {
 }
 
 function findPgDump() {
+  // Prefer major >= server (Supabase prod is 17.x); never pick older client first.
   const candidates = [
     process.env.PG_DUMP_PATH,
-    "C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe",
     "C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe",
+    "C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe",
+    "C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe",
     "C:\\Program Files\\PostgreSQL\\15\\bin\\pg_dump.exe",
     "pg_dump",
   ].filter(Boolean);

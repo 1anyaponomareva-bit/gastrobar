@@ -6,17 +6,18 @@
 
 ---
 
-## Current blockers on the agent machine (verified)
+## Status (2026-11-25) — blockers cleared on Free path
 
 | Tool / access | Status |
 |---------------|--------|
 | Supabase org plan | FREE — no scheduled backups / no PITR / branching locked |
-| `SUPABASE_DB_PASSWORD` in local env | **Missing** |
-| `pg_dump` / PostgreSQL client | **Not installed** (winget installer hung on GUI; aborted) |
-| Docker Desktop | **Not installed** |
-| Free project slots | Org already has **2** projects (production + SpiceSpace). Free limit = 2 active → new cloud staging needs pausing SpiceSpace **or** use local Docker |
+| `SUPABASE_DB_PASSWORD` in local env | **OK** (`.env.db.local`, CDP reset; not in git/chat) |
+| `pg_dump` | **OK** — PostgreSQL **17** client (matches server 17.6) |
+| Non-prod restore + R2×6 | **OK** on local DB `gastrofood_r2_copy` (PG16) — see `docs/R12_FREE_PATH_READINESS.md` |
+| Docker Desktop | Installed but **engine down** (WSL missing) — not required after local restore |
+| Free project slots | Still 2/2; SpiceSpace left alone |
 
-Agent **cannot** finish dump/migrate alone until you complete §1–§2 below.
+**Production SQL / merge still blocked** until owner final OK in readiness doc.
 
 ---
 
