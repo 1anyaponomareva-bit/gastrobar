@@ -1,6 +1,6 @@
 {
   "passed": 12,
-  "generatedAt": "2026-11-25T05:55:28.214Z",
+  "generatedAt": "2026-11-25T06:29:15.541Z",
   "controls": {
     "mustard": {
       "pendingPerKg": 87750,
@@ -42,7 +42,7 @@
         }
       ],
       "postResult": {
-        "id": "3ed3c655-0083-49c8-bedf-8692d16c7883",
+        "id": "b17ad348-fcf0-49d5-b93d-f3253b42d2ef",
         "doc_no": "WO-000013",
         "cost_known": true,
         "total_cost": 980000
