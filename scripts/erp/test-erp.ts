@@ -1359,21 +1359,40 @@ async function main() {
     assert.ok(Math.abs(n(line.diff_qty)! - (0.5 - before)) < 1e-9);
   });
 
-  await test("input VAT: recoverable VAT is excluded from cost", async () => {
+  await test("input VAT: deductible excludes recoverable VAT; pending keeps it in inventory cost", async () => {
     await q("update public.erp_settings set input_vat_enabled = true, default_input_vat_rate = 10");
-    const r = await saveDoc({
+    // Default receipt status is Pending (Phase 8B/8C): inventory includes pending VAT.
+    const pendingDoc = await saveDoc({
       doc_type: "receipt",
       warehouse_id: prep,
       prices_include_vat: true,
       lines: [{ product_id: bun, qty: 10, unit_price: 11000 }],
     });
-    await post(r);
-    const line = await one<Record<string, unknown>>(
-      "select net_amount, vat_amount, gross_amount, unit_cost from public.erp_document_lines where document_id = $1",
-      [r],
+    await post(pendingDoc);
+    const pendingLine = await one<Record<string, unknown>>(
+      "select net_amount, vat_amount, gross_amount, unit_cost, vat_deduction_status from public.erp_document_lines where document_id = $1",
+      [pendingDoc],
     );
+    assert.equal(pendingLine.vat_deduction_status, "pending");
     assert.deepEqual(
-      [n(line.net_amount), n(line.vat_amount), n(line.gross_amount), n(line.unit_cost)],
+      [n(pendingLine.net_amount), n(pendingLine.vat_amount), n(pendingLine.gross_amount), n(pendingLine.unit_cost)],
+      [100000, 10000, 110000, 11000],
+    );
+    // Explicit Deductible: recoverable VAT out of inventory unit cost (Release 1 expectation).
+    const dedDoc = await saveDoc({
+      doc_type: "receipt",
+      warehouse_id: prep,
+      prices_include_vat: true,
+      lines: [{ product_id: bun, qty: 10, unit_price: 11000, vat_deduction_status: "deductible" }],
+    });
+    await post(dedDoc);
+    const dedLine = await one<Record<string, unknown>>(
+      "select net_amount, vat_amount, gross_amount, unit_cost, vat_deduction_status from public.erp_document_lines where document_id = $1",
+      [dedDoc],
+    );
+    assert.equal(dedLine.vat_deduction_status, "deductible");
+    assert.deepEqual(
+      [n(dedLine.net_amount), n(dedLine.vat_amount), n(dedLine.gross_amount), n(dedLine.unit_cost)],
       [100000, 10000, 110000, 10000],
     );
     await q("update public.erp_settings set input_vat_enabled = false");
@@ -1606,6 +1625,9 @@ async function main() {
     assert.equal(n(await value("select public.erp_effective_output_vat_rate($1, null)", [dishId])), 5);
 
     assert.ok((n(await value("select count(*) from public.erp_vat_exception_history")) ?? 0) >= 4);
+
+    // Restore input VAT off so later FIFO/value regressions stay net-price based unless they opt in.
+    await q("update public.erp_settings set input_vat_enabled = false, default_input_vat_rate = 8, default_output_vat_rate = 8");
 
     // Client dual-read helpers (DB columns direction/scope_kind)
     const rows = await q<{
@@ -1848,6 +1870,7 @@ async function main() {
   });
 
   await test("movement report: opening, in, out, closing with cancellations and dates", async () => {
+    await q("update public.erp_settings set input_vat_enabled = false");
     const w = await value<string>("select public.erp_save_ref('warehouse', $1::jsonb, $2)", [JSON.stringify({ name: "Report test", kind: "other" }), ACTOR]);
     const salt = await saveProduct({ type: "ingredient", name_en: "Salt report test", base_unit: "kg" });
     const receipt = (date: string, qty: number, price: number) =>

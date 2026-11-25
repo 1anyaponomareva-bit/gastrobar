@@ -1,0 +1,180 @@
+{
+  "passed": 12,
+  "generatedAt": "2026-11-25T05:40:53.882Z",
+  "controls": {
+    "mustard": {
+      "pendingPerKg": 87750,
+      "deductiblePerKg": 81250,
+      "partial50PerKg": 84500,
+      "recipe15g": {
+        "full": 1218.75,
+        "pending": 1316.25,
+        "partial50": 1267.5
+      }
+    },
+    "pickles": {
+      "lotUnitCost": 24000,
+      "lossPct": 51.45631067961165,
+      "recipeFull": 2400,
+      "recipePending": 2592,
+      "consumptionJars": 0.1
+    },
+    "sausage": {
+      "lotUnitCost": 153000,
+      "pieceFull": 7650,
+      "piecePending": 8262
+    },
+    "fifo": {
+      "consumptionCost": 980000,
+      "documentTotalCost": 980000,
+      "remainingQty": 8,
+      "remainingValue": 720000,
+      "movements": [
+        {
+          "qty": -10,
+          "unit_cost": 80000,
+          "amount": 800000
+        },
+        {
+          "qty": -2,
+          "unit_cost": 90000,
+          "amount": 180000
+        }
+      ],
+      "postResult": {
+        "id": "2a78bbeb-3caf-4225-b33b-145563979911",
+        "doc_no": "WO-000013",
+        "cost_known": true,
+        "total_cost": 980000
+      }
+    }
+  },
+  "finance": {
+    "danishHotDogLegacyTotal": 27902.06,
+    "food": 24750,
+    "pack": 3152,
+    "matrix": [
+      {
+        "price": 99000,
+        "channel": "Direct",
+        "pendingCmPct": 69.56145454545454,
+        "pendingCm": 63764.66666666666,
+        "fullCmPct": 69.56145454545454,
+        "fullCm": 63764.66666666666,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 99000,
+        "channel": "Grab Organic",
+        "pendingCmPct": 48.35630254545455,
+        "pendingCm": 44326.61066666666,
+        "fullCmPct": 49.92705454545454,
+        "fullCm": 45766.46666666666,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 99000,
+        "channel": "Grab Standard",
+        "pendingCmPct": 40.796302545454544,
+        "pendingCm": 37396.61066666666,
+        "fullCmPct": 42.92705454545454,
+        "fullCm": 39349.79999999999,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 99000,
+        "channel": "Grab Full",
+        "pendingCmPct": 39.71630254545454,
+        "pendingCm": 36406.61066666666,
+        "fullCmPct": 41.92705454545454,
+        "fullCm": 38433.133333333324,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 109000,
+        "channel": "Direct",
+        "pendingCmPct": 72.35398165137615,
+        "pendingCm": 73023.92592592591,
+        "fullCmPct": 72.35398165137615,
+        "fullCm": 73023.92592592591,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 109000,
+        "channel": "Grab Organic",
+        "pendingCmPct": 51.14882965137614,
+        "pendingCm": 51622.42992592591,
+        "fullCmPct": 52.719581651376146,
+        "fullCm": 53207.725925925915,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 109000,
+        "channel": "Grab Standard",
+        "pendingCmPct": 43.58882965137614,
+        "pendingCm": 43992.42992592591,
+        "fullCmPct": 45.71958165137614,
+        "fullCm": 46142.9111111111,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 109000,
+        "channel": "Grab Full",
+        "pendingCmPct": 42.50882965137614,
+        "pendingCm": 42902.42992592591,
+        "fullCmPct": 44.719581651376146,
+        "fullCm": 45133.65185185184,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 119000,
+        "channel": "Direct",
+        "pendingCmPct": 74.67717647058824,
+        "pendingCm": 82283.18518518518,
+        "fullCmPct": 74.67717647058824,
+        "fullCm": 82283.18518518518,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 119000,
+        "channel": "Grab Organic",
+        "pendingCmPct": 53.47202447058823,
+        "pendingCm": 58918.24918518518,
+        "fullCmPct": 55.04277647058824,
+        "fullCm": 60648.985185185185,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 119000,
+        "channel": "Grab Standard",
+        "pendingCmPct": 45.91202447058823,
+        "pendingCm": 50588.24918518518,
+        "fullCmPct": 48.04277647058824,
+        "fullCm": 52936.02222222222,
+        "recommendedPending": null,
+        "recommendedFull": null
+      },
+      {
+        "price": 119000,
+        "channel": "Grab Full",
+        "pendingCmPct": 44.83202447058823,
+        "pendingCm": 49398.24918518518,
+        "fullCmPct": 47.04277647058823,
+        "fullCm": 51834.17037037037,
+        "recommendedPending": null,
+        "recommendedFull": null
+      }
+    ]
+  },
+  "notes": []
+}

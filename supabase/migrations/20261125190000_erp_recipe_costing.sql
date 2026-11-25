@@ -122,32 +122,32 @@ returns void
 language plpgsql
 as $$
 declare
+  v_in numeric;
+  v_out numeric;
   v_method text;
   v_in_id uuid;
   v_out_id uuid;
   v_recipe_src text;
 begin
-  if p is null then
-    perform public.erp_raise('ERP_BAD_REQUEST', 'settings payload required');
+  -- Phase 8F: keep Phase 3/4 validation; add recipe_cost_source only.
+  if p ? 'default_input_vat_rate' and nullif(p->>'default_input_vat_rate', '') is not null then
+    v_in := (p->>'default_input_vat_rate')::numeric;
+    if not public.erp_tax_rate_is_legacy_percent(v_in) then
+      perform public.erp_raise('ERP_INVALID', 'default_input_vat_rate');
+    end if;
   end if;
-
-  v_method := nullif(btrim(coalesce(p->>'vat_accounting_method', '')), '');
-  if v_method is not null and v_method not in ('cash', 'accrual', 'hybrid', 'unconfirmed') then
-    perform public.erp_raise('ERP_BAD_REQUEST', 'vat_accounting_method');
+  if p ? 'default_output_vat_rate' and nullif(p->>'default_output_vat_rate', '') is not null then
+    v_out := (p->>'default_output_vat_rate')::numeric;
+    if not public.erp_tax_rate_is_legacy_percent(v_out) then
+      perform public.erp_raise('ERP_INVALID', 'default_output_vat_rate');
+    end if;
   end if;
-  if v_method = 'unconfirmed' then
-    v_method := null;
+  if p ? 'vat_accounting_method' then
+    v_method := nullif(btrim(p->>'vat_accounting_method'), '');
+    if v_method is not null and v_method not in ('cash', 'accrual', 'hybrid', 'unconfirmed') then
+      perform public.erp_raise('ERP_INVALID', 'vat_accounting_method');
+    end if;
   end if;
-
-  v_recipe_src := nullif(btrim(coalesce(p->>'recipe_cost_source', '')), '');
-  if v_recipe_src is not null and v_recipe_src not in (
-    'manual_estimated', 'last_purchase', 'weighted_average', 'estimated_fifo'
-  ) then
-    perform public.erp_raise('ERP_BAD_REQUEST', 'recipe_cost_source');
-  end if;
-
-  v_in_id := null;
-  v_out_id := null;
   if p ? 'default_input_tax_rate_id' and nullif(p->>'default_input_tax_rate_id', '') is not null then
     v_in_id := (p->>'default_input_tax_rate_id')::uuid;
     if not exists (select 1 from public.erp_tax_rates where id = v_in_id) then
@@ -159,6 +159,13 @@ begin
     if not exists (select 1 from public.erp_tax_rates where id = v_out_id) then
       perform public.erp_raise('ERP_NOT_FOUND', 'default_output_tax_rate_id');
     end if;
+  end if;
+
+  v_recipe_src := nullif(btrim(coalesce(p->>'recipe_cost_source', '')), '');
+  if v_recipe_src is not null and v_recipe_src not in (
+    'manual_estimated', 'last_purchase', 'weighted_average', 'estimated_fifo'
+  ) then
+    perform public.erp_raise('ERP_INVALID', 'recipe_cost_source');
   end if;
 
   update public.erp_settings set
