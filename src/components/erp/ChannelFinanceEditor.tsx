@@ -377,9 +377,9 @@ export function ChannelFinanceEditor({ channels }: { channels: ErpChannel[] }) {
     <div data-testid="channel-finance-editor">
       <p className="erpHint">
         {T(
-          "Новые поля комиссии/рекламы сохраняются в истории. Текущая маржа на карточке блюда до Phase 6 по-прежнему использует Legacy Rate (commission_pct). Вычисляемые net/gross не редактируются отдельно.",
-          "New commission/ads fields are versioned. Dish margin until Phase 6 still uses Legacy Rate (commission_pct). Computed net/gross are read-only.",
-          "Trường hoa hồng/QC mới có lịch sử. Biên LN đến Phase 6 vẫn dùng Legacy Rate. Net/gộp chỉ xem.",
+          "Новые поля комиссии/рекламы сохраняются в истории. Карточка блюда считает Contribution Margin через financialCalculator (Phase 7). Legacy Rate — только fallback.",
+          "New commission/ads fields are versioned. Dish card Contribution Margin uses financialCalculator (Phase 7). Legacy Rate is fallback only.",
+          "Thẻ món dùng financialCalculator (Phase 7). Legacy Rate chỉ fallback.",
         )}
       </p>
       {active.map((channel) => (

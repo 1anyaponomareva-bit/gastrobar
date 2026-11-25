@@ -5,6 +5,7 @@ import {
   withUncategorizedLast,
 } from "@/lib/erp/categoryOrder";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
+import { dishMainChannelFinance } from "./DishChannelFinance";
 import { productLabel, type ProductNameFields } from "@/lib/erp/productName";
 import type { ErpCategory, ErpDish, ErpState } from "@/lib/erp/types";
 import { T, erpLang, locale } from "./i18n";
@@ -104,19 +105,29 @@ export function costContextOf(state: ErpState, priceSource: MenuPriceSource = DE
 }
 
 export function dishEconomics(state: ErpState, ctx: CostContext, dish: ErpDish) {
-  const { summary, channels, main } = dishCost(ctx, dish, state.settings, state.channels);
+  const { summary, channels, main: legacyMain } = dishCost(ctx, dish, state.settings, state.channels);
+  const finance = dishMainChannelFinance(state.channels, {
+    settings: state.settings,
+    vatExceptions: state.vatExceptions,
+    dish,
+    foodCost: summary.foodCost,
+    packagingCost: summary.packagingCost,
+  });
+  const r = finance?.mode !== "incomplete" && finance?.result?.complete ? finance.result : null;
   return {
     summary,
     channels,
-    main,
-    channel: main,
-    channelName: main?.name ?? "—",
+    main: legacyMain,
+    finance,
+    channel: legacyMain,
+    channelName: finance?.channel.name ?? legacyMain?.name ?? "—",
     cost: summary.totalCost,
-    markup: main?.markupPct ?? null,
-    foodOnPrice: main?.foodCostOnPricePct ?? null,
-    foodCostPct: main?.foodCostPct ?? null,
-    margin: main?.grossMarginPct ?? null,
-    profit: main?.grossProfit ?? null,
+    markup: legacyMain?.markupPct ?? null,
+    foodOnPrice: legacyMain?.foodCostOnPricePct ?? null,
+    foodCostPct: r?.foodCostPct ?? legacyMain?.foodCostPct ?? null,
+    /** Contribution Margin % (Phase 7); not Net Profit. */
+    margin: r?.contributionMarginPct ?? null,
+    profit: r?.contributionMargin ?? null,
   };
 }
 

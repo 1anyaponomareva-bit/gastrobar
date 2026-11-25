@@ -108,7 +108,7 @@ export type ErpChannel = Archivable & {
   id: string;
   code: string;
   name: string;
-  /** Legacy single commission % of menu price — used by channelResult until Phase 6. */
+  /** Legacy single commission % of menu price — fallback when Phase 5 finance is absent. */
   commission_pct: number | null;
   /** Frozen copy of commission_pct; never auto-split into net/VAT/ads. */
   legacy_commission_pct?: number | null;

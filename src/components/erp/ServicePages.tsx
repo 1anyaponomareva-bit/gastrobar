@@ -172,9 +172,9 @@ export function SettingsPage() {
         <h2>{T("Каналы продаж", "Sales channels", "Kênh bán")}</h2>
         <p className="erpHint">
           {T(
-            "Финансовые настройки канала: НДС продажи, комиссия, реклама, цели маржи. Legacy Rate (commission_pct) остаётся для текущей маржи на карточке блюда до Phase 6.",
-            "Channel finance: sales VAT, commission, advertising, margin targets. Legacy Rate (commission_pct) still drives dish margin until Phase 6.",
-            "Tài chính kênh: VAT bán, hoa hồng, QC, biên LN. Legacy Rate vẫn dùng đến Phase 6.",
+            "Финансовые настройки канала: НДС продажи, комиссия, реклама, цели маржи. Карточка блюда (Phase 7) использует financialCalculator; Legacy Rate — только fallback.",
+            "Channel finance: sales VAT, commission, advertising, margin targets. Dish card (Phase 7) uses financialCalculator; Legacy Rate is fallback only.",
+            "Thẻ món (Phase 7) dùng financialCalculator; Legacy Rate chỉ là fallback.",
           )}
         </p>
         <ChannelFinanceEditor channels={state.channels} />

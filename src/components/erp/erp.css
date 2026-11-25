@@ -3832,3 +3832,58 @@ button.erpBack {
 .erpHint.warn {
   color: var(--erp-warn);
 }
+/* Phase 7 — contribution margin bands (per-channel thresholds) */
+.erpMargin.critical { color: var(--erp-bad); font-weight: 600; }
+.erpMargin.acceptable { color: var(--erp-warn); font-weight: 600; }
+.erpMargin.good { color: var(--erp-ok); font-weight: 600; }
+.erpMargin.excellent { color: var(--erp-ok); font-weight: 700; }
+
+.erpChannelFinanceDetail {
+  padding: 12px 8px 16px;
+  background: var(--erp-soft);
+  border-radius: 12px;
+  margin: 4px 0 12px;
+}
+.erpChannelFinanceDetail h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--erp-muted);
+}
+.erpFinanceDl {
+  display: grid;
+  gap: 6px 12px;
+  margin: 0 0 14px;
+}
+.erpFinanceDl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--erp-line);
+  padding: 4px 0;
+}
+.erpFinanceDl dt { color: var(--erp-muted); margin: 0; }
+.erpFinanceDl dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.erpChannelFinanceControls {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.erpRecommendBox {
+  margin-top: 8px;
+}
+.erpCard.soft {
+  background: var(--erp-bg);
+  box-shadow: none;
+  border: 1px solid var(--erp-line);
+}
+.erpChannelFinanceExpand > td {
+  padding: 0 8px 8px;
+  background: transparent;
+}
+@media (max-width: 900px) {
+  .erpFinanceBlocks.erpGrid.two { grid-template-columns: 1fr; }
+}

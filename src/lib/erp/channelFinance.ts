@@ -1,7 +1,7 @@
 /**
  * Phase 5 helpers: derived commission/advertising net↔gross.
  * Editable rate is one field; the counterpart is computed (not stored as independent editable).
- * channelResult still uses legacy commission_pct until Phase 6.
+ * Dish UI (Phase 7) uses financialCalculator via dishChannelFinance; Legacy Rate is fallback only.
  */
 
 export type VatDeductionStatus = "pending" | "deductible" | "partial" | "non_deductible";

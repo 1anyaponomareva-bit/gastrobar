@@ -10,19 +10,18 @@ import {
   isPackaging,
   liveCatalogName,
   processedUnitCost,
-  type ChannelResult,
   type CostContext,
   type CostLine,
   type LossMethod,
   type MenuPriceSource,
 } from "@/lib/erp/costing";
+import { dishMainChannelFinance, DishChannelFinancePanel } from "./DishChannelFinance";
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
 import { defaultOutputVatRate, effectiveOutputVatRate } from "@/lib/erp/vat";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
-import { notImplemented } from "./CatalogTable";
 import { useErp } from "./ErpShell";
 import { grossPatch, lossHint, MethodPicker, NetCell, netOf, netWeight, netWeightText, type LossLine } from "./losses";
 import { menuListBackHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
@@ -32,7 +31,6 @@ import { compositionPartsMessage, LinePartsButton, LinePartsPlaque } from "./Lin
 import { filledParts, netToSmallUnit, parseLineParts, shiftOpenCuts, toggleCutsState, type LinePart } from "@/lib/erp/lineParts";
 import { ExtraNameFields } from "./ExtraNameFields";
 import { defaultDishCategoryId, POSTER_WORKSHOPS } from "./menuFields";
-import { MENU_HREFS, MenuMobileNav } from "./menuNav";
 import {
   Empty,
   Field,
@@ -45,7 +43,6 @@ import {
   QtyInput,
   savingText,
   T,
-  Tip,
   unitLabel,
   unitOf,
   useDirtyGuard,
@@ -64,19 +61,11 @@ type DishForm = {
   channel_prices: Record<string, number | null>;
 };
 
-const issueText = (issue: ChannelResult["issues"][number]) =>
-  ({
-    no_price: T("нет цены продажи", "no sale price", "chưa có giá bán"),
-    no_vat_rate: T("не задан НДС", "no VAT rate", "chưa có VAT"),
-    no_commission: T("не задана комиссия канала", "channel commission not set", "chưa có hoa hồng"),
-    incomplete_cost: T("себестоимость неполная", "cost incomplete", "giá vốn chưa đủ"),
-  })[issue];
-
 const marginNote = () =>
   T(
-    "Маржа = цена без НДС − комиссия канала − продукты − упаковка. Это валовая маржа: зарплата, аренда и другие расходы не учтены.",
-    "Margin = price without VAT − channel commission − food − packaging. This is gross margin: wages, rent and other costs are not included.",
-    "Biên lợi nhuận = giá chưa VAT − hoa hồng − thực phẩm − bao bì. Đây là biên gộp, chưa tính lương, thuê mặt bằng và chi phí khác.",
+    "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses (комиссия, реклама). Не Net Profit: зарплата, аренда и прочие расходы не учтены.",
+    "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses (commission, advertising). Not Net Profit: wages, rent and other costs are excluded.",
+    "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Không phải Net Profit.",
   );
 
 const isPackagingId = (state: ErpState, id: string | null) => {
@@ -105,9 +94,9 @@ function toForm(dish: ErpDish | null, defaultCategory = ""): DishForm {
   };
 }
 
-function calculate(state: ErpState, ctx: CostContext, form: DishForm) {
+function calculate(state: ErpState, ctx: CostContext, form: DishForm, dishId?: string | null) {
   const priced = form.lines.filter((l) => compositionLineQty(l) != null);
-  const { summary, channels, main } = dishCost(
+  const { summary } = dishCost(
     ctx,
     {
       lines: priced.map((l, i) => ({
@@ -127,8 +116,23 @@ function calculate(state: ErpState, ctx: CostContext, form: DishForm) {
     state.settings,
     state.channels,
   );
-  const lines = priced.map((l) => costLine(ctx, l.product_id, l.qty!));
-  return { lines, summary, channels, main };
+  const lines = priced.map((l) => costLine(ctx, l.product_id, compositionLineQty(l)!));
+  const main = dishMainChannelFinance(state.channels, {
+    settings: state.settings,
+    vatExceptions: state.vatExceptions,
+    dish: {
+      id: dishId ?? "",
+      vat_rate: form.vat_rate,
+      category_id: form.category_id || null,
+      sale_price: form.sale_price,
+      channel_prices: Object.entries(form.channel_prices)
+        .filter((entry): entry is [string, number] => entry[1] !== null)
+        .map(([channel_id, sale_price]) => ({ channel_id, sale_price })),
+    },
+    foodCost: summary.foodCost,
+    packagingCost: summary.packagingCost,
+  });
+  return { lines, summary, main };
 }
 
 type Missing = { key: string; name: string; href: string; action: string };
@@ -230,7 +234,9 @@ export function MenuPage() {
                 </thead>
                 <tbody>
                   {dishes.map((dish) => {
-                    const { summary, main } = calculate(state, ctx, toForm(dish));
+                    const { summary, main } = calculate(state, ctx, toForm(dish), dish.id);
+                    const cm = main?.result;
+                    const showCm = main && main.mode !== "incomplete" && cm?.complete;
                     return (
                       <tr
                         key={dish.id}
@@ -257,15 +263,15 @@ export function MenuPage() {
                           {summary.totalCost === null ? (summary.knownFood + summary.knownPackaging > 0 ? `≥ ${vnd(summary.knownFood + summary.knownPackaging)}` : "—") : vnd(summary.totalCost)}
                         </td>
                         <td className="num" data-label="Food Cost">
-                          {pct(main?.foodCostPct)}
+                          {showCm ? pct(cm?.foodCostPct) : "—"}
                         </td>
                         <td className="num" data-label={T("Маржа", "Margin", "Biên LN")}>
-                          {main?.grossProfit === null || main?.grossProfit === undefined ? (
+                          {!showCm ? (
                             "—"
                           ) : (
                             <>
-                              {vnd(main.grossProfit)}
-                              <span className="erpCellSub">{pct(main.grossMarginPct)}</span>
+                              {vnd(cm?.contributionMargin ?? null)}
+                              <span className="erpCellSub">{pct(cm?.contributionMarginPct ?? null)}</span>
                             </>
                           )}
                         </td>
@@ -324,8 +330,10 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
   const dirty = JSON.stringify(form) !== baseline;
   useDirtyGuard(dirty);
   const set = <K extends keyof DishForm>(key: K, value: DishForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
-  const { summary, channels, main, lines } = calculate(state, ctx, form);
+  const { summary, main, lines } = calculate(state, ctx, form, dish?.id);
   const missing = missingParts(state, lines);
+  const mainCm = main?.result;
+  const showMainCm = Boolean(main && main.mode !== "incomplete" && mainCm?.complete);
   const portion = netWeight(state, form.lines.filter((l) => !isPackagingId(state, l.product_id)));
   const isNew = !dish;
 
@@ -672,11 +680,15 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           </div>
           <div className="erpKpi">
             <span>Food Cost</span>
-            <strong>{pct(main?.foodCostPct)}</strong>
+            <strong>{showMainCm ? pct(mainCm?.foodCostPct ?? null) : "—"}</strong>
           </div>
           <div className="erpKpi">
-            <span>{T("Маржа", "Margin", "Biên LN")}</span>
-            <strong>{main?.grossProfit === null || main?.grossProfit === undefined ? "—" : `${vnd(main.grossProfit)} · ${pct(main.grossMarginPct)}`}</strong>
+            <span>Contribution Margin</span>
+            <strong>
+              {!showMainCm
+                ? "—"
+                : `${vnd(mainCm?.contributionMargin ?? null)} · ${pct(mainCm?.contributionMarginPct ?? null)}`}
+            </strong>
           </div>
           {portion.kg ? (
             <div className="erpKpi">
@@ -687,72 +699,19 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
         </div>
       </section>
 
-      {channels.length ? (
-        <section className="erpCard">
-          <h2>
-            {T("Каналы продаж", "Sales channels", "Kênh bán")}{" "}
-            <Tip>{marginNote()}</Tip>
-          </h2>
-          <div className="erpTableWrap">
-            <table className="erpTable stack">
-              <thead>
-                <tr>
-                  <th>{T("Канал", "Channel", "Kênh")}</th>
-                  <th>{T("Цена, ₫", "Price, ₫", "Giá, ₫")}</th>
-                  <th className="num">{T("Комиссия", "Commission", "Hoa hồng")}</th>
-                  {state.settings.output_vat_enabled ? <th className="num">{T("НДС", "VAT", "VAT")}</th> : null}
-                  <th className="num">Food Cost</th>
-                  <th className="num">{T("Себестоимость с упаковкой, %", "Cost incl. packaging, %", "Giá vốn gồm bao bì, %")}</th>
-                  <th className="num">{T("Маржа", "Margin", "Biên LN")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {channels.map((channel) => (
-                  <tr key={channel.id}>
-                    <td className="main">
-                      <span className="erpName">{channel.name}</span>
-                      {channel.issues.length ? <span className="erpCellSub">{channel.issues.map(issueText).join(", ")}</span> : null}
-                    </td>
-                    <td className="edit" data-label={T("Цена, ₫", "Price, ₫", "Giá, ₫")} style={{ minWidth: 120 }}>
-                      <NumberInput
-                        value={form.channel_prices[channel.id] ?? null}
-                        placeholder={form.sale_price === null ? "" : `${form.sale_price} (${T("как в меню", "menu price", "như menu")})`}
-                        onChange={(v) => set("channel_prices", { ...form.channel_prices, [channel.id]: v })}
-                      />
-                    </td>
-                    <td className="num" data-label={T("Комиссия", "Commission", "Hoa hồng")}>
-                      {vnd(channel.commission)}
-                      {channel.commissionPct !== null ? <span className="erpCellSub">{channel.commissionPct}%</span> : null}
-                    </td>
-                    {state.settings.output_vat_enabled ? (
-                      <td className="num" data-label={T("НДС", "VAT", "VAT")}>
-                        {vnd(channel.vat)}
-                      </td>
-                    ) : null}
-                    <td className="num" data-label="Food Cost">
-                      {pct(channel.foodCostPct)}
-                    </td>
-                    <td className="num" data-label={T("С упаковкой", "Incl. packaging", "Gồm bao bì")}>
-                      {pct(channel.totalCostPct)}
-                    </td>
-                    <td className="num" data-label={T("Маржа", "Margin", "Biên LN")}>
-                      {channel.grossProfit === null ? (
-                        "—"
-                      ) : (
-                        <>
-                          {vnd(channel.grossProfit)}
-                          <span className="erpCellSub">{pct(channel.grossMarginPct)}</span>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="erpHint">{T("Пустая цена канала = цена в меню. Проценты считаются от цены без НДС.", "An empty channel price means the menu price. Percentages are of the price without VAT.", "Giá kênh trống = giá menu. Phần trăm tính trên giá chưa VAT.")}</p>
-        </section>
-      ) : null}
+      <DishChannelFinancePanel
+        channels={state.channels}
+        settings={state.settings}
+        vatExceptions={state.vatExceptions}
+        dishId={dish?.id}
+        categoryId={form.category_id || null}
+        dishVatRate={form.vat_rate}
+        menuPrice={form.sale_price}
+        channelPrices={form.channel_prices}
+        costs={{ foodCost: summary.foodCost, packagingCost: summary.packagingCost }}
+        onChannelPrice={(channelId, price) => set("channel_prices", { ...form.channel_prices, [channelId]: price })}
+        defaultDetailed={false}
+      />
 
       <div className="erpActions split">
         <div className="erpRow">
