@@ -60,7 +60,7 @@ export function VatAdjustmentEditor({
   sourceDocumentId?: string | null;
 }) {
   const router = useErpRouter();
-  const { act, busy } = useErp();
+  const { act, busy, state } = useErp();
   const [reason, setReason] = useState<VatAdjustmentReason>("vat_deduction_confirmed");
   const [reasonNote, setReasonNote] = useState("");
   const [newStatus, setNewStatus] = useState<VatDeductionStatus>("deductible");
@@ -74,6 +74,7 @@ export function VatAdjustmentEditor({
   const [error, setError] = useState<string | null>(null);
   const [adjId, setAdjId] = useState<string | null>(null);
   const backdated = adjDate < today();
+  const allowBackdated = Boolean(state?.settings?.vat_adj_allow_backdated);
 
   const payload = useMemo(
     () => ({
@@ -194,13 +195,22 @@ export function VatAdjustmentEditor({
           <Field label={T("Дата корректировки", "Adjustment date", "Ngày điều chỉnh")}>
             <input type="date" value={adjDate} onChange={(e) => setAdjDate(e.target.value)} data-testid="vat-adj-date" />
           </Field>
-          {backdated ? (
+          {backdated && !allowBackdated ? (
+            <div className="erpNotice warn" style={{ gridColumn: "1 / -1" }} data-testid="vat-adj-backdated-disabled">
+              {T(
+                "Корректировки задним числом отключены в настройках (по умолчанию). Полное закрытие периодов — Release 3. Checkbox подтверждения недостаточен.",
+                "Backdated adjustments are disabled in settings (default). Full period close is Release 3. A confirmation checkbox alone is not enough.",
+                "Điều chỉnh lùi ngày đang tắt trong cài đặt (mặc định). Khoá kỳ = Release 3.",
+              )}
+            </div>
+          ) : null}
+          {backdated && allowBackdated ? (
             <label className="erpCheck" style={{ gridColumn: "1 / -1" }}>
               <input type="checkbox" checked={confirmBackdated} onChange={(e) => setConfirmBackdated(e.target.checked)} data-testid="vat-adj-backdated" />
               {T(
-                "Подтверждаю проведение задним числом (закрытые периоды не открываются автоматически)",
-                "I confirm backdated posting (closed periods are not reopened automatically)",
-                "Xác nhận ghi lùi ngày (không tự mở kỳ đã khoá)",
+                "Подтверждаю проведение задним числом; укажите причину в комментарии (аудит)",
+                "I confirm backdated posting; enter a reason note (audited)",
+                "Xác nhận ghi lùi ngày; ghi lý do (được audit)",
               )}
             </label>
           ) : null}

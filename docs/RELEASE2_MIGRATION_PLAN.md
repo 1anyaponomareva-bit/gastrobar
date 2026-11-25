@@ -10,6 +10,7 @@ Target order on a **non-prod** clone first, then production in one window.
 3. `20261125170000_erp_vat_cost_adjustment.sql` — 8D adjustment docs  
 4. `20261125180000_erp_production_cost_lineage.sql` — 8E lineage + backdate guard + propagate  
 5. `20261125190000_erp_recipe_costing.sql` — 8F recipe cost policy + dish cost snapshots  
+6. `20261125200000_erp_r2_preprod_hardening.sql` — catalog tax validation + backdated adj default OFF  
 
 Prerequisite already on prod from Release 1 era: tax rates / VAT exceptions / channels (`…251100`–`…251300`) as applicable.
 

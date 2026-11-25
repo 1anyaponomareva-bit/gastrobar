@@ -145,6 +145,19 @@ export function SettingsPage() {
               ))}
             </select>
           </Field>
+          <label className="erpCheck">
+            <input
+              type="checkbox"
+              data-testid="vat-adj-allow-backdated"
+              checked={Boolean(form.vat_adj_allow_backdated)}
+              onChange={(e) => set("vat_adj_allow_backdated", e.target.checked)}
+            />
+            {T(
+              "Разрешить корректировки входящего НДС задним числом (только уполномоченный; нужна причина)",
+              "Allow backdated input VAT adjustments (authorized only; reason note required)",
+              "Cho phép điều chỉnh VAT đầu vào lùi ngày (có lý do)",
+            )}
+          </label>
         </div>
         <p className="erpHint">
           {T(
@@ -166,6 +179,7 @@ export function SettingsPage() {
                 purchase_prices_include_vat_default: form.purchase_prices_include_vat_default ?? true,
                 vat_accounting_method: form.vat_accounting_method || null,
                 recipe_cost_source: form.recipe_cost_source ?? DEFAULT_RECIPE_COST_SOURCE,
+                vat_adj_allow_backdated: Boolean(form.vat_adj_allow_backdated),
               };
               if (await act({ action: "saveSettings", settings }, T("Настройки сохранены", "Settings saved", "Đã lưu cài đặt"))) {
                 setForm(settings);

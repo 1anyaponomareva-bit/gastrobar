@@ -36,6 +36,11 @@ export type ErpSettings = {
    * Actual warehouse write-off remains FIFO (`erp_consume`).
    */
   recipe_cost_source?: "manual_estimated" | "last_purchase" | "weighted_average" | "estimated_fifo" | null;
+  /**
+   * When false (default), VAT cost adjustments dated before Vietnam today are refused.
+   * Checkbox confirmation alone is not enough. Full period close = Release 3.
+   */
+  vat_adj_allow_backdated?: boolean | null;
 };
 
 export type ErpDishCostSnapshot = {

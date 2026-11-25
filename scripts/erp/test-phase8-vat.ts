@@ -283,7 +283,7 @@ async function main() {
     assert.ok(lot.received_at, "FIFO received_at preserved");
   });
 
-  await test("8D backdated adjustment requires confirmation", async () => {
+  await test("8D/8G backdated adjustments disabled by default; checkbox alone insufficient", async () => {
     const p = await seedProduct("Backdate Guard");
     const rid = await saveReceipt({
       doc_type: "receipt",
@@ -292,25 +292,33 @@ async function main() {
     });
     await post(rid);
     const lineId = await value<string>(`select id from public.erp_document_lines where document_id = $1`, [rid]);
+    // Default vat_adj_allow_backdated = false → refused even with confirm.
+    await assert.rejects(
+      () =>
+        q(`select public.erp_vat_adj_save($1::jsonb, $2)`, [
+          JSON.stringify({
+            source_line_id: lineId,
+            new_vat_deduction_status: "deductible",
+            reason: "accounting_correction",
+            reason_note: "try backdate",
+            adj_date: "2020-01-01",
+            confirm_backdated: true,
+          }),
+          ACTOR,
+        ]),
+      /ERP_BACKDATED|backdated_adjustments_disabled/i,
+    );
+    // Authorized path: company setting on + confirm + reason_note.
+    await q(`select public.erp_save_settings($1::jsonb, $2)`, [
+      JSON.stringify({ vat_adj_allow_backdated: true }),
+      ACTOR,
+    ]);
     const adjId = await value<string>(`select public.erp_vat_adj_save($1::jsonb, $2)`, [
       JSON.stringify({
         source_line_id: lineId,
         new_vat_deduction_status: "deductible",
         reason: "accounting_correction",
-        adj_date: "2020-01-01",
-      }),
-      ACTOR,
-    ]);
-    await assert.rejects(
-      () => q(`select public.erp_vat_adj_post($1, $2, null)`, [adjId, ACTOR]),
-      /ERP_BACKDATED|backdated/i,
-    );
-    await value(`select public.erp_vat_adj_save($1::jsonb, $2)`, [
-      JSON.stringify({
-        id: adjId,
-        source_line_id: lineId,
-        new_vat_deduction_status: "deductible",
-        reason: "accounting_correction",
+        reason_note: "authorized backdated correction for test",
         adj_date: "2020-01-01",
         confirm_backdated: true,
       }),
@@ -318,6 +326,10 @@ async function main() {
     ]);
     await q(`select public.erp_vat_adj_post($1, $2, null)`, [adjId, ACTOR]);
     assert.equal(await value(`select status from public.erp_vat_cost_adjustments where id = $1`, [adjId]), "posted");
+    await q(`select public.erp_save_settings($1::jsonb, $2)`, [
+      JSON.stringify({ vat_adj_allow_backdated: false }),
+      ACTOR,
+    ]);
   });
 
   await test("8E Chicken processing: VAT adj flows to semi-finished output lot", async () => {

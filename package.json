@@ -23,6 +23,8 @@
     "test:erp": "tsx scripts/erp/test-erp.ts",
     "test:phase8": "tsx scripts/erp/test-phase8-vat.ts",
     "test:phase8g": "tsx scripts/erp/test-phase8g-acceptance.ts",
+    "test:phase8g:chicken": "tsx scripts/erp/test-phase8g-chicken-chain.ts",
+    "erp:r2-nonprod-gate": "node scripts/erp/apply-r2-migrations-nonprod.mjs",
     "test:finance": "node --import tsx --test src/lib/erp/financialCalculator.test.ts src/lib/erp/dishChannelFinance.test.ts src/lib/erp/purchaseVat.test.ts src/lib/erp/vatCostAdjustment.test.ts src/lib/erp/recipeCosting.test.ts src/lib/erp/compositionYieldCost.test.ts",
     "check": "npm run lint && npm run typecheck"
   },

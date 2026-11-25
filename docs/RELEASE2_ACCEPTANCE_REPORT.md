@@ -1,9 +1,68 @@
-# Release 2 — Acceptance Report (Phase 8G)
+# Release 2 — Acceptance Report (Phase 8G + Pre-Production Verification)
 
-**Branch:** `erp-inventory` @ `3a5f6e6` (+ Phase 8G acceptance harness)  
+**Branch:** `erp-inventory`  
+**Latest:** Pre-prod hardening migration `20261125200000_erp_r2_preprod_hardening.sql`  
 **Date:** 2026-11-25  
 **Production:** **not** deployed. SQL **not** applied. Merge to `main` **not** done.  
 **Release 3 / Phase 9:** **not** started.
+
+Owner preliminary approval of Phase 8B–8G technical reports: **received**.  
+This document adds final pre-production verification items requested before publish.
+
+---
+
+## 0. Final pre-production verification (owner brief)
+
+### 0.1 Costing Policy — **approved & implemented**
+
+| Policy | Status |
+|--------|--------|
+| Default Recipe Cost Source = `manual_estimated` | Default in DB + Settings UI |
+| Actual inventory consumption = FIFO (`erp_consume`) | Unchanged |
+| Weighted Average / Last Purchase / Estimated FIFO | Optional forecast sources only |
+| Sale prices never auto-changed | Confirmed |
+
+### 0.2 Non-production Supabase
+
+| Item | Status |
+|------|--------|
+| Production project `ulxmubivimwxevgxxxyu` | **Blocked** for test apply |
+| Agent-accessible GASTROFOOD staging clone | **Not provisioned** in this environment (no SERVICE_ROLE / DB URL for a non-prod GASTROFOOD project) |
+| PGlite full ordered apply of 8B→hardening | **Pass** (local non-prod substitute) |
+| Gate script | `npm run erp:r2-nonprod-gate` → `scripts/erp/apply-r2-migrations-nonprod.mjs` |
+
+**Owner action required:** create/link a Supabase **clone** of production schema (Release 1), set `ERP_SUPABASE_PROJECT_REF` + `ERP_ALLOW_NONPROD_APPLY=1`, apply migrations 8B→hardening in order, then point a Vercel Preview env at that clone (not production) for UI stock tests.
+
+### 0.3 Hardening delivered in this pass
+
+| Topic | Change |
+|-------|--------|
+| Tax rate validation | `erp_tax_rate_percent_allowed` uses **active `erp_tax_rates` catalog + effective dates** (not hardcoded-only 0/5/8/10). Exempt / Not Subject via `tax_treatment`. |
+| Backdated VAT adj | `vat_adj_allow_backdated` default **false**. Checkbox alone insufficient. When enabled: confirm + **reason_note** + audit. Period close = Release 3. |
+| Unallocated adj UI | Journal warning + badge; text states **not** auto P&L/COGS; no arbitrary edit of amounts. |
+| Chicken chain | `npm run test:phase8g:chicken` — Raw→Mince→Cooked→2-Pack→Dish + transfer + VAT adj on consumed lot |
+
+### 0.4 Release 1 Output VAT — **re-confirmed**
+
+`dishChannelFinance.test.ts`: legacy `dish.vat_rate` does not become an individual exception when global moves; modern channels use only `financialCalculator.ts`.
+
+### 0.5 Danish Hot Dog
+
+Fixture finance matrix + R1 vs R2 explanation: `docs/assets/r2-danish-hotdog-comparison.md` + `r2-phase8g-acceptance.json`.  
+Live component Δ table requires clone dump or owner-authorized read after SQL apply — **not** force-fit to 27 902.06.
+
+### 0.6 Preview / UI
+
+- Login screenshot: `docs/assets/r2-ui-login-required.png`  
+- Preview alias still behind Vercel SSO / ERP admin auth — **not** bypassed.  
+- Preview must not run write tests against production DB.
+
+### 0.7 Remaining blockers before production deploy
+
+1. Owner provisions non-prod Supabase clone + applies migrations via gate.  
+2. Authenticated UI acceptance on Preview wired to that clone.  
+3. Backup / PITR restore point on production.  
+4. Explicit OK for production SQL + frontend publish + merge.
 
 ---
 
@@ -12,19 +71,21 @@
 | Gate | Status |
 |------|--------|
 | Phases 8A–8F implemented on `erp-inventory` | **Yes** |
-| Critical unit + PGlite SQL/RPC controls | **Pass** (see §8) |
-| R2 migrations verified on non-prod PGlite (full ordered apply) | **Pass** |
-| Authenticated UI screenshots of R2 screens | **Blocked** — admin login required (owner) |
+| Pre-prod hardening (tax catalog + backdated default deny + unalloc UI) | **Yes** |
+| Critical unit + PGlite SQL/RPC controls | **Pass** |
+| Chicken multilevel production chain (PGlite) | **Pass** (8 checks) |
+| Remote Supabase clone integration | **Pending owner** (credentials / project) |
+| Authenticated UI screenshots of R2 screens | **Blocked** — admin login + non-prod Preview |
 | Production SQL apply | **Awaiting owner OK** |
 | Merge `erp-inventory` → `main` | **Awaiting owner OK** |
-| **Technical readiness for controlled deploy** | **CONDITIONAL PASS** — automated suites green after 8G fixes; ready after owner UI sign-off + backup + non-prod clone apply |
+| **Technical readiness for controlled deploy** | **CONDITIONAL PASS** — code+PGlite green; remote Supabase clone + UI sign-off still required |
 
 Release 2 is **technically ready for a controlled production window** only after:
 
-1. Owner reviews this report and Preview / staging UI.  
-2. Full Supabase backup + restore point confirmed.  
-3. Migrations 8B→8F applied on a **clone** that mirrors production, then production in one window.  
-4. Frontend deploy only when DB schema matches (no partial tax stack).
+1. Non-prod Supabase clone apply + smoke.  
+2. Owner UI walkthrough on Preview→clone.  
+3. Full Supabase backup + restore point.  
+4. Migrations 8B→hardening on production in one window, then matching frontend.
 
 ---
 
@@ -97,6 +158,9 @@ Apply **only** after backup, on non-prod first, then production in one window:
 3. `20261125170000_erp_vat_cost_adjustment.sql` — 8D  
 4. `20261125180000_erp_production_cost_lineage.sql` — 8E  
 5. `20261125190000_erp_recipe_costing.sql` — 8F  
+6. `20261125200000_erp_r2_preprod_hardening.sql` — pre-prod hardening  
+
+Gate: `npm run erp:r2-nonprod-gate` (refuses production ref `ulxmubivimwxevgxxxyu`).
 
 **Prerequisites already on production (Release 1):** tax rates, VAT exceptions I/O, sales channel finance (`…251100`–`…251300` as applicable).
 

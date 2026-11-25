@@ -79,44 +79,74 @@ export function VatAdjustmentsPage() {
           }
         />
       ) : (
-        <div className="erpTableWrap">
-          <table className="erpTable">
-            <thead>
-              <tr>
-                <th>{T("Номер", "Number", "Số")}</th>
-                <th>{T("Дата", "Date", "Ngày")}</th>
-                <th>{T("Поставщик", "Supplier", "NCC")}</th>
-                <th>{T("Продукт", "Product", "SP")}</th>
-                <th>{T("Статус НДС", "VAT status", "VAT")}</th>
-                <th className="num">{T("Δ НДС", "VAT Δ", "Δ VAT")}</th>
-                <th className="num">{T("Δ себест.", "Inv. Δ", "Δ giá vốn")}</th>
-                <th className="num">{T("Нерасп.", "Unalloc.", "Chưa PB")}</th>
-                <th>{T("Статус", "Status", "TT")}</th>
-                <th>{T("Автор", "Created by", "Tạo bởi")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <NavLink href={`/erp/documents/${row.source_document_id}`}>{row.adj_no}</NavLink>
-                  </td>
-                  <td>{dateText(row.adj_date)}</td>
-                  <td>{supplierName(row.supplier_id)}</td>
-                  <td>{productName(row.product_id)}</td>
-                  <td>
-                    {row.previous_vat_deduction_status ?? "—"} → {row.new_vat_deduction_status}
-                  </td>
-                  <td className="num">{vnd(row.vat_deduction_difference)}</td>
-                  <td className="num">{vnd(row.total_cost_adjustment)}</td>
-                  <td className="num">{vnd(row.unallocated_adjustment)}</td>
-                  <td>{row.status}</td>
-                  <td>{row.created_by ?? "—"}</td>
+        <>
+          {rows.some((r) => Number(r.unallocated_adjustment) > 0) ? (
+            <div className="erpNotice warn" data-testid="unallocated-adj-warning">
+              <strong>
+                {T(
+                  "Есть нераспределённые корректировки",
+                  "Unallocated adjustments present",
+                  "Có điều chỉnh chưa phân bổ",
+                )}
+              </strong>
+              <p>
+                {T(
+                  "Суммы в колонке «Нерасп.» сохранены отдельно, связаны с исходной закупкой и НЕ относятся автоматически на P&L / COGS. Ручное распределение — Release 3. Произвольное редактирование сумм запрещено.",
+                  "Amounts in Unalloc. stay separate, linked to the source purchase, and are NOT posted automatically to P&L / COGS. Manual allocation is Release 3. Arbitrary editing of these amounts is not allowed.",
+                  "Số tiền Unalloc. giữ riêng, gắn phiếu mua, KHÔNG tự vào P&L/COGS. Phân bổ tay = Release 3.",
+                )}
+              </p>
+            </div>
+          ) : null}
+          <div className="erpTableWrap">
+            <table className="erpTable">
+              <thead>
+                <tr>
+                  <th>{T("Номер", "Number", "Số")}</th>
+                  <th>{T("Дата", "Date", "Ngày")}</th>
+                  <th>{T("Поставщик", "Supplier", "NCC")}</th>
+                  <th>{T("Продукт", "Product", "SP")}</th>
+                  <th>{T("Статус НДС", "VAT status", "VAT")}</th>
+                  <th className="num">{T("Δ НДС", "VAT Δ", "Δ VAT")}</th>
+                  <th className="num">{T("Δ себест.", "Inv. Δ", "Δ giá vốn")}</th>
+                  <th className="num">{T("Нерасп.", "Unalloc.", "Chưa PB")}</th>
+                  <th>{T("Статус", "Status", "TT")}</th>
+                  <th>{T("Автор", "Created by", "Tạo bởi")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const unalloc = Number(row.unallocated_adjustment) > 0;
+                  return (
+                    <tr key={row.id} className={unalloc ? "erpRowWarn" : undefined}>
+                      <td>
+                        <NavLink href={`/erp/documents/${row.source_document_id}`}>{row.adj_no}</NavLink>
+                      </td>
+                      <td>{dateText(row.adj_date)}</td>
+                      <td>{supplierName(row.supplier_id)}</td>
+                      <td>{productName(row.product_id)}</td>
+                      <td>
+                        {row.previous_vat_deduction_status ?? "—"} → {row.new_vat_deduction_status}
+                      </td>
+                      <td className="num">{vnd(row.vat_deduction_difference)}</td>
+                      <td className="num">{vnd(row.total_cost_adjustment)}</td>
+                      <td className="num">
+                        {vnd(row.unallocated_adjustment)}
+                        {unalloc ? (
+                          <span className="erpBadge warn" title="Not posted to P&L/COGS">
+                            Unallocated
+                          </span>
+                        ) : null}
+                      </td>
+                      <td>{row.status}</td>
+                      <td>{row.created_by ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </>
   );
