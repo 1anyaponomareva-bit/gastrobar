@@ -23,7 +23,7 @@ npm run typecheck
 npm run build   # optional CI
 ```
 
-On staging Supabase: apply 1→5, smoke post receipt (Pending), produce, VAT adjust, dish Recipe Cost / Cost History.
+On staging Supabase: apply 1→6 (8B→hardening), smoke post receipt (Pending), produce, VAT adjust, dish Recipe Cost / Cost History. Gate: `npm run erp:r2-nonprod-gate`.
 
 See also `docs/RELEASE2_ACCEPTANCE_PLAN.md` and `docs/PHASE8F_RECIPE_COSTING.md`.
 

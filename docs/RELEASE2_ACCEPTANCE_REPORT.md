@@ -1,7 +1,8 @@
 # Release 2 — Acceptance Report (Phase 8G + Pre-Production Verification)
 
 **Branch:** `erp-inventory`  
-**Latest:** Pre-prod hardening migration `20261125200000_erp_r2_preprod_hardening.sql`  
+**Latest commit:** `d568e2d` — pre-prod hardening (catalog tax + backdated default off)  
+**Hardening migration:** `20261125200000_erp_r2_preprod_hardening.sql`  
 **Date:** 2026-11-25  
 **Production:** **not** deployed. SQL **not** applied. Merge to `main` **not** done.  
 **Release 3 / Phase 9:** **not** started.
@@ -352,7 +353,7 @@ Confirmed by design + tests:
 | Risk | Mitigation |
 |------|------------|
 | Deploy frontend before SQL | Blocked by this plan; deploy DB first or atomically |
-| Partial migration | Forbidden — apply 8B→8F together |
+| Partial migration | Forbidden — apply 8B→hardening together |
 | Confusing forecast vs FIFO actual | Docs + UI hints; policy labels |
 | Preview SSO / auth | Owner screenshot session |
 | Shopee channel incomplete finance | Pre-existing R1; not R2 scope |
@@ -366,30 +367,30 @@ Confirmed by design + tests:
 
 1. Owner OK on this report.  
 2. Supabase **full backup** (logical dump / PITR restore point — **not** row counts).  
-3. Clone DB: apply migrations 1→5; run `test-phase8-vat` + `test-phase8g-acceptance` against clone if possible.  
+3. Clone DB: apply migrations 8B→hardening (`…150000`…`…200000`); run `test:phase8`, `test:phase8g`, `test:phase8g:chicken` against clone if possible.  
 4. Freeze optional: pause new receipts/production during cutover window (minutes).  
-5. Confirm Vercel env still points to intended project; feature flags none required.
+5. Confirm Vercel Preview / production env points to intended project; **never** point Preview write-tests at production.
 
 ### Cutover order
 
-1. Apply SQL 8B→8F on production.  
-2. Smoke: open receipt draft with Pending VAT; post; check lot `unit_cost`; open VAT adj UI; open dish Recipe Cost.  
+1. Apply SQL 8B→hardening on production (six migrations, one window).  
+2. Smoke: receipt draft with Pending VAT; post; lot `unit_cost`; VAT adj UI (unallocated warning); dish Recipe Cost; settings tax catalog.  
 3. Deploy `erp-inventory` frontend (or merge then deploy — **only after owner merge OK**).  
 4. Verify Danish Hot Dog costs/CM; list any ingredient deltas vs 27 902.06.  
-5. Confirm sale prices unchanged.
+5. Confirm sale prices unchanged; backdated adj blocked by default.
 
 ### Rollback
 
-1. Frontend: redeploy previous Vercel production deployment.  
+1. Frontend: redeploy previous Vercel production deployment (**does not** roll back SQL).  
 2. Database: restore from pre-cutover backup / PITR (preferred). Forward-only SQL is not designed for partial down-migrate.  
-3. Do **not** leave R2 UI on R1 schema.
+3. Do **not** leave R2 UI on R1 schema, or R1 UI on R2 schema without compatibility check.
 
 ### Post-checks
 
 - Post one test receipt on staging clone (not prod) with Pending → Deductible adj.  
-- Spot-check FIFO write-off.  
-- Audit log entries for settings / adj.  
-- No automatic price changes.
+- Spot-check FIFO write-off + chicken-style multilevel lineage if data allows.  
+- Audit log entries for settings / adj / denied backdated attempts.  
+- No automatic price changes; unallocated adj not on P&L.
 
 ### Commits to publish (when approved)
 
@@ -400,7 +401,8 @@ Confirmed by design + tests:
 28f2c36 Phase 8D
 845ce0c Phase 8C verify + 8D harden + 8E
 3a5f6e6 Phase 8F
-(+ Phase 8G report / harness commit)
+5cade9c Phase 8G acceptance report + regression fixes
+d568e2d Pre-prod hardening (catalog tax + backdated default off)
 ```
 
 ---
@@ -424,15 +426,39 @@ Confirmed by design + tests:
 
 ---
 
-## 16. Final decision request
+## 16. Pre-prod verification result summary
 
-Release 2 Acceptance Report is ready for owner review.
+| Owner brief item | Result |
+|------------------|--------|
+| 1. Costing policy | **Approved & coded** — `manual_estimated` default; FIFO actual; sale prices untouched |
+| 2. Non-prod Supabase | **Gate ready**; clone **not provisioned** here — owner must create/apply |
+| 3. Supabase integration | **PGlite** full ordered apply + RPC/RLS-style controls **Pass**; remote clone **Pending owner** |
+| 4. Chicken multilevel chain | **Pass** — 8/8 (`test:phase8g:chicken`) |
+| 5. Unallocated adjustments | **UI warning + separate bucket**; no auto P&L; no arbitrary edit |
+| 6. Tax rate validation | **Catalog `erp_tax_rates`** + dates; rejects unknown %; Exempt/Not Subject via treatment |
+| 7. Closed periods / backdated | **Default deny**; allow only when setting ON + reason + audit; period close = R3 |
+| 8. Release 1 Output VAT | **Re-confirmed** — legacy `dish.vat_rate` not individual exception; modern = `financialCalculator` |
+| 9. Danish Hot Dog | Fixture matrix + R1/R2 note in `docs/assets/r2-danish-hotdog-comparison.md`; live Δ after clone |
+| 10. Vercel Preview | Auth/SSO intact; URL in §11; must wire to **clone**, not prod writes |
+| 11. Deploy plan | §14 — six migrations + frontend; separate FE/DB rollback |
+| 12. This report | Updated |
+| 13. Constraints | **Honoured** — no merge, no prod SQL, no R3, no mass recalc, no real stock/price changes |
+
+Automated re-check this pass: `test:finance` **74/74**; chicken chain **8/8**; nonprod gate refuses without `ERP_ALLOW_NONPROD_APPLY=1`.
+
+---
+
+## 17. Final decision request
+
+Release 2 Acceptance Report (Phase 8G + pre-production verification) is ready for owner review.
+
+**Status:** **CONDITIONAL PASS** — code and PGlite green; remote Supabase clone + authenticated Preview UI still required before production.
 
 **Awaiting your decision on:**
 
-1. Authenticated UI walkthrough / screenshots.  
-2. Non-prod Supabase clone apply (recommended before prod).  
-3. Production SQL window + frontend publish.  
+1. Provision non-prod Supabase clone and apply 8B→hardening via `npm run erp:r2-nonprod-gate`.  
+2. Authenticated UI walkthrough / screenshots on Preview→clone.  
+3. Production backup + SQL window + frontend publish.  
 4. Merge `erp-inventory` → `main`.  
 
-**Until then:** no merge, no production SQL, no production publish, no Release 3.
+**Until then:** no merge, no production SQL, no production publish, no Release 3, no mass historical cost rewrite.
