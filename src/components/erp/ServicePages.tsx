@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
-import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, StaffMergeResult } from "@/lib/erp/types";
-import { DEFAULT_VAT_RATE, defaultInputVatRate, vatRatesForSelect, visibleVatExceptions } from "@/lib/erp/vat";
+import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, ErpTaxRate, StaffMergeResult } from "@/lib/erp/types";
+import {
+  DEFAULT_VAT_RATE,
+  VAT_ACCOUNTING_METHODS,
+  catalogOrFallbackRates,
+  defaultInputVatRate,
+  taxRateLabel,
+  vatRatesForSelect,
+  visibleVatExceptions,
+} from "@/lib/erp/vat";
 import { useErp } from "./ErpShell";
 import { Pager, usePageSize } from "./Pager";
 import { RefList } from "./RefList";
@@ -37,44 +45,85 @@ export function SettingsPage() {
   if (!state || !form) return null;
   const set = <K extends keyof ErpSettings>(key: K, value: ErpSettings[K]) => setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 
+  const taxRates = state.taxRates ?? [];
+
   return (
     <>
       <ServiceHead active="/erp/service" />
 
-      <section className="erpCard">
-        <h2>{T("НДС", "VAT", "VAT")}</h2>
+      <section className="erpCard" data-testid="tax-settings">
+        <h2>{T("Налоги", "Taxes", "Thuế")}</h2>
         <div className="erpGrid two">
+          <Field
+            label={T("Метод налогового учёта", "VAT accounting method", "Phương pháp kế toán thuế GTGT")}
+            hint={T(
+              "Пусто — ещё не подтверждено администратором или бухгалтером.",
+              "Empty means not yet confirmed by an administrator or accountant.",
+              "Để trống = chưa được quản trị viên/kế toán xác nhận.",
+            )}
+          >
+            <select
+              className="erpVatSelect"
+              value={form.vat_accounting_method ?? ""}
+              onChange={(e) => set("vat_accounting_method", e.target.value || null)}
+            >
+              <option value="">{T("Не подтверждён", "Unconfirmed", "Chưa xác nhận")}</option>
+              {VAT_ACCOUNTING_METHODS.filter((m) => m !== "unconfirmed").map((method) => (
+                <option key={method} value={method}>
+                  {method === "cash"
+                    ? T("Кассовый", "Cash", "Tiền mặt")
+                    : method === "accrual"
+                      ? T("Начисление", "Accrual", "Dồn tích")
+                      : T("Смешанный", "Hybrid", "Hỗn hợp")}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <label className="erpCheck">
+            <input
+              type="checkbox"
+              checked={form.purchase_prices_include_vat_default ?? true}
+              onChange={(e) => set("purchase_prices_include_vat_default", e.target.checked)}
+            />
+            {T("Закупочные цены по умолчанию включают НДС", "Purchase prices include VAT by default", "Giá mua mặc định đã gồm VAT")}
+          </label>
           <label className="erpCheck">
             <input type="checkbox" checked={form.input_vat_enabled} onChange={(e) => set("input_vat_enabled", e.target.checked)} />
             {T("Учитывать входящий НДС в поставках", "Track input VAT on deliveries", "Tính VAT đầu vào khi nhập hàng")}
           </label>
           <Field
-            label={T("НДС по умолчанию, %", "Default VAT, %", "VAT mặc định, %")}
-            hint={T("Новый ингредиент получает эту ставку. Сейчас для всех без исключения — 8%.", "New ingredients get this rate. Everyone not on the exception list uses it (8% until you change it).", "Nguyên liệu mới nhận mức này. Chưa có ngoại lệ thì 8%.")}
+            label={T("Входящий НДС по умолчанию, %", "Default input VAT, %", "VAT đầu vào mặc định, %")}
+            hint={T(
+              "Новый ингредиент получает эту ставку. Без исключения — ставка компании (сейчас 8%).",
+              "New ingredients get this rate. Everyone not on the exception list uses the company default (8% until changed).",
+              "Nguyên liệu mới nhận mức này. Chưa có ngoại lệ thì dùng mức công ty (8% cho đến khi đổi).",
+            )}
           >
             <VatRateSelect
               value={form.default_input_vat_rate}
               fallback={DEFAULT_VAT_RATE}
+              taxRates={taxRates}
               onChange={(v) => set("default_input_vat_rate", v)}
             />
           </Field>
           <label className="erpCheck">
             <input type="checkbox" checked={form.output_vat_enabled} onChange={(e) => set("output_vat_enabled", e.target.checked)} />
-            {T("Цены в меню включают НДС", "Menu prices include VAT", "Giá menu đã gồm VAT")}
+            {T("Цены продажи включают НДС", "Sales prices include VAT", "Giá bán đã gồm VAT")}
           </label>
-          <Field label={T("НДС с продаж по умолчанию, %", "Default sales VAT, %", "VAT đầu ra mặc định, %")}>
+          <Field label={T("Исходящий НДС по умолчанию, %", "Default output VAT, %", "VAT đầu ra mặc định, %")}>
             <VatRateSelect
               value={form.default_output_vat_rate}
               fallback={DEFAULT_VAT_RATE}
+              taxRates={taxRates}
               onChange={(v) => set("default_output_vat_rate", v)}
             />
           </Field>
         </div>
         <p className="erpHint">
           {T(
-            "Входящий НДС включён — себестоимость считается без НДС. Выключен — себестоимость равна оплаченной сумме. НДС с продаж включён — маржа считается от цены без НДС. Изменение настроек не пересчитывает уже подтверждённые документы.",
-            "With input VAT on, cost excludes VAT; off — cost is the amount paid. With sales VAT on, margin is calculated from the price without VAT. Changing settings never recalculates confirmed documents.",
-            "Bật VAT đầu vào: giá vốn không gồm VAT. Bật VAT đầu ra: biên LN tính trên giá chưa VAT. Chứng từ đã xác nhận không bị tính lại.",
+            "«Цены продажи включают НДС» — это Sales Prices Include VAT (поле output_vat_enabled). Входящий НДС включён — себестоимость без возмещаемого НДС. Изменение настроек не пересчитывает уже проведённые документы.",
+            "“Sales prices include VAT” is the Sales Prices Include VAT flag (output_vat_enabled). With input VAT on, cost excludes recoverable VAT. Changing settings never recalculates posted documents.",
+            "“Giá bán đã gồm VAT” là Sales Prices Include VAT (output_vat_enabled). Bật VAT đầu vào: giá vốn không gồm VAT được khấu trừ. Chứng từ đã ghi sổ không bị tính lại.",
           )}
         </p>
         <div className="erpActions end">
@@ -87,6 +136,8 @@ export function SettingsPage() {
                 ...form,
                 default_input_vat_rate: form.default_input_vat_rate ?? DEFAULT_VAT_RATE,
                 default_output_vat_rate: form.default_output_vat_rate ?? DEFAULT_VAT_RATE,
+                purchase_prices_include_vat_default: form.purchase_prices_include_vat_default ?? true,
+                vat_accounting_method: form.vat_accounting_method || null,
               };
               if (await act({ action: "saveSettings", settings }, T("Настройки сохранены", "Settings saved", "Đã lưu cài đặt"))) {
                 setForm(settings);
@@ -98,6 +149,8 @@ export function SettingsPage() {
           </button>
         </div>
       </section>
+
+      <TaxRatesCard />
 
       <VatExceptionsCard defaultRate={defaultInputVatRate(state.settings)} />
 
@@ -134,12 +187,14 @@ function VatRateSelect({
   fallback,
   exclude,
   disabled,
+  taxRates,
 }: {
   value: number | null | undefined;
   onChange: (value: number) => void;
   fallback?: number;
   exclude?: number | null;
   disabled?: boolean;
+  taxRates?: ErpTaxRate[] | null;
 }) {
   const shown = value ?? fallback ?? DEFAULT_VAT_RATE;
   return (
@@ -149,7 +204,7 @@ function VatRateSelect({
       disabled={disabled}
       onChange={(event) => onChange(Number(event.target.value))}
     >
-      {vatRatesForSelect(shown, exclude).map((rate) => (
+      {vatRatesForSelect(shown, exclude, taxRates).map((rate) => (
         <option key={rate} value={rate}>
           {rate}%
         </option>
@@ -158,13 +213,157 @@ function VatRateSelect({
   );
 }
 
+function treatmentLabel(treatment: string) {
+  if (treatment === "exempt") return T("Освобождение", "Exempt", "Miễn thuế");
+  if (treatment === "not_subject") return T("Не подлежит декларации", "Not subject", "Không kê khai");
+  return T("Стандарт", "Standard", "Chuẩn");
+}
+
+function TaxRatesCard() {
+  const { state, act, busy } = useErp();
+  const rows = catalogOrFallbackRates(state?.taxRates);
+  const [editId, setEditId] = useState<string | null>(null);
+  const editing = rows.find((row) => row.id === editId) ?? null;
+  const [name, setName] = useState("");
+  const [nameVn, setNameVn] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [effectiveTo, setEffectiveTo] = useState("");
+  const [active, setActive] = useState(true);
+  useEffect(() => {
+    if (!editing) return;
+    setName(editing.name);
+    setNameVn(editing.name_vn ?? "");
+    setEffectiveFrom((editing.effective_from ?? "").slice(0, 10));
+    setEffectiveTo((editing.effective_to ?? "").slice(0, 10));
+    setActive(editing.is_active !== false);
+  }, [editing]);
+  if (!state) return null;
+  const catalogReady = (state.taxRates?.length ?? 0) > 0;
+  const save = async () => {
+    if (!editing || editing.id.startsWith("fallback-")) return;
+    if (
+      await act(
+        {
+          action: "saveTaxRate",
+          taxRate: {
+            id: editing.id,
+            name,
+            name_vn: nameVn,
+            rate: editing.rate,
+            tax_treatment: editing.tax_treatment,
+            effective_from: effectiveFrom || null,
+            effective_to: effectiveTo || null,
+            is_active: active,
+            sort: editing.sort ?? 0,
+          },
+        },
+        T("Ставка сохранена", "Tax rate saved", "Đã lưu thuế suất"),
+      )
+    ) {
+      setEditId(null);
+    }
+  };
+  return (
+    <section className="erpCard" data-testid="tax-rates">
+      <h2>{T("Справочник налоговых ставок", "Tax rates catalog", "Danh mục thuế suất")}</h2>
+      <p className="erpHint">
+        {T(
+          "0%, освобождение от НДС и «не подлежит декларированию» — разные записи. История изменений пишется в журнал; проведённые документы не пересчитываются.",
+          "0%, VAT Exempt, and Not Subject To VAT Declaration are separate rows. Changes are written to history; posted documents are never recalculated.",
+          "0%, miễn thuế GTGT và không kê khai là các dòng riêng. Mọi thay đổi được ghi lịch sử; chứng từ đã ghi sổ không bị tính lại.",
+        )}
+      </p>
+      {!catalogReady ? (
+        <p className="erpHint">
+          {T(
+            "Каталог ещё не загружен из базы — показан запасной список 0/5/8/10%. После применения миграции появятся Exempt и Not Subject.",
+            "Catalog not loaded from the database yet — showing fallback 0/5/8/10%. After the migration, Exempt and Not Subject appear.",
+            "Chưa tải danh mục từ CSDL — đang dùng dự phòng 0/5/8/10%. Sau migration sẽ có Exempt và Not Subject.",
+          )}
+        </p>
+      ) : null}
+      <div className="erpTableWrap">
+        <table className="erpTable stack">
+          <thead>
+            <tr>
+              <th>{T("Код", "Code", "Mã")}</th>
+              <th>{T("Название", "Name", "Tên")}</th>
+              <th className="num">{T("Ставка, %", "Rate, %", "Thuế suất, %")}</th>
+              <th>{T("Режим", "Treatment", "Cách xử lý")}</th>
+              <th>{T("С", "From", "Từ")}</th>
+              <th>{T("По", "To", "Đến")}</th>
+              <th>{T("Активна", "Active", "Hiệu lực")}</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <code>{row.code}</code>
+                </td>
+                <td>{taxRateLabel(row)}</td>
+                <td className="num">{asVatDisplay(row.rate)}</td>
+                <td>{treatmentLabel(String(row.tax_treatment))}</td>
+                <td>{(row.effective_from ?? "").slice(0, 10) || "—"}</td>
+                <td>{(row.effective_to ?? "").slice(0, 10) || "—"}</td>
+                <td>{row.is_active === false ? T("Нет", "No", "Không") : T("Да", "Yes", "Có")}</td>
+                <td>
+                  {catalogReady && !row.id.startsWith("fallback-") ? (
+                    <button type="button" className="erpBtn" disabled={busy} onClick={() => setEditId(row.id)}>
+                      {T("Изменить", "Edit", "Sửa")}
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {editing && !editing.id.startsWith("fallback-") ? (
+        <div className="erpGrid two" style={{ marginTop: 12 }}>
+          <Field label={T("Название (EN)", "Name (EN)", "Tên (EN)")}>
+            <input className="erpInput" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label={T("Название (VN)", "Name (VN)", "Tên (VN)")}>
+            <input className="erpInput" value={nameVn} onChange={(e) => setNameVn(e.target.value)} />
+          </Field>
+          <Field label={T("Действует с", "Effective from", "Hiệu lực từ")}>
+            <input className="erpInput" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+          </Field>
+          <Field label={T("Действует по", "Effective to", "Hiệu lực đến")}>
+            <input className="erpInput" type="date" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
+          </Field>
+          <label className="erpCheck">
+            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+            {T("Активна", "Active", "Hiệu lực")}
+          </label>
+          <div className="erpActions end">
+            <button type="button" className="erpBtn" disabled={busy} onClick={() => setEditId(null)}>
+              {T("Отмена", "Cancel", "Huỷ")}
+            </button>
+            <button type="button" className="erpBtn primary" disabled={busy || !name.trim()} onClick={() => void save()}>
+              {busy ? savingText() : T("Сохранить ставку", "Save rate", "Lưu thuế suất")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function asVatDisplay(rate: number) {
+  return Number.isInteger(rate) ? String(rate) : String(rate);
+}
+
 function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
   const { state, act, busy } = useErp();
+  const taxRates = state?.taxRates;
   const listed = visibleVatExceptions(state?.vatExceptions, defaultRate);
   const listedIds = useMemo(() => new Set(listed.map((row) => row.product_id)), [listed]);
-  const otherRates = useMemo(() => vatRatesForSelect(null, defaultRate), [defaultRate]);
+  const otherRates = useMemo(() => vatRatesForSelect(null, defaultRate, taxRates), [defaultRate, taxRates]);
   const [productId, setProductId] = useState("");
-  const [rate, setRate] = useState(() => vatRatesForSelect(null, defaultRate)[0] ?? 10);
+  const [rate, setRate] = useState(() => vatRatesForSelect(null, defaultRate, taxRates)[0] ?? 10);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = usePageSize();
   useEffect(() => {
@@ -211,7 +410,7 @@ function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
           <ProductPicker state={pickerState} value={productId} onChange={setProductId} />
         </Field>
         <Field label={T("НДС, %", "VAT, %", "VAT, %")}>
-          <VatRateSelect value={rate} exclude={defaultRate} onChange={setRate} />
+          <VatRateSelect value={rate} exclude={defaultRate} taxRates={taxRates} onChange={setRate} />
         </Field>
         <div className="erpVatAddAct">
           <button type="button" className="erpBtn primary" disabled={busy || !productId || rate === defaultRate} onClick={() => void add()}>

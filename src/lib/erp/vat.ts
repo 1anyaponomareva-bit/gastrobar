@@ -1,13 +1,36 @@
 /**
  * Vietnam restaurant VAT: company default is 8%. Ingredients without an exception
- * use that default (8% until the owner changes it). Allowed rates match typical VN VAT.
+ * use that default (8% until the owner changes it).
+ *
+ * Dual-read: prefer `erp_tax_rates` catalog when loaded; fall back to hardcoded
+ * `ERP_VAT_RATES` (0/5/8/10) when the catalog is missing (pre-migration / offline).
+ * 0% standard, VAT Exempt, and Not Subject stay distinct catalog rows — never merge.
  */
 
+/** Hardcoded fallback when the tax-rates catalog is not loaded yet. */
 export const ERP_VAT_RATES = [0, 5, 8, 10] as const;
 export type ErpVatRate = (typeof ERP_VAT_RATES)[number];
 export const DEFAULT_VAT_RATE: ErpVatRate = 8;
 
+export type TaxTreatment = "standard" | "exempt" | "not_subject";
+
 export type VatException = { product_id: string; vat_rate: number };
+
+export type TaxRateRow = {
+  id: string;
+  code: string;
+  name: string;
+  name_vn?: string | null;
+  rate: number;
+  tax_treatment: TaxTreatment | string;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  is_active?: boolean;
+  sort?: number;
+};
+
+export const VAT_ACCOUNTING_METHODS = ["cash", "accrual", "hybrid", "unconfirmed"] as const;
+export type VatAccountingMethod = (typeof VAT_ACCOUNTING_METHODS)[number];
 
 export function isAllowedVatRate(value: unknown): value is ErpVatRate {
   const n = Number(value);
@@ -51,8 +74,65 @@ export function visibleVatExceptions(
   return (exceptions ?? []).filter((row) => asVatRate(row.vat_rate) !== defaultRate);
 }
 
-export function vatRatesForSelect(current?: number | null, exclude?: number | null): number[] {
-  const rates = new Set<number>(ERP_VAT_RATES);
+/** Active catalog rates, or hardcoded fallback when catalog is empty/missing. */
+export function catalogOrFallbackRates(taxRates?: TaxRateRow[] | null): TaxRateRow[] {
+  const active = (taxRates ?? []).filter((row) => row.is_active !== false);
+  if (active.length > 0) {
+    return [...active].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.rate - b.rate || a.code.localeCompare(b.code));
+  }
+  return ERP_VAT_RATES.map((rate, index) => ({
+    id: `fallback-${rate}`,
+    code: `vat-${rate}`,
+    name: `${rate}%`,
+    name_vn: `${rate}%`,
+    rate,
+    tax_treatment: "standard" as const,
+    is_active: true,
+    sort: (index + 1) * 10,
+  }));
+}
+
+/** Numeric rates for legacy selects (exceptions / defaults). Prefers standard catalog rows. */
+export function vatRatesForSelect(
+  current?: number | null,
+  exclude?: number | null,
+  taxRates?: TaxRateRow[] | null,
+): number[] {
+  const fromCatalog = catalogOrFallbackRates(taxRates)
+    .filter((row) => row.tax_treatment === "standard" || isAllowedVatRate(row.rate))
+    .map((row) => asVatRate(row.rate));
+  const rates = new Set<number>(fromCatalog.length ? fromCatalog : ERP_VAT_RATES);
   if (current != null && Number.isFinite(Number(current))) rates.add(Number(current));
   return [...rates].filter((rate) => exclude == null || rate !== exclude).sort((a, b) => a - b);
+}
+
+export function taxRateLabel(row: TaxRateRow, lang: "ru" | "en" | "vn" = "en"): string {
+  if (row.tax_treatment === "exempt") {
+    return lang === "ru" ? "Освобождение от НДС" : lang === "vn" ? "Miễn thuế GTGT" : "VAT Exempt";
+  }
+  if (row.tax_treatment === "not_subject") {
+    return lang === "ru"
+      ? "Не подлежит декларированию НДС"
+      : lang === "vn"
+        ? "Không thuộc diện kê khai thuế GTGT"
+        : "Not Subject To VAT Declaration";
+  }
+  const name = lang === "vn" && row.name_vn ? row.name_vn : row.name;
+  return name || `${asVatRate(row.rate)}%`;
+}
+
+export function findTaxRateById(taxRates: TaxRateRow[] | null | undefined, id: string | null | undefined): TaxRateRow | null {
+  if (!id) return null;
+  return (taxRates ?? []).find((row) => row.id === id) ?? null;
+}
+
+export function findStandardTaxRateByPercent(
+  taxRates: TaxRateRow[] | null | undefined,
+  rate: number | null | undefined,
+): TaxRateRow | null {
+  if (rate == null || !Number.isFinite(Number(rate))) return null;
+  const n = Number(rate);
+  return (
+    catalogOrFallbackRates(taxRates).find((row) => row.tax_treatment === "standard" && asVatRate(row.rate) === n) ?? null
+  );
 }

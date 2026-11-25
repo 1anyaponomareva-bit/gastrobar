@@ -182,7 +182,11 @@ export async function POST(request: Request) {
         return timing.json({ ok: true, patch: await fresh(["categories", "products"]) });
       case "saveSettings":
         await rpc("erp_save_settings", { p: object(a.settings, "settings"), p_actor: actor });
-        return timing.json({ ok: true, patch: await fresh(["settings", "vatExceptions"]) });
+        return timing.json({ ok: true, patch: await fresh(["settings", "vatExceptions", "taxRates"]) });
+      case "saveTaxRate": {
+        const id = await rpc("erp_save_tax_rate", { p: object(a.taxRate, "taxRate"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["taxRates", "settings"]) });
+      }
       case "saveVatException":
         await rpc("erp_save_vat_exception", { p: object(a.exception, "exception"), p_actor: actor });
         return timing.json({ ok: true, patch: await fresh(["vatExceptions"]) });

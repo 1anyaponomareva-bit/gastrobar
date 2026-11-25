@@ -93,8 +93,10 @@ import { ingredientCategoryStats, withInputVat } from "../../src/lib/erp/ingredi
 import {
   DEFAULT_VAT_RATE,
   ERP_VAT_RATES,
+  catalogOrFallbackRates,
   defaultInputVatRate,
   effectiveInputVatRate,
+  vatRatesForSelect,
   visibleVatExceptions,
 } from "../../src/lib/erp/vat";
 import { planStaffMerge, type ErpCatalogRows } from "../../src/lib/erp/staffMerge";
@@ -967,6 +969,7 @@ async function main() {
       "financeEmployees",
       "financePayroll",
       "vatExceptions",
+      "taxRates",
     ]) {
       assert.ok(key in full, key);
     }
@@ -1445,6 +1448,106 @@ async function main() {
 
     await q("update public.erp_settings set input_vat_enabled = false, default_input_vat_rate = 8, default_output_vat_rate = coalesce(default_output_vat_rate, 8)");
     await q("delete from public.erp_vat_exceptions");
+  });
+
+  await test("tax rates catalog seeds, history, settings fields; dual-read fallback", async () => {
+    const codes = (
+      await q<{ code: string; rate: string; tax_treatment: string }>(
+        "select code, rate::text, tax_treatment from public.erp_tax_rates order by sort",
+      )
+    ).map((r) => [r.code, n(r.rate), r.tax_treatment]);
+    assert.deepEqual(codes, [
+      ["vat-0", 0, "standard"],
+      ["vat-5", 5, "standard"],
+      ["vat-8", 8, "standard"],
+      ["vat-10", 10, "standard"],
+      ["vat-exempt", 0, "exempt"],
+      ["vat-not-subject", 0, "not_subject"],
+    ]);
+    assert.ok(
+      n(await value("select count(*) from public.erp_tax_rates where rate = 0 and tax_treatment = 'standard'")) === 1,
+      "0% standard must stay separate from exempt",
+    );
+    assert.ok((n(await value("select count(*) from public.erp_tax_rate_history")) ?? 0) >= 6);
+
+    const settings = await one<{
+      vat_accounting_method: string | null;
+      purchase_prices_include_vat_default: boolean;
+      default_input_tax_rate_id: string | null;
+      output_vat_enabled: boolean;
+    }>(
+      `select vat_accounting_method, purchase_prices_include_vat_default, default_input_tax_rate_id::text,
+              output_vat_enabled
+         from public.erp_settings where id = 1`,
+    );
+    assert.equal(settings.vat_accounting_method, null);
+    assert.equal(settings.purchase_prices_include_vat_default, true);
+    assert.ok(settings.default_input_tax_rate_id);
+
+    await q(
+      "select public.erp_save_settings($1::jsonb, $2)",
+      [
+        JSON.stringify({
+          vat_accounting_method: "accrual",
+          purchase_prices_include_vat_default: false,
+          output_vat_enabled: true,
+          default_output_vat_rate: 8,
+        }),
+        ACTOR,
+      ],
+    );
+    const after = await one<{
+      vat_accounting_method: string | null;
+      purchase_prices_include_vat_default: boolean;
+      output_vat_enabled: boolean;
+    }>(
+      "select vat_accounting_method, purchase_prices_include_vat_default, output_vat_enabled from public.erp_settings where id = 1",
+    );
+    assert.equal(after.vat_accounting_method, "accrual");
+    assert.equal(after.purchase_prices_include_vat_default, false);
+    assert.equal(after.output_vat_enabled, true);
+
+    const exemptId = await value<string>("select id::text from public.erp_tax_rates where code = 'vat-exempt'");
+    const histBefore = n(await value("select count(*) from public.erp_tax_rate_history where tax_rate_id = $1", [exemptId])) ?? 0;
+    await q(
+      "select public.erp_save_tax_rate($1::jsonb, $2)",
+      [
+        JSON.stringify({
+          id: exemptId,
+          name: "VAT Exempt",
+          name_vn: "Miễn thuế GTGT",
+          rate: 0,
+          tax_treatment: "exempt",
+          effective_from: "2026-01-01",
+          is_active: true,
+        }),
+        ACTOR,
+      ],
+    );
+    assert.equal(
+      n(await value("select count(*) from public.erp_tax_rate_history where tax_rate_id = $1", [exemptId])),
+      histBefore + 1,
+    );
+
+    const loaded = await value<{ taxRates: { code: string }[] }>("select public.erp_load_state($1)", ["taxRates"]);
+    assert.equal(loaded.taxRates.length, 6);
+    assert.deepEqual(
+      loaded.taxRates.map((r) => r.code).sort(),
+      ["vat-0", "vat-10", "vat-5", "vat-8", "vat-exempt", "vat-not-subject"],
+    );
+
+    const fallback = catalogOrFallbackRates([]);
+    assert.deepEqual(
+      fallback.map((r) => r.rate),
+      [0, 5, 8, 10],
+    );
+    assert.deepEqual(vatRatesForSelect(null, null, []), [0, 5, 8, 10]);
+    assert.ok(vatRatesForSelect(8, null, loaded.taxRates as never).includes(8));
+
+    await q(
+      "select public.erp_save_settings($1::jsonb, $2)",
+      [JSON.stringify({ vat_accounting_method: null, purchase_prices_include_vat_default: true }), ACTOR],
+    );
   });
 
   await test("product with stock cannot be archived; base unit locked once used", async () => {

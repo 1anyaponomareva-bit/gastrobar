@@ -20,9 +20,16 @@ export type {
 
 export type ErpSettings = {
   input_vat_enabled: boolean;
+  /** Sales Prices Include VAT (menu/channel prices are gross when true). Legacy column name kept. */
   output_vat_enabled: boolean;
   default_input_vat_rate: number | null;
   default_output_vat_rate: number | null;
+  /** Nullable until confirmed by administrator/accountant: cash | accrual | hybrid | unconfirmed. */
+  vat_accounting_method?: string | null;
+  /** Company default for purchase/receipt prices include VAT. Document flag still wins. */
+  purchase_prices_include_vat_default?: boolean;
+  default_input_tax_rate_id?: string | null;
+  default_output_tax_rate_id?: string | null;
   timezone?: string;
 };
 
@@ -30,6 +37,22 @@ export type ErpSettings = {
 export type ErpVatException = {
   product_id: string;
   vat_rate: number;
+};
+
+/** Row from erp_tax_rates catalog (Phase 3). */
+export type ErpTaxRate = {
+  id: string;
+  code: string;
+  name: string;
+  name_vn?: string | null;
+  rate: number;
+  tax_treatment: "standard" | "exempt" | "not_subject" | string;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  is_active?: boolean;
+  sort?: number;
+  updated_at?: string | null;
+  updated_by?: string | null;
 };
 
 type Archivable = { archived_at: string | null };
@@ -270,6 +293,8 @@ export type ErpState = {
   financePayroll?: FinancePayroll[];
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
+  /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
+  taxRates?: ErpTaxRate[];
 };
 
 export type ErpDocType = "opening" | "receipt" | "transfer" | "writeoff" | "count" | "production";
@@ -419,6 +444,7 @@ export type ErpAction =
   | { action: "restoreCategory"; id: string }
   | { action: "purgeCategoryTrash" }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
+  | { action: "saveTaxRate"; taxRate: Record<string, unknown> }
   | { action: "saveVatException"; exception: { product_id: string; vat_rate: number } }
   | { action: "deleteVatException"; productId: string }
   | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
