@@ -46,13 +46,13 @@ const bandClass = (band: MarginBand | null) => (band ? `erpMargin ${band}` : "er
 
 const bandLabel = (band: MarginBand | null) =>
   band === "critical"
-    ? T("Critical", "Critical", "Critical")
+    ? T("Критично", "Critical", "Nghiêm trọng")
     : band === "acceptable"
-      ? T("Acceptable", "Acceptable", "Acceptable")
+      ? T("Приемлемо", "Acceptable", "Chấp nhận được")
       : band === "good"
-        ? T("Good", "Good", "Good")
+        ? T("Хорошо", "Good", "Tốt")
         : band === "excellent"
-          ? T("Excellent", "Excellent", "Excellent")
+          ? T("Отлично", "Excellent", "Xuất sắc")
           : null;
 
 const money = (value: number | null | undefined) => (value == null || !Number.isFinite(value) ? "—" : vnd(value));
@@ -80,7 +80,7 @@ function RowDetail({
   if (view.mode === "incomplete") {
     return (
       <div className="erpNotice warn" data-testid="channel-finance-incomplete">
-        <strong>{T("Financial Settings Incomplete", "Financial Settings Incomplete", "Financial Settings Incomplete")}</strong>
+        <strong>{T("Финансовые настройки неполные", "Financial Settings Incomplete", "Thiết lập tài chính chưa đủ")}</strong>
         <p className="erpHint">
           {T(
             "Задайте комиссию и рекламу канала в Служебном → Каналы продаж. Legacy Rate не смешивается с новой моделью.",
@@ -154,10 +154,10 @@ function RowDetail({
             onChange={(e) => setState({ vatSim: e.target.value as VatSimulationMode })}
             data-testid={`vat-sim-${channel.code}`}
           >
-            <option value="current">{T("Current VAT Status", "Current VAT Status", "Current VAT Status")}</option>
-            <option value="full">{T("Full VAT Deduction (Simulation)", "Full VAT Deduction (Simulation)", "Full VAT Deduction (Simulation)")}</option>
-            <option value="partial">{T("Partial VAT Deduction (Simulation)", "Partial VAT Deduction (Simulation)", "Partial VAT Deduction (Simulation)")}</option>
-            <option value="none">{T("No VAT Deduction (Simulation)", "No VAT Deduction (Simulation)", "No VAT Deduction (Simulation)")}</option>
+            <option value="current">{T("Текущий статус НДС", "Current VAT Status", "Trạng thái VAT hiện tại")}</option>
+            <option value="full">{T("Полный вычет НДС (симуляция)", "Full VAT Deduction (Simulation)", "Khấu trừ VAT đầy đủ (mô phỏng)")}</option>
+            <option value="partial">{T("Частичный вычет НДС (симуляция)", "Partial VAT Deduction (Simulation)", "Khấu trừ VAT một phần (mô phỏng)")}</option>
+            <option value="none">{T("Без вычета НДС (симуляция)", "No VAT Deduction (Simulation)", "Không khấu trừ VAT (mô phỏng)")}</option>
           </select>
         </Field>
         {state.vatSim === "partial" ? (
@@ -165,62 +165,62 @@ function RowDetail({
             <NumberInput value={state.partialPct} onChange={(v) => setState({ partialPct: v })} />
           </Field>
         ) : null}
-        {view.simulation ? <span className="erpBadge warn">Simulation</span> : null}
+        {view.simulation ? <span className="erpBadge warn">{T("Симуляция", "Simulation", "Mô phỏng")}</span> : null}
       </div>
 
       <div className="erpGrid two erpFinanceBlocks">
         <div>
-          <h4>{T("Revenue", "Revenue", "Doanh thu")}</h4>
+          <h4>{T("Выручка", "Revenue", "Doanh thu")}</h4>
           <dl className="erpFinanceDl">
-            <div><dt>Gross Selling Price</dt><dd>{money(r.grossSellingPrice)}</dd></div>
-            <div><dt>Merchant Discount</dt><dd>{money(r.merchantFundedDiscount)}</dd></div>
-            <div><dt>Output VAT Rate</dt><dd>{rate(r.outputVatRate)}</dd></div>
-            <div><dt>Output VAT Amount</dt><dd>{money(r.outputVatAmount)}</dd></div>
-            <div><dt>Net Revenue</dt><dd>{money(r.netRevenue)}</dd></div>
+            <div><dt>{T("Цена продажи (с НДС)", "Gross Selling Price", "Giá bán gộp")}</dt><dd>{money(r.grossSellingPrice)}</dd></div>
+            <div><dt>{T("Скидка за счёт ресторана", "Merchant Discount", "Chiết khấu nhà hàng")}</dt><dd>{money(r.merchantFundedDiscount)}</dd></div>
+            <div><dt>{T("Ставка исходящего НДС", "Output VAT Rate", "Thuế VAT đầu ra")}</dt><dd>{rate(r.outputVatRate)}</dd></div>
+            <div><dt>{T("Сумма исходящего НДС", "Output VAT Amount", "Số tiền VAT đầu ra")}</dt><dd>{money(r.outputVatAmount)}</dd></div>
+            <div><dt>{T("Выручка без НДС", "Net Revenue", "Doanh thu chưa VAT")}</dt><dd>{money(r.netRevenue)}</dd></div>
           </dl>
         </div>
         <div>
-          <h4>{T("Product Cost", "Product Cost", "Giá vốn")}</h4>
+          <h4>{T("Себестоимость продукта", "Product Cost", "Giá vốn")}</h4>
           <dl className="erpFinanceDl">
-            <div><dt>Food Cost</dt><dd>{money(r.foodCost)} <span className="erpCellSub">{pct(r.foodCostPct)}</span></dd></div>
-            <div><dt>Packaging Cost</dt><dd>{money(r.packagingCost)} <span className="erpCellSub">{pct(r.packagingCostPct)}</span></dd></div>
-            <div><dt>Total Product Cost</dt><dd>{money(r.totalProductCost)} <span className="erpCellSub">{pct(r.totalProductCostPct)}</span></dd></div>
+            <div><dt>{T("Food Cost", "Food Cost", "Food Cost")}</dt><dd>{money(r.foodCost)} <span className="erpCellSub">{pct(r.foodCostPct)}</span></dd></div>
+            <div><dt>{T("Упаковка", "Packaging Cost", "Bao bì")}</dt><dd>{money(r.packagingCost)} <span className="erpCellSub">{pct(r.packagingCostPct)}</span></dd></div>
+            <div><dt>{T("Полная себестоимость", "Total Product Cost", "Tổng giá vốn")}</dt><dd>{money(r.totalProductCost)} <span className="erpCellSub">{pct(r.totalProductCostPct)}</span></dd></div>
           </dl>
         </div>
         <div>
-          <h4>{T("Platform Commission", "Platform Commission", "Hoa hồng sàn")}</h4>
+          <h4>{T("Комиссия платформы", "Platform Commission", "Hoa hồng sàn")}</h4>
           <dl className="erpFinanceDl">
-            <div><dt>Commission Net Rate</dt><dd>{rate(r.commissionNetRate)}</dd></div>
-            <div><dt>Commission VAT Rate</dt><dd>{rate(channel.commission_vat_rate)}</dd></div>
-            <div><dt>Commission Gross Rate</dt><dd>{rate(r.commissionGrossRate)}</dd></div>
-            <div><dt>Commission Net Amount</dt><dd>{money(r.commissionNetAmount)}</dd></div>
-            <div><dt>Commission VAT Amount</dt><dd>{money(r.commissionVatAmount)}</dd></div>
-            <div><dt>Commission Gross Amount</dt><dd>{money(r.commissionGrossAmount)}</dd></div>
-            <div><dt>Deductible VAT</dt><dd>{money(r.deductibleCommissionVat)}</dd></div>
-            <div><dt>Effective Commission Expense</dt><dd>{money(r.effectiveCommissionExpense)}</dd></div>
+            <div><dt>{T("Комиссия без НДС, %", "Commission Net Rate", "Hoa hồng chưa VAT, %")}</dt><dd>{rate(r.commissionNetRate)}</dd></div>
+            <div><dt>{T("НДС комиссии, %", "Commission VAT Rate", "VAT hoa hồng, %")}</dt><dd>{rate(channel.commission_vat_rate)}</dd></div>
+            <div><dt>{T("Комиссия с НДС, %", "Commission Gross Rate", "Hoa hồng gồm VAT, %")}</dt><dd>{rate(r.commissionGrossRate)}</dd></div>
+            <div><dt>{T("Комиссия без НДС", "Commission Net Amount", "Hoa hồng chưa VAT")}</dt><dd>{money(r.commissionNetAmount)}</dd></div>
+            <div><dt>{T("НДС комиссии", "Commission VAT Amount", "VAT hoa hồng")}</dt><dd>{money(r.commissionVatAmount)}</dd></div>
+            <div><dt>{T("Комиссия с НДС", "Commission Gross Amount", "Hoa hồng gồm VAT")}</dt><dd>{money(r.commissionGrossAmount)}</dd></div>
+            <div><dt>{T("Возмещаемый НДС", "Deductible VAT", "VAT được khấu trừ")}</dt><dd>{money(r.deductibleCommissionVat)}</dd></div>
+            <div><dt>{T("Эффективный расход на комиссию", "Effective Commission Expense", "Chi phí hoa hồng hiệu dụng")}</dt><dd>{money(r.effectiveCommissionExpense)}</dd></div>
           </dl>
         </div>
         <div>
-          <h4>{T("Advertising", "Advertising", "Quảng cáo")}</h4>
+          <h4>{T("Реклама", "Advertising", "Quảng cáo")}</h4>
           <dl className="erpFinanceDl">
-            <div><dt>Advertising Scenario</dt><dd>{r.advertisingScenario ?? "—"}</dd></div>
-            <div><dt>Advertising Gross Rate</dt><dd>{rate(r.advertisingGrossRate)}</dd></div>
-            <div><dt>Advertising VAT Rate</dt><dd>{rate(channel.advertising_vat_rate)}</dd></div>
-            <div><dt>Advertising Net Amount</dt><dd>{money(r.advertisingNetAmount)}</dd></div>
-            <div><dt>Advertising VAT Amount</dt><dd>{money(r.advertisingVatAmount)}</dd></div>
-            <div><dt>Advertising Gross Amount</dt><dd>{money(r.advertisingGrossAmount)}</dd></div>
-            <div><dt>Deductible VAT</dt><dd>{money(r.deductibleAdvertisingVat)}</dd></div>
-            <div><dt>Effective Advertising Expense</dt><dd>{money(r.effectiveAdvertisingExpense)}</dd></div>
+            <div><dt>{T("Сценарий рекламы", "Advertising Scenario", "Kịch bản quảng cáo")}</dt><dd>{r.advertisingScenario ?? "—"}</dd></div>
+            <div><dt>{T("Реклама с НДС, %", "Advertising Gross Rate", "Quảng cáo gồm VAT, %")}</dt><dd>{rate(r.advertisingGrossRate)}</dd></div>
+            <div><dt>{T("НДС рекламы, %", "Advertising VAT Rate", "VAT quảng cáo, %")}</dt><dd>{rate(channel.advertising_vat_rate)}</dd></div>
+            <div><dt>{T("Реклама без НДС", "Advertising Net Amount", "Quảng cáo chưa VAT")}</dt><dd>{money(r.advertisingNetAmount)}</dd></div>
+            <div><dt>{T("НДС рекламы", "Advertising VAT Amount", "VAT quảng cáo")}</dt><dd>{money(r.advertisingVatAmount)}</dd></div>
+            <div><dt>{T("Реклама с НДС", "Advertising Gross Amount", "Quảng cáo gồm VAT")}</dt><dd>{money(r.advertisingGrossAmount)}</dd></div>
+            <div><dt>{T("Возмещаемый НДС", "Deductible VAT", "VAT được khấu trừ")}</dt><dd>{money(r.deductibleAdvertisingVat)}</dd></div>
+            <div><dt>{T("Эффективный расход на рекламу", "Effective Advertising Expense", "Chi phí quảng cáo hiệu dụng")}</dt><dd>{money(r.effectiveAdvertisingExpense)}</dd></div>
           </dl>
         </div>
         <div>
-          <h4>{T("Financial Results", "Financial Results", "Kết quả tài chính")}</h4>
+          <h4>{T("Финансовый результат", "Financial Results", "Kết quả tài chính")}</h4>
           <dl className="erpFinanceDl">
-            <div><dt>Total Channel Expenses</dt><dd>{money(r.totalChannelExpenses)}</dd></div>
-            <div><dt>Total Variable Expenses</dt><dd>{money(r.totalVariableExpenses)}</dd></div>
+            <div><dt>{T("Расходы канала всего", "Total Channel Expenses", "Tổng chi phí kênh")}</dt><dd>{money(r.totalChannelExpenses)}</dd></div>
+            <div><dt>{T("Переменные расходы всего", "Total Variable Expenses", "Tổng chi phí biến đổi")}</dt><dd>{money(r.totalVariableExpenses)}</dd></div>
             <div>
               <dt>
-                Estimated Platform Payout{" "}
+                {T("Прогноз выплаты платформы", "Estimated Platform Payout", "Dự báo thanh toán sàn")}{" "}
                 <Tip>
                   {T(
                     "Прогноз выплаты агрегатора, не чистая прибыль и не выручка без НДС.",
@@ -232,7 +232,7 @@ function RowDetail({
               <dd>{money(r.estimatedPlatformPayout)}</dd>
             </div>
             <div>
-              <dt>Contribution Margin</dt>
+              <dt>{T("Маржа вклада (CM)", "Contribution Margin", "Contribution Margin")}</dt>
               <dd className={bandClass(view.band)}>
                 {r.complete ? (
                   <>
@@ -250,18 +250,18 @@ function RowDetail({
       </div>
 
       <div className="erpCard soft erpRecommendBox" data-testid={`recommend-${channel.code}`}>
-        <h4>{T("Recommended Selling Price", "Recommended Selling Price", "Giá bán đề xuất")}</h4>
+        <h4>{T("Рекомендуемая цена продажи", "Recommended Selling Price", "Giá bán đề xuất")}</h4>
         <div className="erpToolbar erpChannelFinanceControls">
           <Field label={T("Цель маржи", "Margin target", "Mục tiêu biên")}>
             <select value={state.marginKind} onChange={(e) => setState({ marginKind: e.target.value as MarginTargetKind })}>
-              <option value="minimum">Minimum Margin ({rate(channel.min_margin_pct)})</option>
-              <option value="target">Target Margin ({rate(channel.target_margin_pct)})</option>
-              <option value="optimal">Optimal Margin ({rate(channel.optimal_margin_pct)})</option>
-              <option value="custom">Custom Margin</option>
+              <option value="minimum">{T("Минимальная маржа", "Minimum Margin", "Biên tối thiểu")} ({rate(channel.min_margin_pct)})</option>
+              <option value="target">{T("Целевая маржа", "Target Margin", "Biên mục tiêu")} ({rate(channel.target_margin_pct)})</option>
+              <option value="optimal">{T("Оптимальная маржа", "Optimal Margin", "Biên tối ưu")} ({rate(channel.optimal_margin_pct)})</option>
+              <option value="custom">{T("Своя маржа", "Custom Margin", "Biên tùy chỉnh")}</option>
             </select>
           </Field>
           {state.marginKind === "custom" ? (
-            <Field label={T("Custom, %", "Custom, %", "Custom, %")}>
+            <Field label={T("Своя, %", "Custom, %", "Tùy chỉnh, %")}>
               <NumberInput value={state.customMargin} onChange={(v) => setState({ customMargin: v })} />
             </Field>
           ) : null}
@@ -392,7 +392,7 @@ export function DishChannelFinancePanel({
         {T("Каналы продаж", "Sales channels", "Kênh bán")}{" "}
         <Tip>
           {T(
-            "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Не Net Profit. Формулы только из financialCalculator.",
+            "Маржа вклада (CM) = Выручка без НДС − Себестоимость − Эффективные расходы канала (комиссия, реклама). Это не чистая прибыль. Расчёт только через financialCalculator.",
             "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Not Net Profit. Formulas only from financialCalculator.",
             "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Không phải Net Profit.",
           )}
@@ -401,9 +401,9 @@ export function DishChannelFinancePanel({
       <div className="erpToolbar">
         <label className="erpCheck">
           <input type="checkbox" checked={detailed} onChange={(e) => setDetailed(e.target.checked)} />
-          {T("Detailed View", "Detailed View", "Detailed View")}
+          {T("Подробный вид", "Detailed View", "Xem chi tiết")}
         </label>
-        <span className="erpMuted">{detailed ? null : T("Compact View", "Compact View", "Compact View")}</span>
+        <span className="erpMuted">{detailed ? null : T("Краткий вид", "Compact View", "Xem gọn")}</span>
       </div>
       <div className="erpTableWrap">
         <table className="erpTable stack">
@@ -412,12 +412,12 @@ export function DishChannelFinancePanel({
               <th />
               <th>{T("Канал", "Sales Channel", "Kênh")}</th>
               <th>{T("Цена, ₫", "Selling Price, ₫", "Giá, ₫")}</th>
-              <th className="num">Output VAT</th>
+              <th className="num">{T("Исх. НДС", "Output VAT", "VAT đầu ra")}</th>
               <th className="num">{T("Комиссия", "Commission", "Hoa hồng")}</th>
               <th className="num">{T("Реклама", "Advertising", "Quảng cáo")}</th>
               <th className="num">Food Cost %</th>
               <th className="num">{T("Себестоимость %", "Total Product Cost %", "Giá vốn %")}</th>
-              <th className="num">Contribution Margin</th>
+              <th className="num">{T("Маржа вклада", "Contribution Margin", "Contribution Margin")}</th>
               <th className="num">CM %</th>
             </tr>
           </thead>
@@ -440,10 +440,10 @@ export function DishChannelFinancePanel({
                     </td>
                     <td className="main">
                       <span className="erpName">{channel.name}</span>
-                      {view.preliminary ? <span className="erpBadge warn">Preliminary</span> : null}
-                      {view.mode === "legacy" ? <span className="erpBadge warn">Legacy</span> : null}
-                      {view.mode === "incomplete" ? <span className="erpBadge bad">Incomplete</span> : null}
-                      {view.simulation ? <span className="erpBadge warn">Simulation</span> : null}
+                      {view.preliminary ? <span className="erpBadge warn">{T("Предварительно", "Preliminary", "Sơ bộ")}</span> : null}
+                      {view.mode === "legacy" ? <span className="erpBadge warn">{T("Устаревшая модель", "Legacy", "Legacy")}</span> : null}
+                      {view.mode === "incomplete" ? <span className="erpBadge bad">{T("Неполно", "Incomplete", "Chưa đủ")}</span> : null}
+                      {view.simulation ? <span className="erpBadge warn">{T("Симуляция", "Simulation", "Mô phỏng")}</span> : null}
                     </td>
                     <td className="edit" data-label={T("Цена, ₫", "Price, ₫", "Giá, ₫")} style={{ minWidth: 120 }}>
                       <NumberInput
@@ -452,7 +452,7 @@ export function DishChannelFinancePanel({
                         onChange={(v) => onChannelPrice(channel.id, v)}
                       />
                     </td>
-                    <td className="num" data-label="Output VAT">
+                    <td className="num" data-label={T("Исх. НДС", "Output VAT", "VAT đầu ra")}>
                       {settings.output_vat_enabled ? (
                         <>
                           {money(r?.outputVatAmount ?? null)}
@@ -476,8 +476,8 @@ export function DishChannelFinancePanel({
                     <td className="num" data-label={T("Себестоимость %", "Cost %", "Giá vốn %")}>
                       {showMargin ? pct(r?.totalProductCostPct) : "—"}
                     </td>
-                    <td className={`num ${bandClass(showMargin ? view.band : null)}`} data-label="Contribution Margin">
-                      {showMargin ? money(r?.contributionMargin) : view.mode === "incomplete" ? T("Incomplete", "Incomplete", "Incomplete") : "—"}
+                    <td className={`num ${bandClass(showMargin ? view.band : null)}`} data-label={T("Маржа вклада", "Contribution Margin", "Contribution Margin")}>
+                      {showMargin ? money(r?.contributionMargin) : view.mode === "incomplete" ? T("Неполно", "Incomplete", "Chưa đủ") : "—"}
                     </td>
                     <td className={`num ${bandClass(showMargin ? view.band : null)}`} data-label="CM %">
                       {showMargin ? pct(r?.contributionMarginPct) : "—"}
