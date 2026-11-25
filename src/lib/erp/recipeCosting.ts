@@ -22,6 +22,7 @@ import {
   type MenuPriceSource,
   type ProductCostQuoteInput,
 } from "./costing";
+import { T } from "@/components/erp/i18n";
 import { computeDishChannelFinance, type DishChannelOverrides } from "./dishChannelFinance";
 import type { ErpChannel, ErpDish, ErpSettings } from "./types";
 
@@ -34,11 +35,60 @@ export type RecipeCostSourcePolicy =
 
 export const DEFAULT_RECIPE_COST_SOURCE: RecipeCostSourcePolicy = "manual_estimated";
 
+/** Stable order for selects (DB values stay English keys). */
+export const RECIPE_COST_SOURCE_POLICIES: RecipeCostSourcePolicy[] = [
+  "manual_estimated",
+  "last_purchase",
+  "weighted_average",
+  "estimated_fifo",
+];
+
+/** Localized option labels for UI (RU/EN/VN). Keys are never shown to the user. */
+export function recipeCostSourceLabel(policy: RecipeCostSourcePolicy): string {
+  switch (policy) {
+    case "manual_estimated":
+      return T(
+        "Ручная оценка — цена, которую задаёте сами на карточке",
+        "Manual estimated — cost you enter on the card",
+        "Ước tính thủ công — giá bạn nhập trên thẻ",
+      );
+    case "last_purchase":
+      return T(
+        "Последняя закупка — цена из самой свежей поставки",
+        "Last purchase — cost from the newest delivery",
+        "Lần nhập gần nhất — giá từ phiếu nhập mới nhất",
+      );
+    case "weighted_average":
+      return T(
+        "Средневзвешенная по складу — средняя цена текущих остатков",
+        "Weighted average — average cost of current stock",
+        "Bình quân gia quyền — giá trung bình tồn kho hiện tại",
+      );
+    case "estimated_fifo":
+      return T(
+        "Прогноз FIFO — оценка «если списывать партии по очереди» (не факт склада)",
+        "Estimated FIFO — forecast if lots were consumed oldest-first (not actual stock write-off)",
+        "Dự báo FIFO — ước tính nếu xuất lô cũ trước (không phải xuất kho thực tế)",
+      );
+    default:
+      return policy;
+  }
+}
+
+/** @deprecated Use recipeCostSourceLabel() — kept for older imports; resolves via current UI language. */
 export const RECIPE_COST_SOURCE_LABELS: Record<RecipeCostSourcePolicy, string> = {
-  manual_estimated: "Manual Estimated Cost",
-  last_purchase: "Last Purchase Cost",
-  weighted_average: "Weighted Average Inventory Cost",
-  estimated_fifo: "Estimated FIFO Consumption Cost",
+  get manual_estimated() {
+    return recipeCostSourceLabel("manual_estimated");
+  },
+  get last_purchase() {
+    return recipeCostSourceLabel("last_purchase");
+  },
+  get weighted_average() {
+    return recipeCostSourceLabel("weighted_average");
+  },
+  get estimated_fifo() {
+    return recipeCostSourceLabel("estimated_fifo");
+  },
 };
 
 /** Map settings policy → existing MenuPriceSource used by costing.ts. */

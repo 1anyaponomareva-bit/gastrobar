@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { productTitle, type ErpUnit } from "@/lib/erp/costing";
 import type { ErpChannel, ErpProduct, ErpRecipe, ErpRecipeLine, ErpSettings, ErpState, ErpTaxRate, StaffMergeResult } from "@/lib/erp/types";
-import { DEFAULT_RECIPE_COST_SOURCE, RECIPE_COST_SOURCE_LABELS, type RecipeCostSourcePolicy } from "@/lib/erp/recipeCosting";
+import {
+  DEFAULT_RECIPE_COST_SOURCE,
+  RECIPE_COST_SOURCE_POLICIES,
+  recipeCostSourceLabel,
+  type RecipeCostSourcePolicy,
+} from "@/lib/erp/recipeCosting";
 import {
   DEFAULT_VAT_RATE,
   VAT_ACCOUNTING_METHODS,
@@ -143,9 +148,9 @@ export function SettingsPage() {
               value={form.recipe_cost_source ?? DEFAULT_RECIPE_COST_SOURCE}
               onChange={(e) => set("recipe_cost_source", (e.target.value || DEFAULT_RECIPE_COST_SOURCE) as RecipeCostSourcePolicy)}
             >
-              {(Object.keys(RECIPE_COST_SOURCE_LABELS) as RecipeCostSourcePolicy[]).map((key) => (
+              {RECIPE_COST_SOURCE_POLICIES.map((key) => (
                 <option key={key} value={key}>
-                  {RECIPE_COST_SOURCE_LABELS[key]}
+                  {recipeCostSourceLabel(key)}
                 </option>
               ))}
             </select>
@@ -166,9 +171,9 @@ export function SettingsPage() {
         </div>
         <p className="erpHint">
           {T(
-            "«Цены продажи включают НДС» — это Sales Prices Include VAT (поле output_vat_enabled). Входящий НДС включён — себестоимость без возмещаемого НДС. Изменение настроек не пересчитывает уже проведённые документы.",
-            "“Sales prices include VAT” is the Sales Prices Include VAT flag (output_vat_enabled). With input VAT on, cost excludes recoverable VAT. Changing settings never recalculates posted documents.",
-            "“Giá bán đã gồm VAT” là Sales Prices Include VAT (output_vat_enabled). Bật VAT đầu vào: giá vốn không gồm VAT được khấu trừ. Chứng từ đã ghi sổ không bị tính lại.",
+            "«Цены продажи включают НДС» — галочка для цен продажи (исходящий НДС). Если входящий НДС включён — себестоимость считается без возмещаемого НДС. Изменение настроек не пересчитывает уже проведённые документы.",
+            "“Sales prices include VAT” controls outgoing VAT on menu prices. With input VAT on, cost excludes recoverable VAT. Changing settings never recalculates posted documents.",
+            "“Giá bán đã gồm VAT” — tùy chọn VAT đầu ra trên giá bán. Bật VAT đầu vào: giá vốn không gồm VAT được khấu trừ. Chứng từ đã ghi sổ không bị tính lại.",
           )}
         </p>
         <div className="erpActions end">

@@ -19,7 +19,8 @@ import { dishCost, menuCostContext, resolveRecipeCostSource, recipeCostSourceToM
 import {
   buildDishRecipeCostBlock,
   compareDishCostSnapshots,
-  RECIPE_COST_SOURCE_LABELS,
+  RECIPE_COST_SOURCE_POLICIES,
+  recipeCostSourceLabel,
   menuPriceSourceToRecipeCostSource,
   type RecipeCostSourcePolicy,
   type RecipeCostWarning,
@@ -788,7 +789,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
           </div>
           <div className="erpKpi">
             <span>{T("Источник себестоимости", "Cost source", "Nguồn giá vốn")}</span>
-            <strong>{RECIPE_COST_SOURCE_LABELS[policy]}</strong>
+            <strong>{recipeCostSourceLabel(policy)}</strong>
           </div>
           <div className="erpKpi">
             <span>{T("Полнота расчёта", "Cost completeness", "Độ đầy đủ")}</span>
@@ -837,9 +838,9 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
               onChange={(e) => setPriceSource(recipeCostSourceToMenuPriceSource(e.target.value as RecipeCostSourcePolicy))}
               data-testid="dish-cost-source"
             >
-              {(Object.keys(RECIPE_COST_SOURCE_LABELS) as RecipeCostSourcePolicy[]).map((key) => (
+              {RECIPE_COST_SOURCE_POLICIES.map((key) => (
                 <option key={key} value={key}>
-                  {RECIPE_COST_SOURCE_LABELS[key]}
+                  {recipeCostSourceLabel(key)}
                 </option>
               ))}
             </select>
