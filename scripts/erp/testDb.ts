@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 
-/** In order: later files replace functions of earlier ones. */
+/** In order: later files replace functions of earlier ones. Kept in sync with localDb + finance extras for PGlite. */
 export const MIGRATIONS = [
   "20261103120000_erp_v1.sql",
   "20261105120000_erp_losses_report.sql",
@@ -52,6 +52,10 @@ export const MIGRATIONS = [
   "20261125110000_erp_tax_rates_catalog.sql",
   "20261125120000_erp_vat_exceptions_io.sql",
   "20261125130000_erp_sales_channels_finance.sql",
+  "20261125150000_erp_purchase_input_vat.sql",
+  "20261125160000_erp_lots_input_vat_fifo.sql",
+  "20261125170000_erp_vat_cost_adjustment.sql",
+  "20261125180000_erp_production_cost_lineage.sql",
 ].map((file) => path.join(process.cwd(), "supabase/migrations", file));
 
 /** In-memory Postgres with the Supabase roles the migration grants to. */

@@ -67,10 +67,13 @@ export function VatAdjustmentEditor({
   const [newPct, setNewPct] = useState<number | null>(50);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(today());
+  const [adjDate, setAdjDate] = useState(today());
+  const [confirmBackdated, setConfirmBackdated] = useState(false);
   const [supportUrl, setSupportUrl] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adjId, setAdjId] = useState<string | null>(null);
+  const backdated = adjDate < today();
 
   const payload = useMemo(
     () => ({
@@ -82,9 +85,10 @@ export function VatAdjustmentEditor({
       vat_invoice_number: invoiceNo || null,
       vat_invoice_date: invoiceDate || null,
       supporting_document_url: supportUrl || null,
-      adj_date: today(),
+      adj_date: adjDate,
+      confirm_backdated: backdated ? confirmBackdated : false,
     }),
-    [sourceLineId, newStatus, newPct, reason, reasonNote, invoiceNo, invoiceDate, supportUrl],
+    [sourceLineId, newStatus, newPct, reason, reasonNote, invoiceNo, invoiceDate, supportUrl, adjDate, backdated, confirmBackdated],
   );
 
   const refreshPreview = async () => {
@@ -187,6 +191,19 @@ export function VatAdjustmentEditor({
           <Field label={T("Дата накладной", "VAT Invoice Date", "Ngày HĐ")}>
             <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </Field>
+          <Field label={T("Дата корректировки", "Adjustment date", "Ngày điều chỉnh")}>
+            <input type="date" value={adjDate} onChange={(e) => setAdjDate(e.target.value)} data-testid="vat-adj-date" />
+          </Field>
+          {backdated ? (
+            <label className="erpCheck" style={{ gridColumn: "1 / -1" }}>
+              <input type="checkbox" checked={confirmBackdated} onChange={(e) => setConfirmBackdated(e.target.checked)} data-testid="vat-adj-backdated" />
+              {T(
+                "Подтверждаю проведение задним числом (закрытые периоды не открываются автоматически)",
+                "I confirm backdated posting (closed periods are not reopened automatically)",
+                "Xác nhận ghi lùi ngày (không tự mở kỳ đã khoá)",
+              )}
+            </label>
+          ) : null}
           <Field label={T("Подтверждающий документ", "Supporting document", "Tài liệu hỗ trợ")} wide>
             <input value={supportUrl} placeholder="https://…" onChange={(e) => setSupportUrl(e.target.value)} />
           </Field>
@@ -247,6 +264,13 @@ export function VatAdjustmentEditor({
                     <li key={w}>{w}</li>
                   ))}
                 </ul>
+                <p>
+                  {T(
+                    "Unallocated Adjustment не списывается автоматически в P&L/COGS — только явное распределение или Phase 8E lineage.",
+                    "Unallocated Adjustment is never auto-posted to P&L/COGS — only explicit assignment or Phase 8E lineage.",
+                    "Unallocated không tự vào P&L/COGS — chỉ phân bổ thủ công hoặc lineage 8E.",
+                  )}
+                </p>
               </div>
             ) : null}
           </>

@@ -1,6 +1,6 @@
 # Phase 8C — Inventory Cost & FIFO Integration
 
-Status: **implemented in repo** (`erp-inventory`). SQL **not** applied to production until separate OK.
+Status: **verified complete** — see `PHASE8C_COMPLETION_REPORT.md`. SQL **not** applied to production until separate OK.
 
 ## Goal
 
