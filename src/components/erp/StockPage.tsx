@@ -312,6 +312,7 @@ function SupplierTable({
       columns={[
         { key: "name", label: `${T("Название", "Name", "Tên")} ${nameDesc ? "↓" : "↑"}` },
         { key: "category_names", label: T("Категория", "Category", "Nhóm"), readOnly: true },
+        { key: "tax_code", label: T("ИНН / MST", "Tax code", "MST"), placeholder: "0…" },
         { key: "zalo_url", label: T("Ссылка Zalo", "Zalo link", "Liên kết Zalo"), placeholder: "https://zalo.me/…" },
       ]}
       addLabel={T("Добавить поставщика", "Add supplier", "Thêm nhà cung cấp")}

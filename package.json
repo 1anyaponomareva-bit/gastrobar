@@ -21,7 +21,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:erp": "tsx scripts/erp/test-erp.ts",
-    "test:finance": "node --import tsx --test src/lib/erp/financialCalculator.test.ts src/lib/erp/dishChannelFinance.test.ts",
+    "test:finance": "node --import tsx --test src/lib/erp/financialCalculator.test.ts src/lib/erp/dishChannelFinance.test.ts src/lib/erp/purchaseVat.test.ts",
     "check": "npm run lint && npm run typecheck"
   },
   "dependencies": {

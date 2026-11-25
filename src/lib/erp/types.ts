@@ -82,7 +82,21 @@ export type ErpCategory = Archivable & {
   sort: number;
   deleted_at?: string | null;
 };
-export type ErpSupplier = Archivable & { id: string; code: string; name: string; zalo_url: string | null; sort: number };
+export type ErpSupplier = Archivable & {
+  id: string;
+  code: string;
+  name: string;
+  zalo_url: string | null;
+  sort: number;
+  /** MST / tax code copied into receipt header when supplier is chosen. */
+  tax_code?: string | null;
+};
+
+/** Input VAT deduction on a purchase (receipt) line. Default for unconfirmed buys: pending. */
+export type ErpVatDeductionStatus = "pending" | "deductible" | "partial" | "non_deductible";
+
+/** Invoice / tax-document check on a receipt header. missing ≠ deductible. */
+export type ErpVatVerificationStatus = "missing" | "pending" | "verified" | "rejected";
 export type ErpLocation = {
   id: string;
   name: string;
@@ -394,6 +408,15 @@ export type ErpDocumentLine = {
   pack_qty_base?: number | null;
   unit_price?: number | null;
   vat_rate?: number | null;
+  /** Line override; when null, document `prices_include_vat` applies. */
+  vat_included?: boolean | null;
+  vat_deduction_status?: ErpVatDeductionStatus | string | null;
+  deductible_vat_pct?: number | null;
+  deductible_vat_amount?: number | null;
+  non_deductible_vat_amount?: number | null;
+  effective_inventory_cost?: number | null;
+  net_unit_price?: number | null;
+  gross_unit_price?: number | null;
   batch_no?: string | null;
   expires_at?: string | null;
   reason?: string | null;
@@ -436,6 +459,14 @@ export type ErpDocument = {
   client_key?: string | null;
   comment?: string | null;
   prices_include_vat?: boolean;
+  /** Supplier MST on the receipt (may differ from master until synced). */
+  supplier_tax_code?: string | null;
+  vat_invoice_number?: string | null;
+  vat_invoice_serial?: string | null;
+  vat_invoice_date?: string | null;
+  invoice_attachment_url?: string | null;
+  vat_verification_status?: ErpVatVerificationStatus | string | null;
+  payment_status?: string | null;
   recipe_id?: string | null;
   output_product_id?: string | null;
   plan_output_qty?: number | null;

@@ -6,8 +6,9 @@ import { productTitle } from "@/lib/erp/costing";
 import { initialWarehouses } from "@/lib/erp/docDefaults";
 import { applyReceiptSupplier, inferredReceiptSupplier } from "@/lib/erp/docSupplier";
 import { basePrice, compatiblePacks, defaultPackId, linePackName, packCoefficient, packDisplayName, packPrice, packToBase } from "@/lib/erp/packs";
-import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState } from "@/lib/erp/types";
-import { effectiveInputVatRate } from "@/lib/erp/vat";
+import { calculatePurchaseLineVat, type VatDeductionStatus } from "@/lib/erp/purchaseVat";
+import type { ErpDocType, ErpDocument, ErpDocumentLine, ErpState, ErpVatVerificationStatus } from "@/lib/erp/types";
+import { catalogOrFallbackRates, effectiveInputVatRate } from "@/lib/erp/vat";
 import { vietnamNowTime } from "@/lib/orders/datetime";
 import { StatusBadge } from "./docs";
 import { PurchasingReceiptPanel } from "./PurchasingReceiptPanel";
@@ -41,6 +42,20 @@ import {
   WarehouseSelect,
 } from "./ui";
 
+const DEDUCTION_STATUSES: { value: VatDeductionStatus; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "deductible", label: "Deductible" },
+  { value: "partial", label: "Partially Deductible" },
+  { value: "non_deductible", label: "Non-Deductible" },
+];
+
+const VERIFICATION_STATUSES: { value: ErpVatVerificationStatus; label: string }[] = [
+  { value: "missing", label: "Missing invoice" },
+  { value: "pending", label: "Pending check" },
+  { value: "verified", label: "Verified" },
+  { value: "rejected", label: "Rejected" },
+];
+
 const TYPES = new Set<ErpDocType>(["opening", "receipt", "transfer", "writeoff", "count"]);
 
 type SetDoc = <K extends keyof ErpDocument>(key: K, value: ErpDocument[K]) => void;
@@ -57,10 +72,34 @@ function defaultDocument(state: ErpState, type: ErpDocType, warehouse: string | 
     doc_date: today(),
     ...(type === "writeoff" ? { doc_time: nowTime() } : {}),
     ...initialWarehouses(type, state.warehouses, warehouse),
+    ...(type === "receipt"
+      ? {
+          prices_include_vat: Boolean(state.settings.purchase_prices_include_vat_default),
+          vat_verification_status: "missing" as const,
+        }
+      : {}),
     // A repeated save/post of this new document (double click, retry) returns the same document.
     client_key: newKey(),
     lines: [],
   };
+}
+
+function receiptLineVat(state: ErpState, doc: ErpDocument, line: ErpDocumentLine) {
+  const product = productById(state, line.product_id);
+  const rate =
+    line.vat_rate ??
+    effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions, {
+      categoryId: product?.category_id ?? null,
+    });
+  const include = line.vat_included ?? Boolean(doc.prices_include_vat);
+  return calculatePurchaseLineVat({
+    qty: line.qty,
+    unitPrice: line.unit_price ?? null,
+    vatRate: rate,
+    pricesIncludeVat: include,
+    vatDeductionStatus: (line.vat_deduction_status as VatDeductionStatus) ?? "pending",
+    deductibleVatPct: line.deductible_vat_pct ?? null,
+  });
 }
 
 /** A new write-off with the warehouse, reason, comment and lines of another one. */
@@ -409,7 +448,16 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
       ) : null}
       {type === "receipt" ? (
         <Field label={T("Поставщик", "Supplier", "Nhà cung cấp")}>
-          <select value={doc.supplier_id ?? ""} disabled={!editable} onChange={(e) => set("supplier_id", e.target.value || null)}>
+          <select
+            value={doc.supplier_id ?? ""}
+            disabled={!editable}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              set("supplier_id", id);
+              const supplier = state.suppliers.find((s) => s.id === id);
+              if (supplier?.tax_code) set("supplier_tax_code", supplier.tax_code);
+            }}
+          >
             <option value="">{T("— не указан —", "— not set —", "— không —")}</option>
             {state.suppliers
               .filter((s) => !s.archived_at || s.id === doc.supplier_id)
@@ -420,6 +468,80 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
               ))}
           </select>
         </Field>
+      ) : null}
+      {type === "receipt" && state.settings.input_vat_enabled ? (
+        <>
+          <Field label={T("ИНН / MST поставщика", "Supplier Tax Code", "Mã số thuế NCC")}>
+            <input
+              value={doc.supplier_tax_code ?? ""}
+              disabled={!editable}
+              onChange={(e) => set("supplier_tax_code", e.target.value || null)}
+              data-testid="receipt-supplier-tax-code"
+            />
+          </Field>
+          <Field
+            label={T("Номер налоговой накладной", "VAT Invoice Number", "Số HĐ VAT")}
+            hint={T(
+              "Можно провести поставку без накладной и добавить документ позже. Отсутствие накладной не подтверждает вычет.",
+              "You can receive stock without an invoice and attach it later. Missing invoice does not confirm deduction.",
+              "Có thể nhập kho chưa có hoá đơn và bổ sung sau. Thiếu hoá đơn không xác nhận quyền khấu trừ.",
+            )}
+          >
+            <input
+              value={doc.vat_invoice_number ?? ""}
+              disabled={!editable}
+              onChange={(e) => {
+                const v = e.target.value || null;
+                set("vat_invoice_number", v);
+                if (!v && !doc.vat_verification_status) set("vat_verification_status", "missing");
+                if (v && (doc.vat_verification_status === "missing" || !doc.vat_verification_status)) {
+                  set("vat_verification_status", "pending");
+                }
+              }}
+              data-testid="receipt-vat-invoice-number"
+            />
+          </Field>
+          <Field label={T("Серия накладной", "VAT Invoice Serial", "Ký hiệu HĐ")}>
+            <input
+              value={doc.vat_invoice_serial ?? ""}
+              disabled={!editable}
+              onChange={(e) => set("vat_invoice_serial", e.target.value || null)}
+              data-testid="receipt-vat-invoice-serial"
+            />
+          </Field>
+          <Field label={T("Дата накладной", "VAT Invoice Date", "Ngày HĐ VAT")}>
+            <input
+              type="date"
+              value={doc.vat_invoice_date ?? ""}
+              disabled={!editable}
+              onChange={(e) => set("vat_invoice_date", e.target.value || null)}
+              data-testid="receipt-vat-invoice-date"
+            />
+          </Field>
+          <Field label={T("Вложение счёта / накладной", "Invoice Attachment", "File hoá đơn")} wide>
+            <input
+              value={doc.invoice_attachment_url ?? ""}
+              disabled={!editable}
+              placeholder="https://…"
+              onChange={(e) => set("invoice_attachment_url", e.target.value || null)}
+              data-testid="receipt-invoice-attachment"
+            />
+          </Field>
+          <Field label={T("Статус проверки НДС", "VAT Verification Status", "Trạng thái kiểm tra VAT")}>
+            <select
+              value={doc.vat_verification_status ?? "missing"}
+              disabled={!editable}
+              onChange={(e) => set("vat_verification_status", (e.target.value || "missing") as ErpVatVerificationStatus)}
+              data-testid="receipt-vat-verification"
+            >
+              {VERIFICATION_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </>
       ) : null}
       {type === "writeoff" ? (
         <Field
@@ -463,10 +585,17 @@ function Header({ state, doc, editable, set, setLines }: { state: ErpState; doc:
         </Field>
       ) : null}
       {type === "receipt" && state.settings.input_vat_enabled ? (
-        <label className="erpCheck">
-          <input type="checkbox" checked={Boolean(doc.prices_include_vat)} disabled={!editable} onChange={(e) => set("prices_include_vat", e.target.checked)} />
-          {T("Цены указаны с НДС", "Prices include VAT", "Giá đã gồm VAT")}
-        </label>
+        <Field label={T("Режим цены", "Price mode", "Chế độ giá")}>
+          <select
+            value={doc.prices_include_vat ? "incl" : "excl"}
+            disabled={!editable}
+            onChange={(e) => set("prices_include_vat", e.target.value === "incl")}
+            data-testid="receipt-price-mode"
+          >
+            <option value="excl">{T("Цена без НДС", "Price Excluding VAT", "Giá chưa VAT")}</option>
+            <option value="incl">{T("Цена с НДС", "Price Including VAT", "Giá gồm VAT")}</option>
+          </select>
+        </Field>
       ) : null}
       <Field label={T("Комментарий", "Comment", "Ghi chú")} wide>
         <input value={doc.comment ?? ""} disabled={!editable} onChange={(e) => set("comment", e.target.value)} />
@@ -492,10 +621,25 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
       takeSupplier(next);
       return next;
     });
-  const total = doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
+  const taxRates = catalogOrFallbackRates(state.taxRates);
   const missingPrice = priced && doc.lines.some((line) => line.product_id && (line.unit_price === null || line.unit_price === undefined));
   const qtyLabel = type === "count" ? T("Фактически", "Counted", "Thực tế") : type === "receipt" ? T("Принято", "Received", "Đã nhận") : T("Количество", "Quantity", "Số lượng");
   const stockLabel = type === "count" ? T("По учёту", "On record", "Theo sổ") : T("Есть на складе", "In stock", "Tồn kho");
+  const purchasePreview = vatOn
+    ? doc.lines.reduce(
+        (acc, line) => {
+          const r = receiptLineVat(state, doc, line);
+          return {
+            net: acc.net + (r.netTotal ?? 0),
+            vat: acc.vat + (r.vatTotal ?? 0),
+            gross: acc.gross + (r.grossTotal ?? 0),
+            effective: acc.effective + (r.effectiveInventoryCost ?? 0),
+          };
+        },
+        { net: 0, vat: 0, gross: 0, effective: 0 },
+      )
+    : null;
+  const total = purchasePreview ? purchasePreview.gross : doc.lines.reduce((sum, line) => sum + (line.unit_price ?? 0) * line.qty, 0);
 
   return (
     <section className="erpCard">
@@ -518,6 +662,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                 {type === "count" ? <th className="num">{T("Разница", "Difference", "Chênh lệch")}</th> : null}
                 {priced ? <th>{T("Цена за фасовку, ₫", "Pack price, ₫", "Giá quy cách, ₫")}</th> : null}
                 {vatOn ? <th>{T("НДС, %", "VAT, %", "VAT, %")}</th> : null}
+                {vatOn ? <th>{T("Вычет НДС", "VAT Deduction", "Khấu trừ VAT")}</th> : null}
                 {priced ? <th>{T("Годен до", "Use by", "Hạn dùng")}</th> : null}
                 {type === "writeoff" ? <th>{T("Комментарий", "Note", "Ghi chú")}</th> : null}
                 {priced || posted ? <th className="num">{T("Сумма", "Amount", "Số tiền")}</th> : null}
@@ -537,6 +682,13 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                 const short = type !== "count" && showStock && Boolean(line.product_id) && available < line.qty;
                 const recorded = posted ? (line.system_qty ?? null) : available;
                 const diff = type === "count" ? (posted ? (line.diff_qty ?? null) : line.product_id ? line.qty - available : null) : null;
+                const resolvedVat =
+                  line.vat_rate ??
+                  effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions, {
+                    categoryId: product?.category_id ?? null,
+                  });
+                const lineVat = vatOn ? receiptLineVat(state, doc, line) : null;
+                const deduction = (line.vat_deduction_status as VatDeductionStatus) || "pending";
                 return (
                   <tr key={line.id ?? index} className={short ? "short" : ""}>
                     <td className="main" style={{ minWidth: 220 }}>
@@ -552,6 +704,12 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                               pack_id: defaultId,
                               pack_qty: null,
                               unit_price: priced ? (picked?.est_unit_cost ?? null) : null,
+                              ...(type === "receipt"
+                                ? {
+                                    vat_rate: null,
+                                    vat_deduction_status: line.vat_deduction_status ?? "pending",
+                                  }
+                                : {}),
                             });
                           }}
                         />
@@ -675,15 +833,65 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                       </td>
                     ) : null}
                     {vatOn ? (
-                      <td className="edit" data-label={T("НДС, %", "VAT, %", "VAT, %")} style={{ width: 90 }}>
+                      <td className="edit" data-label={T("НДС, %", "VAT, %", "VAT, %")} style={{ minWidth: 100 }}>
                         {editable ? (
-                          <NumberInput
-                            value={line.vat_rate}
-                            placeholder={String(effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions))}
-                            onChange={(v) => update(index, { vat_rate: v })}
-                          />
+                          <select
+                            className="erpVatSelect"
+                            value={line.vat_rate ?? ""}
+                            onChange={(e) => update(index, { vat_rate: e.target.value === "" ? null : Number(e.target.value) })}
+                            data-testid="doc-line-vat-rate"
+                          >
+                            <option value="">{T("авто", "auto", "tự động")} ({resolvedVat}%)</option>
+                            {taxRates.map((row) => (
+                              <option key={row.id ?? row.rate} value={row.rate}>
+                                {row.rate}%{row.name ? ` · ${row.name}` : ""}
+                              </option>
+                            ))}
+                          </select>
                         ) : (
-                          (line.vat_rate ?? effectiveInputVatRate(line.product_id, state.settings, state.vatExceptions))
+                          `${resolvedVat}%`
+                        )}
+                      </td>
+                    ) : null}
+                    {vatOn ? (
+                      <td className="edit" data-label={T("Вычет НДС", "VAT Deduction", "Khấu trừ VAT")} style={{ minWidth: 160 }}>
+                        {editable ? (
+                          <div className="erpPackLine">
+                            <select
+                              value={deduction}
+                              onChange={(e) =>
+                                update(index, {
+                                  vat_deduction_status: e.target.value as VatDeductionStatus,
+                                  deductible_vat_pct: e.target.value === "partial" ? (line.deductible_vat_pct ?? 100) : null,
+                                })
+                              }
+                              data-testid="doc-line-vat-deduction"
+                            >
+                              {DEDUCTION_STATUSES.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
+                            {deduction === "partial" ? (
+                              <label className="erpPackQty">
+                                <span>{T("% вычета", "Deductible %", "% khấu trừ")}</span>
+                                <NumberInput
+                                  value={line.deductible_vat_pct}
+                                  onChange={(v) =>
+                                    update(index, {
+                                      deductible_vat_pct: v == null ? null : Math.min(100, Math.max(0, v)),
+                                    })
+                                  }
+                                />
+                              </label>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <>
+                            {DEDUCTION_STATUSES.find((s) => s.value === deduction)?.label ?? deduction}
+                            {deduction === "partial" && line.deductible_vat_pct != null ? ` (${line.deductible_vat_pct}%)` : ""}
+                          </>
                         )}
                       </td>
                     ) : null}
@@ -704,7 +912,7 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                             <span className="erpBadge warn">{T("цена неизвестна", "price unknown", "chưa rõ giá")}</span>
                           ) : (
                             <>
-                              {vnd(line.cost_amount)}
+                              {vnd(line.effective_inventory_cost ?? line.cost_amount)}
                               {type === "writeoff" && line.unit_cost !== null && line.unit_cost !== undefined ? (
                                 <small className="erpCellSub">
                                   {vnd(line.unit_cost)} / {unitLabel(unit)}
@@ -712,12 +920,26 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
                               ) : null}
                             </>
                           )
+                        ) : lineVat && lineVat.grossTotal != null ? (
+                          <span data-testid="doc-line-sum">
+                            {vnd(lineVat.grossTotal)}
+                            <small className="erpCellSub">
+                              Net {vnd(lineVat.netTotal)} · VAT {vnd(lineVat.vatTotal)}
+                              <br />
+                              {T("Себест. склад", "Inventory cost", "Giá vốn kho")}: {vnd(lineVat.effectiveInventoryCost)}
+                            </small>
+                          </span>
                         ) : line.unit_price !== null && line.unit_price !== undefined ? (
                           <span data-testid="doc-line-sum">{vnd(line.unit_price * line.qty)}</span>
                         ) : (
                           "—"
                         )}
-                        {posted && vatOn && line.vat_amount ? <small className="erpCellSub">НДС {vnd(line.vat_amount)}</small> : null}
+                        {posted && vatOn && (line.vat_amount || line.effective_inventory_cost) ? (
+                          <small className="erpCellSub">
+                            Net {vnd(line.net_amount)} · VAT {vnd(line.vat_amount)}
+                            {line.non_deductible_vat_amount != null ? ` · non-ded. ${vnd(line.non_deductible_vat_amount)}` : ""}
+                          </small>
+                        ) : null}
                       </td>
                     ) : null}
                     {editable ? (
@@ -736,7 +958,21 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
       )}
       {editable ? (
         <div className="erpActions">
-          <button type="button" className="erpBtn" data-testid="doc-add-line" onClick={() => setLines((lines) => [...lines, { product_id: "", qty: 0 }])}>
+          <button
+            type="button"
+            className="erpBtn"
+            data-testid="doc-add-line"
+            onClick={() =>
+              setLines((lines) => [
+                ...lines,
+                {
+                  product_id: "",
+                  qty: 0,
+                  ...(type === "receipt" ? { vat_deduction_status: "pending" as const } : {}),
+                },
+              ])
+            }
+          >
             + {T("Добавить продукт", "Add product", "Thêm sản phẩm")}
           </button>
           {type === "count" && doc.warehouse_id ? (
@@ -757,6 +993,16 @@ function Lines({ state, doc, editable, set, setLines }: { state: ErpState; doc: 
       {priced && doc.lines.length ? (
         <p className="erpHint">
           {T("Итого", "Total", "Tổng")}: <b>{vnd(total)}</b>
+          {purchasePreview ? (
+            <>
+              {" "}
+              · Net {vnd(purchasePreview.net)} · VAT {vnd(purchasePreview.vat)} · Gross {vnd(purchasePreview.gross)}
+              <br />
+              {T("Эффективная складская себестоимость", "Effective inventory cost", "Giá vốn kho hiệu lực")}: <b>{vnd(purchasePreview.effective)}</b>
+              {" · "}
+              {T("Pending включает НДС в себестоимость до подтверждения вычета", "Pending keeps VAT in inventory cost until deduction is confirmed", "Pending giữ VAT trong giá vốn đến khi xác nhận khấu trừ")}
+            </>
+          ) : null}
           {missingPrice ? ` · ${T("у строк без цены себестоимость будет неизвестна", "lines without a price will have unknown cost", "dòng chưa có giá sẽ chưa rõ giá vốn")}` : ""}
           {vatOn ? ` · ${doc.prices_include_vat ? T("с НДС", "incl. VAT", "gồm VAT") : T("без НДС", "excl. VAT", "chưa VAT")}` : ""}
         </p>
