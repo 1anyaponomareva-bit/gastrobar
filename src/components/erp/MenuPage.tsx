@@ -469,21 +469,21 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
             <Field
               label={T("НДС, %", "VAT, %", "VAT, %")}
               hint={T(
-                `Эффективная ставка: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                `Эффективная ставка (без канала): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
                   dishId: dish?.id,
                   categoryId: form.category_id || null,
                   dishVatRate: form.vat_rate,
-                })}% (исключение → поле блюда → категория → ${defaultOutputVatRate(state.settings)}%). Список исключений — в Служебном.`,
-                `Effective rate: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                })}%. Приоритет: исключение блюда → явное поле (≠${defaultOutputVatRate(state.settings)}%) → категория → канал → глобальная. Авто-${defaultOutputVatRate(state.settings)}% в поле не перекрывает категорию/канал.`,
+                `Effective rate (no channel): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
                   dishId: dish?.id,
                   categoryId: form.category_id || null,
                   dishVatRate: form.vat_rate,
-                })}% (exception → dish field → category → ${defaultOutputVatRate(state.settings)}%). Exception list is in Admin.`,
-                `Thuế hiệu lực: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                })}%. Priority: dish exception → explicit field (≠${defaultOutputVatRate(state.settings)}%) → category → channel → global. Auto-${defaultOutputVatRate(state.settings)}% field does not override category/channel.`,
+                `Thuế (không kênh): ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
                   dishId: dish?.id,
                   categoryId: form.category_id || null,
                   dishVatRate: form.vat_rate,
-                })}% (ngoại lệ → món → danh mục → ${defaultOutputVatRate(state.settings)}%). Danh sách trong Quản trị.`,
+                })}%. Ưu tiên: ngoại lệ món → field rõ (≠${defaultOutputVatRate(state.settings)}%) → danh mục → kênh → global.`,
               )}
             >
               <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />

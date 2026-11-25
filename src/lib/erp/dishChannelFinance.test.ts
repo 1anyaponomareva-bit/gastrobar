@@ -133,6 +133,27 @@ test("output VAT: dish exception wins over channel", () => {
   assert.equal(rate, 5);
 });
 
+test("output VAT: auto dish.vat_rate=global does not override category/channel", () => {
+  const rate = resolveDishOutputVatRate({
+    settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
+    exceptions: [{ id: "1", category_id: "c1", vat_rate: 0, direction: "output", scope_kind: "category" } as never],
+    channel: { output_vat_rate: 8 },
+    categoryId: "c1",
+    dishVatRate: 8,
+  });
+  assert.equal(rate, 0);
+});
+
+test("output VAT: explicit dish.vat_rate ≠ global acts as individual override", () => {
+  const rate = resolveDishOutputVatRate({
+    settings: { output_vat_enabled: true, default_output_vat_rate: 8 },
+    exceptions: [],
+    channel: { output_vat_rate: 8 },
+    dishVatRate: 0,
+  });
+  assert.equal(rate, 0);
+});
+
 test("margin bands use channel thresholds", () => {
   const ch = { min_margin_pct: 40, target_margin_pct: 45, optimal_margin_pct: 50 };
   assert.equal(marginBandForChannel(39, ch), "critical");

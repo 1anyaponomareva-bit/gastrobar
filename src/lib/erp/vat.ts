@@ -132,8 +132,10 @@ export function effectiveInputVatRate(
 }
 
 /**
- * Output VAT (matches SQL erp_effective_output_vat_rate):
- * dish/product exception → legacy dish.vat_rate → category → company default.
+ * Output VAT without sales-channel context (catalog / dish field readout).
+ * Release 1: dish exception → explicit dish.vat_rate (≠ global) → product exception
+ * → category exception → global. Auto-baseline dish.vat_rate (= global) is ignored.
+ * For dish×channel finance use resolveDishOutputVatRate (adds channel before global).
  */
 export function effectiveOutputVatRate(
   settings?: { default_output_vat_rate?: number | null } | null,
@@ -146,23 +148,28 @@ export function effectiveOutputVatRate(
     asOf?: string | Date | null;
   },
 ): number {
+  const global = defaultOutputVatRate(settings);
   const rows = exceptionsFor(exceptions, "output", opts?.asOf);
   if (opts?.dishId) {
     const dish = rows.find((row) => normalizeVatScope(row) === "dish" && row.dish_id === opts.dishId);
-    if (dish) return asVatRate(dish.vat_rate, defaultOutputVatRate(settings));
+    if (dish) return asVatRate(dish.vat_rate, global);
   }
-  if (opts?.dishVatRate != null && Number.isFinite(Number(opts.dishVatRate))) {
-    return asVatRate(opts.dishVatRate, defaultOutputVatRate(settings));
+  if (
+    opts?.dishVatRate != null &&
+    Number.isFinite(Number(opts.dishVatRate)) &&
+    Number(opts.dishVatRate) !== global
+  ) {
+    return asVatRate(opts.dishVatRate, global);
   }
   if (opts?.productId) {
     const product = rows.find((row) => normalizeVatScope(row) === "product" && row.product_id === opts.productId);
-    if (product) return asVatRate(product.vat_rate, defaultOutputVatRate(settings));
+    if (product) return asVatRate(product.vat_rate, global);
   }
   if (opts?.categoryId) {
     const cat = rows.find((row) => normalizeVatScope(row) === "category" && row.category_id === opts.categoryId);
-    if (cat) return asVatRate(cat.vat_rate, defaultOutputVatRate(settings));
+    if (cat) return asVatRate(cat.vat_rate, global);
   }
-  return defaultOutputVatRate(settings);
+  return global;
 }
 
 /** Visible exception list for one direction: only rates other than that direction's default. */

@@ -65,8 +65,16 @@ export function channelCalcMode(channel: ErpChannel): ChannelCalcMode {
 }
 
 /**
- * Output VAT priority (Phase 7):
- * 1) dish exception → 2) dish.vat_rate → 3) category exception → 4) channel → 5) global.
+ * Output VAT for dish×channel (Release 1 final):
+ * 1) Individual Output VAT Exception (dish scope)
+ * 2) Explicit individual dish.vat_rate — ONLY when it differs from the global default
+ *    (auto-assigned 8%/global baseline is ignored so it cannot override category/channel)
+ * 3) Category Output VAT Exception
+ * 4) Sales Channel output_vat_rate
+ * 5) Global default_output_vat_rate
+ *
+ * Single individual source: prefer erp_vat_exceptions(dish); dish.vat_rate is a legacy
+ * alias for the same priority when it is clearly not the auto baseline.
  * Input/purchase VAT never drives dish output VAT.
  */
 export function resolveDishOutputVatRate(opts: {
@@ -79,6 +87,7 @@ export function resolveDishOutputVatRate(opts: {
   asOf?: string | Date | null;
 }): number {
   if (!opts.settings.output_vat_enabled) return 0;
+  const global = defaultOutputVatRate(opts.settings);
   const rows = (opts.exceptions ?? []).filter(
     (row) => normalizeVatDirection(row) === "output" && exceptionActiveOn(row, opts.asOf),
   );
@@ -86,7 +95,14 @@ export function resolveDishOutputVatRate(opts: {
     const dish = rows.find((row) => normalizeVatScope(row) === "dish" && row.dish_id === opts.dishId);
     if (dish && dish.vat_rate != null) return Number(dish.vat_rate);
   }
-  if (opts.dishVatRate != null && Number.isFinite(Number(opts.dishVatRate))) return Number(opts.dishVatRate);
+  // Legacy dish.vat_rate: ignore when equal to global (typical auto-seed 8%).
+  if (
+    opts.dishVatRate != null &&
+    Number.isFinite(Number(opts.dishVatRate)) &&
+    Number(opts.dishVatRate) !== global
+  ) {
+    return Number(opts.dishVatRate);
+  }
   if (opts.categoryId) {
     const cat = rows.find((row) => normalizeVatScope(row) === "category" && row.category_id === opts.categoryId);
     if (cat && cat.vat_rate != null) return Number(cat.vat_rate);
@@ -94,7 +110,7 @@ export function resolveDishOutputVatRate(opts: {
   if (opts.channel?.output_vat_rate != null && Number.isFinite(Number(opts.channel.output_vat_rate))) {
     return Number(opts.channel.output_vat_rate);
   }
-  return defaultOutputVatRate(opts.settings);
+  return global;
 }
 
 function forecastFromSim(sim: VatSimulationMode | undefined): DeductionMode | null {
