@@ -46,3 +46,8 @@ coverage
 .erp-menu-backup/
 supabase/.temp/
 .erp-menu-accept-db/
+
+# local DB secrets & dumps (free-plan backup path)
+.env.db.local
+.env.db.*.local
+
