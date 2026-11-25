@@ -96,6 +96,7 @@ import {
   catalogOrFallbackRates,
   defaultInputVatRate,
   effectiveInputVatRate,
+  effectiveOutputVatRate,
   vatRatesForSelect,
   visibleVatExceptions,
 } from "../../src/lib/erp/vat";
@@ -1548,6 +1549,96 @@ async function main() {
       "select public.erp_save_settings($1::jsonb, $2)",
       [JSON.stringify({ vat_accounting_method: null, purchase_prices_include_vat_default: true }), ACTOR],
     );
+  });
+
+  await test("Phase 4: independent input/output VAT exceptions; category priority; history; no lot change", async () => {
+    await q("update public.erp_settings set default_input_vat_rate = 8, default_output_vat_rate = 8, input_vat_enabled = true, output_vat_enabled = true");
+    await q("delete from public.erp_vat_exceptions");
+
+    const lotsBefore = n(await value("select count(*) from public.erp_lots"));
+    const qtyBefore = n(await value("select coalesce(sum(qty_left),0) from public.erp_lots"));
+
+    // Legacy input product exception still works (dual-read defaults).
+    const flour = await saveProduct({ type: "ingredient", name_en: "P4 flour", base_unit: "kg", category_id: null });
+    await q("select public.erp_save_vat_exception($1::jsonb, $2)", [JSON.stringify({ product_id: flour, vat_rate: 10 }), ACTOR]);
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [flour])), 10);
+    const dir = await value<string>("select direction from public.erp_vat_exceptions where product_id = $1", [flour]);
+    assert.equal(dir, "input");
+
+    // Category input exception applies when no item exception.
+    const catId = await value<string>("select id::text from public.erp_categories order by sort limit 1");
+    const inCat = await saveProduct({
+      type: "ingredient",
+      name_en: "P4 cat item",
+      base_unit: "kg",
+      category_id: catId,
+    });
+    await q(
+      "select public.erp_save_vat_exception($1::jsonb, $2)",
+      [JSON.stringify({ vat_direction: "input", scope: "category", category_id: catId, vat_rate: 5 }), ACTOR],
+    );
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [inCat])), 5);
+    // Item beats category.
+    await q(
+      "select public.erp_save_vat_exception($1::jsonb, $2)",
+      [JSON.stringify({ direction: "input", scope_kind: "product", product_id: inCat, vat_rate: 0 }), ACTOR],
+    );
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [inCat])), 0);
+
+    // Output is independent of input.
+    const dishId = await value<string>(
+      `insert into public.erp_dishes (code, name_en, category_id, vat_rate, created_by)
+       values ('p4-dish', 'P4 Dish', $1, null, $2) returning id::text`,
+      [catId, ACTOR],
+    );
+    assert.equal(n(await value("select public.erp_effective_output_vat_rate($1, null)", [dishId])), 8);
+    await q(
+      "select public.erp_save_vat_exception($1::jsonb, $2)",
+      [JSON.stringify({ vat_direction: "output", scope: "category", category_id: catId, vat_rate: 10 }), ACTOR],
+    );
+    assert.equal(n(await value("select public.erp_effective_output_vat_rate($1, null)", [dishId])), 10);
+    // Input category 5% must not affect output.
+    assert.equal(n(await value("select public.erp_effective_input_vat_rate($1)", [inCat])), 0);
+    await q(
+      "select public.erp_save_vat_exception($1::jsonb, $2)",
+      [JSON.stringify({ direction: "output", scope_kind: "dish", dish_id: dishId, vat_rate: 5 }), ACTOR],
+    );
+    assert.equal(n(await value("select public.erp_effective_output_vat_rate($1, null)", [dishId])), 5);
+
+    assert.ok((n(await value("select count(*) from public.erp_vat_exception_history")) ?? 0) >= 4);
+
+    // Client dual-read helpers (DB columns direction/scope_kind)
+    const rows = await q<{
+      id: string;
+      product_id: string | null;
+      category_id: string | null;
+      dish_id: string | null;
+      vat_rate: string;
+      direction: string;
+      scope_kind: string;
+    }>("select id::text, product_id::text, category_id::text, dish_id::text, vat_rate::text, direction, scope_kind from public.erp_vat_exceptions");
+    const mapped = rows.map((r) => ({
+      id: r.id,
+      product_id: r.product_id,
+      category_id: r.category_id,
+      dish_id: r.dish_id,
+      vat_rate: Number(r.vat_rate),
+      direction: r.direction,
+      scope_kind: r.scope_kind,
+    }));
+    assert.equal(effectiveInputVatRate(inCat, { default_input_vat_rate: 8 }, mapped, { categoryId: catId }), 0);
+    assert.equal(
+      effectiveOutputVatRate({ default_output_vat_rate: 8 }, mapped, { dishId, categoryId: catId }),
+      5,
+    );
+    assert.ok(visibleVatExceptions(mapped, 8, "input").length >= 1);
+    assert.ok(visibleVatExceptions(mapped, 8, "output").length >= 1);
+
+    assert.equal(n(await value("select count(*) from public.erp_lots")), lotsBefore, "Phase 4 does not touch lots");
+    assert.equal(n(await value("select coalesce(sum(qty_left),0) from public.erp_lots")), qtyBefore, "Phase 4 does not touch qty");
+
+    await q("delete from public.erp_vat_exceptions");
+    await q("delete from public.erp_dishes where id = $1", [dishId]);
   });
 
   await test("product with stock cannot be archived; base unit locked once used", async () => {

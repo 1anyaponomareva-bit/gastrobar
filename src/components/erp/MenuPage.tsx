@@ -19,6 +19,7 @@ import {
 import { dishCost, menuCostContext } from "@/lib/erp/menu";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpDish, ErpState } from "@/lib/erp/types";
+import { defaultOutputVatRate, effectiveOutputVatRate } from "@/lib/erp/vat";
 import { useDragReorder } from "@/lib/useDragReorder";
 import { ComposeDragHandle, MainIngredientChips } from "./CompositionMains";
 import { notImplemented } from "./CatalogTable";
@@ -457,8 +458,35 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
             </select>
           </Field>
           {state.settings.output_vat_enabled ? (
-            <Field label={T("НДС, %", "VAT, %", "VAT, %")} hint={`${T("По умолчанию", "Default", "Mặc định")}: ${state.settings.default_output_vat_rate ?? 8}%`}>
+            <Field
+              label={T("НДС, %", "VAT, %", "VAT, %")}
+              hint={T(
+                `Эффективная ставка: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                  dishId: dish?.id,
+                  categoryId: form.category_id || null,
+                  dishVatRate: form.vat_rate,
+                })}% (исключение → поле блюда → категория → ${defaultOutputVatRate(state.settings)}%). Список исключений — в Служебном.`,
+                `Effective rate: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                  dishId: dish?.id,
+                  categoryId: form.category_id || null,
+                  dishVatRate: form.vat_rate,
+                })}% (exception → dish field → category → ${defaultOutputVatRate(state.settings)}%). Exception list is in Admin.`,
+                `Thuế hiệu lực: ${effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                  dishId: dish?.id,
+                  categoryId: form.category_id || null,
+                  dishVatRate: form.vat_rate,
+                })}% (ngoại lệ → món → danh mục → ${defaultOutputVatRate(state.settings)}%). Danh sách trong Quản trị.`,
+              )}
+            >
               <NumberInput value={form.vat_rate} onChange={(v) => set("vat_rate", v)} />
+              <span className="erpVatReadout" data-testid="dish-vat-effective">
+                {effectiveOutputVatRate(state.settings, state.vatExceptions, {
+                  dishId: dish?.id,
+                  categoryId: form.category_id || null,
+                  dishVatRate: form.vat_rate,
+                })}
+                %
+              </span>
             </Field>
           ) : null}
         </div>

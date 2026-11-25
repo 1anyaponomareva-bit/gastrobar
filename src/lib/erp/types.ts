@@ -33,10 +33,26 @@ export type ErpSettings = {
   timezone?: string;
 };
 
-/** Ingredient whose input VAT differs from the company default. Edited in Служебное. */
+/**
+ * Input/Output VAT exception (Phase 4). Legacy rows are input/product with product_id only.
+ * Edited in Служебное — independent lists per direction.
+ */
 export type ErpVatException = {
-  product_id: string;
+  id?: string;
+  product_id?: string | null;
+  category_id?: string | null;
+  dish_id?: string | null;
   vat_rate: number;
+  direction?: "input" | "output" | string | null;
+  vat_direction?: "input" | "output" | string | null;
+  scope_kind?: "product" | "category" | "dish" | string | null;
+  scope?: "product" | "category" | "dish" | string | null;
+  tax_rate_id?: string | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  note?: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
 };
 
 /** Row from erp_tax_rates catalog (Phase 3). */
@@ -445,8 +461,25 @@ export type ErpAction =
   | { action: "purgeCategoryTrash" }
   | { action: "saveSettings"; settings: Partial<ErpSettings> }
   | { action: "saveTaxRate"; taxRate: Record<string, unknown> }
-  | { action: "saveVatException"; exception: { product_id: string; vat_rate: number } }
-  | { action: "deleteVatException"; productId: string }
+  | {
+      action: "saveVatException";
+      exception: {
+        id?: string;
+        direction?: "input" | "output";
+        vat_direction?: "input" | "output";
+        scope_kind?: "product" | "category" | "dish";
+        scope?: "product" | "category" | "dish";
+        product_id?: string | null;
+        category_id?: string | null;
+        dish_id?: string | null;
+        vat_rate: number;
+        tax_rate_id?: string | null;
+        effective_from?: string | null;
+        effective_to?: string | null;
+        note?: string | null;
+      };
+    }
+  | { action: "deleteVatException"; productId?: string; id?: string }
   | { action: "saveWriteoffReason"; reason: Record<string, unknown> }
   | { action: "saveDocument"; document: Record<string, unknown> }
   /** With `document`, the draft is saved first (and stays saved if posting fails). */

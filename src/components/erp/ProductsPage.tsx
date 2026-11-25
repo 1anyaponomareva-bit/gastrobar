@@ -19,7 +19,7 @@ import { compatiblePacks, packDisplayName } from "@/lib/erp/packs";
 import { ORDERS_ADMIN_PATH, productEditorReturnHref, withMenuListReturn } from "@/lib/erp/menuListQuery";
 import { extraNamesOnly, namesHaystack } from "@/lib/erp/contentLang";
 import type { ErpCategory, ErpProduct, ErpState } from "@/lib/erp/types";
-import { effectiveInputVatRate } from "@/lib/erp/vat";
+import { effectiveInputVatRate, normalizeVatDirection, normalizeVatScope } from "@/lib/erp/vat";
 import { notImplemented } from "./CatalogTable";
 import { ExtraNameFields } from "./ExtraNameFields";
 import { StorageOptionsEditor } from "./StorageOptionsEditor";
@@ -547,13 +547,22 @@ function ProductEditor({
         <Field
           label={T("НДС", "VAT", "VAT")}
           hint={
-            product && state.vatExceptions?.some((row) => row.product_id === product.id)
-              ? T("Исключение из Служебное → Настройки. На карточке ставку не меняют.", "Exception from Admin → Settings. The rate is not edited on this card.", "Ngoại lệ trong Quản trị → Cài đặt. Không sửa trên thẻ này.")
-              : T("Для новых ингредиентов всегда ставка по умолчанию. Другую ставку задают списком исключений в Служебном.", "New ingredients always get the default rate. A different rate is set on the exception list in Admin.", "Nguyên liệu mới luôn dùng mức mặc định. Mức khác khai trong danh sách ngoại lệ.")
+            product &&
+            state.vatExceptions?.some((row) => {
+              if (normalizeVatDirection(row) !== "input") return false;
+              const sc = normalizeVatScope(row);
+              if (sc === "product") return row.product_id === product.id;
+              return sc === "category" && row.category_id != null && row.category_id === (product.category_id ?? form.category_id);
+            })
+              ? T("Исключение из Служебное → Настройки (позиция или категория). На карточке ставку не меняют.", "Exception from Admin → Settings (item or category). The rate is not edited on this card.", "Ngoại lệ trong Quản trị (mặt hàng hoặc danh mục). Không sửa trên thẻ này.")
+              : T("Входящий НДС: позиция → категория → ставка по умолчанию. Исключения задают в Служебном.", "Input VAT: item → category → default. Exceptions are set in Admin.", "VAT đầu vào: mặt hàng → danh mục → mặc định. Ngoại lệ trong Quản trị.")
           }
         >
           <span className="erpVatReadout" data-testid="product-vat">
-            {effectiveInputVatRate(product?.id, state.settings, state.vatExceptions)}%
+            {effectiveInputVatRate(product?.id, state.settings, state.vatExceptions, {
+              categoryId: product?.category_id ?? form.category_id,
+            })}
+            %
           </span>
           <NavLink href="/erp/service" className="erpLink">
             {T("Список исключений в настройках", "Exception list in settings", "Danh sách ngoại lệ trong cài đặt")}

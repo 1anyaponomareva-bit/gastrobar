@@ -8,9 +8,13 @@ import {
   VAT_ACCOUNTING_METHODS,
   catalogOrFallbackRates,
   defaultInputVatRate,
+  defaultOutputVatRate,
+  normalizeVatScope,
   taxRateLabel,
   vatRatesForSelect,
   visibleVatExceptions,
+  type VatDirection,
+  type VatExceptionScope,
 } from "@/lib/erp/vat";
 import { useErp } from "./ErpShell";
 import { Pager, usePageSize } from "./Pager";
@@ -152,7 +156,16 @@ export function SettingsPage() {
 
       <TaxRatesCard />
 
-      <VatExceptionsCard defaultRate={defaultInputVatRate(state.settings)} />
+      <VatExceptionsCard
+        direction="input"
+        defaultRate={defaultInputVatRate(state.settings)}
+        testId="vat-exceptions-input"
+      />
+      <VatExceptionsCard
+        direction="output"
+        defaultRate={defaultOutputVatRate(state.settings)}
+        testId="vat-exceptions-output"
+      />
 
       <section className="erpCard">
         <h2>{T("Каналы продаж и комиссии", "Sales channels and commission", "Kênh bán và hoa hồng")}</h2>
@@ -356,64 +369,171 @@ function asVatDisplay(rate: number) {
   return Number.isInteger(rate) ? String(rate) : String(rate);
 }
 
-function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
+function VatExceptionsCard({
+  direction,
+  defaultRate,
+  testId,
+}: {
+  direction: VatDirection;
+  defaultRate: number;
+  testId: string;
+}) {
   const { state, act, busy } = useErp();
   const taxRates = state?.taxRates;
-  const listed = visibleVatExceptions(state?.vatExceptions, defaultRate);
-  const listedIds = useMemo(() => new Set(listed.map((row) => row.product_id)), [listed]);
+  const listed = visibleVatExceptions(state?.vatExceptions, defaultRate, direction);
   const otherRates = useMemo(() => vatRatesForSelect(null, defaultRate, taxRates), [defaultRate, taxRates]);
+  const scopes: VatExceptionScope[] =
+    direction === "input" ? ["product", "category"] : ["dish", "product", "category"];
+  const [scope, setScope] = useState<VatExceptionScope>(scopes[0]);
   const [productId, setProductId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [dishId, setDishId] = useState("");
   const [rate, setRate] = useState(() => vatRatesForSelect(null, defaultRate, taxRates)[0] ?? 10);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = usePageSize();
+  useEffect(() => {
+    if (!scopes.includes(scope)) setScope(scopes[0]);
+  }, [direction]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (rate === defaultRate && otherRates[0] != null) setRate(otherRates[0]);
   }, [defaultRate, otherRates, rate]);
   useEffect(() => setPage(0), [listed.length, pageSize]);
   if (!state) return null;
+
+  const usedProductIds = new Set(
+    listed.filter((r) => normalizeVatScope(r) === "product" && r.product_id).map((r) => r.product_id as string),
+  );
+  const usedCategoryIds = new Set(
+    listed.filter((r) => normalizeVatScope(r) === "category" && r.category_id).map((r) => r.category_id as string),
+  );
+  const usedDishIds = new Set(
+    listed.filter((r) => normalizeVatScope(r) === "dish" && r.dish_id).map((r) => r.dish_id as string),
+  );
   const pickerState: ErpState = {
     ...state,
-    products: state.products.filter((p) => !listedIds.has(p.id)),
+    products: state.products.filter((p) => !usedProductIds.has(p.id)),
   };
+  const title =
+    direction === "input"
+      ? T("Исключения входящего НДС", "Input VAT exceptions", "Ngoại lệ VAT đầu vào")
+      : T("Исключения исходящего НДС", "Output VAT exceptions", "Ngoại lệ VAT đầu ra");
+  const hint =
+    direction === "input"
+      ? T(
+          `Входящий НДС: приоритет позиция → категория → ${defaultRate}% по умолчанию. Ингредиенты, упаковка, закупки. Не пересчитывает проведённые документы.`,
+          `Input VAT: item → category → ${defaultRate}% default. Ingredients, packaging, purchases. Never recalculates posted documents.`,
+          `VAT đầu vào: mặt hàng → danh mục → mặc định ${defaultRate}%. Không tính lại chứng từ đã ghi sổ.`,
+        )
+      : T(
+          `Исходящий НДС: приоритет блюдо/товар → категория меню → ${defaultRate}% по умолчанию. Независимо от входящего. Не пересчитывает проведённые документы.`,
+          `Output VAT: dish/product → menu category → ${defaultRate}% default. Independent of input. Never recalculates posted documents.`,
+          `VAT đầu ra: món/hàng → danh mục → mặc định ${defaultRate}%. Độc lập với đầu vào. Không tính lại chứng từ đã ghi sổ.`,
+        );
+
   const named = listed
-    .map((row) => ({
-      ...row,
-      name: productTitle(state.products.find((p) => p.id === row.product_id) ?? { name_en: row.product_id, name_vn: "" }),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map((row) => {
+      const sc = normalizeVatScope(row);
+      let name = "—";
+      if (sc === "product" && row.product_id) {
+        name = productTitle(state.products.find((p) => p.id === row.product_id) ?? { name_en: row.product_id, name_vn: "" });
+      } else if (sc === "category" && row.category_id) {
+        const cat = state.categories.find((c) => c.id === row.category_id);
+        name = cat ? cat.name_en || cat.name_vn || cat.code : row.category_id;
+      } else if (sc === "dish" && row.dish_id) {
+        const dish = state.dishes.find((d) => d.id === row.dish_id);
+        name = dish ? dish.name_en || dish.name_vn || dish.code : row.dish_id;
+      }
+      return { ...row, scope: sc, name };
+    })
+    .sort((a, b) => a.scope.localeCompare(b.scope) || a.name.localeCompare(b.name));
   const pages = Math.max(1, Math.ceil(named.length / pageSize));
   const current = Math.min(page, pages - 1);
   const pageRows = named.slice(current * pageSize, current * pageSize + pageSize);
+
+  const canAdd =
+    rate !== defaultRate &&
+    ((scope === "product" && Boolean(productId)) ||
+      (scope === "category" && Boolean(categoryId)) ||
+      (scope === "dish" && Boolean(dishId)));
+
   const add = async () => {
-    if (!productId || rate === defaultRate) return;
-    if (
-      await act(
-        { action: "saveVatException", exception: { product_id: productId, vat_rate: rate } },
-        T("Исключение сохранено", "Exception saved", "Đã lưu ngoại lệ"),
-      )
-    ) {
+    if (!canAdd) return;
+    const exception = {
+      direction,
+      vat_direction: direction,
+      scope_kind: scope,
+      scope,
+      product_id: scope === "product" ? productId : null,
+      category_id: scope === "category" ? categoryId : null,
+      dish_id: scope === "dish" ? dishId : null,
+      vat_rate: rate,
+    };
+    if (await act({ action: "saveVatException", exception }, T("Исключение сохранено", "Exception saved", "Đã lưu ngoại lệ"))) {
       setProductId("");
+      setCategoryId("");
+      setDishId("");
     }
   };
+
+  const scopeLabel = (sc: VatExceptionScope) =>
+    sc === "product"
+      ? T("Позиция", "Item", "Mặt hàng")
+      : sc === "category"
+        ? T("Категория", "Category", "Danh mục")
+        : T("Блюдо", "Dish", "Món");
+
   return (
-    <section className="erpCard erpVatExceptions" data-testid="vat-exceptions">
-      <h2>{T("Исключения", "Exceptions", "Ngoại lệ")}</h2>
-      <p className="erpHint">
-        {T(
-          `У всех ингредиентов НДС ${defaultRate}%, пока их нет в этом списке. Новый ингредиент тоже получает ${defaultRate}% — ставку на карточке выбирать не нужно. Сюда добавляют только те, у кого ставка другая.`,
-          `Every ingredient uses ${defaultRate}% VAT until it is on this list. A new ingredient also gets ${defaultRate}% — you do not pick a rate on the product card. Add only products with a different rate.`,
-          `Mọi nguyên liệu dùng VAT ${defaultRate}% trừ khi có trong danh sách này. Nguyên liệu mới cũng ${defaultRate}% — không chọn trên thẻ. Chỉ thêm mức khác.`,
-        )}
-      </p>
+    <section className="erpCard erpVatExceptions" data-testid={testId}>
+      <h2>{title}</h2>
+      <p className="erpHint">{hint}</p>
       <div className="erpVatAdd">
-        <Field label={T("Ингредиент", "Ingredient", "Nguyên liệu")} wide>
-          <ProductPicker state={pickerState} value={productId} onChange={setProductId} />
+        <Field label={T("Область", "Scope", "Phạm vi")}>
+          <select className="erpVatSelect" value={scope} onChange={(e) => setScope(e.target.value as VatExceptionScope)}>
+            {scopes.map((sc) => (
+              <option key={sc} value={sc}>
+                {scopeLabel(sc)}
+              </option>
+            ))}
+          </select>
         </Field>
+        {scope === "product" ? (
+          <Field label={T("Позиция", "Item", "Mặt hàng")} wide>
+            <ProductPicker state={pickerState} value={productId} onChange={setProductId} />
+          </Field>
+        ) : null}
+        {scope === "category" ? (
+          <Field label={T("Категория", "Category", "Danh mục")} wide>
+            <select className="erpVatSelect" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">{T("Выберите…", "Select…", "Chọn…")}</option>
+              {state.categories
+                .filter((c) => !c.archived_at && !c.deleted_at && !usedCategoryIds.has(c.id))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name_en || c.name_vn || c.code}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        ) : null}
+        {scope === "dish" ? (
+          <Field label={T("Блюдо", "Dish", "Món")} wide>
+            <select className="erpVatSelect" value={dishId} onChange={(e) => setDishId(e.target.value)}>
+              <option value="">{T("Выберите…", "Select…", "Chọn…")}</option>
+              {state.dishes
+                .filter((d) => !d.archived_at && !usedDishIds.has(d.id))
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name_en || d.name_vn || d.code}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        ) : null}
         <Field label={T("НДС, %", "VAT, %", "VAT, %")}>
           <VatRateSelect value={rate} exclude={defaultRate} taxRates={taxRates} onChange={setRate} />
         </Field>
         <div className="erpVatAddAct">
-          <button type="button" className="erpBtn primary" disabled={busy || !productId || rate === defaultRate} onClick={() => void add()}>
+          <button type="button" className="erpBtn primary" disabled={busy || !canAdd} onClick={() => void add()}>
             {T("Добавить", "Add", "Thêm")}
           </button>
         </div>
@@ -424,14 +544,16 @@ function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
             <table className="erpTable stack">
               <thead>
                 <tr>
-                  <th>{T("Ингредиент", "Ingredient", "Nguyên liệu")}</th>
+                  <th>{T("Область", "Scope", "Phạm vi")}</th>
+                  <th>{T("Цель", "Target", "Đối tượng")}</th>
                   <th className="num">{T("НДС", "VAT", "VAT")}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((row) => (
-                  <tr key={row.product_id}>
+                  <tr key={row.id ?? `${row.scope}-${row.product_id ?? row.category_id ?? row.dish_id}`}>
+                    <td>{scopeLabel(row.scope)}</td>
                     <td className="main">
                       <span className="erpName">{row.name}</span>
                     </td>
@@ -446,7 +568,9 @@ function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
                         aria-label={T("Убрать", "Remove", "Xóa")}
                         onClick={() =>
                           void act(
-                            { action: "deleteVatException", productId: row.product_id },
+                            row.id
+                              ? { action: "deleteVatException", id: row.id }
+                              : { action: "deleteVatException", productId: row.product_id ?? undefined },
                             T("Исключение удалено", "Exception removed", "Đã xóa ngoại lệ"),
                           )
                         }
@@ -462,7 +586,9 @@ function VatExceptionsCard({ defaultRate }: { defaultRate: number }) {
           <Pager total={named.length} page={current} pages={pages} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
         </>
       ) : (
-        <p className="erpHint">{T("Исключений пока нет — у всех ингредиентов ставка по умолчанию.", "No exceptions yet — every ingredient uses the default rate.", "Chưa có ngoại lệ — mọi nguyên liệu dùng mức mặc định.")}</p>
+        <p className="erpHint">
+          {T("Исключений пока нет — действует ставка по умолчанию для этого направления.", "No exceptions yet — the default rate for this direction applies.", "Chưa có ngoại lệ — dùng mức mặc định của chiều này.")}
+        </p>
       )}
     </section>
   );
