@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-11-25T07:03:00.000Z",
+  "production_url": "https://gastrofood.vn/erp",
+  "vercel_team_path": "annas-projects-183a79d7",
+  "git_expected": "origin/main ~ 3ad1c1c lineage (R1 Phase 6-7 FE present; R2 absent)",
+  "rollback": "Redeploy previous Vercel production deployment for gastrobar; does not roll back SQL"
+}

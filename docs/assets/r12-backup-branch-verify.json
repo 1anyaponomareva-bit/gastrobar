@@ -1,0 +1,63 @@
+{
+  "checked_at": "2026-11-25T07:01:50.864Z",
+  "project_ref": "ulxmubivimwxevgxxxyu",
+  "mode": "read_only_cdp",
+  "pages": {
+    "pitr": {
+      "url": "https://supabase.com/dashboard/project/ulxmubivimwxevgxxxyu/database/backups/pitr",
+      "title": "Backups | Database | 1anyaponomareva-bit's Project | 1anyaponomareva-bit's Org | Supabase",
+      "shot": "C:/Users/Nikita Ponomarev/.cursor/projects/c-Users-Nikita-Ponomarev-Downloads-BAR-FOOD-GASTROBAR-inventory/assets/r12-pitr.png",
+      "textSnippet": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nDatabase\nDATABASE MANAGEMENT\nSchema Visualizer\nTables\nFunctions\nTriggers\nEnumerated Types\nExtensions\nIndexes\nPublications\nACCESS CONTROL\nPolicies\nRoles\nCONFIGURATION\nSettings\nPLATFORM\nPipelines\nNEW\nBackups\nMigrations\nDatabase Backups\nScheduled backups\nPoint in time\nRestore to new project\nBETA\n\nPoint in Time Recovery is a Pro Plan add-on\n\nRoll back your database to a specific second. Starts at $100/month. Pro Plan already includes daily backups at no extra cost.\n\nUpgrade to Pro\nPREVIEW\n\nUser growth\n\nTrack how your user base is trending.\n\nselect\ndate_trunc('week', last_sign_in_at) as week,\ncount(distinct id) as active_users\n\nExplorer & Notebooks\n\nNew unified workspace for querying data and chatting with Assistant.\n\nEnable Explorer",
+      "textLen": 1182,
+      "infer": {
+        "mentions_pitr": true,
+        "mentions_enabled": false,
+        "mentions_disabled": true,
+        "has_restore_ui": true,
+        "earliest_match": null,
+        "latest_match": null,
+        "retention_match": null
+      }
+    },
+    "scheduled": {
+      "url": "https://supabase.com/dashboard/project/ulxmubivimwxevgxxxyu/database/backups/scheduled",
+      "title": "Backups | Database | 1anyaponomareva-bit's Project | 1anyaponomareva-bit's Org | Supabase",
+      "shot": "C:/Users/Nikita Ponomarev/.cursor/projects/c-Users-Nikita-Ponomarev-Downloads-BAR-FOOD-GASTROBAR-inventory/assets/r12-scheduled-backups.png",
+      "infer": {
+        "mentions_pitr": true,
+        "mentions_enabled": false,
+        "mentions_disabled": true,
+        "has_restore_ui": true,
+        "earliest_match": null,
+        "latest_match": null,
+        "retention_match": null
+      },
+      "textSnippet": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nDatabase\nDATABASE MANAGEMENT\nSchema Visualizer\nTables\nFunctions\nTriggers\nEnumerated Types\nExtensions\nIndexes\nPublications\nACCESS CONTROL\nPolicies\nRoles\nCONFIGURATION\nSettings\nPLATFORM\nPipelines\nNEW\nBackups\nMigrations\nDatabase Backups\nScheduled backups\nPoint in time\nRestore to new project\nBETA\n\nProjects are backed up daily around midnight of your project’s region and can be restored at any time.\n\nFree Plan does not include project backups.\n\nUpgrade to the Pro Plan for up to 7 days of scheduled backups.\n\nUpgrade\nPREVIEW\n\nUser growth\n\nTrack how your user base is trending.\n\nselect\ndate_trunc('week', last_sign_in_at) as week,\ncount(distinct id) as active_users\n\nExplorer & Notebooks\n\nNew unified workspace for querying data and chatting with Assistant.\n\nEnable Explorer"
+    },
+    "backupsRoot": {
+      "url": "https://supabase.com/dashboard/project/ulxmubivimwxevgxxxyu/database/backups",
+      "title": "Backups | Database | 1anyaponomareva-bit's Project | 1anyaponomareva-bit's Org | Supabase",
+      "shot": "C:/Users/Nikita Ponomarev/.cursor/projects/c-Users-Nikita-Ponomarev-Downloads-BAR-FOOD-GASTROBAR-inventory/assets/r12-backups-root.png",
+      "textSnippet": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nDatabase\nDATABASE MANAGEMENT\nSchema Visualizer\nTables\nFunctions\nTriggers\nEnumerated Types\nExtensions\nIndexes\nPublications\nACCESS CONTROL\nPolicies\nRoles\nCONFIGURATION\nSettings\nPLATFORM\nPipelines\nNEW\nBackups\nMigrations\nDatabase Backups\nScheduled backups\nPoint in time\nRestore to new project\nBETA\n\nProjects are backed up daily around midnight of your project’s region and can be restored at any time.\n\nFree Plan does not include project backups.\n\nUpgrade to the Pro Plan for up to 7 days of scheduled backups.\n\nUpgrade\nPREVIEW\n\nUser growth\n\nTrack how your user base is trending.\n\nselect\ndate_trunc('week', last_sign_in_at) as week,\ncount(distinct id) as active_users\n\nExplorer & Notebooks\n\nNew unified workspace for querying data and chatting with Assistant.\n\nEnable Explorer"
+    },
+    "branches": {
+      "url": "https://supabase.com/dashboard/project/ulxmubivimwxevgxxxyu/branches",
+      "title": "Branching | 1anyaponomareva-bit's Project | 1anyaponomareva-bit's Org | Supabase",
+      "shot": "C:/Users/Nikita Ponomarev/.cursor/projects/c-Users-Nikita-Ponomarev-Downloads-BAR-FOOD-GASTROBAR-inventory/assets/r12-branches.png",
+      "textSnippet": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nBranching\nMANAGE\nBranches\nMerge requests\nCONFIGURE\nGitHub connection\n\nNot connected\n\nBranches\nManage your database preview branches and deployments\nDocs\nCreate branch\nPRODUCTION BRANCH\nmain\nGET STARTED WITH BRANCHING\n\nCreate isolated environments to test changes before merging to production\n\nCreate a preview branch\n\nMake schema or Edge Function changes on a clone of your project, then merge them back when ready.\n\nCreate branch\nLearn more\n\nConnect with GitHubOPTIONAL\n\nAutomatically create a preview branch for each pull request and apply your migrations on every commit.\n\nConnect GitHub\nLearn more\nPREVIEW\n\nUser growth\n\nTrack how your user base is trending.\n\nselect\ndate_trunc('week', last_sign_in_at) as week,\ncount(distinct id) as active_users\n\nExplorer & Notebooks\n\nNew unified workspace for querying data and chatting with Assistant.\n\nEnable Explorer",
+      "textLen": 1302,
+      "infer": {
+        "mentions_branches": true,
+        "create_branch": true,
+        "upgrade_required": true,
+        "empty_or_list": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nBranching\nMANAGE\nBranches\nMerge requests\nCONFIGURE\nGitHu"
+      }
+    },
+    "settings": {
+      "url": "https://supabase.com/dashboard/project/ulxmubivimwxevgxxxyu/settings/general",
+      "title": "General | Settings | 1anyaponomareva-bit's Project | 1anyaponomareva-bit's Org | Supabase",
+      "shot": "C:/Users/Nikita Ponomarev/.cursor/projects/c-Users-Nikita-Ponomarev-Downloads-BAR-FOOD-GASTROBAR-inventory/assets/r12-project-settings.png",
+      "textSnippet": "Skip to content\n\nWe are investigating a technical issue\n\n·\nFollow the status page for updates\nBack to organization home\n1anyaponomareva-bit's Org\nFREE\n1anyaponomareva-bit's Project\nmain\nPRODUCTION\nConnect\nFeedback\n\nSearch...\n\nCtrl K\nHelp\nAdvisor Center\nSQL Editor\nAI Assistant\nProject Overview\nTable Editor\nSQL Editor\nDatabase\nAuthentication\nStorage\nEdge Functions\nCompute\nNEW\nRealtime\nAdvisors\nObservability\nLogs\nIntegrations\nProject Settings\nSettings\nCONFIGURATION\nGeneral\nInfrastructure\nIntegrations\nAPI Keys\nJWT Keys\nLog Drains\nAdd-ons\nINTEGRATIONS\nData API\nVault\nBETA\nBILLING\nSubscription\nUsage\nProject Settings\nGeneral configuration, domains, ownership, and lifecycle\nGeneral settings\nProject name\nDisplayed throughout the dashboard.\nCopy\nProject ID\nReference used in APIs and URLs.\nCopy\nProject region\nSoutheast Asia (Singapore)\nSave changes\nProject access\n\nOrganization-wide access\n\nAll 1 organization members can access this project.\n\nManage members\nMEMBER\tROLE\n\n\n1anyaponomareva@gmail.com\n\nYOU\n\tOwner\nProject availability\nRestart or pause your project when performing maintenance.\n\nRestart project\n\nYour project will not be available for a few minutes.\n\nRestart project\n\nPause project\n\nYour project will not be accessible while it is paused.\n\nPause project\nService versions\nService versions and upgrade eligibility for your provisioned instance.\nCustom domains\nPresent a branded experience to your users.\n\nCustom domains are a Pro Plan add-on\n\nPaid Plans come with free vanity subdomains or Custom Domains for an additional $10/month per domain.\n\nUpgrade to Pro\nTransfer project\n\nTransfer project to another organization\n\nTo transfer projects, the owner must be a member of both the source and target organizations.\n\nTransfer project\nDelete project\nPermanently remove your project and its database.\n\nDeleting this project will also remove your database\n\nMake sure you have made a backup if you want to keep your data.\n\nDelete project\nPREVIEW\n\nUser growth\n\nTrack how your user base is trending.\n\nselect\ndate_trunc('week', last_sign_in_at) as week,\ncount(distinct id) as active_users\n\nExplorer & Notebooks\n\nNew unified workspace for querying data and chatting with Assistant.\n\nEnable Explorer"
+    }
+  }
+}

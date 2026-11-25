@@ -16,8 +16,8 @@
 | Fast-forward / merge into `main` | **Clean** — main is ancestor; branch **13 commits** ahead; no real merge conflicts |
 | Automated tests (finance / phase8 / 8G / chicken) | **Pass** (see §3) |
 | Frontend ↔ DB compatibility | R2 FE **requires** R2 SQL first (missing columns/RPCs on prod today) |
-| Non-prod Supabase apply of 8B→hardening | **BLOCKED** — no staging/clone credentials in this environment |
-| Production backup / PITR restore point | **Owner must confirm** — agent cannot see Supabase dashboard PITR |
+| Non-prod Supabase apply of 8B→hardening | **BLOCKED** — Free plan: branching locked («Upgrade to unlock»). See `docs/R12_BLOCKERS_BACKUP_NONPROD.md` |
+| Production backup / PITR restore point | **BLOCKED** — Free plan: **no** scheduled backups, **no** PITR. See `docs/R12_BLOCKERS_BACKUP_NONPROD.md` |
 | Production FE fingerprint to restore | Documented (pre-R2 bundles; build fingerprint in prior verify) |
 
 **Overall readiness:** **CONDITIONAL** — publish sequence is ready on paper and in CI-style tests; **blocking** until (A) non-prod Supabase migration smoke and (B) confirmed production backup.
