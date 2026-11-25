@@ -237,6 +237,27 @@ export async function POST(request: Request) {
       case "deleteDraft":
         await rpc("erp_delete_draft", { p_id: uuid(a.id), p_actor: actor });
         return timing.json({ ok: true, patch: {} });
+      case "previewVatAdjustment": {
+        const preview = await rpc("erp_vat_adj_preview", { p: object(a.preview, "preview") });
+        return timing.json({ preview });
+      }
+      case "saveVatAdjustment": {
+        const id = await rpc<string>("erp_vat_adj_save", { p: object(a.adjustment, "adjustment"), p_actor: actor });
+        return timing.json({ id });
+      }
+      case "postVatAdjustment": {
+        const id = uuid(a.id);
+        const result = await rpc("erp_vat_adj_post", {
+          p_id: id,
+          p_actor: actor,
+          p_preview_hash: a.previewHash ?? null,
+        });
+        return timing.json({ id, result, patch: await fresh(STOCK_PARTS) });
+      }
+      case "reverseVatAdjustment": {
+        const id = await rpc<string>("erp_vat_adj_reverse", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(STOCK_PARTS) });
+      }
       case "saveRecipe": {
         const recipe = object(a.recipe, "recipe");
         const id = await rpc<string>("erp_save_recipe", { p: recipe, p_actor: actor });

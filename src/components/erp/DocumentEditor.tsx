@@ -356,6 +356,43 @@ export function DocumentEditor({ id }: { id: string }) {
         sub={doc.status ? dateText(doc.doc_date) : undefined}
       />
       {type === "receipt" && doc.id ? <PurchasingReceiptPanel documentId={doc.id} /> : null}
+      {type === "receipt" && doc.status === "posted" && state.settings.input_vat_enabled ? (
+        <section className="erpCard" data-testid="receipt-vat-adjustments">
+          <h2>{T("Корректировка входящего НДС", "Input VAT Adjustment", "Điều chỉnh VAT đầu vào")}</h2>
+          <p className="erpHint">
+            {T(
+              "Статус вычета после проведения поставки меняется только через документ корректировки. Прямое изменение строк запрещено.",
+              "After posting, deduction status changes only via an adjustment document. Direct line edits are blocked.",
+              "Sau khi ghi sổ, chỉ đổi trạng thái khấu trừ bằng chứng từ điều chỉnh.",
+            )}
+          </p>
+          <ul className="erpList">
+            {doc.lines
+              .filter((line) => line.id && line.product_id)
+              .map((line) => {
+                const product = productById(state, line.product_id);
+                return (
+                  <li key={line.id}>
+                    <NavLink
+                      href={`/erp/stock/vat-adjustments/new?line=${encodeURIComponent(line.id!)}&document=${encodeURIComponent(doc.id!)}`}
+                      className="erpBtn ghost"
+                      data-testid="receipt-vat-adj-link"
+                    >
+                      {product ? productTitle(product) : line.product_id}
+                      {" · "}
+                      {line.vat_deduction_status ?? "pending"}
+                      {" → "}
+                      {T("Корректировка НДС", "VAT adjustment", "Điều chỉnh VAT")}
+                    </NavLink>
+                  </li>
+                );
+              })}
+          </ul>
+          <NavLink href="/erp/stock/vat-adjustments" className="erpBtn">
+            {T("Журнал корректировок", "Adjustment journal", "Nhật ký điều chỉnh")}
+          </NavLink>
+        </section>
+      ) : null}
       {doc.status === "cancelled" ? (
         <div className="erpNotice bad">
           {T("Документ отменён", "Cancelled", "Đã hủy")}: {doc.cancel_reason} · {doc.cancelled_by} · {dateTimeText(doc.cancelled_at)}

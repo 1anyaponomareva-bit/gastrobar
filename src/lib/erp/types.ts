@@ -601,4 +601,8 @@ export type ErpAction =
   | { action: "closeFinanceShift"; value: Record<string, unknown> }
   | { action: "saveFinanceEmployee"; value: Record<string, unknown> }
   | { action: "saveFinancePayroll"; value: Record<string, unknown> }
-  | { action: "payFinancePayroll"; value: Record<string, unknown> };
+  | { action: "payFinancePayroll"; value: Record<string, unknown> }
+  | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
+  | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
+  | { action: "postVatAdjustment"; id: string; previewHash?: string | null }
+  | { action: "reverseVatAdjustment"; id: string };
