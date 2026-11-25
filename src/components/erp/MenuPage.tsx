@@ -70,7 +70,7 @@ type DishForm = {
 
 const marginNote = () =>
   T(
-    "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses (комиссия, реклама). Не Net Profit: зарплата, аренда и прочие расходы не учтены.",
+    "Маржа вклада (CM) = Выручка без НДС − Себестоимость − Эффективные расходы канала (комиссия, реклама). Это не чистая прибыль: зарплата, аренда и прочие расходы не учтены.",
     "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses (commission, advertising). Not Net Profit: wages, rent and other costs are excluded.",
     "Contribution Margin = Net Revenue − Product Cost − Effective Channel Expenses. Không phải Net Profit.",
   );
@@ -809,7 +809,7 @@ function DishEditor({ state, dish, from }: { state: ErpState; dish: ErpDish | nu
             <strong>{showMainCm ? pct(mainCm?.foodCostPct ?? null) : "—"}</strong>
           </div>
           <div className="erpKpi">
-            <span>Contribution Margin</span>
+            <span>{T("Маржа вклада (CM)", "Contribution Margin", "Contribution Margin")}</span>
             <strong>
               {!showMainCm
                 ? "—"
