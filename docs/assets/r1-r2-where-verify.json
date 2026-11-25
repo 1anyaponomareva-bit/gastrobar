@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-11-25T06:25:22.348Z",
+  "production_url": "https://gastrofood.vn/erp",
+  "next_build_id": null,
+  "git": {
+    "origin_main": "3ad1c1c",
+    "origin_erp_inventory": "03e9f90",
+    "r2_only_on_branch": true,
+    "phase6_7_on_main": true
+  },
+  "production_frontend_strings": {
+    "recommended_selling_price_en": true,
+    "recommended_selling_price_ru": false,
+    "financialCalculator": true,
+    "costing_policy": false,
+    "vat_adjustments_nav": false,
+    "balances_fifo_label": false
+  },
+  "interpretation": {
+    "phase6_7_frontend_on_production": true,
+    "phase6_7_matches_main_not_latest_branch": true,
+    "release2_frontend_on_production": false
+  },
+  "db": {
+    "supabase_ref": "ulxmubivimwxevgxxxyu",
+    "method": "postgrest_anon_error_codes",
+    "r1_present": [
+      "erp_tax_rates",
+      "erp_vat_exceptions",
+      "erp_sales_channels finance cols",
+      "erp_settings vat flags",
+      "erp_lots.unit_cost"
+    ],
+    "r2_absent": [
+      "recipe_cost_source",
+      "vat_adj_allow_backdated",
+      "vat_deduction_status",
+      "vat_invoice_number",
+      "lot input_vat cols",
+      "erp_vat_cost_adjustments",
+      "erp_dish_cost_snapshots",
+      "erp_production_lot_lineage",
+      "erp_tax_rate_percent_allowed"
+    ]
+  }
+}

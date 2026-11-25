@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-11-25T06:25:22.348Z",
+  "production_url": "https://gastrofood.vn/erp",
+  "next_build_id": null,
+  "git": {
+    "origin_main": "3ad1c1c",
+    "origin_erp_inventory": "03e9f90",
+    "r2_only_on_branch": true,
+    "phase6_7_on_main": true
+  },
+  "production_frontend_strings": {
+    "recommended_selling_price_en": true,
+    "recommended_selling_price_ru": false,
+    "financialCalculator": true,
+    "costing_policy": false,
+    "vat_adjustments_nav": false,
+    "balances_fifo_label": false
+  },
+  "interpretation": {
+    "phase6_7_frontend_on_production": true,
+    "phase6_7_matches_main_not_latest_branch": true,
+    "release2_frontend_on_production": false
+  }
+}
