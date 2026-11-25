@@ -103,7 +103,48 @@ export type ErpWarehouse = Archivable & {
   phone?: string | null;
 };
 export type ErpWriteoffReason = Archivable & { id: string; name: string; color: string; pnl_block: "cost" | "expense"; sort: number };
-export type ErpChannel = Archivable & { id: string; code: string; name: string; commission_pct: number | null; sort: number };
+/** Sales channel. commission_pct = Legacy Rate (Phase 6 still uses it). Finance fields from Phase 5. */
+export type ErpChannel = Archivable & {
+  id: string;
+  code: string;
+  name: string;
+  /** Legacy single commission % of menu price — used by channelResult until Phase 6. */
+  commission_pct: number | null;
+  /** Frozen copy of commission_pct; never auto-split into net/VAT/ads. */
+  legacy_commission_pct?: number | null;
+  sort: number;
+  output_vat_rate?: number | null;
+  selling_price_includes_vat?: boolean | null;
+  finance_preliminary?: boolean | null;
+  commission_enabled?: boolean | null;
+  commission_rate?: number | null;
+  commission_vat_included?: boolean | null;
+  commission_vat_rate?: number | null;
+  commission_calc_base?: string | null;
+  commission_vat_deduction_status?: string | null;
+  commission_deductible_vat_pct?: number | null;
+  advertising_enabled?: boolean | null;
+  advertising_scenario?: string | null;
+  advertising_rate?: number | null;
+  advertising_vat_included?: boolean | null;
+  advertising_vat_rate?: number | null;
+  advertising_calc_base?: string | null;
+  advertising_vat_deduction_status?: string | null;
+  advertising_deductible_vat_pct?: number | null;
+  advertising_organic_gross_pct?: number | null;
+  advertising_standard_gross_pct?: number | null;
+  advertising_full_gross_pct?: number | null;
+  merchant_discounts_enabled?: boolean | null;
+  platform_fees_enabled?: boolean | null;
+  chargebacks_enabled?: boolean | null;
+  financial_adjustments_enabled?: boolean | null;
+  additional_expenses_note?: string | null;
+  min_margin_pct?: number | null;
+  target_margin_pct?: number | null;
+  optimal_margin_pct?: number | null;
+  finance_effective_from?: string | null;
+  finance_effective_to?: string | null;
+};
 
 /** Shared ordering unit (Poster «Фасовка»): name is English display; name_vn is optional Vietnamese. */
 export type ErpPack = {

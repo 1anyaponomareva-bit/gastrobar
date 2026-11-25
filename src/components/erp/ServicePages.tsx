@@ -16,6 +16,7 @@ import {
   type VatDirection,
   type VatExceptionScope,
 } from "@/lib/erp/vat";
+import { ChannelFinanceEditor } from "./ChannelFinanceEditor";
 import { useErp } from "./ErpShell";
 import { Pager, usePageSize } from "./Pager";
 import { RefList } from "./RefList";
@@ -168,20 +169,26 @@ export function SettingsPage() {
       />
 
       <section className="erpCard">
-        <h2>{T("Каналы продаж и комиссии", "Sales channels and commission", "Kênh bán và hoa hồng")}</h2>
+        <h2>{T("Каналы продаж", "Sales channels", "Kênh bán")}</h2>
         <p className="erpHint">
           {T(
-            "Комиссия — доля площадки от цены в меню (Grab Food, Shopee Food…). Пусто — комиссия не задана, расчёт маржи будет отмечен как неполный.",
-            "Commission is the platform share of the menu price (Grab Food, Shopee Food…). Empty means not set — margin is marked incomplete.",
-            "Hoa hồng là % trên giá bán. Để trống = chưa đặt.",
+            "Финансовые настройки канала: НДС продажи, комиссия, реклама, цели маржи. Legacy Rate (commission_pct) остаётся для текущей маржи на карточке блюда до Phase 6.",
+            "Channel finance: sales VAT, commission, advertising, margin targets. Legacy Rate (commission_pct) still drives dish margin until Phase 6.",
+            "Tài chính kênh: VAT bán, hoa hồng, QC, biên LN. Legacy Rate vẫn dùng đến Phase 6.",
           )}
         </p>
+        <ChannelFinanceEditor channels={state.channels} />
+        <h3>{T("Добавить / переименовать канал", "Add / rename channel", "Thêm / đổi tên kênh")}</h3>
         <RefList<ErpChannel>
           entity="channel"
           rows={state.channels}
           columns={[
             { key: "name", label: T("Канал", "Channel", "Kênh") },
-            { key: "commission_pct", label: T("Комиссия, %", "Commission, %", "Hoa hồng, %"), kind: "number" },
+            {
+              key: "commission_pct",
+              label: T("Legacy комиссия, %", "Legacy commission, %", "Hoa hồng legacy, %"),
+              kind: "number",
+            },
           ]}
           addLabel={T("Добавить канал", "Add channel", "Thêm kênh")}
           emptyTitle={T("Каналов продаж пока нет", "No sales channels yet", "Chưa có kênh bán")}
