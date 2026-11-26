@@ -15,7 +15,7 @@ Constraints honored: no production SQL · no merge to `main` · FE not published
 | Item | Value |
 |------|--------|
 | Branch | `release-3-phase9d` |
-| Implementation | (tip after this report commit) |
+| Implementation | b627eda |
 | Backlog | `docs/RELEASE3_BACKLOG.md` updated |
 
 ---
