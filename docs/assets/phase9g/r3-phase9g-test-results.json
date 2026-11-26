@@ -1,0 +1,309 @@
+{
+  "runId": "mwxulrs1",
+  "results": [
+    {
+      "name": "ctrl_cogs",
+      "ok": true,
+      "detail": "140000000"
+    },
+    {
+      "name": "ctrl_gp",
+      "ok": true,
+      "detail": "360000000"
+    },
+    {
+      "name": "ctrl_gm",
+      "ok": true,
+      "detail": "72"
+    },
+    {
+      "name": "ctrl_cm",
+      "ok": true,
+      "detail": "245000000"
+    },
+    {
+      "name": "ctrl_cm_pct",
+      "ok": true,
+      "detail": "49"
+    },
+    {
+      "name": "ctrl_ebitda",
+      "ok": true,
+      "detail": "80000000"
+    },
+    {
+      "name": "ctrl_ebitda_m",
+      "ok": true,
+      "detail": "16"
+    },
+    {
+      "name": "ctrl_ebit",
+      "ok": true,
+      "detail": "75000000"
+    },
+    {
+      "name": "ctrl_pbt",
+      "ok": true,
+      "detail": "75000000"
+    },
+    {
+      "name": "ctrl_pbt_m",
+      "ok": true,
+      "detail": "15"
+    },
+    {
+      "name": "ctrl_cit_null",
+      "ok": true,
+      "detail": "{\"cit\":null,\"np\":null}"
+    },
+    {
+      "name": "ctrl_np_pending",
+      "ok": true,
+      "detail": "Pending Tax Calculation"
+    },
+    {
+      "name": "exp_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "exp_ap_created",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "exp_partial",
+      "ok": true,
+      "detail": "partial"
+    },
+    {
+      "name": "exp_pay_idempotent",
+      "ok": true,
+      "detail": "623b12c4-36e0-4488-b489-95bc41edf736==623b12c4-36e0-4488-b489-95bc41edf736"
+    },
+    {
+      "name": "exp_full_paid",
+      "ok": true,
+      "detail": "paid"
+    },
+    {
+      "name": "exp_single_doc",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "exp_alloc",
+      "ok": true,
+      "detail": "8c4b05a0-1b32-4c86-bf02-8c709ef10bfa"
+    },
+    {
+      "name": "auto_alloc_off",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  auto_allocate_disabled\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT pu"
+    },
+    {
+      "name": "exp_locked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_DOCUMENT_LOCKED\r\n�����������:  \r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE"
+    },
+    {
+      "name": "payroll_net",
+      "ok": true,
+      "detail": "8500000"
+    },
+    {
+      "name": "employer_si_not_in_net",
+      "ok": true,
+      "detail": "er"
+    },
+    {
+      "name": "payroll_paid_next_period",
+      "ok": true,
+      "detail": "1b1c7c41-920c-4069-900c-5dc09a9c26da"
+    },
+    {
+      "name": "payroll_pay_status",
+      "ok": true,
+      "detail": "paid"
+    },
+    {
+      "name": "payroll_pay_idempotent",
+      "ok": true,
+      "detail": "idem"
+    },
+    {
+      "name": "depr_created",
+      "ok": true,
+      "detail": "128f73d9-c079-4d8a-8791-9f3ebcc963c4"
+    },
+    {
+      "name": "depr_straight_line",
+      "ok": true,
+      "detail": "1000000"
+    },
+    {
+      "name": "depr_idempotent",
+      "ok": true,
+      "detail": "idem"
+    },
+    {
+      "name": "nbv_updated",
+      "ok": true,
+      "detail": "nbv"
+    },
+    {
+      "name": "capex_no_opex_ap",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "pnl_basis",
+      "ok": true,
+      "detail": "accrual"
+    },
+    {
+      "name": "pnl_has_rent",
+      "ok": true,
+      "detail": "10000000"
+    },
+    {
+      "name": "pnl_has_payroll",
+      "ok": true,
+      "detail": "10000000"
+    },
+    {
+      "name": "pnl_has_depr",
+      "ok": true,
+      "detail": "1000000"
+    },
+    {
+      "name": "pnl_cit_pending",
+      "ok": true,
+      "detail": "Pending Tax Calculation"
+    },
+    {
+      "name": "pnl_net_null",
+      "ok": true,
+      "detail": "null"
+    },
+    {
+      "name": "cf_has_open",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "cf_note_internal",
+      "ok": true,
+      "detail": "note"
+    },
+    {
+      "name": "dash_pbt",
+      "ok": true,
+      "detail": "-23300000"
+    },
+    {
+      "name": "dash_ap",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "apar_payables",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "cit_tbd",
+      "ok": true,
+      "detail": "tbd"
+    },
+    {
+      "name": "auto_alloc_flag_off",
+      "ok": true,
+      "detail": "off"
+    },
+    {
+      "name": "reg_9f_bom",
+      "ok": true,
+      "detail": "9f"
+    },
+    {
+      "name": "reg_9e",
+      "ok": true,
+      "detail": "9e"
+    },
+    {
+      "name": "reg_cashbook",
+      "ok": true,
+      "detail": "cash"
+    },
+    {
+      "name": "auto_consume_off",
+      "ok": true,
+      "detail": "off"
+    }
+  ],
+  "math": {
+    "cit": null,
+    "ebit": 75000000,
+    "ebitda": 80000000,
+    "rule_ref": "erp_accrual_pnl_control_math@9g",
+    "cit_status": "accountant_tbd",
+    "net_profit": null,
+    "total_cogs": 140000000,
+    "net_revenue": 500000000,
+    "gross_profit": 360000000,
+    "gross_margin_pct": 72,
+    "ebitda_margin_pct": 16,
+    "net_profit_status": "Pending Tax Calculation",
+    "profit_before_tax": 75000000,
+    "contribution_margin": 245000000,
+    "contribution_margin_pct": 49,
+    "profit_before_tax_margin_pct": 15
+  },
+  "pnl": {
+    "ebit": -23300000,
+    "rent": 10000000,
+    "basis": "accrual",
+    "ebitda": -22300000,
+    "payroll": 10000000,
+    "cit_rate": null,
+    "period_to": "2096-03-31",
+    "utilities": 0,
+    "cit_amount": null,
+    "cit_status": "accountant_tbd",
+    "disclaimer": "Management Accrual P&L. VAT payment ≠ P&L expense. Cash Basis report is separate/Legacy.",
+    "net_profit": null,
+    "total_cogs": 0,
+    "advertising": 0,
+    "net_revenue": 0,
+    "period_from": "2096-03-01",
+    "staff_meals": 300000,
+    "completeness": {
+      "status": "Actual",
+      "is_final": false,
+      "pending_cogs_orders": 0
+    },
+    "depreciation": 1000000,
+    "gross_profit": 0,
+    "food_cost_pct": null,
+    "rent_cost_pct": null,
+    "labor_cost_pct": null,
+    "prime_cost_pct": null,
+    "food_actual_cogs": 0,
+    "gross_margin_pct": null,
+    "operating_profit": -23300000,
+    "ebitda_margin_pct": null,
+    "net_profit_status": "Pending Tax Calculation",
+    "profit_before_tax": -23300000,
+    "packaging_cost_pct": null,
+    "contribution_margin": 0,
+    "platform_commission": 0,
+    "advertising_cost_pct": null,
+    "packaging_actual_cogs": 0,
+    "contribution_margin_pct": null,
+    "platform_commission_pct": null,
+    "other_operating_expenses": 0,
+    "employer_social_insurance": 2000000,
+    "profit_before_tax_margin_pct": null
+  }
+}

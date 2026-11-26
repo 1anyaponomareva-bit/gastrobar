@@ -63,6 +63,10 @@ export const ALL_PARTS: StatePart[] = [
   "vatPeriodCorrections",
   "salesPendingCogs",
   "salesBomSnapshots",
+  "expensePayments",
+  "payrollAccruals",
+  "fixedAssets",
+  "apArItems",
   "vatExceptions",
   "taxRates",
 ];
@@ -290,6 +294,26 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "salesBomSnapshots":
       return optionalTable(
         await db.from("erp_sales_bom_snapshots").select("*").order("exploded_at", { ascending: false }).limit(2000),
+        [],
+      );
+    case "expensePayments":
+      return optionalTable(
+        await db.from("erp_expense_payments").select("*").neq("status", "cancelled").order("payment_date", { ascending: false }).limit(2000),
+        [],
+      );
+    case "payrollAccruals":
+      return optionalTable(
+        await db.from("erp_payroll_accruals").select("*").order("period_end", { ascending: false }).limit(2000),
+        [],
+      );
+    case "fixedAssets":
+      return optionalTable(
+        await db.from("erp_fixed_assets").select("*").neq("status", "cancelled").order("acquisition_date", { ascending: false }).limit(2000),
+        [],
+      );
+    case "apArItems":
+      return optionalTable(
+        await db.from("erp_ap_ar_items").select("*").in("status", ["open", "partial"]).order("due_date", { ascending: true }).limit(5000),
         [],
       );
     case "vatExceptions":

@@ -668,6 +668,63 @@ export async function POST(request: Request) {
         });
         return timing.json(data);
       }
+      case "saveExpensePayment": {
+        const id = await rpc("erp_expense_payment_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["expensePayments", "expenseDocuments", "apArItems"] as StatePart[]) });
+      }
+      case "postExpensePayment": {
+        const id = await rpc("erp_expense_payment_post", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["expensePayments", "expenseDocuments", "apArItems"] as StatePart[]) });
+      }
+      case "saveExpenseAllocation": {
+        const id = await rpc("erp_expense_allocation_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["expenseDocuments"] as StatePart[]) });
+      }
+      case "savePayrollAccrual": {
+        const id = await rpc("erp_payroll_accrual_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["payrollAccruals"] as StatePart[]) });
+      }
+      case "postPayrollAccrual": {
+        const id = await rpc("erp_payroll_accrual_post", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["payrollAccruals", "apArItems"] as StatePart[]) });
+      }
+      case "postPayrollPayment": {
+        const id = await rpc("erp_payroll_payment_post", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["payrollAccruals", "apArItems"] as StatePart[]) });
+      }
+      case "saveFixedAsset": {
+        const id = await rpc("erp_fixed_asset_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["fixedAssets"] as StatePart[]) });
+      }
+      case "activateFixedAsset": {
+        const id = await rpc("erp_fixed_asset_activate", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["fixedAssets"] as StatePart[]) });
+      }
+      case "runDepreciation": {
+        const value = object(a.value, "value");
+        const id = await rpc("erp_depreciation_run", {
+          p_asset_id: uuid(value.asset_id),
+          p_period_start: value.period_start,
+          p_period_end: value.period_end,
+          p_actor: actor,
+        });
+        return timing.json({ id, patch: await fresh(["fixedAssets"] as StatePart[]) });
+      }
+      case "accrualPnl": {
+        const value = object(a.value ?? {}, "value");
+        return timing.json(await rpc("erp_accrual_pnl", { p_from: value.from, p_to: value.to, p_location: value.location_id ? uuid(value.location_id) : null }));
+      }
+      case "managementCashflow": {
+        const value = object(a.value ?? {}, "value");
+        return timing.json(await rpc("erp_management_cashflow", { p_from: value.from, p_to: value.to }));
+      }
+      case "financeDashboard": {
+        const value = object(a.value ?? {}, "value");
+        return timing.json(await rpc("erp_finance_dashboard", { p_from: value.from, p_to: value.to }));
+      }
+      case "apArSummary": {
+        return timing.json(await rpc("erp_ap_ar_summary", {}));
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }

@@ -193,11 +193,11 @@ export function FinancePnlPage() {
   return (
     <div className="erpMenu erpFinance">
       <PageHead
-        title={T("P&L (Cash Basis)", "P&L (Cash Basis)", "P&L (Cash Basis)")}
+        title={T("P&L (Cash Basis / Legacy)", "P&L (Cash Basis / Legacy)", "P&L (Cash Basis / Legacy)")}
         sub={T(
-          "Cash Basis: прибыли/убытки кассовых категорий по дате сделки. Будущий Accrual P&L — отдельно (Release 3).",
-          "Cash Basis: cashbook category P&L by deal date. Future Accrual P&L is separate (Release 3).",
-          "Cash Basis: P&L sổ quỹ theo ngày phát sinh. Accrual P&L tương lai tách riêng (Release 3).",
+          "Cash Basis / Legacy: кассовые категории по дате сделки. Accrual P&L: /erp/finance/pnl/accrual — не смешивать.",
+          "Cash Basis / Legacy cashbook P&L. Accrual P&L: /erp/finance/pnl/accrual — do not mix.",
+          "Cash Basis / Legacy. Accrual: /erp/finance/pnl/accrual.",
         )}
       />
       <FinanceMobileNav active={FINANCE_HREFS.pnl} />

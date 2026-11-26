@@ -450,6 +450,11 @@ export type ErpState = {
   /** Phase 9F pending COGS / BOM snapshots. */
   salesPendingCogs?: Array<Record<string, unknown>>;
   salesBomSnapshots?: Array<Record<string, unknown>>;
+  /** Phase 9G */
+  expensePayments?: Array<Record<string, unknown>>;
+  payrollAccruals?: Array<Record<string, unknown>>;
+  fixedAssets?: Array<Record<string, unknown>>;
+  apArItems?: Array<Record<string, unknown>>;
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -722,6 +727,19 @@ export type ErpAction =
   | { action: "profitabilityLocations"; value?: Record<string, unknown> }
   | { action: "profitabilityProducts"; value?: Record<string, unknown> }
   | { action: "profitabilityPendingCogs"; value?: Record<string, unknown> }
+  | { action: "saveExpensePayment"; value: Record<string, unknown> }
+  | { action: "postExpensePayment"; id: string }
+  | { action: "saveExpenseAllocation"; value: Record<string, unknown> }
+  | { action: "savePayrollAccrual"; value: Record<string, unknown> }
+  | { action: "postPayrollAccrual"; id: string }
+  | { action: "postPayrollPayment"; value: Record<string, unknown> }
+  | { action: "saveFixedAsset"; value: Record<string, unknown> }
+  | { action: "activateFixedAsset"; id: string }
+  | { action: "runDepreciation"; value: Record<string, unknown> }
+  | { action: "accrualPnl"; value?: Record<string, unknown> }
+  | { action: "managementCashflow"; value?: Record<string, unknown> }
+  | { action: "financeDashboard"; value?: Record<string, unknown> }
+  | { action: "apArSummary" }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }
