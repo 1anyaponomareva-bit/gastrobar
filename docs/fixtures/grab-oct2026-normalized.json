@@ -1,0 +1,24 @@
+{
+  "fixture": "Grab October 2026 arithmetic control — TEST ONLY",
+  "note": "Not a real GrabMerchant export. Raw Grab columns unknown until owner provides sample.",
+  "vat": "Commission and advertising VAT unverified",
+  "rows": [
+    {
+      "external_order_id": "OCT2026-FIXTURE-SUMMARY",
+      "line_kind": "order",
+      "settlement_date": "2026-10-31",
+      "gross_sales": 434904005,
+      "merchant_funded_discount": 764000,
+      "net_sales": 434140005,
+      "platform_commission": 85240734,
+      "commission_vat": null,
+      "advertising_expense": 30349488,
+      "advertising_vat": null,
+      "chargeback_amount": 76347,
+      "net_earnings": 318473436,
+      "advertising_source": "settlement",
+      "currency": "VND",
+      "operation_key": "grab:fixture:oct2026:summary"
+    }
+  ]
+}

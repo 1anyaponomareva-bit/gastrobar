@@ -522,6 +522,79 @@ export async function POST(request: Request) {
           patch: await fresh(["expenseDocuments"] as StatePart[]),
         });
       }
+      case "platformDashboard": {
+        const value = isObject(a.value) ? a.value : {};
+        const dash = await rpc("erp_platform_dashboard", {
+          p_from: value.from ?? null,
+          p_to: value.to ?? null,
+          p_account: value.platform_account_id ?? null,
+          p_location: value.location_id ?? null,
+        });
+        return timing.json(dash);
+      }
+      case "savePlatformAccount": {
+        const id = await rpc("erp_save_platform_account", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["platformAccounts"] as StatePart[]) });
+      }
+      case "platformImportUpload": {
+        const id = await rpc("erp_platform_import_upload", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["platformImportBatches"] as StatePart[]) });
+      }
+      case "platformImportPreview": {
+        const value = object(a.value, "value");
+        const result = await rpc("erp_platform_import_preview", {
+          p_batch_id: uuid(a.id),
+          p_rows: value.rows ?? [],
+          p_actor: actor,
+        });
+        return timing.json({ ...((result as object) ?? {}), patch: await fresh(["platformImportBatches"] as StatePart[]) });
+      }
+      case "platformImportConfirm": {
+        const id = await rpc("erp_platform_import_confirm", { p_batch_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["platformImportBatches"] as StatePart[]) });
+      }
+      case "platformImportApply": {
+        const value = isObject(a.value) ? a.value : {};
+        const result = await rpc("erp_platform_import_apply", {
+          p_batch_id: uuid(a.id),
+          p_actor: actor,
+          p_settlement_key: value.settlement_key ?? null,
+          p_create_vat_expenses: Boolean(value.create_vat_expenses),
+        });
+        return timing.json({
+          result,
+          patch: await fresh([
+            "platformImportBatches",
+            "platformSettlements",
+            "platformSettlementLines",
+            "platformReconciliation",
+            "expenseDocuments",
+          ] as StatePart[]),
+        });
+      }
+      case "savePlatformPayout": {
+        const id = await rpc("erp_platform_save_payout", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["platformPayouts", "platformReconciliation"] as StatePart[]),
+        });
+      }
+      case "postPlatformPayout": {
+        const id = await rpc("erp_platform_post_payout", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["platformPayouts"] as StatePart[]) });
+      }
+      case "platformManualMatch": {
+        const value = object(a.value, "value");
+        const id = await rpc("erp_platform_manual_match", {
+          p_line_id: uuid(a.id),
+          p_sales_id: uuid(value.sales_document_id),
+          p_actor: actor,
+        });
+        return timing.json({
+          id,
+          patch: await fresh(["platformSettlementLines", "platformReconciliation"] as StatePart[]),
+        });
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }

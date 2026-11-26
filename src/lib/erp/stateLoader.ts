@@ -51,6 +51,12 @@ export const ALL_PARTS: StatePart[] = [
   "inputVatCategories",
   "taxInvoices",
   "expenseDocuments",
+  "platformAccounts",
+  "platformImportBatches",
+  "platformSettlements",
+  "platformSettlementLines",
+  "platformPayouts",
+  "platformReconciliation",
   "vatExceptions",
   "taxRates",
 ];
@@ -218,6 +224,36 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "expenseDocuments":
       return optionalTable(
         await db.from("erp_expense_documents").select("*").is("deleted_at", null).order("transaction_date", { ascending: false }).limit(3000),
+        [],
+      );
+    case "platformAccounts":
+      return optionalTable(
+        await db.from("erp_platform_accounts").select("*").eq("is_active", true).order("platform_code").order("display_name"),
+        [],
+      );
+    case "platformImportBatches":
+      return optionalTable(
+        await db.from("erp_platform_import_batches").select("*").order("created_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "platformSettlements":
+      return optionalTable(
+        await db.from("erp_platform_settlements").select("*").neq("status", "cancelled").order("created_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "platformSettlementLines":
+      return optionalTable(
+        await db.from("erp_platform_settlement_lines").select("*").order("created_at", { ascending: false }).limit(20000),
+        [],
+      );
+    case "platformPayouts":
+      return optionalTable(
+        await db.from("erp_platform_payouts").select("*").neq("status", "cancelled").order("payout_date", { ascending: false }).limit(500),
+        [],
+      );
+    case "platformReconciliation":
+      return optionalTable(
+        await db.from("erp_platform_reconciliation").select("*").order("created_at", { ascending: false }).limit(5000),
         [],
       );
     case "vatExceptions":

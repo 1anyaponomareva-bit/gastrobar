@@ -435,6 +435,13 @@ export type ErpState = {
   }>;
   taxInvoices?: Array<Record<string, unknown>>;
   expenseDocuments?: Array<Record<string, unknown>>;
+  /** Phase 9D platforms / Grab settlements. */
+  platformAccounts?: Array<Record<string, unknown>>;
+  platformImportBatches?: Array<Record<string, unknown>>;
+  platformSettlements?: Array<Record<string, unknown>>;
+  platformSettlementLines?: Array<Record<string, unknown>>;
+  platformPayouts?: Array<Record<string, unknown>>;
+  platformReconciliation?: Array<Record<string, unknown>>;
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -687,6 +694,15 @@ export type ErpAction =
   | { action: "saveExpenseDocument"; value: Record<string, unknown> }
   | { action: "postExpenseDocument"; id: string }
   | { action: "setExpenseVatStatus"; id: string; value: Record<string, unknown> }
+  | { action: "platformDashboard"; value?: Record<string, unknown> }
+  | { action: "savePlatformAccount"; value: Record<string, unknown> }
+  | { action: "platformImportUpload"; value: Record<string, unknown> }
+  | { action: "platformImportPreview"; id: string; value: Record<string, unknown> }
+  | { action: "platformImportConfirm"; id: string }
+  | { action: "platformImportApply"; id: string; value?: Record<string, unknown> }
+  | { action: "savePlatformPayout"; value: Record<string, unknown> }
+  | { action: "postPlatformPayout"; id: string }
+  | { action: "platformManualMatch"; id: string; value: Record<string, unknown> }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }
