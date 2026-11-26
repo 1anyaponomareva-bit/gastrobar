@@ -16,6 +16,7 @@ Constraints honored: no production SQL · no merge to `main` · FE not published
 |------|--------|
 | Branch | `release-3-phase9e` |
 | Base commit | `a6c89cc` |
+| Implementation | `21d32d2` |
 | Backlog | `docs/RELEASE3_BACKLOG.md` updated |
 
 ---
