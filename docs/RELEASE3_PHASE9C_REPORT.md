@@ -14,7 +14,7 @@ Constraints honored: no production SQL · no merge to `main` · FE not published
 | Item | Value |
 |------|--------|
 | Branch | `release-3-phase9c` |
-| Implementation | (see tip after this report commit) |
+| Implementation | `d3d6cfc` |
 | Backlog | `docs/RELEASE3_BACKLOG.md` (9B unfinished items frozen) |
 
 ---
