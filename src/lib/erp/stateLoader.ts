@@ -57,6 +57,10 @@ export const ALL_PARTS: StatePart[] = [
   "platformSettlementLines",
   "platformPayouts",
   "platformReconciliation",
+  "vatSettlements",
+  "vatCarryforwards",
+  "vatPayments",
+  "vatPeriodCorrections",
   "vatExceptions",
   "taxRates",
 ];
@@ -254,6 +258,26 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "platformReconciliation":
       return optionalTable(
         await db.from("erp_platform_reconciliation").select("*").order("created_at", { ascending: false }).limit(5000),
+        [],
+      );
+    case "vatSettlements":
+      return optionalTable(
+        await db.from("erp_vat_settlements").select("*").order("period_end", { ascending: false }).limit(500),
+        [],
+      );
+    case "vatCarryforwards":
+      return optionalTable(
+        await db.from("erp_vat_carryforwards").select("*").order("created_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "vatPayments":
+      return optionalTable(
+        await db.from("erp_vat_payments").select("*").neq("status", "cancelled").order("payment_date", { ascending: false }).limit(500),
+        [],
+      );
+    case "vatPeriodCorrections":
+      return optionalTable(
+        await db.from("erp_vat_period_corrections").select("*").order("created_at", { ascending: false }).limit(500),
         [],
       );
     case "vatExceptions":

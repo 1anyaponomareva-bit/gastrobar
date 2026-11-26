@@ -595,6 +595,44 @@ export async function POST(request: Request) {
           patch: await fresh(["platformSettlementLines", "platformReconciliation"] as StatePart[]),
         });
       }
+      case "saveVatSettlement": {
+        const id = await rpc("erp_vat_settlement_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["vatSettlements", "vatCarryforwards"] as StatePart[]),
+        });
+      }
+      case "approveVatSettlement": {
+        const id = await rpc("erp_vat_settlement_approve", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_force: Boolean(a.force),
+        });
+        return timing.json({
+          id,
+          patch: await fresh(["vatSettlements", "vatCarryforwards"] as StatePart[]),
+        });
+      }
+      case "saveVatCarryforwardOpening": {
+        const id = await rpc("erp_vat_carryforward_opening", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["vatCarryforwards"] as StatePart[]) });
+      }
+      case "saveVatPayment": {
+        const id = await rpc("erp_vat_payment_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["vatPayments", "vatSettlements"] as StatePart[]) });
+      }
+      case "postVatPayment": {
+        const id = await rpc("erp_vat_payment_post", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["vatPayments", "vatSettlements"] as StatePart[]) });
+      }
+      case "saveVatPeriodCorrection": {
+        const id = await rpc("erp_vat_period_correction_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(["vatPeriodCorrections"] as StatePart[]) });
+      }
+      case "exportVatSettlement": {
+        const data = await rpc("erp_vat_settlement_export", { p_id: uuid(a.id) });
+        return timing.json(data);
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }

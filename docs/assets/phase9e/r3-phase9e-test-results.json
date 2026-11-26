@@ -1,0 +1,324 @@
+{
+  "runId": "mwxtnv2a",
+  "results": [
+    {
+      "name": "tables_exist",
+      "ok": true,
+      "detail": "settlements"
+    },
+    {
+      "name": "cf_table",
+      "ok": true,
+      "detail": "cf"
+    },
+    {
+      "name": "pay_table",
+      "ok": true,
+      "detail": "pay"
+    },
+    {
+      "name": "alloc_table",
+      "ok": true,
+      "detail": "alloc"
+    },
+    {
+      "name": "corr_table",
+      "ok": true,
+      "detail": "corr"
+    },
+    {
+      "name": "rpc_compute",
+      "ok": true,
+      "detail": "compute"
+    },
+    {
+      "name": "case_a_payable",
+      "ok": true,
+      "detail": "{\"note\":\"Pending and Non-Deductible excluded from deductible base\",\"rule_ref\":\"erp_vat_settlement_compute@9e\",\"output_vat\":32000000,\"vat_payable\":12000000,\"total_input_vat\":24000000,\"vat_adjustments\":0,\"pending_input_vat\":6000000,\"applied_carryforward\":2000000,\"deductible_input_vat\":18000000,\"opening_carryforward\":2000000,\"potential_carryforward\":0,\"non_deductible_input_vat\":0}"
+    },
+    {
+      "name": "case_a_pending_excluded",
+      "ok": true,
+      "detail": "pending not in deductible"
+    },
+    {
+      "name": "case_a_cf_applied",
+      "ok": true,
+      "detail": "2000000"
+    },
+    {
+      "name": "case_b_payable_zero",
+      "ok": true,
+      "detail": "{\"note\":\"Pending and Non-Deductible excluded from deductible base\",\"rule_ref\":\"erp_vat_settlement_compute@9e\",\"output_vat\":10000000,\"vat_payable\":0,\"total_input_vat\":15000000,\"vat_adjustments\":0,\"pending_input_vat\":0,\"applied_carryforward\":0,\"deductible_input_vat\":15000000,\"opening_carryforward\":0,\"potential_carryforward\":5000000,\"non_deductible_input_vat\":0}"
+    },
+    {
+      "name": "case_b_potential_cf",
+      "ok": true,
+      "detail": "5000000"
+    },
+    {
+      "name": "case_c_deductible",
+      "ok": true,
+      "detail": "65000"
+    },
+    {
+      "name": "case_c_nonded",
+      "ok": true,
+      "detail": "65000"
+    },
+    {
+      "name": "case_c_payable",
+      "ok": true,
+      "detail": "935000"
+    },
+    {
+      "name": "case_c_nonded_excluded",
+      "ok": true,
+      "detail": "nonded not subtracted"
+    },
+    {
+      "name": "opening_cf_requires_confirmed",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  opening_carryforward_requires_confirmed\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_INV"
+    },
+    {
+      "name": "opening_cf_ok",
+      "ok": true,
+      "detail": "51bf7a1c-e7d4-4eec-86fe-75761e7328ec"
+    },
+    {
+      "name": "save_case_a",
+      "ok": true,
+      "detail": "99efee02-0a10-41bf-833f-1ab71d592e58"
+    },
+    {
+      "name": "save_case_a_payable",
+      "ok": true,
+      "detail": "{\"p\":12000000,\"o\":12000000}"
+    },
+    {
+      "name": "save_case_a_status",
+      "ok": true,
+      "detail": "calculated"
+    },
+    {
+      "name": "approve_a",
+      "ok": true,
+      "detail": "approved"
+    },
+    {
+      "name": "approve_snapshot",
+      "ok": true,
+      "detail": "12000000"
+    },
+    {
+      "name": "cf_consumed",
+      "ok": true,
+      "detail": "{\"id\":\"51bf7a1c-e7d4-4eec-86fe-75761e7328ec\",\"notes\":\"phase9e-mwxtnv2a-opening\",\"created_at\":\"2026-11-27T00:24:12.768752+07:00\",\"created_by\":\"phase9e-test\",\"updated_at\":\"2026-11-27T00:24:13.19599+07:00\",\"updated_by\":\"phase9e-test\",\"approved_at\":\"2026-11-27T00:24:12.768752+07:00\",\"approved_by\":\"phase9e-test\",\"applied_amount\":2000000,\"opening_amount\":2000000,\"approval_status\":\"exhausted\",\"legal_entity_id\":null,\"remaining_amount\":0,\"source_period_end\":\"2025-12-31\",\"is_opening_balance\":true,\"source_period_start\":\"2025-01-01\",\"source_settlement_id\":null,\"destination_settlement_id\":\"99efee02-0a10-41bf-833f-1ab71d592e58\"}"
+    },
+    {
+      "name": "approved_locked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_DOCUMENT_LOCKED\r\n�����������:  approved_settlement\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_DOCUMENT_LOCKED"
+    },
+    {
+      "name": "case_b_approved_payable",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "case_b_approved_potential",
+      "ok": true,
+      "detail": "5000000"
+    },
+    {
+      "name": "case_b_cf_generated",
+      "ok": true,
+      "detail": "c3e34fbc-0a95-49f5-9846-c7b6df7e45b0"
+    },
+    {
+      "name": "cf_no_double_use_remaining_zero",
+      "ok": true,
+      "detail": "{\"id\":\"c3e34fbc-0a95-49f5-9846-c7b6df7e45b0\",\"notes\":null,\"created_at\":\"2026-11-27T00:24:13.935316+07:00\",\"created_by\":\"phase9e-test\",\"updated_at\":\"2026-11-27T00:24:14.518362+07:00\",\"updated_by\":\"phase9e-test\",\"approved_at\":\"2026-11-27T00:24:13.935316+07:00\",\"approved_by\":\"phase9e-test\",\"applied_amount\":5000000,\"opening_amount\":5000000,\"approval_status\":\"exhausted\",\"legal_entity_id\":null,\"remaining_amount\":0,\"source_period_end\":\"2132-02-29\",\"is_opening_balance\":false,\"source_period_start\":\"2132-02-01\",\"source_settlement_id\":\"274cb4fd-1542-4040-81f7-4d9e90c49387\",\"destination_settlement_id\":\"4354b73a-f875-451f-8b05-500e13e4cb70\"}"
+    },
+    {
+      "name": "cf_insufficient_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  insufficient_carryforward\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_INVALID', 'insuff"
+    },
+    {
+      "name": "payment_save",
+      "ok": true,
+      "detail": "dc367240-e040-41ab-9e1d-e83ca8c78abe"
+    },
+    {
+      "name": "case_d_outstanding",
+      "ok": true,
+      "detail": "{\"paid\":8000000,\"out\":4000000,\"ps\":\"partially_paid\"}"
+    },
+    {
+      "name": "case_d_partial_status",
+      "ok": true,
+      "detail": "partially_paid"
+    },
+    {
+      "name": "repost_no_double",
+      "ok": true,
+      "detail": "8000000"
+    },
+    {
+      "name": "payment_key_idempotent",
+      "ok": true,
+      "detail": "dc367240-e040-41ab-9e1d-e83ca8c78abe vs dc367240-e040-41ab-9e1d-e83ca8c78abe"
+    },
+    {
+      "name": "full_paid",
+      "ok": true,
+      "detail": "\"paid\""
+    },
+    {
+      "name": "quarterly_period",
+      "ok": true,
+      "detail": "{\"id\":\"8f7e9dc5-5a23-4d5f-9f97-3581efa9936c\",\"notes\":\"caseCq-mwxtnv2a\",\"is_final\":true,\"rule_ref\":\"erp_vat_settlement_compute@9e\",\"snapshot\":{\"note\":\"Pending and Non-Deductible excluded from deductible base\",\"is_final\":true,\"rule_ref\":\"erp_vat_settlement_compute@9e\",\"warnings\":[],\"output_vat\":1000000,\"vat_payable\":935000,\"total_input_vat\":130000,\"vat_adjustments\":0,\"pending_input_vat\":0,\"applied_carryforward\":0,\"deductible_input_vat\":65000,\"opening_carryforward\":0,\"tax_recognition_basis\":\"accountant_tbd\",\"potential_carryforward\":0,\"non_deductible_input_vat\":65000},\"vat_paid\":0,\"warnings\":[],\"amended_of\":null,\"created_at\":\"2026-11-27T00:24:16.412195+07:00\",\"created_by\":\"phase9e-test\",\"output_vat\":1000000,\"period_end\":\"2132-09-30\",\"updated_at\":\"2026-11-27T00:24:16.412195+07:00\",\"updated_by\":\"phase9e-test\",\"approved_at\":null,\"approved_by\":null,\"filing_date\":null,\"period_kind\":\"quarterly\",\"vat_payable\":935000,\"period_start\":\"2132-07-01\",\"calculated_at\":\"2026-11-27T00:24:16.412195+07:00\",\"calculated_by\":\"phase9e-test\",\"payment_status\":\"unpaid\",\"legal_entity_id\":null,\"total_input_vat\":130000,\"vat_adjustments\":0,\"payment_due_date\":null,\"pending_input_vat\":0,\"settlement_status\":\"calculated\",\"applied_carryforward\":0,\"deductible_input_vat\":65000,\"opening_carryforward\":0,\"declaration_reference\":null,\"outstanding_liability\":935000,\"tax_recognition_basis\":\"accountant_tbd\",\"potential_carryforward\":0,\"non_deductible_input_vat\":65000}"
+    },
+    {
+      "name": "incomplete_not_final",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "approve_incomplete_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  incomplete_data_use_force_or_fix\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_INVALID', "
+    },
+    {
+      "name": "approve_force_ok",
+      "ok": true,
+      "detail": "forced"
+    },
+    {
+      "name": "period_correction",
+      "ok": true,
+      "detail": "ac9845e7-040b-401a-baeb-907390b19073"
+    },
+    {
+      "name": "correction_no_rewrite",
+      "ok": true,
+      "detail": "approved"
+    },
+    {
+      "name": "collect_has_formula",
+      "ok": true,
+      "detail": "\"erp_vat_settlement_compute@9e\""
+    },
+    {
+      "name": "collect_pending_field",
+      "ok": true,
+      "detail": "2000"
+    },
+    {
+      "name": "collect_no_forecast_key",
+      "ok": true,
+      "detail": "no forecast"
+    },
+    {
+      "name": "export_disclaimer",
+      "ok": true,
+      "detail": "Internal ERP tax calculation — not an official Vietnam tax declaration"
+    },
+    {
+      "name": "export_lines",
+      "ok": true,
+      "detail": "8"
+    },
+    {
+      "name": "period_kind_accountant_tbd",
+      "ok": true,
+      "detail": "accountant_tbd"
+    },
+    {
+      "name": "rls_enabled",
+      "ok": true,
+      "detail": "rls"
+    },
+    {
+      "name": "reg_9b_sales",
+      "ok": true,
+      "detail": "9b"
+    },
+    {
+      "name": "reg_9c_input",
+      "ok": true,
+      "detail": "9c"
+    },
+    {
+      "name": "reg_9d_plat",
+      "ok": true,
+      "detail": "9d"
+    },
+    {
+      "name": "reg_r2_adj",
+      "ok": true,
+      "detail": "r2"
+    },
+    {
+      "name": "load_state_settlements",
+      "ok": true,
+      "detail": "10"
+    },
+    {
+      "name": "load_state_cf",
+      "ok": true,
+      "detail": "4"
+    },
+    {
+      "name": "load_state_pay",
+      "ok": true,
+      "detail": "3"
+    }
+  ],
+  "caseA": {
+    "note": "Pending and Non-Deductible excluded from deductible base",
+    "rule_ref": "erp_vat_settlement_compute@9e",
+    "output_vat": 32000000,
+    "vat_payable": 12000000,
+    "total_input_vat": 24000000,
+    "vat_adjustments": 0,
+    "pending_input_vat": 6000000,
+    "applied_carryforward": 2000000,
+    "deductible_input_vat": 18000000,
+    "opening_carryforward": 2000000,
+    "potential_carryforward": 0,
+    "non_deductible_input_vat": 0
+  },
+  "caseB": {
+    "note": "Pending and Non-Deductible excluded from deductible base",
+    "rule_ref": "erp_vat_settlement_compute@9e",
+    "output_vat": 10000000,
+    "vat_payable": 0,
+    "total_input_vat": 15000000,
+    "vat_adjustments": 0,
+    "pending_input_vat": 0,
+    "applied_carryforward": 0,
+    "deductible_input_vat": 15000000,
+    "opening_carryforward": 0,
+    "potential_carryforward": 5000000,
+    "non_deductible_input_vat": 0
+  },
+  "caseC": {
+    "note": "Pending and Non-Deductible excluded from deductible base",
+    "rule_ref": "erp_vat_settlement_compute@9e",
+    "output_vat": 1000000,
+    "vat_payable": 935000,
+    "total_input_vat": 130000,
+    "vat_adjustments": 0,
+    "pending_input_vat": 0,
+    "applied_carryforward": 0,
+    "deductible_input_vat": 65000,
+    "opening_carryforward": 0,
+    "potential_carryforward": 0,
+    "non_deductible_input_vat": 65000
+  },
+  "sidA": "99efee02-0a10-41bf-833f-1ab71d592e58",
+  "sidB": "274cb4fd-1542-4040-81f7-4d9e90c49387"
+}
