@@ -62,8 +62,12 @@ export function FinanceReportPage() {
   return (
     <div className="erpMenu erpFinance">
       <PageHead
-        title={T("Финансовый отчет", "Financial report", "Báo cáo tài chính")}
-        sub={T("Доходы и расходы по категориям за месяц — по дате сделки.", "Income and expense by category for the month, using the deal date.", "Thu/chi theo nhóm trong tháng, theo ngày phát sinh.")}
+        title={T("Финансовый отчет (Cash Basis)", "Financial report (Cash Basis)", "Báo cáo tài chính (Cash Basis)")}
+        sub={T(
+          "Cash Basis: доходы и расходы кассовой книги по дате сделки. Не Accrual P&L и не продажи Phase 9B.",
+          "Cash Basis: cashbook income/expense by deal date. Not Accrual P&L and not Phase 9B sales.",
+          "Cash Basis: thu/chi sổ quỹ theo ngày phát sinh. Không phải Accrual P&L / bán 9B.",
+        )}
       />
       <FinanceMobileNav active={FINANCE_HREFS.report} />
       <PeriodBar month={month} onChange={setMonth} />
@@ -113,8 +117,12 @@ export function FinanceCashflowPage() {
   return (
     <div className="erpMenu erpFinance">
       <PageHead
-        title={T("Cash flow", "Cash flow", "Cash flow")}
-        sub={T("Движение денег по дате транзакции, не по дате сделки.", "Money movement by transaction date, not deal date.", "Dòng tiền theo ngày giao dịch, không theo ngày phát sinh.")}
+        title={T("Cash flow (Cash Basis)", "Cash flow (Cash Basis)", "Cash flow (Cash Basis)")}
+        sub={T(
+          "Cash Basis: движение денег по дате транзакции. Не смешивать с Accrual P&L.",
+          "Cash Basis: money movement by transaction date. Do not mix with Accrual P&L.",
+          "Cash Basis: dòng tiền theo ngày giao dịch. Không trộn với Accrual P&L.",
+        )}
       />
       <FinanceMobileNav active={FINANCE_HREFS.cashflow} />
       <PeriodBar month={month} onChange={setMonth} />
@@ -185,8 +193,12 @@ export function FinancePnlPage() {
   return (
     <div className="erpMenu erpFinance">
       <PageHead
-        title={T("P&L", "P&L", "P&L")}
-        sub={T("Прибыли и убытки по дате сделки. Переводы между счетами сюда не входят.", "Profit and loss by deal date. Transfers between accounts are excluded.", "Lãi lỗ theo ngày phát sinh. Không gồm chuyển khoản.")}
+        title={T("P&L (Cash Basis)", "P&L (Cash Basis)", "P&L (Cash Basis)")}
+        sub={T(
+          "Cash Basis: прибыли/убытки кассовых категорий по дате сделки. Будущий Accrual P&L — отдельно (Release 3).",
+          "Cash Basis: cashbook category P&L by deal date. Future Accrual P&L is separate (Release 3).",
+          "Cash Basis: P&L sổ quỹ theo ngày phát sinh. Accrual P&L tương lai tách riêng (Release 3).",
+        )}
       />
       <FinanceMobileNav active={FINANCE_HREFS.pnl} />
       <PeriodBar month={month} onChange={setMonth} />

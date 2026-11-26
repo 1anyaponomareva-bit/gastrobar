@@ -6,6 +6,7 @@ import type {
   FinanceShift,
   FinanceTransaction,
 } from "./finance";
+import type { ErpLegalEntity, ErpSalesDocument, ErpSalesLine, ErpSalesSourceLink } from "./sales";
 import type {
   ErpDish,
   ErpDocument,
@@ -43,6 +44,10 @@ export const ALL_PARTS: StatePart[] = [
   "financeShifts",
   "financeEmployees",
   "financePayroll",
+  "legalEntities",
+  "salesDocuments",
+  "salesLines",
+  "salesSourceLinks",
   "vatExceptions",
   "taxRates",
 ];
@@ -179,6 +184,23 @@ async function loadPart(part: StatePart): Promise<unknown> {
       return optionalTable(
         await db.from("erp_finance_payroll").select("*").order("period_end", { ascending: false }).limit(2000),
         [] as FinancePayroll[],
+      );
+    case "legalEntities":
+      return optionalTable(await db.from("erp_legal_entities").select("*").eq("is_active", true).order("code"), [] as ErpLegalEntity[]);
+    case "salesDocuments":
+      return optionalTable(
+        await db.from("erp_sales_documents").select("*").is("deleted_at", null).order("business_date", { ascending: false }).limit(3000),
+        [] as ErpSalesDocument[],
+      );
+    case "salesLines":
+      return optionalTable(
+        await db.from("erp_sales_lines").select("*").order("document_id").order("line_no").limit(20000),
+        [] as ErpSalesLine[],
+      );
+    case "salesSourceLinks":
+      return optionalTable(
+        await db.from("erp_sales_source_links").select("*").order("created_at", { ascending: false }).limit(10000),
+        [] as ErpSalesSourceLink[],
       );
     case "vatExceptions":
       return optionalTable(await db.from("erp_vat_exceptions").select("*"), [] as ErpVatException[]);

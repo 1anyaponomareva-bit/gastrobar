@@ -11,6 +11,8 @@ export const FINANCE_HREFS = {
   accountsTrash: "/erp/finance/accounts/trash",
   categories: "/erp/finance/categories",
   salary: "/erp/finance/salary",
+  sales: "/erp/finance/sales",
+  outputVat: "/erp/finance/vat/output",
   report: "/erp/finance/report",
   cashflow: "/erp/finance/cashflow",
   pnl: "/erp/finance/pnl",
@@ -19,13 +21,24 @@ export const FINANCE_HREFS = {
 export function financeNavItems() {
   return [
     { href: FINANCE_HREFS.transactions, label: T("Транзакции", "Transactions", "Giao dịch") },
+    { href: FINANCE_HREFS.sales, label: T("Продажи", "Sales", "Bán hàng") },
+    { href: FINANCE_HREFS.outputVat, label: T("Исходящий НДС", "Output VAT", "VAT đầu ra") },
     { href: FINANCE_HREFS.shifts, label: T("Кассовые смены", "Cash shifts", "Ca quỹ") },
     { href: FINANCE_HREFS.accounts, label: T("Счета", "Accounts", "Tài khoản") },
     { href: FINANCE_HREFS.categories, label: T("Категории", "Categories", "Nhóm") },
     { href: FINANCE_HREFS.salary, label: T("Зарплата", "Payroll", "Lương") },
-    { href: FINANCE_HREFS.report, label: T("Финансовый отчет", "Financial report", "Báo cáo tài chính") },
-    { href: FINANCE_HREFS.cashflow, label: T("Cash flow", "Cash flow", "Cash flow") },
-    { href: FINANCE_HREFS.pnl, label: T("P&L", "P&L", "P&L") },
+    {
+      href: FINANCE_HREFS.report,
+      label: T("Финансовый отчет (Cash Basis)", "Financial report (Cash Basis)", "Báo cáo (Cash Basis)"),
+    },
+    {
+      href: FINANCE_HREFS.cashflow,
+      label: T("Cash flow (Cash Basis)", "Cash flow (Cash Basis)", "Cash flow (Cash Basis)"),
+    },
+    {
+      href: FINANCE_HREFS.pnl,
+      label: T("P&L (Cash Basis)", "P&L (Cash Basis)", "P&L (Cash Basis)"),
+    },
   ];
 }
 
@@ -36,6 +49,8 @@ export function activeFinanceHref(pathname: string | null): string | null {
   );
   if (listed) return listed.href;
   if (path === FINANCE_HREFS.trash || path.startsWith(`${FINANCE_HREFS.trash}/`)) return FINANCE_HREFS.transactions;
+  if (path.startsWith("/erp/finance/sales")) return FINANCE_HREFS.sales;
+  if (path.startsWith("/erp/finance/vat/output")) return FINANCE_HREFS.outputVat;
   if (path === "/erp/finance" || path === "/erp/finance/" || path.startsWith("/erp/finance/new") || /^\/erp\/finance\/[^/]+$/.test(path)) {
     return FINANCE_HREFS.transactions;
   }

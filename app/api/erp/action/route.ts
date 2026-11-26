@@ -36,6 +36,18 @@ const FINANCE_PARTS: StatePart[] = [
   "financeEmployees",
   "financePayroll",
 ];
+const SALES_PARTS: StatePart[] = [
+  "legalEntities",
+  "salesDocuments",
+  "salesLines",
+  "salesSourceLinks",
+  "settings",
+  "channels",
+  "locations",
+  "warehouses",
+  "dishes",
+  "products",
+];
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -402,6 +414,62 @@ export async function POST(request: Request) {
       case "payFinancePayroll": {
         const id = await rpc("erp_pay_finance_payroll", { p: object(a.value, "value"), p_actor: actor });
         return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
+      }
+      case "saveSalesDocument": {
+        const id = await rpc("erp_save_sales_document", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({ id, patch: await fresh(SALES_PARTS) });
+      }
+      case "postSalesDocument": {
+        const id = await rpc("erp_post_sales_document", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({ id, patch: await fresh(SALES_PARTS) });
+      }
+      case "cancelSalesDocument": {
+        const id = await rpc("erp_cancel_sales_document", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_reason: a.reason ?? null,
+        });
+        return timing.json({ id, patch: await fresh(SALES_PARTS) });
+      }
+      case "refundSalesDocument": {
+        const id = await rpc("erp_refund_sales_document", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_amount: a.amount ?? null,
+          p_full: Boolean(a.full),
+        });
+        return timing.json({ id, patch: await fresh(SALES_PARTS) });
+      }
+      case "linkSalesSource": {
+        const value = object(a.value, "value");
+        const id = await rpc("erp_sales_link_source", {
+          p_sales_id: uuid(value.sales_document_id),
+          p_source: String(value.source_system ?? ""),
+          p_external_id: String(value.external_id ?? ""),
+          p_account_key: String(value.account_or_location_key ?? ""),
+          p_match_kind: String(value.match_kind ?? "manual"),
+          p_payload: value.raw_payload ?? null,
+          p_actor: actor,
+        });
+        return timing.json({ id, patch: await fresh(SALES_PARTS) });
+      }
+      case "postSalesCogs": {
+        const result = await rpc("erp_sales_post_cogs", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_auto_consume: Boolean(a.autoConsume),
+        });
+        return timing.json({ result, patch: await fresh([...SALES_PARTS, ...STOCK_PARTS]) });
+      }
+      case "validateSalesImportStub": {
+        const value = object(a.value, "value");
+        const id = await rpc("erp_sales_import_stub_validate", {
+          p_source: String(value.source_system ?? "import"),
+          p_rows: value.rows ?? [],
+          p_actor: actor,
+          p_file_name: value.file_name ?? null,
+        });
+        return timing.json({ id, patch: {} });
       }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");

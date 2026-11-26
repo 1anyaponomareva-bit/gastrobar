@@ -7,6 +7,7 @@ import type {
   FinanceShift,
   FinanceTransaction,
 } from "./finance";
+import type { ErpLegalEntity, ErpSalesDocument, ErpSalesLine, ErpSalesSourceLink } from "./sales";
 export type { MenuPriceSource, ProductCostQuote } from "./costing";
 export type { StaffMergeResult } from "./staffMerge";
 export type {
@@ -17,6 +18,12 @@ export type {
   FinanceShift as ErpFinanceShift,
   FinanceTransaction as ErpFinanceTransaction,
 } from "./finance";
+export type {
+  ErpLegalEntity,
+  ErpSalesDocument,
+  ErpSalesLine,
+  ErpSalesSourceLink,
+} from "./sales";
 
 export type ErpSettings = {
   input_vat_enabled: boolean;
@@ -41,6 +48,13 @@ export type ErpSettings = {
    * Checkbox confirmation alone is not enough. Full period close = Release 3.
    */
   vat_adj_allow_backdated?: boolean | null;
+  /** Phase 9B: default legal entity for sales docs. */
+  default_legal_entity_id?: string | null;
+  /**
+   * Phase 9B: when true, erp_sales_post_cogs may call FIFO consume.
+   * Default false — do not mass-auto consume production stock.
+   */
+  sales_auto_consume_stock?: boolean | null;
 };
 
 export type ErpDishCostSnapshot = {
@@ -406,6 +420,11 @@ export type ErpState = {
   financeShifts?: FinanceShift[];
   financeEmployees?: FinanceEmployee[];
   financePayroll?: FinancePayroll[];
+  /** Phase 9B sales (accrual). Missing until migrations applied. */
+  legalEntities?: ErpLegalEntity[];
+  salesDocuments?: ErpSalesDocument[];
+  salesLines?: ErpSalesLine[];
+  salesSourceLinks?: ErpSalesSourceLink[];
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -646,6 +665,13 @@ export type ErpAction =
   | { action: "saveFinanceEmployee"; value: Record<string, unknown> }
   | { action: "saveFinancePayroll"; value: Record<string, unknown> }
   | { action: "payFinancePayroll"; value: Record<string, unknown> }
+  | { action: "saveSalesDocument"; value: Record<string, unknown> }
+  | { action: "postSalesDocument"; id: string }
+  | { action: "cancelSalesDocument"; id: string; reason?: string | null }
+  | { action: "refundSalesDocument"; id: string; amount?: number | null; full?: boolean }
+  | { action: "linkSalesSource"; value: Record<string, unknown> }
+  | { action: "postSalesCogs"; id: string; autoConsume?: boolean }
+  | { action: "validateSalesImportStub"; value: Record<string, unknown> }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }
