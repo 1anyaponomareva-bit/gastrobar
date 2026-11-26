@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Phase 9B UI fixture (TEST DATA ONLY — FE not published)</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a222c; --line:#2a3542; --txt:#e8eef5; --muted:#9aa8b8; --acc:#3d8bfd; --ok:#3ecf8e; --warn:#f5a524; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.45 system-ui,Segoe UI,sans-serif; background:var(--bg); color:var(--txt); }
+    header { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:18px; }
+    header .badge { background:#5b2b00; color:#ffd7a8; padding:2px 8px; border-radius:999px; font-size:12px; }
+    nav { display:flex; gap:8px; padding:10px 20px; border-bottom:1px solid var(--line); overflow:auto; }
+    nav span { padding:6px 10px; border-radius:8px; background:var(--card); color:var(--muted); white-space:nowrap; }
+    nav span.active { background:var(--acc); color:#fff; }
+    main { padding:20px; display:grid; gap:28px; }
+    section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+    h2 { margin:0 0 12px; font-size:16px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+    td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .field { background:#121820; border:1px solid var(--line); border-radius:8px; padding:10px; }
+    .field label { display:block; color:var(--muted); font-size:12px; margin-bottom:4px; }
+    .field strong { font-size:15px; }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; }
+    .pill.posted { background:#143528; color:var(--ok); }
+    .pill.pending { background:#3a2a00; color:var(--warn); }
+    .pill.refund { background:#3a1520; color:#ff8fab; }
+    ul { margin:0; padding-left:18px; }
+    .shot-label { color:var(--warn); font-size:12px; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Финансы · Phase 9B fixture</h1>
+    <span class="badge">TEST DATA ONLY · FE not published · local acceptance</span>
+  </header>
+  <nav>
+    <span>Транзакции</span>
+    <span class="active">Продажи</span>
+    <span>Исходящий НДС</span>
+    <span>Финансовый отчет (Cash Basis)</span>
+  </nav>
+  <main>
+    <section id="sales-list" data-shot="sales-list">
+      <div class="shot-label">SHOT: Финансы → Продажи</div>
+      <h2>Продажи (начисление)</h2>
+      <table data-testid="sales-docs-table">
+        <thead>
+          <tr>
+            <th>Дата</th><th>Источник</th><th>Канал</th><th>Подразделение</th><th>Статус</th>
+            <th>Сверка</th><th class="num">Gross</th><th class="num">Net</th><th class="num">VAT</th><th class="num">COGS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-11-26</td><td>poster</td><td>GrabFood</td><td>GF Bar</td>
+            <td><span class="pill posted">Проведён</span></td><td>manual_match</td>
+            <td class="num">108,000</td><td class="num">100,000</td><td class="num">8,000</td><td class="num">ожидает</td>
+          </tr>
+          <tr>
+            <td>2026-11-26</td><td>manual</td><td>Dine-in</td><td>GF Bar</td>
+            <td><span class="pill posted">Проведён</span></td><td>unmatched</td>
+            <td class="num">90,000</td><td class="num">83,333</td><td class="num">6,667</td><td class="num">42,500</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="sale-card" data-shot="sale-card">
+      <div class="shot-label">SHOT: Карточка продажи</div>
+      <h2>Продажа ORD-9B-TEST-001 · posted · poster · poster:spot1:test-001</h2>
+      <div class="grid">
+        <div class="field"><label>Business date</label><strong>2026-11-26</strong></div>
+        <div class="field"><label>Order at</label><strong>2026-11-27 02:30 +07</strong></div>
+        <div class="field"><label>Payment status</label><strong>paid</strong></div>
+        <div class="field"><label>Reconciliation</label><strong>manual_match</strong></div>
+        <div class="field"><label>Gross Sales</label><strong>108,000 ₫</strong></div>
+        <div class="field"><label>Net Revenue</label><strong>100,000 ₫</strong></div>
+        <div class="field"><label>Output VAT</label><strong>8,000 ₫ (8%)</strong></div>
+        <div class="field"><label>Actual / Pending COGS</label><strong>pending · —</strong><div class="hint">auto_consume_disabled</div></div>
+      </div>
+      <h2 style="margin-top:16px">Строки</h2>
+      <table>
+        <thead><tr><th>#</th><th>Описание</th><th class="num">Кол-во</th><th class="num">Gross</th><th class="num">VAT</th><th class="num">Net</th><th>COGS</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Test dish (+ no_ice, extra_shot)</td><td class="num">1</td><td class="num">108,000</td><td class="num">8,000</td><td class="num">100,000</td><td>pending</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="output-vat" data-shot="output-vat">
+      <div class="shot-label">SHOT: Финансы → Исходящий НДС</div>
+      <h2>Исходящий НДС · период 2026-11</h2>
+      <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:12px">
+        <div class="field"><label>Налоговая база</label><strong>183,333 ₫</strong></div>
+        <div class="field"><label>Сумма Output VAT</label><strong>14,667 ₫</strong></div>
+      </div>
+      <table data-testid="output-vat-register">
+        <thead>
+          <tr><th>Дата</th><th>Канал</th><th>Подразделение</th><th>Ставка</th><th>Источник ставки</th><th class="num">База</th><th class="num">VAT</th><th>Статус</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2026-11-26</td><td>GrabFood</td><td>GF Bar</td><td>8</td><td>company_default</td><td class="num">100,000</td><td class="num">8,000</td><td>posted</td></tr>
+          <tr><td>2026-11-26</td><td>Dine-in</td><td>GF Bar</td><td>8</td><td>company_default</td><td class="num">83,333</td><td class="num">6,667</td><td>posted</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="cogs-actual" data-shot="cogs-actual">
+      <div class="shot-label">SHOT: Карточка продажи с Actual COGS</div>
+      <h2>Продажа ORD-9B-TEST-002 · posted · manual</h2>
+      <div class="grid">
+        <div class="field"><label>Gross Sales</label><strong>90,000 ₫</strong></div>
+        <div class="field"><label>Output VAT</label><strong>6,667 ₫ (8%)</strong></div>
+        <div class="field"><label>Actual / Pending COGS</label><strong>posted · 42,500 ₫</strong></div>
+        <div class="field"><label>COGS status</label><span class="pill posted">posted</span></div>
+      </div>
+      <p class="hint">Actual COGS from FIFO allocations (local test flag only; production auto-consume remains false).</p>
+    </section>
+
+    <section id="cogs-pending" data-shot="cogs-pending">
+      <div class="shot-label">SHOT: Карточка продажи с Pending COGS</div>
+      <h2>Продажа ORD-9B-TEST-003 · posted · manual</h2>
+      <div class="grid">
+        <div class="field"><label>Gross Sales</label><strong>1,000 ₫</strong></div>
+        <div class="field"><label>Order status</label><span class="pill posted">posted</span></div>
+        <div class="field"><label>Actual / Pending COGS</label><strong>partial · 0 ₫</strong><div class="hint">insufficient:&lt;product&gt;</div></div>
+        <div class="field"><label>COGS status</label><span class="pill pending">pending / partial</span></div>
+      </div>
+      <p class="hint">Sale kept posted; Pending COGS recorded separately (insufficient stock path).</p>
+    </section>
+
+    <section id="reconcile" data-shot="reconcile">
+      <div class="shot-label">SHOT: Сверка источников Poster и Grab</div>
+      <h2>Source links · ORD-9B-TEST-001</h2>
+      <ul>
+        <li>poster / test-001 · exact · account spot1</li>
+        <li>grab / grab-test-001 · manual · merchant-accept</li>
+      </ul>
+      <p class="hint">Reconciliation: manual_match. Gross from Poster not overwritten by Grab on divergence. No amount/time auto-merge.</p>
+    </section>
+  </main>
+</body>
+</html>
