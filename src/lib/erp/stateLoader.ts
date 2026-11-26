@@ -48,6 +48,9 @@ export const ALL_PARTS: StatePart[] = [
   "salesDocuments",
   "salesLines",
   "salesSourceLinks",
+  "inputVatCategories",
+  "taxInvoices",
+  "expenseDocuments",
   "vatExceptions",
   "taxRates",
 ];
@@ -201,6 +204,21 @@ async function loadPart(part: StatePart): Promise<unknown> {
       return optionalTable(
         await db.from("erp_sales_source_links").select("*").order("created_at", { ascending: false }).limit(10000),
         [] as ErpSalesSourceLink[],
+      );
+    case "inputVatCategories":
+      return optionalTable(
+        await db.from("erp_input_vat_categories").select("*").eq("is_active", true).order("sort"),
+        [],
+      );
+    case "taxInvoices":
+      return optionalTable(
+        await db.from("erp_tax_invoices").select("*").is("deleted_at", null).order("invoice_date", { ascending: false }).limit(3000),
+        [],
+      );
+    case "expenseDocuments":
+      return optionalTable(
+        await db.from("erp_expense_documents").select("*").is("deleted_at", null).order("transaction_date", { ascending: false }).limit(3000),
+        [],
       );
     case "vatExceptions":
       return optionalTable(await db.from("erp_vat_exceptions").select("*"), [] as ErpVatException[]);

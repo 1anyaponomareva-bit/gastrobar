@@ -13,6 +13,7 @@ export const FINANCE_HREFS = {
   salary: "/erp/finance/salary",
   sales: "/erp/finance/sales",
   outputVat: "/erp/finance/vat/output",
+  inputVat: "/erp/finance/vat/input",
   report: "/erp/finance/report",
   cashflow: "/erp/finance/cashflow",
   pnl: "/erp/finance/pnl",
@@ -23,6 +24,7 @@ export function financeNavItems() {
     { href: FINANCE_HREFS.transactions, label: T("Транзакции", "Transactions", "Giao dịch") },
     { href: FINANCE_HREFS.sales, label: T("Продажи", "Sales", "Bán hàng") },
     { href: FINANCE_HREFS.outputVat, label: T("Исходящий НДС", "Output VAT", "VAT đầu ra") },
+    { href: FINANCE_HREFS.inputVat, label: T("Входящий НДС", "Input VAT", "VAT đầu vào") },
     { href: FINANCE_HREFS.shifts, label: T("Кассовые смены", "Cash shifts", "Ca quỹ") },
     { href: FINANCE_HREFS.accounts, label: T("Счета", "Accounts", "Tài khoản") },
     { href: FINANCE_HREFS.categories, label: T("Категории", "Categories", "Nhóm") },
@@ -51,6 +53,7 @@ export function activeFinanceHref(pathname: string | null): string | null {
   if (path === FINANCE_HREFS.trash || path.startsWith(`${FINANCE_HREFS.trash}/`)) return FINANCE_HREFS.transactions;
   if (path.startsWith("/erp/finance/sales")) return FINANCE_HREFS.sales;
   if (path.startsWith("/erp/finance/vat/output")) return FINANCE_HREFS.outputVat;
+  if (path.startsWith("/erp/finance/vat/input")) return FINANCE_HREFS.inputVat;
   if (path === "/erp/finance" || path === "/erp/finance/" || path.startsWith("/erp/finance/new") || /^\/erp\/finance\/[^/]+$/.test(path)) {
     return FINANCE_HREFS.transactions;
   }

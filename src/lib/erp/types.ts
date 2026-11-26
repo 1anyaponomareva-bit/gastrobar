@@ -425,6 +425,16 @@ export type ErpState = {
   salesDocuments?: ErpSalesDocument[];
   salesLines?: ErpSalesLine[];
   salesSourceLinks?: ErpSalesSourceLink[];
+  /** Phase 9C Input VAT register supporting catalogs/docs. */
+  inputVatCategories?: Array<{
+    code: string;
+    name_en: string;
+    name_ru?: string | null;
+    name_vn?: string | null;
+    sort: number;
+  }>;
+  taxInvoices?: Array<Record<string, unknown>>;
+  expenseDocuments?: Array<Record<string, unknown>>;
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -672,6 +682,11 @@ export type ErpAction =
   | { action: "linkSalesSource"; value: Record<string, unknown> }
   | { action: "postSalesCogs"; id: string; autoConsume?: boolean }
   | { action: "validateSalesImportStub"; value: Record<string, unknown> }
+  | { action: "inputVatRegister"; value: Record<string, unknown> }
+  | { action: "saveTaxInvoice"; value: Record<string, unknown> }
+  | { action: "saveExpenseDocument"; value: Record<string, unknown> }
+  | { action: "postExpenseDocument"; id: string }
+  | { action: "setExpenseVatStatus"; id: string; value: Record<string, unknown> }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }

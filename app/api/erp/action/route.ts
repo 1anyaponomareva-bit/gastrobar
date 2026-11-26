@@ -471,6 +471,57 @@ export async function POST(request: Request) {
         });
         return timing.json({ id, patch: {} });
       }
+      case "inputVatRegister": {
+        const value = object(a.value, "value");
+        const register = await rpc("erp_input_vat_register", {
+          p_from: value.from ?? null,
+          p_to: value.to ?? null,
+          p_legal_entity: value.legal_entity_id ?? null,
+          p_location: value.location_id ?? null,
+          p_supplier: value.supplier_id ?? null,
+          p_category: value.category ?? null,
+          p_rate: value.rate ?? null,
+          p_status: value.status ?? null,
+          p_source_type: value.source_type ?? null,
+        });
+        return timing.json(register);
+      }
+      case "saveTaxInvoice": {
+        const id = await rpc("erp_save_tax_invoice", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["taxInvoices", "inputVatCategories", "expenseDocuments"] as StatePart[]),
+        });
+      }
+      case "saveExpenseDocument": {
+        const id = await rpc("erp_save_expense_document", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["expenseDocuments", "inputVatCategories"] as StatePart[]),
+        });
+      }
+      case "postExpenseDocument": {
+        const id = await rpc("erp_post_expense_document", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["expenseDocuments"] as StatePart[]),
+        });
+      }
+      case "setExpenseVatStatus": {
+        const value = object(a.value, "value");
+        const id = await rpc("erp_set_expense_vat_status", {
+          p_id: uuid(a.id),
+          p_status: String(value.status ?? ""),
+          p_pct: value.deductible_vat_pct ?? null,
+          p_reason: value.reason ?? null,
+          p_actor: actor,
+          p_recognition_date: value.tax_recognition_date ?? null,
+        });
+        return timing.json({
+          id,
+          patch: await fresh(["expenseDocuments"] as StatePart[]),
+        });
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }
