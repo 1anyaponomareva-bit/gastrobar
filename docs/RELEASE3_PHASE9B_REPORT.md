@@ -176,7 +176,9 @@ Additional coverage notes:
 
 ## 9. Commit
 
-See branch tip after Phase 9B commit (this report lands in that commit). Push: `release-3-phase9b` only — **not** `main`.
+- **Commit:** `1e2c6bf` — `feat(erp): Phase 9B Sales and Output VAT (branch only)`
+- **Branch pushed:** `origin/release-3-phase9b`
+- **Not merged** to `main`.
 
 ---
 
