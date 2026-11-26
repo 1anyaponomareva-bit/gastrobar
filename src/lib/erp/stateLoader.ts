@@ -61,6 +61,8 @@ export const ALL_PARTS: StatePart[] = [
   "vatCarryforwards",
   "vatPayments",
   "vatPeriodCorrections",
+  "salesPendingCogs",
+  "salesBomSnapshots",
   "vatExceptions",
   "taxRates",
 ];
@@ -278,6 +280,16 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "vatPeriodCorrections":
       return optionalTable(
         await db.from("erp_vat_period_corrections").select("*").order("created_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "salesPendingCogs":
+      return optionalTable(
+        await db.from("erp_sales_pending_cogs").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(2000),
+        [],
+      );
+    case "salesBomSnapshots":
+      return optionalTable(
+        await db.from("erp_sales_bom_snapshots").select("*").order("exploded_at", { ascending: false }).limit(2000),
         [],
       );
     case "vatExceptions":

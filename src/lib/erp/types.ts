@@ -447,6 +447,9 @@ export type ErpState = {
   vatCarryforwards?: Array<Record<string, unknown>>;
   vatPayments?: Array<Record<string, unknown>>;
   vatPeriodCorrections?: Array<Record<string, unknown>>;
+  /** Phase 9F pending COGS / BOM snapshots. */
+  salesPendingCogs?: Array<Record<string, unknown>>;
+  salesBomSnapshots?: Array<Record<string, unknown>>;
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -715,6 +718,10 @@ export type ErpAction =
   | { action: "postVatPayment"; id: string }
   | { action: "saveVatPeriodCorrection"; value: Record<string, unknown> }
   | { action: "exportVatSettlement"; id: string }
+  | { action: "profitabilityChannels"; value?: Record<string, unknown> }
+  | { action: "profitabilityLocations"; value?: Record<string, unknown> }
+  | { action: "profitabilityProducts"; value?: Record<string, unknown> }
+  | { action: "profitabilityPendingCogs"; value?: Record<string, unknown> }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }

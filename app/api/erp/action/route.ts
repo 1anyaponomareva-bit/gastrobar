@@ -633,6 +633,41 @@ export async function POST(request: Request) {
         const data = await rpc("erp_vat_settlement_export", { p_id: uuid(a.id) });
         return timing.json(data);
       }
+      case "profitabilityChannels": {
+        const value = object(a.value ?? {}, "value");
+        const data = await rpc("erp_profitability_channels", {
+          p_from: value.from,
+          p_to: value.to,
+          p_location: value.location_id ? uuid(value.location_id) : null,
+        });
+        return timing.json(data);
+      }
+      case "profitabilityLocations": {
+        const value = object(a.value ?? {}, "value");
+        const data = await rpc("erp_profitability_locations", {
+          p_from: value.from,
+          p_to: value.to,
+        });
+        return timing.json(data);
+      }
+      case "profitabilityProducts": {
+        const value = object(a.value ?? {}, "value");
+        const data = await rpc("erp_profitability_products", {
+          p_from: value.from,
+          p_to: value.to,
+          p_channel: value.channel_id ? uuid(value.channel_id) : null,
+          p_location: value.location_id ? uuid(value.location_id) : null,
+        });
+        return timing.json(data);
+      }
+      case "profitabilityPendingCogs": {
+        const value = object(a.value ?? {}, "value");
+        const data = await rpc("erp_profitability_pending_cogs", {
+          p_from: value.from ?? null,
+          p_to: value.to ?? null,
+        });
+        return timing.json(data);
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }

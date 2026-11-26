@@ -16,6 +16,7 @@ export const FINANCE_HREFS = {
   inputVat: "/erp/finance/vat/input",
   platforms: "/erp/finance/platforms",
   vatSettlement: "/erp/finance/vat/settlement",
+  profitability: "/erp/finance/profitability",
   report: "/erp/finance/report",
   cashflow: "/erp/finance/cashflow",
   pnl: "/erp/finance/pnl",
@@ -29,6 +30,7 @@ export function financeNavItems() {
     { href: FINANCE_HREFS.inputVat, label: T("Входящий НДС", "Input VAT", "VAT đầu vào") },
     { href: FINANCE_HREFS.platforms, label: T("Агрегаторы", "Platforms", "Sàn") },
     { href: FINANCE_HREFS.vatSettlement, label: T("НДС к уплате", "VAT Settlement", "VAT phải nộp") },
+    { href: FINANCE_HREFS.profitability, label: T("Прибыльность", "Profitability", "Lợi nhuận") },
     { href: FINANCE_HREFS.shifts, label: T("Кассовые смены", "Cash shifts", "Ca quỹ") },
     { href: FINANCE_HREFS.accounts, label: T("Счета", "Accounts", "Tài khoản") },
     { href: FINANCE_HREFS.categories, label: T("Категории", "Categories", "Nhóm") },
@@ -60,6 +62,7 @@ export function activeFinanceHref(pathname: string | null): string | null {
   if (path.startsWith("/erp/finance/vat/input")) return FINANCE_HREFS.inputVat;
   if (path.startsWith("/erp/finance/platforms")) return FINANCE_HREFS.platforms;
   if (path.startsWith("/erp/finance/vat/settlement")) return FINANCE_HREFS.vatSettlement;
+  if (path.startsWith("/erp/finance/profitability")) return FINANCE_HREFS.profitability;
   if (path === "/erp/finance" || path === "/erp/finance/" || path.startsWith("/erp/finance/new") || /^\/erp\/finance\/[^/]+$/.test(path)) {
     return FINANCE_HREFS.transactions;
   }

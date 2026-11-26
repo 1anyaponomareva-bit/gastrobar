@@ -1,0 +1,234 @@
+{
+  "runId": "mwxu296z",
+  "results": [
+    {
+      "name": "wh",
+      "ok": true,
+      "detail": "14737282-81f6-4953-9255-707533b11307"
+    },
+    {
+      "name": "danish_exists",
+      "ok": true,
+      "detail": "dish"
+    },
+    {
+      "name": "bom_simple_status",
+      "ok": true,
+      "detail": "complete"
+    },
+    {
+      "name": "bom_has_lines",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "name": "bom_has_pack",
+      "ok": true,
+      "detail": "pack"
+    },
+    {
+      "name": "bom_has_food",
+      "ok": true,
+      "detail": "food"
+    },
+    {
+      "name": "bom_qty_scale",
+      "ok": true,
+      "detail": "scaled"
+    },
+    {
+      "name": "bom_modifier_add",
+      "ok": true,
+      "detail": "{\"qty\":2,\"meta\":null,\"cogs_kind\":\"food\",\"recipe_id\":null,\"source_id\":\"34a2654c-9dd0-4e22-b9ff-a061c2bd5ce0\",\"product_id\":\"9e067bea-5596-4d3b-94a5-4c36e3504f12\",\"source_kind\":\"dish\",\"external_key\":null,\"external_name\":null,\"mapping_status\":\"mapped\"}"
+    },
+    {
+      "name": "bom_modifier_exclude",
+      "ok": true,
+      "detail": "excluded"
+    },
+    {
+      "name": "bom_mapping_required",
+      "ok": true,
+      "detail": "mapping_required"
+    },
+    {
+      "name": "bom_mapping_line",
+      "ok": true,
+      "detail": "line"
+    },
+    {
+      "name": "bom_prep_includes_prep",
+      "ok": true,
+      "detail": "59aa9906-50bd-492c-943d-7d5b399e1782"
+    },
+    {
+      "name": "bom_prep_includes_pack",
+      "ok": true,
+      "detail": "pack"
+    },
+    {
+      "name": "count_explode_exists",
+      "ok": true,
+      "detail": "fn"
+    },
+    {
+      "name": "snapshot_created",
+      "ok": true,
+      "detail": "d18ffa09-f431-48f4-b553-50ef6b80d7da"
+    },
+    {
+      "name": "snapshot_idempotent",
+      "ok": true,
+      "detail": "d18ffa09-f431-48f4-b553-50ef6b80d7da==d18ffa09-f431-48f4-b553-50ef6b80d7da"
+    },
+    {
+      "name": "snapshot_lines",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "name": "snapshot_immutable",
+      "ok": true,
+      "detail": "a961c137ccd507a1b5c399d4ae10c6bd"
+    },
+    {
+      "name": "cogs_off_pending",
+      "ok": true,
+      "detail": "{\"ok\":true,\"reason\":\"auto_consume_disabled\",\"cogs_status\":\"pending\"}"
+    },
+    {
+      "name": "pending_cogs_status",
+      "ok": true,
+      "detail": "{\"ok\":true,\"note\":\"Missing cost never treated as zero; pending recorded separately\",\"food_cogs\":0,\"actual_cogs\":0,\"cogs_status\":\"partial\",\"packaging_cogs\":0,\"pending_reason\":\"insufficient:091cfe06-6f6a-4e7b-9c1b-d1d7e830bfc5\",\"stock_document_id\":\"6da90628-f608-4051-8dcc-43eae148aebb\"}"
+    },
+    {
+      "name": "pending_cogs_row",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "sale_still_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "cogs_idempotent",
+      "ok": true,
+      "detail": "{\"ok\":true,\"food_cogs\":0,\"idempotent\":true,\"actual_cogs\":0,\"packaging_cogs\":0}"
+    },
+    {
+      "name": "lots_seeded",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "name": "danish_cogs_posted_or_partial",
+      "ok": true,
+      "detail": "{\"ok\":true,\"note\":\"Missing cost never treated as zero; pending recorded separately\",\"food_cogs\":1097.5,\"actual_cogs\":3102,\"cogs_status\":\"posted\",\"packaging_cogs\":2004.5,\"pending_reason\":null,\"stock_document_id\":\"102299e1-4e7c-4cfc-942e-283e355b99ab\"}"
+    },
+    {
+      "name": "danish_food_pack_split",
+      "ok": true,
+      "detail": "food=1097.5 pack=2004.5"
+    },
+    {
+      "name": "estimated_not_actual",
+      "ok": true,
+      "detail": "est=27902.06 act=3102"
+    },
+    {
+      "name": "vat_cogs_adj",
+      "ok": true,
+      "detail": "861be834-bee5-4e25-8693-e54379849fc0"
+    },
+    {
+      "name": "vat_cogs_adj_amount",
+      "ok": true,
+      "detail": "-500"
+    },
+    {
+      "name": "refund_no_stock",
+      "ok": true,
+      "detail": "cancel_before_prep"
+    },
+    {
+      "name": "physical_return_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_DOCUMENT_LOCKED\r\n�����������:  refunded\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.e"
+    },
+    {
+      "name": "auto_consume_restored_off",
+      "ok": true,
+      "detail": "off"
+    },
+    {
+      "name": "control_total_cogs",
+      "ok": true,
+      "detail": "28000"
+    },
+    {
+      "name": "control_gp",
+      "ok": true,
+      "detail": "72000"
+    },
+    {
+      "name": "control_gm",
+      "ok": true,
+      "detail": "72"
+    },
+    {
+      "name": "control_cm",
+      "ok": true,
+      "detail": "47000"
+    },
+    {
+      "name": "control_cm_pct",
+      "ok": true,
+      "detail": "47"
+    },
+    {
+      "name": "channels_report",
+      "ok": true,
+      "detail": "\"Partial\""
+    },
+    {
+      "name": "locations_report",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "products_report",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "reg_9e",
+      "ok": true,
+      "detail": "9e"
+    },
+    {
+      "name": "reg_9d",
+      "ok": true,
+      "detail": "9d"
+    },
+    {
+      "name": "reg_consume",
+      "ok": true,
+      "detail": "fifo"
+    }
+  ],
+  "bomLines": 12,
+  "math": {
+    "rule_ref": "erp_profitability_control_math@9f",
+    "net_revenue": 100000,
+    "gross_profit": 72000,
+    "food_actual_cogs": 25000,
+    "gross_margin_pct": 72,
+    "actual_commission": 18000,
+    "total_actual_cogs": 28000,
+    "actual_advertising": 7000,
+    "contribution_margin": 47000,
+    "packaging_actual_cogs": 3000,
+    "contribution_margin_pct": 47
+  }
+}
