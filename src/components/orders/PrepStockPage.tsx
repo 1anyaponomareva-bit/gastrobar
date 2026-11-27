@@ -12,6 +12,7 @@ import {
   getStaffStockItems,
   splitPackQty,
   staffStockPackSize,
+  staffStockTotalWeightGrams,
   staffStockUnit,
   type StaffStockItem,
 } from "@/data/staffInStockItems";
@@ -442,6 +443,11 @@ export function PrepStockPage() {
                       <div className="orders-prepStockMatrixCell total">
                         <strong>{totalParts.totalLine}</strong>
                         {totalParts.formula ? <span>{totalParts.formula}</span> : null}
+                        <span className="orders-prepStockWeight">
+                          {t("prep_stock_total_weight", {
+                            grams: fmtQty(staffStockTotalWeightGrams(item, row.total)),
+                          })}
+                        </span>
                       </div>
                     </td>
                   </tr>

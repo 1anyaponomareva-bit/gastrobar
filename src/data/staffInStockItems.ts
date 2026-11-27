@@ -13,6 +13,11 @@ export type StaffStockItem = {
    * UI accepts packs + leftover pieces (e.g. 2 packs + 5 pcs).
    */
   packSize?: number;
+  /**
+   * Weight of 1 piece in grams. Later from ERP product; Prep Stock TOTAL shows
+   * unitWeightGrams × total pieces. Stub 0 until ERP weight is wired.
+   */
+  unitWeightGrams?: number;
   /** In-house amount at or below this value is flagged as PREP ORDER. */
   prepOrderAtOrBelow?: number;
   /** Warehouse amount at or below this value is flagged as FOOD ORDER (default 0). */
@@ -70,6 +75,17 @@ export function formatPackQty(totalPieces: number, packSize: number): string {
   if (packs <= 0) return `${pcs} pcs`;
   if (pcs <= 0) return `${packs} pack`;
   return `${packs} pack + ${pcs} pcs`;
+}
+
+/** Grams for one piece — ERP later; currently 0 stub. */
+export function staffStockUnitWeightGrams(item: StaffStockItem): number {
+  const g = item.unitWeightGrams;
+  return typeof g === "number" && Number.isFinite(g) && g > 0 ? g : 0;
+}
+
+export function staffStockTotalWeightGrams(item: StaffStockItem, totalPieces: number): number {
+  const pcs = Math.max(0, Math.round(Number(totalPieces) || 0));
+  return staffStockUnitWeightGrams(item) * pcs;
 }
 
 export type StaffStockTask = "FOOD ORDER" | "PREP ORDER";
