@@ -18,6 +18,14 @@ import {
 import { OrderCategoryTabs } from "./OrderCategoryTabs";
 import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
+import {
+  archiveAdminPrepStockItem,
+  listAdminPrepStockItems,
+  PrepStockApiError,
+  saveAdminPrepStockItem,
+  type PrepStockCatalogItemRow,
+} from "@/lib/orders/prepStockApi";
+import { staffStockLabel } from "@/data/staffInStockItems";
 import type { OrderProduct, OrderSupplier } from "@/lib/orders/types";
 import { useOrders } from "./OrdersShell";
 import "@/components/staff/staff-inventory.css";
@@ -28,7 +36,7 @@ import "./orders.css";
 const tAdmin = (key: string) => translate("ru", key);
 const t = (key: string) => ordersT("ru", key);
 
-type Tab = "items" | "suppliers";
+type Tab = "items" | "suppliers" | "prep";
 type Notice = { ok: boolean; text: string } | null;
 
 export function OrdersAdminApp() {
@@ -98,9 +106,11 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
   const { lang } = useOrders();
   const [products, setProducts] = useState<OrderProduct[]>([]);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
+  const [prepItems, setPrepItems] = useState<PrepStockCatalogItemRow[]>([]);
   const [tab, setTab] = useState<Tab>("items");
   const [editingProduct, setEditingProduct] = useState<OrderProduct | "new" | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<OrderSupplier | "new" | null>(null);
+  const [editingPrep, setEditingPrep] = useState<PrepStockCatalogItemRow | "new" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -112,9 +122,22 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
     setSuppliers(catalog.suppliers);
   }, []);
 
+  const loadPrep = useCallback(async () => {
+    setPrepItems(await listAdminPrepStockItems());
+  }, []);
+
   useEffect(() => {
     load().catch(() => setNotice({ ok: false, text: tAdmin("recipes_admin_err_server") }));
   }, [load]);
+
+  useEffect(() => {
+    if (tab !== "prep") return;
+    loadPrep().catch((error) => {
+      const status = error instanceof PrepStockApiError ? error.status : 0;
+      if (status === 401) onExpired();
+      else setNotice({ ok: false, text: tAdmin("recipes_admin_err_server") });
+    });
+  }, [tab, loadPrep, onExpired]);
 
   const guard = async (work: () => Promise<void>, okText: string) => {
     setBusy(true);
@@ -214,6 +237,33 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
         }
       />
     );
+  } else if (editingPrep) {
+    const initial = editingPrep === "new" ? null : editingPrep;
+    body = (
+      <PrepStockItemForm
+        initial={initial}
+        busy={busy}
+        onCancel={() => setEditingPrep(null)}
+        onSave={async (payload, isNew) => {
+          const ok = await guard(async () => {
+            await saveAdminPrepStockItem(payload);
+            await loadPrep();
+          }, isNew ? t("admin_prep_added") : t("admin_prep_saved"));
+          if (ok) setEditingPrep(null);
+        }}
+        onArchive={
+          initial
+            ? async () => {
+                const ok = await guard(async () => {
+                  await archiveAdminPrepStockItem(initial.id);
+                  await loadPrep();
+                }, t("admin_prep_archived"));
+                if (ok) setEditingPrep(null);
+              }
+            : undefined
+        }
+      />
+    );
   } else if (tab === "items") {
     body = (
       <>
@@ -250,7 +300,7 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
         {!visible.length ? <div className="empty">Ничего не найдено</div> : null}
       </>
     );
-  } else {
+  } else if (tab === "suppliers") {
     body = (
       <>
         <button type="button" className="dark staffAdminAdd" onClick={() => setEditingSupplier("new")}>
@@ -270,6 +320,31 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
         ))}
       </>
     );
+  } else {
+    body = (
+      <>
+        <button type="button" className="dark staffAdminAdd" onClick={() => setEditingPrep("new")}>
+          {t("admin_add_prep_item")}
+        </button>
+        <div className="mode">
+          <span>{t("admin_prep_hint")}</span>
+        </div>
+        {prepItems.map((item) => {
+          const label = staffStockLabel(item, lang);
+          const note = String(item.note || "").trim();
+          return (
+            <button key={item.id} type="button" className="staffAdminRow" onClick={() => setEditingPrep(item)}>
+              <b>
+                {label}
+                {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
+              </b>
+              <span>{item.noWarehouse ? "Prep only" : "Prep · Warehouse"}</span>
+            </button>
+          );
+        })}
+        {!prepItems.length ? <div className="empty">Ничего не найдено</div> : null}
+      </>
+    );
   }
 
   return (
@@ -280,12 +355,13 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
           {tAdmin("recipes_admin_logout")}
         </button>
       </div>
-      {editingProduct || editingSupplier ? null : (
-        <div className="sectionPicker staffAdminTabs" role="tablist" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      {editingProduct || editingSupplier || editingPrep ? null : (
+        <div className="sectionPicker staffAdminTabs" role="tablist" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
           {(
             [
               ["items", t("admin_items")],
               ["suppliers", t("admin_suppliers")],
+              ["prep", t("admin_prep_stock")],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -307,6 +383,102 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
       {notice ? <div className={notice.ok ? "adminOk" : "adminError"}>{notice.text}</div> : null}
       {body}
     </div>
+  );
+}
+
+function PrepStockItemForm({
+  initial,
+  busy,
+  onCancel,
+  onSave,
+  onArchive,
+}: {
+  initial: PrepStockCatalogItemRow | null;
+  busy: boolean;
+  onCancel: () => void;
+  onSave: (
+    payload: {
+      id?: string | null;
+      nameEn: string;
+      nameRu: string;
+      nameVn: string;
+      note: string;
+      noWarehouse: boolean;
+    },
+    isNew: boolean,
+  ) => void;
+  onArchive?: () => void;
+}) {
+  const [nameRu, setNameRu] = useState(initial?.name.ru ?? "");
+  const [nameEn, setNameEn] = useState(initial?.name.en ?? "");
+  const [nameVn, setNameVn] = useState(initial?.name.vn ?? "");
+  const [note, setNote] = useState(initial?.note ?? "");
+  const [noWarehouse, setNoWarehouse] = useState(Boolean(initial?.noWarehouse));
+  const canSave = Boolean(nameRu.trim() || nameEn.trim() || nameVn.trim());
+
+  return (
+    <form
+      className="card formSection"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!canSave) return;
+        onSave(
+          {
+            id: initial?.id ?? null,
+            nameEn: nameEn.trim(),
+            nameRu: nameRu.trim(),
+            nameVn: nameVn.trim(),
+            note: note.trim(),
+            noWarehouse,
+          },
+          !initial,
+        );
+      }}
+    >
+      <h2 className="staffAdminTitle">{initial ? t("admin_prep_edit") : t("admin_prep_new")}</h2>
+      <label>
+        <span>{t("admin_prep_name_ru")}</span>
+        <input value={nameRu} onChange={(event) => setNameRu(event.target.value)} />
+      </label>
+      <label>
+        <span>{t("admin_prep_name_en")}</span>
+        <input value={nameEn} onChange={(event) => setNameEn(event.target.value)} />
+      </label>
+      <label>
+        <span>{t("admin_prep_name_vn")}</span>
+        <input value={nameVn} onChange={(event) => setNameVn(event.target.value)} />
+      </label>
+      <label>
+        <span>{t("admin_prep_note")}</span>
+        <input
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder={t("admin_prep_note_hint")}
+        />
+      </label>
+      <small className="staffAdminHint">{t("admin_prep_note_hint")}</small>
+      <label className="orders-prepAdminCheck">
+        <input
+          type="checkbox"
+          checked={noWarehouse}
+          onChange={(event) => setNoWarehouse(event.target.checked)}
+        />
+        <span>{t("admin_prep_no_warehouse")}</span>
+      </label>
+      <div className="adminActions">
+        <button type="submit" className="dark" disabled={busy || !canSave}>
+          {busy ? "Сохраняю…" : "Сохранить"}
+        </button>
+        <button type="button" className="white" disabled={busy} onClick={onCancel}>
+          Отмена
+        </button>
+      </div>
+      {onArchive ? (
+        <button type="button" className="white danger staffAdminDelete" disabled={busy} onClick={onArchive}>
+          🗑 В архив
+        </button>
+      ) : null}
+    </form>
   );
 }
 

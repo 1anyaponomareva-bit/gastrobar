@@ -10,12 +10,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   evaluateStaffStock,
   getStaffStockItems,
+  staffStockLabel,
+  staffStockNote,
   staffStockUnit,
   type StaffStockItem,
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
 import {
   listPrepStockBalances,
+  listPrepStockCatalogItems,
   movePrepStock,
   PrepStockApiError,
   prepStockErrorMessage,
@@ -68,7 +71,8 @@ function parseLooseNumber(raw: string): number {
 
 export function PrepStockPage() {
   const { t, lang, displayName, email } = useOrders();
-  const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
+  const fallbackItems = useMemo(() => getStaffStockItems(VENUE), []);
+  const [stockItems, setStockItems] = useState<StaffStockItem[]>(fallbackItems);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
   const [balances, setBalances] = useState<BalanceMap>(() => {
@@ -91,8 +95,21 @@ export function PrepStockPage() {
     if (!opts?.quiet) setRefreshing(true);
     setError(null);
     try {
-      const rows = await listPrepStockBalances();
+      const [rows, catalog] = await Promise.all([
+        listPrepStockBalances(),
+        listPrepStockCatalogItems().catch(() => null),
+      ]);
       setBalances(toMap(rows));
+      if (catalog && catalog.length) {
+        setStockItems(
+          catalog.map((item) => ({
+            id: item.id,
+            name: item.name,
+            note: item.note || undefined,
+            noWarehouse: item.noWarehouse,
+          })),
+        );
+      }
     } catch (err) {
       // Keep cached balances on screen if refresh fails.
       setError(prepStockErrorMessage(err, t("error_network"), t("error_load")));
@@ -274,15 +291,15 @@ export function PrepStockPage() {
 
       <div className="orders-prepStockList">
         {stockItems.map((item) => {
-          const label = item.name[lang] || item.name.en;
-          const secondary = lang === "en" ? item.name.vn : item.name.en;
+          const label = staffStockLabel(item, lang);
+          const note = staffStockNote(item);
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
           const busy = busyItem === item.id;
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
-                {secondary && secondary !== label ? <span> / {secondary}</span> : null}
+                {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
               </div>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
@@ -378,7 +395,8 @@ export function PrepStockPage() {
           <div className="orders-prepStockModalCard">
             <h3>{dialog.title}</h3>
             <p className="orders-prepStockModalItem">
-              {dialog.item.name[lang] || dialog.item.name.en}
+              {staffStockLabel(dialog.item, lang)}
+              {staffStockNote(dialog.item) ? ` / ${staffStockNote(dialog.item)}` : ""}
             </p>
             <p className="orders-prepStockModalHint">
               {dialog.mode === "set" ? t("prep_stock_set_hint") : t("prep_stock_add_hint")}

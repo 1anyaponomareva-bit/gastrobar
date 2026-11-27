@@ -10,6 +10,14 @@ export type PrepStockBalanceRow = {
   total: number;
 };
 
+export type PrepStockCatalogItemRow = {
+  id: string;
+  name: { en: string; ru: string; vn: string };
+  note: string;
+  noWarehouse: boolean;
+  sortOrder: number;
+};
+
 export type PrepStockMoveType =
   | "produce"
   | "to_warehouse"
@@ -111,6 +119,59 @@ export async function listPrepStockBalances(): Promise<PrepStockBalanceRow[]> {
   const rows = balancesOf(await postJson("/api/orders/prep-stock"));
   writePrepStockBalanceCache(rows);
   return rows;
+}
+
+function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
+  const obj = asRecord(data);
+  const list = Array.isArray(obj.items) ? obj.items : [];
+  return list
+    .map((row) => {
+      const r = asRecord(row);
+      const name = asRecord(r.name);
+      return {
+        id: String(r.id ?? ""),
+        name: {
+          en: String(name.en ?? ""),
+          ru: String(name.ru ?? ""),
+          vn: String(name.vn ?? ""),
+        },
+        note: String(r.note ?? ""),
+        noWarehouse: Boolean(r.noWarehouse ?? r.no_warehouse),
+        sortOrder: Number(r.sortOrder ?? r.sort_order ?? 0) || 0,
+      };
+    })
+    .filter((row) => row.id);
+}
+
+export async function listPrepStockCatalogItems(): Promise<PrepStockCatalogItemRow[]> {
+  return catalogItemsOf(await postJson("/api/orders/prep-stock/items"));
+}
+
+export async function listAdminPrepStockItems(): Promise<PrepStockCatalogItemRow[]> {
+  return catalogItemsOf(await postJson("/api/orders/admin/prep-stock-items"));
+}
+
+export async function saveAdminPrepStockItem(payload: {
+  id?: string | null;
+  nameEn: string;
+  nameRu: string;
+  nameVn: string;
+  note: string;
+  noWarehouse: boolean;
+}): Promise<PrepStockCatalogItemRow> {
+  const data = asRecord(
+    await postJson("/api/orders/admin/prep-stock-items", {
+      action: "upsert",
+      ...payload,
+    }),
+  );
+  const items = catalogItemsOf({ items: [pick(data, "item") ?? data] });
+  if (!items[0]) throw new PrepStockApiError(500, "server", "item");
+  return items[0];
+}
+
+export async function archiveAdminPrepStockItem(id: string): Promise<void> {
+  await postJson("/api/orders/admin/prep-stock-items", { action: "archive", id });
 }
 
 export async function movePrepStock(

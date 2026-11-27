@@ -4,6 +4,11 @@ import type { StaffAppLang } from "@/lib/staffInventoryI18n";
 export type StaffStockItem = {
   id: string;
   name: Record<StaffAppLang, string>;
+  /**
+   * Free-text info shown to the right of the name (not a language translation).
+   * Same for all UI languages.
+   */
+  note?: string;
   noWarehouse?: boolean;
   /** Still being produced in-house, so never flagged red. */
   noAlerts?: boolean;
@@ -23,6 +28,26 @@ export type StaffStockItem = {
   /** Warehouse amount at or below this value is flagged as FOOD ORDER (default 0). */
   warehouseOrderAtOrBelow?: number;
 };
+
+/** Single display name for the active UI language — never mixes EN+VN. */
+export function staffStockLabel(
+  item: { id: string; name: Partial<Record<StaffAppLang, string>> },
+  lang: StaffAppLang,
+): string {
+  const picked = String(item.name[lang] || "").trim();
+  if (picked) return picked;
+  const en = String(item.name.en || "").trim();
+  if (en) return en;
+  const ru = String(item.name.ru || "").trim();
+  if (ru) return ru;
+  const vn = String(item.name.vn || "").trim();
+  return vn || item.id;
+}
+
+/** Optional note to the right of the name (admin free text). */
+export function staffStockNote(item: { note?: string | null }): string {
+  return String(item.note || "").trim();
+}
 
 export type StaffStockUnit = "bags" | "pcs" | "btl";
 
