@@ -1,7 +1,8 @@
 # Release 3 — Backlog (Post Production + UI/Poster fix)
 
-**Updated:** UI periods visibility + permanent Poster ban  
-**Production:** https://gastrofood.vn · see `docs/RELEASE3_UI_FIX_POSTER_BAN.md`
+**Updated:** Stable pin **`1c23863`** · permanent Poster ban in architecture  
+**Production pin:** `docs/RELEASE3_PRODUCTION_PIN.md`  
+**Production:** https://gastrofood.vn · `docs/RELEASE3_UI_FIX_POSTER_BAN.md`
 
 ---
 

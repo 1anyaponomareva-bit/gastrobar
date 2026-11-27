@@ -1,11 +1,26 @@
 # Release 3 — Phase 9A: Financial & Tax Accounting Architecture
 
-**Status:** Design only — awaiting owner / accountant approval  
-**Base:** Production pin `c3e0b15` (+ later RU UX label commits; R1/R2 product logic unchanged)  
+**Status:** Implemented through Release 3; production pin **`1c23863`**  
 **Live ERP:** https://gastrofood.vn/erp  
-**Date:** 2026-11-26  
+**Updated:** 2026-11-27  
 
-**Constraints for this phase (honoured):** no code changes, no production SQL, no merge for R3 features, no financial documents created, no SpiceSpace, stay on Supabase Free. Phase **9B+** starts only after explicit owner OK.
+### Hard architecture rule — Poster POS
+
+**Poster POS ↔ GASTROFOOD ERP synchronization is FORBIDDEN BY OWNER (permanent).**
+
+- No live Poster API for ERP sales sync.  
+- No Poster tokens for ERP integration.  
+- No background Poster sync jobs.  
+- No automatic data transfer Poster → ERP or ERP → Poster.  
+- Historical poster-sourced rows may remain read-only.  
+- Manual Poster **file** import into ERP only after a **separate** explicit owner OK.  
+- Guest/marketing `poster-test` is **not** an ERP sync channel.  
+- Server enforcement: `src/lib/erp/posterErpSyncForbidden.ts` + `/api/erp/action`.  
+- Optional DB RPC guard: proposed only — `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` (**not applied** until owner OK).
+
+GASTROFOOD ERP must operate **independently** of Poster POS.
+
+**Other standing constraints:** Supabase Free; auto-consume OFF until separate OK; no Release 4 without owner instruction.
 
 ---
 

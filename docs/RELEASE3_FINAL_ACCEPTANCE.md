@@ -74,7 +74,7 @@ Updated: `docs/RELEASE3_BACKLOG.md` with Production Blocker / Deferred / Disable
 | Production build | **PASS** | 0 | 0 | 0 | `next build` |
 | Vercel Preview (`release-3-phase9h` / final push) | **Ready** after fix | — | — | — | prior Error was typecheck |
 | Live Grab raw file | — | — | — | **DEFERRED** | no real export |
-| Live Poster auto-sync | — | — | — | **DEFERRED** | OFF |
+| Live Poster auto-sync | — | — | — | **FORBIDDEN BY OWNER** | Permanent ban |
 | Auto-consume ON scenarios | — | — | — | **DISABLED** | plan only |
 | Interactive UI ops on isolated FE↔test DB screenshots | — | — | — | **PARTIAL** | routes/build/Preview verified; see §7 |
 
@@ -212,7 +212,7 @@ Grab raw format: keep Partial; UI must show unsupported raw format (normalized i
 
 | Topic | Status |
 |-------|--------|
-| Poster | Existing poster-test / contracts; **auto-sync OFF**; no prod order import |
+| Poster | **FORBIDDEN BY OWNER** — no ERP sync; API ban at pin `1c23863`; SQL guard proposed only |
 | Grab | Normalized OK; **raw GrabMerchant DEFERRED** until real file |
 | Auto-consume | **OFF**; activation plan = separate owner OK + go-live date; no historical backfill consume |
 | Payroll / Staff | Accrual engine OK; **live import DEFERRED**; P&L completeness Partial when missing |
@@ -266,7 +266,7 @@ Allowed limited R3 publish after owner 10H confirmation, with:
 
 - Auto-consume **OFF**  
 - Grab raw **Partial**  
-- Poster auto-sync **OFF**  
+- Poster ERP sync **FORBIDDEN BY OWNER** (permanent)  
 - Payroll live import **Deferred**  
 - CIT / some tax policies **Pending / marked**
 
