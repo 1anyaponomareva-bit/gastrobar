@@ -12,7 +12,6 @@ import {
   getStaffStockItems,
   splitPackQty,
   staffStockPackSize,
-  staffStockTotalWeightGrams,
   staffStockUnit,
   type StaffStockItem,
 } from "@/data/staffInStockItems";
@@ -86,7 +85,6 @@ export function PrepStockPage() {
   const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
-  const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const [balances, setBalances] = useState<BalanceMap>(() => {
     const cached = readPrepStockBalanceCache();
     return cached ? toMap(cached) : {};
@@ -295,34 +293,7 @@ export function PrepStockPage() {
     }
   }, [balances, date, employee, exportingPdf, lang, stockItems, t]);
 
-  const overviewRows = useMemo(() => {
-    return stockItems.map((item) => {
-      const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
-      return {
-        id: item.id,
-        item,
-        name: item.name[lang] || item.name.en,
-        unit: staffStockUnit(item),
-        packSize: staffStockPackSize(item),
-        kitchen: bal.kitchen,
-        warehouse: item.noWarehouse ? null : bal.warehouse,
-        total: bal.total,
-        hasStock: bal.total > 0,
-      };
-    });
-  }, [balances, lang, stockItems]);
-
   const pcsLabel = t("prep_stock_pcs_short");
-
-  const jumpToCard = useCallback((itemId: string) => {
-    const el = document.getElementById(`prep-stock-card-${itemId}`);
-    if (!el) return;
-    setFocusItemId(itemId);
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.setTimeout(() => {
-      setFocusItemId((cur) => (cur === itemId ? null : cur));
-    }, 1600);
-  }, []);
 
   return (
     <div className="orders-prepStock">
@@ -344,93 +315,14 @@ export function PrepStockPage() {
         </label>
       </div>
 
-      <section className="orders-prepStockOverview" aria-label={t("prep_stock_overview_title")}>
-        <div className="orders-prepStockOverviewHead">
-          <h2>{t("prep_stock_overview_title")}</h2>
-        </div>
-        <div className="orders-prepStockOverviewTableWrap">
-          <table className="orders-prepStockOverviewTable matrix">
-            <thead>
-              <tr>
-                <th>{t("prep_stock_col_item")}</th>
-                <th>PREP</th>
-                <th>WAREHOUSE</th>
-                <th>TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overviewRows.map((row) => {
-                const item = row.item;
-                const kitchenParts = stockCellParts(row.kitchen, item, pcsLabel);
-                const warehouseParts =
-                  row.warehouse == null ? null : stockCellParts(row.warehouse, item, pcsLabel);
-                const totalParts = stockCellParts(row.total, item, pcsLabel);
-                return (
-                  <tr
-                    key={row.id}
-                    className="orders-prepStockOverviewRow"
-                    tabIndex={0}
-                    role="link"
-                    aria-label={t("prep_stock_jump_to_card", { name: row.name })}
-                    onClick={() => jumpToCard(row.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        jumpToCard(row.id);
-                      }
-                    }}
-                  >
-                    <td className="orders-prepStockOverviewNameCell">
-                      <span className="orders-prepStockOverviewName">{row.name}</span>
-                    </td>
-                    <td>
-                      <div className="orders-prepStockMatrixCell">
-                        <strong>{kitchenParts.totalLine}</strong>
-                        {kitchenParts.formula ? <span>{kitchenParts.formula}</span> : null}
-                      </div>
-                    </td>
-                    <td>
-                      {warehouseParts == null ? (
-                        <span className="orders-prepStockMatrixEmpty">—</span>
-                      ) : (
-                        <div className="orders-prepStockMatrixCell">
-                          <strong>{warehouseParts.totalLine}</strong>
-                          {warehouseParts.formula ? <span>{warehouseParts.formula}</span> : null}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div className="orders-prepStockMatrixCell total">
-                        <strong>{totalParts.totalLine}</strong>
-                        {totalParts.formula ? <span>{totalParts.formula}</span> : null}
-                        <span className="orders-prepStockWeight">
-                          {t("prep_stock_total_weight", {
-                            grams: fmtQty(staffStockTotalWeightGrams(item, row.total)),
-                          })}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
       <div className="orders-prepStockList">
         {stockItems.map((item) => {
           const label = item.name[lang] || item.name.en;
           const secondary = lang === "en" ? item.name.vn : item.name.en;
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
           const busy = busyItem === item.id;
-          const focused = focusItemId === item.id;
           return (
-            <div
-              key={item.id}
-              id={`prep-stock-card-${item.id}`}
-              className={`orders-prepStockCard${focused ? " focus" : ""}`}
-            >
+            <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
                 {secondary && secondary !== label ? <span> / {secondary}</span> : null}
