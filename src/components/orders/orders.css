@@ -875,6 +875,13 @@
   box-sizing: border-box;
 }
 
+.orders-prepStockRefreshing {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-muted);
+}
+
 .orders-prepStockMeta {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

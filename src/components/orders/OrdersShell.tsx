@@ -66,13 +66,17 @@ export function OrdersShell({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  // Warm Order List catalog while user is on any Orders tab.
+  // Warm Order List catalog only on list routes — not on Prep Stock (steals mobile bandwidth).
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const path = pathname ?? "";
+    const onList =
+      path === "/orders" || path === "/orders/" || path.startsWith("/orders/suppliers");
+    if (!onList) return;
     const ctrl = new AbortController();
     void fetch("/api/orders/catalog", { signal: ctrl.signal, credentials: "same-origin" }).catch(() => {});
     return () => ctrl.abort();
-  }, []);
+  }, [pathname]);
 
   const setLang = useCallback((next: OrdersLang) => {
     setLangState(next);

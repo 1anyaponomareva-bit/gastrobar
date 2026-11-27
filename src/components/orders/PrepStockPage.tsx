@@ -17,13 +17,15 @@ import {
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
 import {
-  errorMessage,
   listPrepStockBalances,
   movePrepStock,
+  PrepStockApiError,
+  prepStockErrorMessage,
+  readPrepStockBalanceCache,
   setPrepStockWarehouseFromPaste,
   type PrepStockBalanceRow,
   type PrepStockMoveType,
-} from "@/lib/orders/api";
+} from "@/lib/orders/prepStockApi";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -32,7 +34,7 @@ import {
   todayIsoDate,
 } from "@/lib/staffInventoryStorage";
 import { parseStockMessage } from "@/lib/staffStockParser";
-import { OrdersError, OrdersLoading } from "./LoadState";
+import { OrdersError } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
 const VENUE = "gastrofood" as const;
@@ -82,9 +84,12 @@ export function PrepStockPage() {
   const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
-  const [balances, setBalances] = useState<BalanceMap>({});
+  const [balances, setBalances] = useState<BalanceMap>(() => {
+    const cached = readPrepStockBalanceCache();
+    return cached ? toMap(cached) : {};
+  });
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [stockPaste, setStockPaste] = useState("");
   const [stockPasteResult, setStockPasteResult] = useState<{
@@ -102,23 +107,37 @@ export function PrepStockPage() {
   const [dialogPacks, setDialogPacks] = useState("");
   const [dialogPcs, setDialogPcs] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) setRefreshing(true);
     setError(null);
     try {
       const rows = await listPrepStockBalances();
       setBalances(toMap(rows));
     } catch (err) {
-      setError(errorMessage(err, t("error_network"), t("error_load")));
+      // Keep cached balances on screen if refresh fails.
+      setError(prepStockErrorMessage(err, t("error_network"), t("error_load")));
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   }, [t]);
 
   useEffect(() => {
     setDate(getStoredDate() || todayIsoDate());
-    setEmployee(getStoredEmployee() || displayName || email || "");
-    void load();
-  }, [displayName, email, load]);
+    setEmployee(getStoredEmployee() || "");
+    void load({ quiet: true });
+    // Load balances once on mount — do not refetch when session name arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!displayName && !email) return;
+    setEmployee((prev) => {
+      if (prev.trim()) return prev;
+      const next = displayName || email || "";
+      if (next) setStoredEmployee(next);
+      return next;
+    });
+  }, [displayName, email]);
 
   const applyBalance = (row: PrepStockBalanceRow) => {
     setBalances((prev) => ({
@@ -193,11 +212,10 @@ export function PrepStockPage() {
       applyBalance(row);
       setDialog(null);
     } catch (err) {
-      const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
       window.alert(
-        code === "ERP_INSUFFICIENT"
+        err instanceof PrepStockApiError && err.code === "ERP_INSUFFICIENT"
           ? t("prep_stock_insufficient")
-          : errorMessage(err, t("error_network"), t("prep_stock_move_fail")),
+          : prepStockErrorMessage(err, t("error_network"), t("prep_stock_move_fail")),
       );
     } finally {
       setBusyItem(null);
@@ -231,7 +249,7 @@ export function PrepStockPage() {
         unrecognized: [...unrecognized, ...noWarehouse],
       });
     } catch (err) {
-      window.alert(errorMessage(err, t("error_network"), t("prep_stock_move_fail")));
+      window.alert(prepStockErrorMessage(err, t("error_network"), t("prep_stock_move_fail")));
     } finally {
       setBusyItem(null);
     }
@@ -352,11 +370,10 @@ export function PrepStockPage() {
     [t],
   );
 
-  if (loading) return <OrdersLoading />;
-  if (error) return <OrdersError text={error} onRetry={() => void load()} />;
-
   return (
     <div className="orders-prepStock">
+      {error ? <OrdersError text={error} onRetry={() => void load()} /> : null}
+      {refreshing ? <p className="orders-prepStockRefreshing">{t("loading")}</p> : null}
       <div className="orders-prepStockMeta">
         <label className="orders-prepStockBox">
           <span>{t("prep_stock_date")}</span>

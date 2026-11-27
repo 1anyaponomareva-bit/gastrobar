@@ -789,65 +789,10 @@ export function newIdempotencyKey(): string {
   return `k-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export type PrepStockBalanceRow = {
-  itemId: string;
-  kitchen: number;
-  warehouse: number;
-  total: number;
-};
-
-export type PrepStockMoveType =
-  | "produce"
-  | "to_warehouse"
-  | "to_kitchen"
-  | "writeoff_kitchen"
-  | "writeoff_warehouse"
-  | "set_warehouse"
-  | "set_kitchen";
-
-function prepBalanceOf(row: Json): PrepStockBalanceRow {
-  return {
-    itemId: str(pick(row, "itemId", "item_id")),
-    kitchen: Number(pick(row, "kitchen") ?? 0) || 0,
-    warehouse: Number(pick(row, "warehouse") ?? 0) || 0,
-    total: Number(pick(row, "total") ?? 0) || 0,
-  };
-}
-
-export async function listPrepStockBalances(): Promise<PrepStockBalanceRow[]> {
-  const data = asRecord(await json("/api/orders/prep-stock"));
-  return listOf(data, ["balances"], prepBalanceOf).filter((row) => row.itemId);
-}
-
-export async function movePrepStock(
-  itemId: string,
-  moveType: PrepStockMoveType,
-  qty: number,
-  note?: string,
-): Promise<PrepStockBalanceRow> {
-  const data = asRecord(
-    await json("/api/orders/prep-stock/move", {
-      method: "POST",
-      body: JSON.stringify({ itemId, moveType, qty, note }),
-    }),
-  );
-  const balance = asRecord(pick(data, "balance") ?? data);
-  return prepBalanceOf(balance);
-}
-
-export async function setPrepStockWarehouseFromPaste(
-  values: { itemId: string; warehouse: number }[],
-): Promise<{ updated: number; balances: PrepStockBalanceRow[] }> {
-  const data = asRecord(
-    await json("/api/orders/prep-stock/set-warehouse", {
-      method: "POST",
-      body: JSON.stringify({ values }),
-    }),
-  );
-  return {
-    updated: Number(pick(data, "updated") ?? 0) || 0,
-    balances: listOf(data, ["balances"], prepBalanceOf).filter((row) => row.itemId),
-  };
-}
-
 export type { OrderPdfInput };
+export type { PrepStockBalanceRow, PrepStockMoveType } from "./prepStockApi";
+export {
+  listPrepStockBalances,
+  movePrepStock,
+  setPrepStockWarehouseFromPaste,
+} from "./prepStockApi";
