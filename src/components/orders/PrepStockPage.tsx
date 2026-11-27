@@ -72,9 +72,9 @@ function stockCellParts(
   if (!packSize) return { totalLine, formula: null };
   if (total <= 0) return { totalLine, formula: null };
   const { packs, pcs } = splitPackQty(total, packSize);
-  if (packs <= 0) return { totalLine, formula: `(${pcs})` };
+  if (packs <= 0) return { totalLine, formula: String(pcs) };
   if (pcs <= 0) return { totalLine, formula: `(${packs}×${packSize})` };
-  return { totalLine, formula: `(${packs}×${packSize}+${pcs})` };
+  return { totalLine, formula: `(${packs}×${packSize})+${pcs}` };
 }
 
 function parseLooseNumber(raw: string): number {
