@@ -499,9 +499,6 @@ export function PrepStockPage() {
               <div className="orders-prepStockName">
                 {label}
                 {secondary && secondary !== label ? <span> / {secondary}</span> : null}
-                <em className="orders-prepStockUnitTag">
-                  {packSize ? t("prep_stock_pack_unit", { size: packSize }) : unit}
-                </em>
               </div>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
