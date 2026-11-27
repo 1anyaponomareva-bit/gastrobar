@@ -1017,15 +1017,22 @@
 .orders-prepStockOverviewTable.matrix th:first-child,
 .orders-prepStockOverviewTable.matrix td:first-child {
   text-align: left;
-  width: 34%;
+  width: 28%;
   padding-left: 0;
 }
 
 .orders-prepStockOverviewTable.matrix th:nth-child(2),
 .orders-prepStockOverviewTable.matrix td:nth-child(2),
 .orders-prepStockOverviewTable.matrix th:nth-child(3),
-.orders-prepStockOverviewTable.matrix td:nth-child(3) {
-  width: 33%;
+.orders-prepStockOverviewTable.matrix td:nth-child(3),
+.orders-prepStockOverviewTable.matrix th:nth-child(4),
+.orders-prepStockOverviewTable.matrix td:nth-child(4) {
+  width: 24%;
+}
+
+.orders-prepStockMatrixCell.total {
+  background: var(--orders-gold-soft);
+  border-radius: 10px;
 }
 
 .orders-prepStockOverviewTable th {

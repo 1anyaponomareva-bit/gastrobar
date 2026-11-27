@@ -389,6 +389,7 @@ export function PrepStockPage() {
                 <th>{t("prep_stock_col_item")}</th>
                 <th>PREP</th>
                 <th>WAREHOUSE</th>
+                <th>TOTAL</th>
               </tr>
             </thead>
             <tbody>
@@ -397,6 +398,7 @@ export function PrepStockPage() {
                 const kitchenParts = stockCellParts(row.kitchen, item, pcsLabel);
                 const warehouseParts =
                   row.warehouse == null ? null : stockCellParts(row.warehouse, item, pcsLabel);
+                const totalParts = stockCellParts(row.total, item, pcsLabel);
                 return (
                   <tr key={row.id}>
                     <td className="orders-prepStockOverviewNameCell">
@@ -435,6 +437,12 @@ export function PrepStockPage() {
                           {warehouseParts.formula ? <span>{warehouseParts.formula}</span> : null}
                         </button>
                       )}
+                    </td>
+                    <td>
+                      <div className="orders-prepStockMatrixCell total">
+                        <strong>{totalParts.totalLine}</strong>
+                        {totalParts.formula ? <span>{totalParts.formula}</span> : null}
+                      </div>
                     </td>
                   </tr>
                 );
