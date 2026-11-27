@@ -4,13 +4,11 @@ import { useMemo, useState } from "react";
 import { currentYearMonth, monthRange } from "@/lib/erp/finance";
 import { useErp } from "./ErpShell";
 import { FinanceMobileNav, FINANCE_HREFS } from "./financeNav";
-import { errorText, NavLink, PageHead, savingText, T, vnd } from "./ui";
+import { NavLink, PageHead, savingText, T, vnd } from "./ui";
 
 export function FinanceExpensesPage() {
-  const { state, run } = useErp();
+  const { state, act, busy } = useErp();
   const rows = (state?.expenseDocuments ?? []) as Array<Record<string, unknown>>;
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
   return (
     <div className="erpMenu erpFinance">
@@ -23,7 +21,6 @@ export function FinanceExpensesPage() {
         )}
       />
       <FinanceMobileNav active={FINANCE_HREFS.expenses} />
-      {err ? <p className="erpNotice warn">{err}</p> : null}
       <section className="erpMenuPanel">
         <table className="erpTable erpMenuTable" data-testid="expenses-table">
           <thead>
@@ -69,29 +66,19 @@ export function FinanceExpensesPage() {
           type="button"
           className="erpBtn"
           disabled={busy}
-          onClick={() => {
-            void (async () => {
-              setBusy(true);
-              setErr(null);
-              try {
-                await run({
-                  action: "saveExpenseDocument",
-                  value: {
-                    expense_category: "operations",
-                    description: "UI draft expense",
-                    transaction_date: new Date().toISOString().slice(0, 10),
-                    net_amount: 0,
-                    vat_amount: 0,
-                    gross_amount: 0,
-                  },
-                });
-              } catch (e) {
-                setErr(errorText(e));
-              } finally {
-                setBusy(false);
-              }
-            })();
-          }}
+          onClick={() =>
+            void act({
+              action: "saveExpenseDocument",
+              value: {
+                expense_category: "operations",
+                description: "UI draft expense",
+                transaction_date: new Date().toISOString().slice(0, 10),
+                net_amount: 0,
+                vat_amount: 0,
+                gross_amount: 0,
+              },
+            })
+          }
         >
           {busy ? savingText() : T("Черновик", "Draft", "Nháp")}
         </button>
@@ -217,23 +204,14 @@ function ApArTable({ rows }: { rows: Array<Record<string, unknown>> }) {
 }
 
 export function FinanceAccrualPnlPage() {
-  const { run } = useErp();
+  const { act, busy } = useErp();
   const [month, setMonth] = useState(currentYearMonth);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [pnl, setPnl] = useState<Record<string, unknown> | null>(null);
   const { from, to } = useMemo(() => monthRange(month), [month]);
 
   const load = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      setPnl((await run({ action: "accrualPnl", value: { from, to } })) as Record<string, unknown>);
-    } catch (e) {
-      setErr(errorText(e));
-    } finally {
-      setBusy(false);
-    }
+    const res = await act({ action: "accrualPnl", value: { from, to } }, false);
+    if (res) setPnl(res as Record<string, unknown>);
   };
 
   const lines: Array<[string, unknown]> = pnl
@@ -279,7 +257,6 @@ export function FinanceAccrualPnlPage() {
         </button>
         <NavLink href={FINANCE_HREFS.pnl}>{T("Cash Basis (Legacy)", "Cash Basis (Legacy)", "Cash Basis")}</NavLink>
       </div>
-      {err ? <p className="erpNotice warn">{err}</p> : null}
       {pnl ? (
         <>
           <p className="erpHint">
@@ -300,10 +277,8 @@ export function FinanceAccrualPnlPage() {
 }
 
 export function FinanceManagementCashflowPage() {
-  const { run } = useErp();
+  const { act, busy } = useErp();
   const [month, setMonth] = useState(currentYearMonth);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [cf, setCf] = useState<Record<string, unknown> | null>(null);
   const { from, to } = useMemo(() => monthRange(month), [month]);
 
@@ -327,24 +302,15 @@ export function FinanceManagementCashflowPage() {
           className="erpBtn primary"
           disabled={busy}
           onClick={() => {
-            void (async () => {
-              setBusy(true);
-              setErr(null);
-              try {
-                setCf((await run({ action: "managementCashflow", value: { from, to } })) as Record<string, unknown>);
-              } catch (e) {
-                setErr(errorText(e));
-              } finally {
-                setBusy(false);
-              }
-            })();
+            void act({ action: "managementCashflow", value: { from, to } }, false).then((res) => {
+              if (res) setCf(res as Record<string, unknown>);
+            });
           }}
         >
           {busy ? savingText() : T("Рассчитать", "Calculate", "Tính")}
         </button>
         <NavLink href={FINANCE_HREFS.cashflow}>{T("Cash Basis (Legacy)", "Cash Basis (Legacy)", "Cash Basis")}</NavLink>
       </div>
-      {err ? <p className="erpNotice warn">{err}</p> : null}
       {cf ? (
         <div className="erpFinanceTotals" data-testid="mgmt-cashflow">
           {(
@@ -371,10 +337,8 @@ export function FinanceManagementCashflowPage() {
 }
 
 export function FinanceDashboardPage() {
-  const { run } = useErp();
+  const { act, busy } = useErp();
   const [month, setMonth] = useState(currentYearMonth);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [dash, setDash] = useState<Record<string, unknown> | null>(null);
   const { from, to } = useMemo(() => monthRange(month), [month]);
 
@@ -391,23 +355,14 @@ export function FinanceDashboardPage() {
           className="erpBtn primary"
           disabled={busy}
           onClick={() => {
-            void (async () => {
-              setBusy(true);
-              setErr(null);
-              try {
-                setDash((await run({ action: "financeDashboard", value: { from, to } })) as Record<string, unknown>);
-              } catch (e) {
-                setErr(errorText(e));
-              } finally {
-                setBusy(false);
-              }
-            })();
+            void act({ action: "financeDashboard", value: { from, to } }, false).then((res) => {
+              if (res) setDash(res as Record<string, unknown>);
+            });
           }}
         >
           {busy ? savingText() : T("Обновить", "Refresh", "Làm mới")}
         </button>
       </div>
-      {err ? <p className="erpNotice warn">{err}</p> : null}
       {dash ? (
         <div className="erpFinanceTotals" data-testid="finance-dashboard">
           {(

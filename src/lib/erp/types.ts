@@ -455,6 +455,14 @@ export type ErpState = {
   payrollAccruals?: Array<Record<string, unknown>>;
   fixedAssets?: Array<Record<string, unknown>>;
   apArItems?: Array<Record<string, unknown>>;
+  /** Phase 9H financial periods / audit */
+  financialPeriods?: Array<Record<string, unknown>>;
+  periodClosings?: Array<Record<string, unknown>>;
+  periodCloseChecks?: Array<Record<string, unknown>>;
+  periodSnapshots?: Array<Record<string, unknown>>;
+  periodReopenRequests?: Array<Record<string, unknown>>;
+  financialCorrections?: Array<Record<string, unknown>>;
+  auditLog?: Array<Record<string, unknown>>;
   /** Products with a VAT rate other than the company default. Missing → none. */
   vatExceptions?: ErpVatException[];
   /** Tax rates catalog. Missing → UI falls back to hardcoded 0/5/8/10. */
@@ -740,6 +748,14 @@ export type ErpAction =
   | { action: "managementCashflow"; value?: Record<string, unknown> }
   | { action: "financeDashboard"; value?: Record<string, unknown> }
   | { action: "apArSummary" }
+  | { action: "saveFinancialPeriod"; value: Record<string, unknown> }
+  | { action: "setFinancialPeriodStatus"; id: string; value: Record<string, unknown> }
+  | { action: "periodCloseChecklist"; id: string }
+  | { action: "closeFinancialPeriod"; id: string; value?: Record<string, unknown> }
+  | { action: "reopenFinancialPeriod"; id: string; value: Record<string, unknown> }
+  | { action: "listPeriodSnapshots"; id: string }
+  | { action: "saveFinancialCorrection"; value: Record<string, unknown> }
+  | { action: "postFinancialCorrection"; id: string }
   | { action: "previewVatAdjustment"; preview: Record<string, unknown> }
   | { action: "saveVatAdjustment"; adjustment: Record<string, unknown> }
   | { action: "postVatAdjustment"; id: string; previewHash?: string | null }

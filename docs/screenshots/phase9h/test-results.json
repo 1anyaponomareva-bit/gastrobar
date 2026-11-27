@@ -1,0 +1,142 @@
+{
+  "ok": true,
+  "runId": "mwyoc5ba",
+  "periodId": "d75f8902-fed5-4f16-93dd-be832058707c",
+  "results": [
+    {
+      "name": "9h_a_period_created",
+      "ok": true,
+      "detail": "d75f8902-fed5-4f16-93dd-be832058707c"
+    },
+    {
+      "name": "9h_a_status_open",
+      "ok": true,
+      "detail": "open"
+    },
+    {
+      "name": "9h_a_overlap_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  overlapping_financial_period\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_INVALID', 'overlapping_financial_period')\"\r\nфункция PL/pgSQL erp_financial_period_save(jsonb,text), строка 21, оператор PERFORM\r\n"
+    },
+    {
+      "name": "fixture_exp_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "9h_b_checklist_can_close",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "9h_b_vat_info_present",
+      "ok": true,
+      "detail": "vat_period_independent"
+    },
+    {
+      "name": "9h_b_closed",
+      "ok": true,
+      "detail": "{\"ok\":true,\"checklist\":{\"checks\":[{\"count\":0,\"message\":\"Draft sales documents: 0\",\"severity\":\"passed\",\"check_code\":\"sales_draft\",\"check_group\":\"sales\"},{\"count\":0,\"message\":\"Sales with pending/partial COGS: 0\",\"severity\":\"passed\",\"check_code\":\"pending_cogs\",\"check_group\":\"cogs\"},{\"count\":0,\"message\":\"Unmatched platform lines: 0\",\"severity\":\"passed\",\"check_code\":\"unmatched_platform\",\"check_group\":\"platform\"},{\"count\":0,\"message\":\"Draft expenses: 0\",\"severity\":\"passed\",\"check_code\":\"expense_draft\",\"check_group\":\"opex\"},{\"count\":0,\"message\":\"Draft payroll accruals: 0 (payment not required for Accrual close)\",\"severity\":\"passed\",\"check_code\":\"payroll_draft\",\"check_group\":\"payroll\"},{\"count\":0,\"message\":\"Active assets missing useful life: 0\",\"severity\":\"passed\",\"check_code\":\"asset_missing_life\",\"check_group\":\"assets\"},{\"message\":\"Financial close does not file/pay VAT or close VAT tax period (Phase 9E independent)\",\"severity\":\"information\",\"check_code\":\"vat_period_independent\",\"check_group\":\"vat\"},{\"count\":1,\"message\":\"Posted expenses with Pending Input VAT: 1 (carry allowed)\",\"severity\":\"warning\",\"check_code\":\"pending_input_vat\",\"check_group\":\"vat\"},{\"message\":\"Accrual P&L / CF / AP-AR / profitability will be snapshotted on close\",\"severity\":\"information\",\"check_code\":\"reports_ready\",\"check_group\":\"reports\"}],\"can_close\":true,\"period_id\":\"d75f8902-fed5-4f16-93dd-be832058707c\",\"period_end\":\"2138-01-31\",\"period_start\":\"2138-01-01\",\"warning_count\":1,\"blocking_error_count\":0,\"can_close_with_warnings\":true},\"period_id\":\"d75f8902-fed5-4f16-93dd-be832058707c\",\"closing_id\":\"823147fe-8d92-42e3-b587-1b4f5f1e9ede\",\"closing_version\":1}"
+    },
+    {
+      "name": "9h_b_status_closed",
+      "ok": true,
+      "detail": "closed"
+    },
+    {
+      "name": "9h_b_snapshots",
+      "ok": true,
+      "detail": "11"
+    },
+    {
+      "name": "9h_b_checks_persisted",
+      "ok": true,
+      "detail": "9"
+    },
+    {
+      "name": "9h_b_snapshot_immutable",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_DOCUMENT_LOCKED\r\n�����������:  period_snapshot_immutable\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_DOCUMENT_LOCKED', 'period_snapshot_immutable')\"\r\nфункция PL/pgSQL erp_period_snapshot_immutable(), строка 3, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_c_amount_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_PERIOD_CLOSED\r\n�����������:  erp_expense_documents\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_PERIOD_CLOSED', tg_table_name)\"\r\nфункция PL/pgSQL erp_period_protect_row(), строка 62, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_c_insert_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_PERIOD_CLOSED\r\n�����������:  erp_expense_documents\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_PERIOD_CLOSED', tg_table_name)\"\r\nфункция PL/pgSQL erp_period_protect_row(), строка 62, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_c_payment_fields_allowed",
+      "ok": true,
+      "detail": "UPDATE 1"
+    },
+    {
+      "name": "9h_c_vat_independent_status",
+      "ok": true,
+      "detail": "calculated"
+    },
+    {
+      "name": "9h_d_reopen_reason_required",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_INVALID\r\n�����������:  reopening_reason_required\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_INVALID', 'reopening_reason_required')\"\r\nфункция PL/pgSQL erp_period_reopen(uuid,text,text), строка 8, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_d_reopened",
+      "ok": true,
+      "detail": "reopened"
+    },
+    {
+      "name": "9h_d_corr_into_closed_blocked",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_PERIOD_CLOSED\r\n�����������:  correction_into_closed_period\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_PERIOD_CLOSED', 'correction_into_closed_period')\"\r\nфункция PL/pgSQL erp_financial_correction_save(jsonb,text), строка 12, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_d_corr_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "9h_d_original_untouched",
+      "ok": true,
+      "detail": "net still 5m"
+    },
+    {
+      "name": "9h_d_snapshots_kept",
+      "ok": true,
+      "detail": "22"
+    },
+    {
+      "name": "9h_e_audit_close",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "9h_e_audit_reopen",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "9h_e_audit_correction",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "9h_e_audit_immutable",
+      "ok": true,
+      "detail": "ОШИБКА:  ERP_FORBIDDEN\r\n�����������:  audit_log_immutable\r\n��������:  функция PL/pgSQL erp_raise(text,text), строка 3, оператор RAISE\r\nSQL-оператор: \"SELECT public.erp_raise('ERP_FORBIDDEN', 'audit_log_immutable')\"\r\nфункция PL/pgSQL erp_audit_log_immutable(), строка 3, оператор PERFORM\r\n"
+    },
+    {
+      "name": "9h_e_load_state_periods",
+      "ok": true,
+      "detail": "periods"
+    },
+    {
+      "name": "9h_e_load_state_audit",
+      "ok": true,
+      "detail": "audit"
+    }
+  ]
+}

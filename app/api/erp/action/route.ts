@@ -725,6 +725,77 @@ export async function POST(request: Request) {
       case "apArSummary": {
         return timing.json(await rpc("erp_ap_ar_summary", {}));
       }
+      case "saveFinancialPeriod": {
+        const id = await rpc("erp_financial_period_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["financialPeriods"] as StatePart[]),
+        });
+      }
+      case "setFinancialPeriodStatus": {
+        const value = object(a.value ?? {}, "value");
+        const id = await rpc("erp_financial_period_set_status", {
+          p_id: uuid(a.id),
+          p_status: value.status,
+          p_actor: actor,
+          p_reason: value.reason ?? null,
+        });
+        return timing.json({
+          id,
+          patch: await fresh(["financialPeriods", "auditLog"] as StatePart[]),
+        });
+      }
+      case "periodCloseChecklist": {
+        return timing.json(await rpc("erp_period_close_checklist", { p_id: uuid(a.id) }));
+      }
+      case "closeFinancialPeriod": {
+        const value = object(a.value ?? {}, "value");
+        const res = await rpc("erp_period_close", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_ack_warnings: Boolean(value.ack_warnings),
+          p_ack_reason: value.ack_reason ?? null,
+        });
+        return timing.json({
+          ...(res as object),
+          patch: await fresh([
+            "financialPeriods",
+            "periodClosings",
+            "periodCloseChecks",
+            "periodSnapshots",
+            "auditLog",
+          ] as StatePart[]),
+        });
+      }
+      case "reopenFinancialPeriod": {
+        const value = object(a.value ?? {}, "value");
+        const id = await rpc("erp_period_reopen", {
+          p_id: uuid(a.id),
+          p_actor: actor,
+          p_reason: value.reason,
+        });
+        return timing.json({
+          id,
+          patch: await fresh(["financialPeriods", "periodReopenRequests", "auditLog"] as StatePart[]),
+        });
+      }
+      case "listPeriodSnapshots": {
+        return timing.json(await rpc("erp_period_snapshots_list", { p_period_id: uuid(a.id) }));
+      }
+      case "saveFinancialCorrection": {
+        const id = await rpc("erp_financial_correction_save", { p: object(a.value, "value"), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["financialCorrections", "auditLog"] as StatePart[]),
+        });
+      }
+      case "postFinancialCorrection": {
+        const id = await rpc("erp_financial_correction_post", { p_id: uuid(a.id), p_actor: actor });
+        return timing.json({
+          id,
+          patch: await fresh(["financialCorrections", "auditLog"] as StatePart[]),
+        });
+      }
       default:
         throw new ErpHttpError(400, "ERP_INVALID", "action");
     }

@@ -74,6 +74,11 @@ export function errorText(code: string, detail?: string): string {
     ERP_INSUFFICIENT_STOCK: T("Недостаточно остатка", "Not enough stock", "Không đủ tồn kho"),
     ERP_ALREADY_POSTED: T("Документ уже проведён", "Already completed", "Chứng từ đã được ghi sổ"),
     ERP_DOCUMENT_LOCKED: T("Проведённый документ нельзя изменить", "A completed document cannot be edited", "Không thể sửa chứng từ đã ghi sổ"),
+    ERP_PERIOD_CLOSED: T(
+      "Финансовый период закрыт — изменение истории запрещено",
+      "Financial period is closed — historical edits are blocked",
+      "Kỳ tài chính đã đóng — không được sửa lịch sử",
+    ),
     ERP_NOT_POSTED: T("Документ ещё не проведён", "The document is not completed", "Chứng từ chưa ghi sổ"),
     ERP_CANCEL_BLOCKED: T(
       "Нельзя отменить: продукты из этого документа уже использованы в",

@@ -27,6 +27,8 @@ export const FINANCE_HREFS = {
   cashflowMgmt: "/erp/finance/cashflow/management",
   pnl: "/erp/finance/pnl",
   pnlAccrual: "/erp/finance/pnl/accrual",
+  periods: "/erp/finance/periods",
+  audit: "/erp/finance/audit",
 } as const;
 
 export function financeNavItems() {
@@ -45,6 +47,8 @@ export function financeNavItems() {
     { href: FINANCE_HREFS.receivables, label: T("Дебиторка", "Receivables", "Phải thu") },
     { href: FINANCE_HREFS.pnlAccrual, label: T("P&L (Accrual)", "P&L (Accrual)", "P&L Accrual") },
     { href: FINANCE_HREFS.cashflowMgmt, label: T("Cash Flow", "Cash Flow", "Cash Flow") },
+    { href: FINANCE_HREFS.periods, label: T("Финансовые периоды", "Financial periods", "Kỳ tài chính") },
+    { href: FINANCE_HREFS.audit, label: T("Журнал аудита", "Audit log", "Nhật ký audit") },
     { href: FINANCE_HREFS.salary, label: T("Зарплата", "Payroll", "Lương") },
     { href: FINANCE_HREFS.shifts, label: T("Кассовые смены", "Cash shifts", "Ca quỹ") },
     { href: FINANCE_HREFS.accounts, label: T("Счета", "Accounts", "Tài khoản") },
@@ -84,6 +88,8 @@ export function activeFinanceHref(pathname: string | null): string | null {
   if (path.startsWith("/erp/finance/receivables")) return FINANCE_HREFS.receivables;
   if (path.startsWith("/erp/finance/pnl/accrual")) return FINANCE_HREFS.pnlAccrual;
   if (path.startsWith("/erp/finance/cashflow/management")) return FINANCE_HREFS.cashflowMgmt;
+  if (path.startsWith("/erp/finance/periods")) return FINANCE_HREFS.periods;
+  if (path.startsWith("/erp/finance/audit")) return FINANCE_HREFS.audit;
   if (path === "/erp/finance" || path === "/erp/finance/" || path.startsWith("/erp/finance/new") || /^\/erp\/finance\/[^/]+$/.test(path)) {
     return FINANCE_HREFS.transactions;
   }

@@ -67,6 +67,13 @@ export const ALL_PARTS: StatePart[] = [
   "payrollAccruals",
   "fixedAssets",
   "apArItems",
+  "financialPeriods",
+  "periodClosings",
+  "periodCloseChecks",
+  "periodSnapshots",
+  "periodReopenRequests",
+  "financialCorrections",
+  "auditLog",
   "vatExceptions",
   "taxRates",
 ];
@@ -314,6 +321,47 @@ async function loadPart(part: StatePart): Promise<unknown> {
     case "apArItems":
       return optionalTable(
         await db.from("erp_ap_ar_items").select("*").in("status", ["open", "partial"]).order("due_date", { ascending: true }).limit(5000),
+        [],
+      );
+    case "financialPeriods":
+      return optionalTable(
+        await db.from("erp_financial_periods").select("*").order("period_end", { ascending: false }).limit(500),
+        [],
+      );
+    case "periodClosings":
+      return optionalTable(
+        await db.from("erp_period_closings").select("*").order("closed_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "periodCloseChecks":
+      return optionalTable(
+        await db.from("erp_period_close_checks").select("*").order("created_at", { ascending: false }).limit(5000),
+        [],
+      );
+    case "periodSnapshots":
+      return optionalTable(
+        await db
+          .from("erp_period_snapshots")
+          .select(
+            "id,period_id,closing_id,report_kind,report_version,calculation_at,applied_rules,data_completeness,closed_by,created_at,payload",
+          )
+          .order("report_version", { ascending: false })
+          .limit(2000),
+        [],
+      );
+    case "periodReopenRequests":
+      return optionalTable(
+        await db.from("erp_period_reopen_requests").select("*").order("requested_at", { ascending: false }).limit(500),
+        [],
+      );
+    case "financialCorrections":
+      return optionalTable(
+        await db.from("erp_financial_corrections").select("*").order("created_at", { ascending: false }).limit(1000),
+        [],
+      );
+    case "auditLog":
+      return optionalTable(
+        await db.from("erp_audit_log").select("*").order("at", { ascending: false }).limit(2000),
         [],
       );
     case "vatExceptions":
