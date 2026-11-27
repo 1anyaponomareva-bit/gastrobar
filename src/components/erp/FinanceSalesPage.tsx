@@ -270,13 +270,13 @@ export function FinanceSalesDetailPage({ id }: { id: string }) {
         </ul>
       </section>
 
-      <div className="erpActions" style={{ marginTop: 16, gap: 8, displayWrap: "wrap" }}>
+      <div className="erpActions" style={{ marginTop: 16, gap: 8, display: "flex", flexWrap: "wrap" }}>
         {!locked ? (
           <button
             type="button"
             className="erpBtn primary"
             disabled={busy}
-            onClick={() => act(() => run({ action: "postSalesDocument", id: doc.id }))}
+            onClick={() => void run({ action: "postSalesDocument", id: doc.id })}
           >
             {T("Провести", "Post", "Ghi sổ")}
           </button>
@@ -287,7 +287,7 @@ export function FinanceSalesDetailPage({ id }: { id: string }) {
               type="button"
               className="erpBtn"
               disabled={busy}
-              onClick={() => act(() => run({ action: "postSalesCogs", id: doc.id, autoConsume: false }))}
+              onClick={() => void run({ action: "postSalesCogs", id: doc.id, autoConsume: false })}
               title={T("Без списания склада (по умолчанию)", "No stock consume (default)", "Không xuất kho")}
             >
               {T("COGS: pending check", "COGS: pending check", "COGS: pending")}
@@ -296,7 +296,7 @@ export function FinanceSalesDetailPage({ id }: { id: string }) {
               type="button"
               className="erpBtn"
               disabled={busy}
-              onClick={() => act(() => run({ action: "refundSalesDocument", id: doc.id, full: true }))}
+              onClick={() => void run({ action: "refundSalesDocument", id: doc.id, full: true })}
             >
               {T("Полный возврат", "Full refund", "Hoàn toàn bộ")}
             </button>
@@ -307,7 +307,7 @@ export function FinanceSalesDetailPage({ id }: { id: string }) {
             type="button"
             className="erpBtn"
             disabled={busy}
-            onClick={() => act(() => run({ action: "cancelSalesDocument", id: doc.id, reason: "ui_cancel" }))}
+            onClick={() => void run({ action: "cancelSalesDocument", id: doc.id, reason: "ui_cancel" })}
           >
             {T("Отменить", "Cancel", "Hủy")}
           </button>

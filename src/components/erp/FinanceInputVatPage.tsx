@@ -9,6 +9,7 @@ import { Field, PageHead, T, vnd } from "./ui";
 type RegisterRow = {
   source_document_type?: string;
   source_document_id?: string;
+  source_document_line_id?: string | null;
   source_document_no?: string | null;
   supplier_name?: string | null;
   invoice_number?: string | null;

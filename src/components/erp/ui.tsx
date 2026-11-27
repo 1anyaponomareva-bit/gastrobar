@@ -69,7 +69,18 @@ export const costSourceLabel = (source: CostSource | null | undefined) =>
               ? T("плановая цена карточки", "card reference price", "giá tham chiếu")
               : "";
 
-export function errorText(code: string, detail?: string): string {
+export function errorText(codeOrErr: unknown, detail?: string): string {
+  let code = "server";
+  let detailText = detail;
+  if (typeof codeOrErr === "string") {
+    code = codeOrErr;
+  } else if (codeOrErr && typeof codeOrErr === "object") {
+    const e = codeOrErr as { code?: unknown; error?: unknown; message?: unknown; detail?: unknown };
+    code = String(e.code ?? e.error ?? e.message ?? "server");
+    if (detailText == null && e.detail != null) detailText = String(e.detail);
+  } else if (codeOrErr != null) {
+    code = String(codeOrErr);
+  }
   const texts: Record<string, string> = {
     ERP_INSUFFICIENT_STOCK: T("Недостаточно остатка", "Not enough stock", "Không đủ tồn kho"),
     ERP_ALREADY_POSTED: T("Документ уже проведён", "Already completed", "Chứng từ đã được ghi sổ"),
@@ -213,13 +224,13 @@ export function errorText(code: string, detail?: string): string {
       supplier: T("поставщик", "supplier", "nhà cung cấp"),
       unit: T("единица заказа", "order unit", "đơn vị đặt"),
     };
-    const missing = (detail ?? "").split(",").filter(Boolean).map((f) => fields[f] ?? f).join(", ");
+    const missing = (detailText ?? "").split(",").filter(Boolean).map((f) => fields[f] ?? f).join(", ");
     return `${T("Чтобы показать продукт в Staff, заполните", "To show the product in Staff, fill in", "Để hiện trong Staff, hãy điền")}: ${missing}`;
   }
-  if (code === "ERP_INVALID" && /net_qty/i.test(detail ?? "")) {
+  if (code === "ERP_INVALID" && /net_qty/i.test(detailText ?? "")) {
     return texts.ERP_NET_QTY_ZERO;
   }
-  if (code === "ERP_DUPLICATE" && detail?.startsWith("item:")) {
+  if (code === "ERP_DUPLICATE" && detailText?.startsWith("item:")) {
     return T(
       "Этот код уже занят другим продуктом ERP — позиция не сохранена, чтобы не смешать разные товары",
       "This code belongs to another ERP product — not saved so different items are not mixed",
@@ -227,7 +238,7 @@ export function errorText(code: string, detail?: string): string {
     );
   }
   const text = texts[code] ?? code;
-  return detail ? `${text}: ${detail}` : text;
+  return detailText ? `${text}: ${detailText}` : text;
 }
 
 export const vnd = (value: number | null | undefined) =>
