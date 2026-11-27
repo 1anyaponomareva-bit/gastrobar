@@ -26,9 +26,10 @@ export function useOrders(): OrdersContextValue {
   return value;
 }
 
-function isOrdersTab(pathname: string | null): "list" | "orders" {
+function isOrdersTab(pathname: string | null): "list" | "orders" | "prep" {
   const path = pathname ?? "/orders";
   if (path === "/orders" || path === "/orders/" || path.startsWith("/orders/suppliers")) return "list";
+  if (path.startsWith("/orders/prep-stock")) return "prep";
   return "orders";
 }
 
@@ -131,12 +132,15 @@ export function OrdersShell({ children }: { children: ReactNode }) {
             </div>
           </header>
           <div className="orders-main">
-            <nav className="orders-tabs" aria-label="Sections">
+            <nav className="orders-tabs orders-tabs3" aria-label="Sections">
               <Link href="/orders" className={tab === "list" ? "active" : ""}>
                 {t("order_list")}
               </Link>
               <Link href="/orders/history" className={tab === "orders" ? "active" : ""}>
                 {t("orders_section")}
+              </Link>
+              <Link href="/orders/prep-stock" className={tab === "prep" ? "active" : ""}>
+                {t("prep_stock")}
               </Link>
             </nav>
             <div className="orders-stage">{children}</div>

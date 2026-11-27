@@ -19,25 +19,14 @@ Flow copied from old Staff **Order list** (`/staff`, section “Order list”):
 
 ---
 
-## Prep Stock — omit entirely
+## Prep Stock — temporary tab in Orders
 
-Old `/staff` has a second section **Prep stock**. **Do not build it** in the new orders app. Those products may still appear on the order list if they are ERP goods with a supplier — only the Prep Stock *feature* is out.
+Owner request: Prep Stock from old `/staff` is available in Orders at `/orders/prep-stock` (tab after Order List / Orders).
 
-Do **not** transfer:
-
-| Old Staff Prep Stock | Why omit |
-| --- | --- |
-| Section picker “Order list / Prep stock” | This app is orders only |
-| In-house / warehouse count fields (`restaurant`, `warehouse`) | Prep counting, not purchasing |
-| Zalo paste (“Склад: вставить сообщение из Zalo”) | Warehouse stock message parser |
-| Thresholds `prepOrderAtOrBelow` / `warehouseOrderAtOrBelow` | Prep alerts |
-| Tasks **PREP ORDER** / **FOOD ORDER** (red rows) | Prep PDF logic |
-| Prep Stock PDF (`PrepStock_…pdf`, in-house / warehouse / task columns) | Separate document |
-| `staffInStockItems` / `evaluateStaffStock` / `staffStockParser` | Hardcoded prep list |
-| “New day” clearing **stock** values | Orders have their own draft lifecycle |
-| Employee name as a required PDF field | Snapshot uses warehouse + order no + revision |
-
-Do **not** put semi-finished **production** (make a batch / write off ingredients) on this screen. That stays `/erp/preps`.
+- Same static positions (`staffInStockItems` / gastrofood), Zalo paste, in-house/warehouse fields, New Day, Prep Stock PDF.
+- Uses the same localStorage keys as Staff (shared values on the same device).
+- **Temporary:** does **not** sync with ERP полуфабрикаты yet. Later, prep items created in ERP should appear here.
+- Do **not** put semi-finished **production** (make a batch / write off ingredients) on this screen. That stays `/erp/preps`.
 
 ---
 
