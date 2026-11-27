@@ -9,8 +9,8 @@ export type StaffStockItem = {
   noAlerts?: boolean;
   unit?: StaffStockUnit;
   /**
-   * Pieces in one pack/bag. When set, Prep Stock stores qty in pieces and
-   * UI accepts packs + leftover pieces (e.g. 2 packs + 5 pcs).
+   * Pieces in one pack/bag (per item). Later from ERP product pack settings —
+   * sausages may differ from beef patty, etc. Prep Stock stores qty in pieces.
    */
   packSize?: number;
   /**
@@ -26,7 +26,10 @@ export type StaffStockItem = {
 
 export type StaffStockUnit = "bags" | "pcs" | "btl";
 
-/** Default prep pack: 1 bag = 20 pcs. */
+/**
+ * Temporary default until ERP supplies per-product pcs-per-pack.
+ * UI must not hardcode this — always use staffStockPackSize(item).
+ */
 export const PREP_STOCK_DEFAULT_PACK_SIZE = 20;
 
 function packed(
