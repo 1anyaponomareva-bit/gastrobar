@@ -74,6 +74,7 @@ export function PrepStockPage() {
     item: StaffStockItem;
     moveType: PrepStockMoveType;
     title: string;
+    mode: "add" | "set";
   } | null>(null);
   const [dialogQty, setDialogQty] = useState("");
 
@@ -106,15 +107,32 @@ export function PrepStockPage() {
     }));
   };
 
-  const askMove = (item: StaffStockItem, moveType: PrepStockMoveType, title: string) => {
-    setDialog({ item, moveType, title });
-    setDialogQty("");
+  const askMove = (
+    item: StaffStockItem,
+    moveType: PrepStockMoveType,
+    title: string,
+    opts?: { mode?: "add" | "set"; initialQty?: number },
+  ) => {
+    const mode = opts?.mode ?? (moveType === "set_kitchen" || moveType === "set_warehouse" ? "set" : "add");
+    setDialog({ item, moveType, title, mode });
+    setDialogQty(
+      opts?.initialQty != null && Number.isFinite(opts.initialQty) ? fmtQty(opts.initialQty) : "",
+    );
   };
+
+  const itemById = useCallback(
+    (id: string) => stockItems.find((item) => item.id === id) ?? null,
+    [stockItems],
+  );
 
   const submitMove = async () => {
     if (!dialog) return;
     const qty = Number(String(dialogQty).replace(",", "."));
-    if (!Number.isFinite(qty) || qty < 0 || (dialog.moveType !== "set_warehouse" && dialog.moveType !== "set_kitchen" && qty <= 0)) {
+    if (
+      !Number.isFinite(qty) ||
+      qty < 0 ||
+      (dialog.mode === "add" && qty <= 0)
+    ) {
       window.alert(t("prep_stock_qty_invalid"));
       return;
     }
@@ -322,17 +340,54 @@ export function PrepStockPage() {
                 </tr>
               </thead>
               <tbody>
-                {overviewInStock.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <span className="orders-prepStockOverviewName">{row.name}</span>
-                      <em>{row.unit}</em>
-                    </td>
-                    <td>{fmtQty(row.kitchen)}</td>
-                    <td>{row.warehouse == null ? "—" : fmtQty(row.warehouse)}</td>
-                    <td>{fmtQty(row.total)}</td>
-                  </tr>
-                ))}
+                {overviewInStock.map((row) => {
+                  const item = itemById(row.id);
+                  return (
+                    <tr key={row.id}>
+                      <td>
+                        <span className="orders-prepStockOverviewName">{row.name}</span>
+                        <em>{row.unit}</em>
+                      </td>
+                      <td>
+                        {item ? (
+                          <button
+                            type="button"
+                            className="orders-prepStockOverviewCellBtn"
+                            onClick={() =>
+                              askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
+                                mode: "set",
+                                initialQty: row.kitchen,
+                              })
+                            }
+                          >
+                            {fmtQty(row.kitchen)}
+                          </button>
+                        ) : (
+                          fmtQty(row.kitchen)
+                        )}
+                      </td>
+                      <td>
+                        {row.warehouse == null || !item ? (
+                          "—"
+                        ) : (
+                          <button
+                            type="button"
+                            className="orders-prepStockOverviewCellBtn"
+                            onClick={() =>
+                              askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
+                                mode: "set",
+                                initialQty: row.warehouse ?? 0,
+                              })
+                            }
+                          >
+                            {fmtQty(row.warehouse)}
+                          </button>
+                        )}
+                      </td>
+                      <td>{fmtQty(row.total)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -397,15 +452,37 @@ export function PrepStockPage() {
               </div>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
-                <div className="orders-prepStockBal">
+                <button
+                  type="button"
+                  className="orders-prepStockBal tap"
+                  disabled={busy}
+                  onClick={() =>
+                    askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
+                      mode: "set",
+                      initialQty: bal.kitchen,
+                    })
+                  }
+                >
                   <span>{t("prep_stock_kitchen")}</span>
                   <strong>{fmtQty(bal.kitchen)}</strong>
-                </div>
+                  <em>{t("prep_stock_tap_edit")}</em>
+                </button>
                 {item.noWarehouse ? null : (
-                  <div className="orders-prepStockBal">
+                  <button
+                    type="button"
+                    className="orders-prepStockBal tap"
+                    disabled={busy}
+                    onClick={() =>
+                      askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
+                        mode: "set",
+                        initialQty: bal.warehouse,
+                      })
+                    }
+                  >
                     <span>{t("prep_stock_warehouse")}</span>
                     <strong>{fmtQty(bal.warehouse)}</strong>
-                  </div>
+                    <em>{t("prep_stock_tap_edit")}</em>
+                  </button>
                 )}
                 <div className="orders-prepStockBal total">
                   <span>{t("prep_stock_total")}</span>
@@ -413,12 +490,13 @@ export function PrepStockPage() {
                 </div>
               </div>
 
+              <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint")}</p>
               <div className="orders-prepStockMoves">
                 <button
                   type="button"
                   className="orders-btn dark"
                   disabled={busy}
-                  onClick={() => askMove(item, "produce", t("prep_stock_produce"))}
+                  onClick={() => askMove(item, "produce", t("prep_stock_produce"), { mode: "add" })}
                 >
                   {t("prep_stock_produce")}
                 </button>
@@ -428,7 +506,9 @@ export function PrepStockPage() {
                       type="button"
                       className="orders-btn primary"
                       disabled={busy}
-                      onClick={() => askMove(item, "to_warehouse", t("prep_stock_to_warehouse"))}
+                      onClick={() =>
+                        askMove(item, "to_warehouse", t("prep_stock_to_warehouse"), { mode: "add" })
+                      }
                     >
                       {t("prep_stock_to_warehouse")}
                     </button>
@@ -436,31 +516,13 @@ export function PrepStockPage() {
                       type="button"
                       className="orders-btn ghost"
                       disabled={busy}
-                      onClick={() => askMove(item, "to_kitchen", t("prep_stock_to_kitchen"))}
+                      onClick={() =>
+                        askMove(item, "to_kitchen", t("prep_stock_to_kitchen"), { mode: "add" })
+                      }
                     >
                       {t("prep_stock_to_kitchen")}
                     </button>
                   </>
-                )}
-                <button
-                  type="button"
-                  className="orders-btn ghost"
-                  disabled={busy}
-                  onClick={() => askMove(item, "writeoff_kitchen", t("prep_stock_writeoff_kitchen"))}
-                >
-                  {t("prep_stock_writeoff_kitchen")}
-                </button>
-                {item.noWarehouse ? null : (
-                  <button
-                    type="button"
-                    className="orders-btn ghost"
-                    disabled={busy}
-                    onClick={() =>
-                      askMove(item, "writeoff_warehouse", t("prep_stock_writeoff_warehouse"))
-                    }
-                  >
-                    {t("prep_stock_writeoff_warehouse")}
-                  </button>
                 )}
               </div>
             </div>
@@ -485,8 +547,13 @@ export function PrepStockPage() {
               {(dialog.item.name[lang] || dialog.item.name.en) +
                 ` · ${staffStockUnit(dialog.item)}`}
             </p>
+            <p className="orders-prepStockModalHint">
+              {dialog.mode === "set" ? t("prep_stock_set_hint") : t("prep_stock_add_hint")}
+            </p>
             <label>
-              <span>{t("prep_stock_qty_prompt")}</span>
+              <span>
+                {dialog.mode === "set" ? t("prep_stock_qty_set_prompt") : t("prep_stock_qty_prompt")}
+              </span>
               <input
                 inputMode="decimal"
                 autoFocus
