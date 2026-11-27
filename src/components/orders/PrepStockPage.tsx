@@ -86,6 +86,7 @@ export function PrepStockPage() {
   const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
+  const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const [balances, setBalances] = useState<BalanceMap>(() => {
     const cached = readPrepStockBalanceCache();
     return cached ? toMap(cached) : {};
@@ -313,6 +314,16 @@ export function PrepStockPage() {
 
   const pcsLabel = t("prep_stock_pcs_short");
 
+  const jumpToCard = useCallback((itemId: string) => {
+    const el = document.getElementById(`prep-stock-card-${itemId}`);
+    if (!el) return;
+    setFocusItemId(itemId);
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      setFocusItemId((cur) => (cur === itemId ? null : cur));
+    }, 1600);
+  }, []);
+
   return (
     <div className="orders-prepStock">
       {error ? <OrdersError text={error} onRetry={() => void load()} /> : null}
@@ -355,42 +366,37 @@ export function PrepStockPage() {
                   row.warehouse == null ? null : stockCellParts(row.warehouse, item, pcsLabel);
                 const totalParts = stockCellParts(row.total, item, pcsLabel);
                 return (
-                  <tr key={row.id}>
+                  <tr
+                    key={row.id}
+                    className="orders-prepStockOverviewRow"
+                    tabIndex={0}
+                    role="link"
+                    aria-label={t("prep_stock_jump_to_card", { name: row.name })}
+                    onClick={() => jumpToCard(row.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        jumpToCard(row.id);
+                      }
+                    }}
+                  >
                     <td className="orders-prepStockOverviewNameCell">
                       <span className="orders-prepStockOverviewName">{row.name}</span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="orders-prepStockMatrixCell"
-                        onClick={() =>
-                          askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
-                            mode: "set",
-                            initialQty: row.kitchen,
-                          })
-                        }
-                      >
+                      <div className="orders-prepStockMatrixCell">
                         <strong>{kitchenParts.totalLine}</strong>
                         {kitchenParts.formula ? <span>{kitchenParts.formula}</span> : null}
-                      </button>
+                      </div>
                     </td>
                     <td>
                       {warehouseParts == null ? (
                         <span className="orders-prepStockMatrixEmpty">—</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="orders-prepStockMatrixCell"
-                          onClick={() =>
-                            askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
-                              mode: "set",
-                              initialQty: row.warehouse ?? 0,
-                            })
-                          }
-                        >
+                        <div className="orders-prepStockMatrixCell">
                           <strong>{warehouseParts.totalLine}</strong>
                           {warehouseParts.formula ? <span>{warehouseParts.formula}</span> : null}
-                        </button>
+                        </div>
                       )}
                     </td>
                     <td>
@@ -418,8 +424,13 @@ export function PrepStockPage() {
           const secondary = lang === "en" ? item.name.vn : item.name.en;
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
           const busy = busyItem === item.id;
+          const focused = focusItemId === item.id;
           return (
-            <div key={item.id} className="orders-prepStockCard">
+            <div
+              key={item.id}
+              id={`prep-stock-card-${item.id}`}
+              className={`orders-prepStockCard${focused ? " focus" : ""}`}
+            >
               <div className="orders-prepStockName">
                 {label}
                 {secondary && secondary !== label ? <span> / {secondary}</span> : null}

@@ -1052,6 +1052,17 @@
   letter-spacing: 0.04em;
 }
 
+.orders-prepStockOverviewRow {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orders-prepStockOverviewRow:active,
+.orders-prepStockOverviewRow:focus-visible {
+  background: #fff7e8;
+  outline: none;
+}
+
 .orders-prepStockOverviewNameCell {
   padding-right: 6px !important;
 }
@@ -1090,10 +1101,6 @@
   color: inherit;
   font: inherit;
   -webkit-tap-highlight-color: transparent;
-}
-
-.orders-prepStockMatrixCell:active {
-  background: #fff7e8;
 }
 
 .orders-prepStockMatrixCell strong {
@@ -1204,6 +1211,11 @@
   min-width: 0;
 }
 
+.orders-prepStockCard.focus {
+  box-shadow: 0 0 0 2px var(--orders-gold), 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s ease;
+}
+
 .orders-prepStockCard {
   background: var(--orders-card);
   border: 1px solid var(--orders-line);
@@ -1214,6 +1226,7 @@
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
+  scroll-margin-top: 72px;
 }
 
 .orders-prepStockName {
