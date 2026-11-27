@@ -994,6 +994,14 @@
   line-height: 1.4;
 }
 
+.orders-prepStockOverviewLegend {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--orders-muted);
+  font-weight: 600;
+}
+
 .orders-prepStockOverviewTableWrap {
   width: 100%;
   max-width: 100%;
@@ -1007,49 +1015,114 @@
   font-size: 13px;
 }
 
-.orders-prepStockOverviewTable th,
-.orders-prepStockOverviewTable td {
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--orders-line);
-  text-align: right;
-  vertical-align: top;
+.orders-prepStockOverviewTable.matrix {
+  min-width: 100%;
+  table-layout: fixed;
 }
 
-.orders-prepStockOverviewTable th:first-child,
-.orders-prepStockOverviewTable td:first-child {
+.orders-prepStockOverviewTable.matrix th,
+.orders-prepStockOverviewTable.matrix td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--orders-line);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.orders-prepStockOverviewTable.matrix th:first-child,
+.orders-prepStockOverviewTable.matrix td:first-child {
   text-align: left;
+  width: 34%;
   padding-left: 0;
 }
 
-.orders-prepStockOverviewTable th:last-child,
-.orders-prepStockOverviewTable td:last-child {
-  padding-right: 0;
-  font-weight: 800;
+.orders-prepStockOverviewTable.matrix th:nth-child(2),
+.orders-prepStockOverviewTable.matrix td:nth-child(2),
+.orders-prepStockOverviewTable.matrix th:nth-child(3),
+.orders-prepStockOverviewTable.matrix td:nth-child(3) {
+  width: 33%;
 }
 
 .orders-prepStockOverviewTable th {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--orders-muted);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+}
+
+.orders-prepStockOverviewNameCell {
+  padding-right: 6px !important;
 }
 
 .orders-prepStockOverviewName {
   display: block;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 13px;
   overflow-wrap: anywhere;
   word-break: break-word;
+  line-height: 1.2;
 }
 
 .orders-prepStockOverviewTable td em {
   display: block;
   margin-top: 2px;
   font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--orders-muted);
+}
+
+.orders-prepStockMatrixCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.orders-prepStockMatrixCell:active {
+  background: #fff7e8;
+}
+
+.orders-prepStockMatrixCell strong {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.orders-prepStockMatrixCell span {
   font-size: 11px;
   font-weight: 700;
   color: var(--orders-muted);
-  text-transform: uppercase;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.orders-prepStockMatrixEmpty {
+  display: block;
+  text-align: center;
+  color: var(--orders-muted);
+  font-weight: 700;
+}
+
+.orders-prepStockFormula {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .orders-prepStockPaste {
@@ -1251,17 +1324,6 @@ button.orders-prepStockBal.tap:active {
   gap: 6px;
 }
 
-.orders-prepStockOverviewCellBtn {
-  border: 0;
-  background: transparent;
-  color: var(--orders-accent);
-  font: inherit;
-  font-weight: 800;
-  padding: 0;
-  min-height: 28px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
 
 .orders-prepStockModalHint {
   margin: -4px 0 10px !important;

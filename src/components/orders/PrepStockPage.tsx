@@ -60,18 +60,21 @@ function fmtQty(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
-function fmtBalance(
+/** Mockup cell: "403 шт." + formula "20×20+3" */
+function stockCellParts(
   value: number,
   item: StaffStockItem,
-  labels: { pack: string; packs: string; pcs: string },
-): string {
+  pcsLabel: string,
+): { totalLine: string; formula: string | null } {
+  const total = Math.max(0, Math.round(Number(value) || 0));
+  const totalLine = `${fmtQty(total)} ${pcsLabel}`;
   const packSize = staffStockPackSize(item);
-  if (!packSize) return fmtQty(value);
-  const { packs, pcs } = splitPackQty(value, packSize);
-  if (packs <= 0 && pcs <= 0) return "0";
-  if (packs <= 0) return `${pcs} ${labels.pcs}`;
-  if (pcs <= 0) return `${packs} ${packs === 1 ? labels.pack : labels.packs}`;
-  return `${packs} ${packs === 1 ? labels.pack : labels.packs} + ${pcs} ${labels.pcs}`;
+  if (!packSize) return { totalLine, formula: null };
+  if (total <= 0) return { totalLine, formula: null };
+  const { packs, pcs } = splitPackQty(total, packSize);
+  if (packs <= 0) return { totalLine, formula: String(pcs) };
+  if (pcs <= 0) return { totalLine, formula: `${packs}×${packSize}` };
+  return { totalLine, formula: `${packs}×${packSize}+${pcs}` };
 }
 
 function parseLooseNumber(raw: string): number {
@@ -352,7 +355,6 @@ export function PrepStockPage() {
     });
   }, [balances, lang, stockItems]);
 
-  const overviewInStock = useMemo(() => overviewRows.filter((row) => row.hasStock), [overviewRows]);
   const kitchenSum = useMemo(
     () => overviewRows.reduce((sum, row) => sum + row.kitchen, 0),
     [overviewRows],
@@ -361,14 +363,7 @@ export function PrepStockPage() {
     () => overviewRows.reduce((sum, row) => sum + (row.warehouse ?? 0), 0),
     [overviewRows],
   );
-  const packLabels = useMemo(
-    () => ({
-      pack: t("prep_stock_pack_one"),
-      packs: t("prep_stock_packs_short"),
-      pcs: t("prep_stock_pcs_short"),
-    }),
-    [t],
-  );
+  const pcsLabel = t("prep_stock_pcs_short");
 
   return (
     <div className="orders-prepStock">
@@ -401,82 +396,79 @@ export function PrepStockPage() {
           <h2>{t("prep_stock_overview_title")}</h2>
           <div className="orders-prepStockOverviewTotals">
             <span>
-              {t("prep_stock_kitchen")}: <strong>{fmtQty(kitchenSum)} pcs</strong>
+              PREP: <strong>{fmtQty(kitchenSum)} {pcsLabel}</strong>
             </span>
             <span>
-              {t("prep_stock_warehouse")}: <strong>{fmtQty(warehouseSum)} pcs</strong>
-            </span>
-            <span>
-              {t("prep_stock_total")}: <strong>{fmtQty(kitchenSum + warehouseSum)} pcs</strong>
+              WAREHOUSE: <strong>{fmtQty(warehouseSum)} {pcsLabel}</strong>
             </span>
           </div>
+          <p className="orders-prepStockOverviewLegend">{t("prep_stock_table_legend")}</p>
         </div>
-        {overviewInStock.length === 0 ? (
-          <p className="orders-prepStockOverviewEmpty">{t("prep_stock_overview_empty")}</p>
-        ) : (
-          <div className="orders-prepStockOverviewTableWrap">
-            <table className="orders-prepStockOverviewTable">
-              <thead>
-                <tr>
-                  <th>{t("prep_stock_overview_item")}</th>
-                  <th>{t("prep_stock_kitchen")}</th>
-                  <th>{t("prep_stock_warehouse")}</th>
-                  <th>{t("prep_stock_total")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overviewInStock.map((row) => {
-                  const item = itemById(row.id);
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        <span className="orders-prepStockOverviewName">{row.name}</span>
+        <div className="orders-prepStockOverviewTableWrap">
+          <table className="orders-prepStockOverviewTable matrix">
+            <thead>
+              <tr>
+                <th>{t("prep_stock_col_item")}</th>
+                <th>PREP</th>
+                <th>WAREHOUSE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overviewRows.map((row) => {
+                const item = row.item;
+                const kitchenParts = stockCellParts(row.kitchen, item, pcsLabel);
+                const warehouseParts =
+                  row.warehouse == null ? null : stockCellParts(row.warehouse, item, pcsLabel);
+                return (
+                  <tr key={row.id}>
+                    <td className="orders-prepStockOverviewNameCell">
+                      <span className="orders-prepStockOverviewName">{row.name}</span>
+                      {row.packSize ? (
+                        <em>{t("prep_stock_pack_size_line", { size: row.packSize })}</em>
+                      ) : (
                         <em>{row.unit}</em>
-                      </td>
-                      <td>
-                        {item ? (
-                          <button
-                            type="button"
-                            className="orders-prepStockOverviewCellBtn"
-                            onClick={() =>
-                              askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
-                                mode: "set",
-                                initialQty: row.kitchen,
-                              })
-                            }
-                          >
-                            {fmtBalance(row.kitchen, item, packLabels)}
-                          </button>
-                        ) : (
-                          fmtBalance(row.kitchen, row.item, packLabels)
-                        )}
-                      </td>
-                      <td>
-                        {row.warehouse == null || !item ? (
-                          "—"
-                        ) : (
-                          <button
-                            type="button"
-                            className="orders-prepStockOverviewCellBtn"
-                            onClick={() =>
-                              askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
-                                mode: "set",
-                                initialQty: row.warehouse ?? 0,
-                              })
-                            }
-                          >
-                            {fmtBalance(row.warehouse, item, packLabels)}
-                          </button>
-                        )}
-                      </td>
-                      <td>{fmtBalance(row.total, row.item, packLabels)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="orders-prepStockMatrixCell"
+                        onClick={() =>
+                          askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
+                            mode: "set",
+                            initialQty: row.kitchen,
+                          })
+                        }
+                      >
+                        <strong>{kitchenParts.totalLine}</strong>
+                        {kitchenParts.formula ? <span>{kitchenParts.formula}</span> : null}
+                      </button>
+                    </td>
+                    <td>
+                      {warehouseParts == null ? (
+                        <span className="orders-prepStockMatrixEmpty">—</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="orders-prepStockMatrixCell"
+                          onClick={() =>
+                            askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
+                              mode: "set",
+                              initialQty: row.warehouse ?? 0,
+                            })
+                          }
+                        >
+                          <strong>{warehouseParts.totalLine}</strong>
+                          {warehouseParts.formula ? <span>{warehouseParts.formula}</span> : null}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <div className="orders-prepStockPaste">
@@ -540,42 +532,58 @@ export function PrepStockPage() {
               </div>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
-                <button
-                  type="button"
-                  className="orders-prepStockBal tap"
-                  disabled={busy}
-                  onClick={() =>
-                    askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
-                      mode: "set",
-                      initialQty: bal.kitchen,
-                    })
-                  }
-                >
-                  <span>{t("prep_stock_kitchen")}</span>
-                  <strong>{fmtBalance(bal.kitchen, item, packLabels)}</strong>
-                  <em>{t("prep_stock_tap_edit")}</em>
-                </button>
-                {item.noWarehouse ? null : (
-                  <button
-                    type="button"
-                    className="orders-prepStockBal tap"
-                    disabled={busy}
-                    onClick={() =>
-                      askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
-                        mode: "set",
-                        initialQty: bal.warehouse,
-                      })
-                    }
-                  >
-                    <span>{t("prep_stock_warehouse")}</span>
-                    <strong>{fmtBalance(bal.warehouse, item, packLabels)}</strong>
-                    <em>{t("prep_stock_tap_edit")}</em>
-                  </button>
-                )}
-                <div className="orders-prepStockBal total">
-                  <span>{t("prep_stock_total")}</span>
-                  <strong>{fmtBalance(bal.total, item, packLabels)}</strong>
-                </div>
+                {(() => {
+                  const kitchenParts = stockCellParts(bal.kitchen, item, pcsLabel);
+                  const warehouseParts = stockCellParts(bal.warehouse, item, pcsLabel);
+                  const totalParts = stockCellParts(bal.total, item, pcsLabel);
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className="orders-prepStockBal tap"
+                        disabled={busy}
+                        onClick={() =>
+                          askMove(item, "set_kitchen", t("prep_stock_set_kitchen"), {
+                            mode: "set",
+                            initialQty: bal.kitchen,
+                          })
+                        }
+                      >
+                        <span>PREP</span>
+                        <strong>{kitchenParts.totalLine}</strong>
+                        {kitchenParts.formula ? <b className="orders-prepStockFormula">{kitchenParts.formula}</b> : null}
+                        <em>{t("prep_stock_tap_edit")}</em>
+                      </button>
+                      {item.noWarehouse ? null : (
+                        <button
+                          type="button"
+                          className="orders-prepStockBal tap"
+                          disabled={busy}
+                          onClick={() =>
+                            askMove(item, "set_warehouse", t("prep_stock_set_warehouse"), {
+                              mode: "set",
+                              initialQty: bal.warehouse,
+                            })
+                          }
+                        >
+                          <span>WAREHOUSE</span>
+                          <strong>{warehouseParts.totalLine}</strong>
+                          {warehouseParts.formula ? (
+                            <b className="orders-prepStockFormula">{warehouseParts.formula}</b>
+                          ) : null}
+                          <em>{t("prep_stock_tap_edit")}</em>
+                        </button>
+                      )}
+                      <div className="orders-prepStockBal total">
+                        <span>{t("prep_stock_total")}</span>
+                        <strong>{totalParts.totalLine}</strong>
+                        {totalParts.formula ? (
+                          <b className="orders-prepStockFormula">{totalParts.formula}</b>
+                        ) : null}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint")}</p>
