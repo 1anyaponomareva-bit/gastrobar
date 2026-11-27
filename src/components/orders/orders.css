@@ -973,18 +973,12 @@
   text-transform: uppercase;
 }
 
-.orders-prepStockOverviewTotals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--orders-muted);
-}
-
-.orders-prepStockOverviewTotals strong {
-  color: var(--orders-text);
+.orders-prepStockOverviewPackRule {
+  margin: 0;
+  font-size: 13px;
   font-weight: 800;
+  color: var(--orders-text);
+  letter-spacing: 0.02em;
 }
 
 .orders-prepStockOverviewEmpty {
@@ -992,14 +986,6 @@
   color: var(--orders-muted);
   font-size: 13px;
   line-height: 1.4;
-}
-
-.orders-prepStockOverviewLegend {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--orders-muted);
-  font-weight: 600;
 }
 
 .orders-prepStockOverviewTableWrap {

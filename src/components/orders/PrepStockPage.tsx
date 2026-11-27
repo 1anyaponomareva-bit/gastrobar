@@ -355,14 +355,6 @@ export function PrepStockPage() {
     });
   }, [balances, lang, stockItems]);
 
-  const kitchenSum = useMemo(
-    () => overviewRows.reduce((sum, row) => sum + row.kitchen, 0),
-    [overviewRows],
-  );
-  const warehouseSum = useMemo(
-    () => overviewRows.reduce((sum, row) => sum + (row.warehouse ?? 0), 0),
-    [overviewRows],
-  );
   const pcsLabel = t("prep_stock_pcs_short");
 
   return (
@@ -385,24 +377,10 @@ export function PrepStockPage() {
         </label>
       </div>
 
-      <p className="orders-prepStockMode">
-        {t("prep_stock_mode", { venue: VENUE_LABEL, count: stockItems.length })}
-      </p>
-      <p className="orders-prepStockNote">{t("prep_stock_temp_note")}</p>
-      <p className="orders-prepStockNote">{t("prep_stock_pack_note", { size: 20 })}</p>
-
       <section className="orders-prepStockOverview" aria-label={t("prep_stock_overview_title")}>
         <div className="orders-prepStockOverviewHead">
           <h2>{t("prep_stock_overview_title")}</h2>
-          <div className="orders-prepStockOverviewTotals">
-            <span>
-              PREP: <strong>{fmtQty(kitchenSum)} {pcsLabel}</strong>
-            </span>
-            <span>
-              WAREHOUSE: <strong>{fmtQty(warehouseSum)} {pcsLabel}</strong>
-            </span>
-          </div>
-          <p className="orders-prepStockOverviewLegend">{t("prep_stock_table_legend")}</p>
+          <p className="orders-prepStockOverviewPackRule">{t("prep_stock_pack_rule", { size: 20 })}</p>
         </div>
         <div className="orders-prepStockOverviewTableWrap">
           <table className="orders-prepStockOverviewTable matrix">
@@ -423,11 +401,6 @@ export function PrepStockPage() {
                   <tr key={row.id}>
                     <td className="orders-prepStockOverviewNameCell">
                       <span className="orders-prepStockOverviewName">{row.name}</span>
-                      {row.packSize ? (
-                        <em>{t("prep_stock_pack_size_line", { size: row.packSize })}</em>
-                      ) : (
-                        <em>{row.unit}</em>
-                      )}
                     </td>
                     <td>
                       <button
