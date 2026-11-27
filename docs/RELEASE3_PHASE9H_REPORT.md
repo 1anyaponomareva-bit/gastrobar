@@ -16,6 +16,7 @@ Constraints honored: no production SQL · no merge to `main` · FE not published
 |------|--------|
 | Branch | `release-3-phase9h` |
 | Base | `358e006` (9G CONDITIONAL) |
+| Implementation | `262c57f` |
 | Migrations | `20261127150000_*`, `20261127151000_*` |
 | Tests | `scripts/erp/test-phase9h-periods.mjs` (27 PASS) |
 | Report | `docs/RELEASE3_PHASE9H_REPORT.md` |
