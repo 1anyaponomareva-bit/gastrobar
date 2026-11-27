@@ -7,8 +7,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  combinePackQty,
   evaluateStaffStock,
   getStaffStockItems,
+  splitPackQty,
+  staffStockPackSize,
   staffStockUnit,
   type StaffStockItem,
 } from "@/data/staffInStockItems";
@@ -55,6 +58,25 @@ function fmtQty(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
+function fmtBalance(
+  value: number,
+  item: StaffStockItem,
+  labels: { pack: string; packs: string; pcs: string },
+): string {
+  const packSize = staffStockPackSize(item);
+  if (!packSize) return fmtQty(value);
+  const { packs, pcs } = splitPackQty(value, packSize);
+  if (packs <= 0 && pcs <= 0) return "0";
+  if (packs <= 0) return `${pcs} ${labels.pcs}`;
+  if (pcs <= 0) return `${packs} ${packs === 1 ? labels.pack : labels.packs}`;
+  return `${packs} ${packs === 1 ? labels.pack : labels.packs} + ${pcs} ${labels.pcs}`;
+}
+
+function parseLooseNumber(raw: string): number {
+  const n = Number(String(raw).trim().replace(",", "."));
+  return Number.isFinite(n) ? n : NaN;
+}
+
 export function PrepStockPage() {
   const { t, lang, displayName, email } = useOrders();
   const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
@@ -77,6 +99,8 @@ export function PrepStockPage() {
     mode: "add" | "set";
   } | null>(null);
   const [dialogQty, setDialogQty] = useState("");
+  const [dialogPacks, setDialogPacks] = useState("");
+  const [dialogPcs, setDialogPcs] = useState("");
 
   const load = useCallback(async () => {
     setError(null);
@@ -115,9 +139,24 @@ export function PrepStockPage() {
   ) => {
     const mode = opts?.mode ?? (moveType === "set_kitchen" || moveType === "set_warehouse" ? "set" : "add");
     setDialog({ item, moveType, title, mode });
-    setDialogQty(
-      opts?.initialQty != null && Number.isFinite(opts.initialQty) ? fmtQty(opts.initialQty) : "",
-    );
+    const packSize = staffStockPackSize(item);
+    if (packSize) {
+      if (opts?.initialQty != null && Number.isFinite(opts.initialQty)) {
+        const split = splitPackQty(opts.initialQty, packSize);
+        setDialogPacks(split.packs ? String(split.packs) : "");
+        setDialogPcs(split.pcs ? String(split.pcs) : "");
+      } else {
+        setDialogPacks("");
+        setDialogPcs("");
+      }
+      setDialogQty("");
+    } else {
+      setDialogQty(
+        opts?.initialQty != null && Number.isFinite(opts.initialQty) ? fmtQty(opts.initialQty) : "",
+      );
+      setDialogPacks("");
+      setDialogPcs("");
+    }
   };
 
   const itemById = useCallback(
@@ -127,7 +166,19 @@ export function PrepStockPage() {
 
   const submitMove = async () => {
     if (!dialog) return;
-    const qty = Number(String(dialogQty).replace(",", "."));
+    const packSize = staffStockPackSize(dialog.item);
+    let qty: number;
+    if (packSize) {
+      const packs = dialogPacks.trim() === "" ? 0 : parseLooseNumber(dialogPacks);
+      const pcs = dialogPcs.trim() === "" ? 0 : parseLooseNumber(dialogPcs);
+      if (!Number.isFinite(packs) || !Number.isFinite(pcs) || packs < 0 || pcs < 0) {
+        window.alert(t("prep_stock_qty_invalid"));
+        return;
+      }
+      qty = combinePackQty(packs, pcs, packSize);
+    } else {
+      qty = parseLooseNumber(dialogQty);
+    }
     if (
       !Number.isFinite(qty) ||
       qty < 0 ||
@@ -162,10 +213,16 @@ export function PrepStockPage() {
     setBusyItem("__paste__");
     try {
       const result = await setPrepStockWarehouseFromPaste(
-        values.map((row) => ({
-          itemId: row.itemId,
-          warehouse: Number(String(row.warehouse).replace(",", ".")) || 0,
-        })),
+        values.map((row) => {
+          const item = itemById(row.itemId);
+          const raw = Number(String(row.warehouse).replace(",", ".")) || 0;
+          const packSize = item ? staffStockPackSize(item) : null;
+          // Zalo warehouse messages are pack counts when the item is packed.
+          return {
+            itemId: row.itemId,
+            warehouse: packSize ? combinePackQty(raw, 0, packSize) : raw,
+          };
+        }),
       );
       setBalances(toMap(result.balances));
       setStockPaste("");
@@ -265,8 +322,10 @@ export function PrepStockPage() {
       const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
       return {
         id: item.id,
+        item,
         name: item.name[lang] || item.name.en,
         unit: staffStockUnit(item),
+        packSize: staffStockPackSize(item),
         kitchen: bal.kitchen,
         warehouse: item.noWarehouse ? null : bal.warehouse,
         total: bal.total,
@@ -283,6 +342,14 @@ export function PrepStockPage() {
   const warehouseSum = useMemo(
     () => overviewRows.reduce((sum, row) => sum + (row.warehouse ?? 0), 0),
     [overviewRows],
+  );
+  const packLabels = useMemo(
+    () => ({
+      pack: t("prep_stock_pack_one"),
+      packs: t("prep_stock_packs_short"),
+      pcs: t("prep_stock_pcs_short"),
+    }),
+    [t],
   );
 
   if (loading) return <OrdersLoading />;
@@ -310,19 +377,20 @@ export function PrepStockPage() {
         {t("prep_stock_mode", { venue: VENUE_LABEL, count: stockItems.length })}
       </p>
       <p className="orders-prepStockNote">{t("prep_stock_temp_note")}</p>
+      <p className="orders-prepStockNote">{t("prep_stock_pack_note", { size: 20 })}</p>
 
       <section className="orders-prepStockOverview" aria-label={t("prep_stock_overview_title")}>
         <div className="orders-prepStockOverviewHead">
           <h2>{t("prep_stock_overview_title")}</h2>
           <div className="orders-prepStockOverviewTotals">
             <span>
-              {t("prep_stock_kitchen")}: <strong>{fmtQty(kitchenSum)}</strong>
+              {t("prep_stock_kitchen")}: <strong>{fmtQty(kitchenSum)} pcs</strong>
             </span>
             <span>
-              {t("prep_stock_warehouse")}: <strong>{fmtQty(warehouseSum)}</strong>
+              {t("prep_stock_warehouse")}: <strong>{fmtQty(warehouseSum)} pcs</strong>
             </span>
             <span>
-              {t("prep_stock_total")}: <strong>{fmtQty(kitchenSum + warehouseSum)}</strong>
+              {t("prep_stock_total")}: <strong>{fmtQty(kitchenSum + warehouseSum)} pcs</strong>
             </span>
           </div>
         </div>
@@ -360,10 +428,10 @@ export function PrepStockPage() {
                               })
                             }
                           >
-                            {fmtQty(row.kitchen)}
+                            {fmtBalance(row.kitchen, item, packLabels)}
                           </button>
                         ) : (
-                          fmtQty(row.kitchen)
+                          fmtBalance(row.kitchen, row.item, packLabels)
                         )}
                       </td>
                       <td>
@@ -380,11 +448,11 @@ export function PrepStockPage() {
                               })
                             }
                           >
-                            {fmtQty(row.warehouse)}
+                            {fmtBalance(row.warehouse, item, packLabels)}
                           </button>
                         )}
                       </td>
-                      <td>{fmtQty(row.total)}</td>
+                      <td>{fmtBalance(row.total, row.item, packLabels)}</td>
                     </tr>
                   );
                 })}
@@ -442,13 +510,16 @@ export function PrepStockPage() {
           const secondary = lang === "en" ? item.name.vn : item.name.en;
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
           const unit = staffStockUnit(item);
+          const packSize = staffStockPackSize(item);
           const busy = busyItem === item.id;
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
                 {secondary && secondary !== label ? <span> / {secondary}</span> : null}
-                <em className="orders-prepStockUnitTag">{unit}</em>
+                <em className="orders-prepStockUnitTag">
+                  {packSize ? t("prep_stock_pack_unit", { size: packSize }) : unit}
+                </em>
               </div>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
@@ -464,7 +535,7 @@ export function PrepStockPage() {
                   }
                 >
                   <span>{t("prep_stock_kitchen")}</span>
-                  <strong>{fmtQty(bal.kitchen)}</strong>
+                  <strong>{fmtBalance(bal.kitchen, item, packLabels)}</strong>
                   <em>{t("prep_stock_tap_edit")}</em>
                 </button>
                 {item.noWarehouse ? null : (
@@ -480,13 +551,13 @@ export function PrepStockPage() {
                     }
                   >
                     <span>{t("prep_stock_warehouse")}</span>
-                    <strong>{fmtQty(bal.warehouse)}</strong>
+                    <strong>{fmtBalance(bal.warehouse, item, packLabels)}</strong>
                     <em>{t("prep_stock_tap_edit")}</em>
                   </button>
                 )}
                 <div className="orders-prepStockBal total">
                   <span>{t("prep_stock_total")}</span>
-                  <strong>{fmtQty(bal.total)}</strong>
+                  <strong>{fmtBalance(bal.total, item, packLabels)}</strong>
                 </div>
               </div>
 
@@ -545,25 +616,71 @@ export function PrepStockPage() {
             <h3>{dialog.title}</h3>
             <p>
               {(dialog.item.name[lang] || dialog.item.name.en) +
-                ` · ${staffStockUnit(dialog.item)}`}
+                ` · ${
+                  staffStockPackSize(dialog.item)
+                    ? t("prep_stock_pack_unit", { size: staffStockPackSize(dialog.item)! })
+                    : staffStockUnit(dialog.item)
+                }`}
             </p>
             <p className="orders-prepStockModalHint">
               {dialog.mode === "set" ? t("prep_stock_set_hint") : t("prep_stock_add_hint")}
             </p>
-            <label>
-              <span>
-                {dialog.mode === "set" ? t("prep_stock_qty_set_prompt") : t("prep_stock_qty_prompt")}
-              </span>
-              <input
-                inputMode="decimal"
-                autoFocus
-                value={dialogQty}
-                onChange={(event) => setDialogQty(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void submitMove();
-                }}
-              />
-            </label>
+            {staffStockPackSize(dialog.item) ? (
+              <>
+                <p className="orders-prepStockModalHint">
+                  {t("prep_stock_pack_size_line", { size: staffStockPackSize(dialog.item)! })}
+                </p>
+                <div className="orders-prepStockPackInputs">
+                  <label>
+                    <span>{t("prep_stock_packs")}</span>
+                    <input
+                      inputMode="numeric"
+                      autoFocus
+                      value={dialogPacks}
+                      onChange={(event) => setDialogPacks(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") void submitMove();
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <span>{t("prep_stock_pcs")}</span>
+                    <input
+                      inputMode="numeric"
+                      value={dialogPcs}
+                      onChange={(event) => setDialogPcs(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") void submitMove();
+                      }}
+                    />
+                  </label>
+                </div>
+                <p className="orders-prepStockPackTotal">
+                  {t("prep_stock_pack_total_pcs", {
+                    qty: combinePackQty(
+                      dialogPacks.trim() === "" ? 0 : parseLooseNumber(dialogPacks) || 0,
+                      dialogPcs.trim() === "" ? 0 : parseLooseNumber(dialogPcs) || 0,
+                      staffStockPackSize(dialog.item)!,
+                    ),
+                  })}
+                </p>
+              </>
+            ) : (
+              <label>
+                <span>
+                  {dialog.mode === "set" ? t("prep_stock_qty_set_prompt") : t("prep_stock_qty_prompt")}
+                </span>
+                <input
+                  inputMode="decimal"
+                  autoFocus
+                  value={dialogQty}
+                  onChange={(event) => setDialogQty(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void submitMove();
+                  }}
+                />
+              </label>
+            )}
             <div className="orders-prepStockModalActions">
               <button type="button" className="orders-btn ghost" onClick={() => setDialog(null)}>
                 {t("place_cancel") || "Cancel"}

@@ -1262,6 +1262,24 @@ button.orders-prepStockBal.tap:active {
   line-height: 1.35;
 }
 
+.orders-prepStockPackInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.orders-prepStockPackInputs label {
+  margin-bottom: 0 !important;
+}
+
+.orders-prepStockPackTotal {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--orders-text);
+}
+
 .orders-prepStockMoves .orders-btn {
   flex: 1 1 auto;
   min-height: 40px;
