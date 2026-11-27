@@ -328,3 +328,137 @@ export async function setPrepStockWarehouseBatch(input: {
   }
   return { updated, balances: await listPrepStockBalances() };
 }
+
+export type PrepStockTransferDirection = "to_warehouse" | "to_kitchen";
+export type PrepStockTransferStatus = "pending" | "received" | "cancelled";
+
+export type PrepStockTransfer = {
+  id: string;
+  itemId: string;
+  direction: PrepStockTransferDirection;
+  qty: number;
+  status: PrepStockTransferStatus;
+  actor: string;
+  note: string | null;
+  createdAt: string | null;
+  receivedAt: string | null;
+  receivedBy: string | null;
+};
+
+export type PrepStockTransferResult = PrepStockTransfer & {
+  kitchen?: number;
+  warehouse?: number;
+  total?: number;
+};
+
+function asTransfer(row: Record<string, unknown>): PrepStockTransfer {
+  const direction = String(row.direction ?? "") as PrepStockTransferDirection;
+  const status = String(row.status ?? "") as PrepStockTransferStatus;
+  return {
+    id: String(row.id ?? ""),
+    itemId: String(row.item_id ?? row.itemId ?? ""),
+    direction: direction === "to_kitchen" ? "to_kitchen" : "to_warehouse",
+    qty: num(row.qty),
+    status:
+      status === "received" ? "received" : status === "cancelled" ? "cancelled" : "pending",
+    actor: String(row.actor ?? ""),
+    note: row.note == null || row.note === "" ? null : String(row.note),
+    createdAt: row.created_at == null ? null : String(row.created_at),
+    receivedAt: row.received_at == null ? null : String(row.received_at),
+    receivedBy: row.received_by == null ? null : String(row.received_by),
+  };
+}
+
+export async function getPrepStockSettings(): Promise<{ zaloUrl: string | null }> {
+  try {
+    const raw = await rpc<Record<string, unknown>>("erp_prep_stock_settings_get", {});
+    const url = raw?.zalo_url;
+    return { zaloUrl: url == null || url === "" ? null : String(url) };
+  } catch (error) {
+    if (error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED") {
+      return { zaloUrl: null };
+    }
+    throw error;
+  }
+}
+
+export async function setPrepStockSettings(input: {
+  zaloUrl: string | null;
+  actor: string;
+}): Promise<{ zaloUrl: string | null }> {
+  const raw = await rpc<Record<string, unknown>>("erp_prep_stock_settings_set", {
+    p_zalo_url: input.zaloUrl,
+    p_actor: input.actor,
+  });
+  const url = raw?.zalo_url;
+  return { zaloUrl: url == null || url === "" ? null : String(url) };
+}
+
+export async function listPrepStockTransfers(status?: PrepStockTransferStatus | null): Promise<PrepStockTransfer[]> {
+  const raw = await rpc<unknown>("erp_prep_stock_transfers_list", {
+    p_status: status ?? null,
+  });
+  const rows = Array.isArray(raw) ? raw : [];
+  return rows
+    .map((row) => asTransfer((row && typeof row === "object" ? row : {}) as Record<string, unknown>))
+    .filter((row) => row.id && row.itemId);
+}
+
+export async function getPrepStockTransfer(id: string): Promise<PrepStockTransfer> {
+  const raw = await rpc<unknown>("erp_prep_stock_transfer_get", { p_transfer_id: id });
+  if (!raw || raw === null || typeof raw !== "object") {
+    throw new ErpHttpError(404, "ERP_NOT_FOUND", "transfer");
+  }
+  const transfer = asTransfer(raw as Record<string, unknown>);
+  if (!transfer.id) throw new ErpHttpError(404, "ERP_NOT_FOUND", "transfer");
+  return transfer;
+}
+
+export async function createPrepStockTransfer(input: {
+  itemId: string;
+  direction: PrepStockTransferDirection;
+  qty: number;
+  actor: string;
+  note?: string | null;
+}): Promise<PrepStockTransferResult> {
+  const item = await requireCatalogItem(input.itemId);
+  if (item.noWarehouse) throw new ErpHttpError(400, "ERP_INVALID", "no_warehouse");
+  if (!Number.isFinite(input.qty) || input.qty <= 0) throw new ErpHttpError(400, "ERP_INVALID", "qty");
+  if (input.direction !== "to_warehouse" && input.direction !== "to_kitchen") {
+    throw new ErpHttpError(400, "ERP_INVALID", "direction");
+  }
+
+  const raw = await rpc<Record<string, unknown>>("erp_prep_stock_transfer_create", {
+    p_item_id: item.id,
+    p_direction: input.direction,
+    p_qty: input.qty,
+    p_actor: input.actor,
+    p_note: input.note ?? null,
+    p_allow_warehouse: true,
+  });
+
+  const transfer = asTransfer(raw);
+  return {
+    ...transfer,
+    kitchen: num(raw.kitchen),
+    warehouse: num(raw.warehouse),
+    total: num(raw.total),
+  };
+}
+
+export async function receivePrepStockTransfer(input: {
+  transferId: string;
+  actor: string;
+}): Promise<PrepStockTransferResult> {
+  const raw = await rpc<Record<string, unknown>>("erp_prep_stock_transfer_receive", {
+    p_transfer_id: input.transferId,
+    p_actor: input.actor,
+  });
+  const transfer = asTransfer(raw);
+  return {
+    ...transfer,
+    kitchen: num(raw.kitchen),
+    warehouse: num(raw.warehouse),
+    total: num(raw.total),
+  };
+}

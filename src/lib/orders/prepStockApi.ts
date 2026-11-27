@@ -174,6 +174,126 @@ export async function archiveAdminPrepStockItem(id: string): Promise<void> {
   await postJson("/api/orders/admin/prep-stock-items", { action: "archive", id });
 }
 
+export type PrepStockTransferRow = {
+  id: string;
+  itemId: string;
+  direction: "to_warehouse" | "to_kitchen";
+  qty: number;
+  status: "pending" | "received" | "cancelled";
+  actor: string;
+  note: string | null;
+  createdAt: string | null;
+  receivedAt: string | null;
+  receivedBy: string | null;
+};
+
+function transferOf(row: Record<string, unknown>): PrepStockTransferRow {
+  const direction = String(pick(row, "direction") ?? "");
+  const status = String(pick(row, "status") ?? "");
+  return {
+    id: String(pick(row, "id") ?? ""),
+    itemId: String(pick(row, "itemId", "item_id") ?? ""),
+    direction: direction === "to_kitchen" ? "to_kitchen" : "to_warehouse",
+    qty: Number(pick(row, "qty") ?? 0) || 0,
+    status:
+      status === "received" ? "received" : status === "cancelled" ? "cancelled" : "pending",
+    actor: String(pick(row, "actor") ?? ""),
+    note: (() => {
+      const note = pick(row, "note");
+      return note == null || note === "" ? null : String(note);
+    })(),
+    createdAt: (() => {
+      const v = pick(row, "createdAt", "created_at");
+      return v == null ? null : String(v);
+    })(),
+    receivedAt: (() => {
+      const v = pick(row, "receivedAt", "received_at");
+      return v == null ? null : String(v);
+    })(),
+    receivedBy: (() => {
+      const v = pick(row, "receivedBy", "received_by");
+      return v == null ? null : String(v);
+    })(),
+  };
+}
+
+function transfersOf(data: unknown): PrepStockTransferRow[] {
+  const obj = asRecord(data);
+  const list = Array.isArray(obj.transfers) ? obj.transfers : Array.isArray(data) ? data : [];
+  return list
+    .map((row) => transferOf(asRecord(row)))
+    .filter((row) => row.id && row.itemId);
+}
+
+export async function listPrepStockTransfers(
+  status?: "pending" | "received" | "cancelled",
+): Promise<PrepStockTransferRow[]> {
+  const path = status
+    ? `/api/orders/prep-stock/transfers?status=${encodeURIComponent(status)}`
+    : "/api/orders/prep-stock/transfers";
+  return transfersOf(await postJson(path));
+}
+
+export async function getPrepStockTransfer(id: string): Promise<PrepStockTransferRow> {
+  const data = asRecord(await postJson(`/api/orders/prep-stock/transfers/${encodeURIComponent(id)}`));
+  const transfer = transferOf(asRecord(pick(data, "transfer") ?? data));
+  if (!transfer.id) throw new PrepStockApiError(404, "ERP_NOT_FOUND", "transfer");
+  return transfer;
+}
+
+export async function createPrepStockTransfer(
+  itemId: string,
+  direction: "to_warehouse" | "to_kitchen",
+  qty: number,
+  note?: string,
+): Promise<{ transfer: PrepStockTransferRow; balance: PrepStockBalanceRow }> {
+  const data = asRecord(
+    await postJson("/api/orders/prep-stock/transfers", { itemId, direction, qty, note }),
+  );
+  const transfer = transferOf(asRecord(pick(data, "transfer") ?? data));
+  const balance = balanceOf(asRecord(pick(data, "balance") ?? {}));
+  if (balance.itemId) {
+    const cached = readPrepStockBalanceCache() ?? [];
+    writePrepStockBalanceCache(
+      cached.filter((row) => row.itemId !== balance.itemId).concat([balance]),
+    );
+  }
+  return { transfer, balance };
+}
+
+export async function receivePrepStockTransfer(
+  id: string,
+): Promise<{ transfer: PrepStockTransferRow; balance: PrepStockBalanceRow }> {
+  const data = asRecord(
+    await postJson(`/api/orders/prep-stock/transfers/${encodeURIComponent(id)}`, {
+      action: "receive",
+    }),
+  );
+  const transfer = transferOf(asRecord(pick(data, "transfer") ?? data));
+  const balance = balanceOf(asRecord(pick(data, "balance") ?? {}));
+  if (balance.itemId) {
+    const cached = readPrepStockBalanceCache() ?? [];
+    writePrepStockBalanceCache(
+      cached.filter((row) => row.itemId !== balance.itemId).concat([balance]),
+    );
+  }
+  return { transfer, balance };
+}
+
+export async function getPrepStockSettings(): Promise<{ zaloUrl: string | null }> {
+  const data = asRecord(await postJson("/api/orders/prep-stock/settings"));
+  const url = pick(data, "zaloUrl", "zalo_url");
+  return { zaloUrl: url == null || url === "" ? null : String(url) };
+}
+
+export async function savePrepStockSettings(zaloUrl: string): Promise<{ zaloUrl: string | null }> {
+  const data = asRecord(
+    await postJson("/api/orders/prep-stock/settings", { zaloUrl }),
+  );
+  const url = pick(data, "zaloUrl", "zalo_url");
+  return { zaloUrl: url == null || url === "" ? null : String(url) };
+}
+
 export async function movePrepStock(
   itemId: string,
   moveType: PrepStockMoveType,

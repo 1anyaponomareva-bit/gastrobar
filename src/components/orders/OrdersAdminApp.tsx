@@ -20,9 +20,11 @@ import { productDisplayName } from "@/lib/erp/productName";
 import { ordersT } from "@/lib/orders/i18n";
 import {
   archiveAdminPrepStockItem,
+  getPrepStockSettings,
   listAdminPrepStockItems,
   PrepStockApiError,
   saveAdminPrepStockItem,
+  savePrepStockSettings,
   type PrepStockCatalogItemRow,
 } from "@/lib/orders/prepStockApi";
 import { staffStockLabel } from "@/data/staffInStockItems";
@@ -107,6 +109,7 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
   const [products, setProducts] = useState<OrderProduct[]>([]);
   const [suppliers, setSuppliers] = useState<OrderSupplier[]>([]);
   const [prepItems, setPrepItems] = useState<PrepStockCatalogItemRow[]>([]);
+  const [prepZaloUrl, setPrepZaloUrl] = useState("");
   const [tab, setTab] = useState<Tab>("items");
   const [editingProduct, setEditingProduct] = useState<OrderProduct | "new" | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<OrderSupplier | "new" | null>(null);
@@ -123,7 +126,12 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
   }, []);
 
   const loadPrep = useCallback(async () => {
-    setPrepItems(await listAdminPrepStockItems());
+    const [items, settings] = await Promise.all([
+      listAdminPrepStockItems(),
+      getPrepStockSettings().catch(() => ({ zaloUrl: null as string | null })),
+    ]);
+    setPrepItems(items);
+    setPrepZaloUrl(settings.zaloUrl ?? "");
   }, []);
 
   useEffect(() => {
@@ -321,8 +329,39 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
       </>
     );
   } else {
+    const zaloValid = !prepZaloUrl.trim() || /^https:\/\/\S+$/i.test(prepZaloUrl.trim());
     body = (
       <>
+        <form
+          className="card formSection orders-prepAdminZalo"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!zaloValid) return;
+            void guard(async () => {
+              const saved = await savePrepStockSettings(prepZaloUrl.trim());
+              setPrepZaloUrl(saved.zaloUrl ?? "");
+            }, t("admin_prep_zalo_saved"));
+          }}
+        >
+          <label>
+            <span>{t("admin_prep_zalo")}</span>
+            <input
+              inputMode="url"
+              placeholder="https://zalo.me/g/…"
+              value={prepZaloUrl}
+              onChange={(event) => setPrepZaloUrl(event.target.value)}
+            />
+          </label>
+          <small className="staffAdminHint">{t("admin_prep_zalo_hint")}</small>
+          {zaloValid ? null : (
+            <small className="staffAdminHint error">Ссылка должна начинаться с https://</small>
+          )}
+          <div className="adminActions">
+            <button type="submit" className="dark" disabled={busy || !zaloValid}>
+              {busy ? "Сохраняю…" : "Сохранить Zalo"}
+            </button>
+          </div>
+        </form>
         <button type="button" className="dark staffAdminAdd" onClick={() => setEditingPrep("new")}>
           {t("admin_add_prep_item")}
         </button>

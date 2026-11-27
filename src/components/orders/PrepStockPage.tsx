@@ -6,6 +6,8 @@
  * Quantities are pieces only (no packs / pack formulas in UI).
  */
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   evaluateStaffStock,
@@ -17,14 +19,17 @@ import {
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
 import {
+  createPrepStockTransfer,
   listPrepStockBalances,
   listPrepStockCatalogItems,
+  listPrepStockTransfers,
   movePrepStock,
   PrepStockApiError,
   prepStockErrorMessage,
   readPrepStockBalanceCache,
   type PrepStockBalanceRow,
   type PrepStockMoveType,
+  type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
 import {
   getStoredDate,
@@ -70,9 +75,11 @@ function parseLooseNumber(raw: string): number {
 }
 
 export function PrepStockPage() {
+  const router = useRouter();
   const { t, lang, displayName, email } = useOrders();
   const fallbackItems = useMemo(() => getStaffStockItems(VENUE), []);
   const [stockItems, setStockItems] = useState<StaffStockItem[]>(fallbackItems);
+  const [pendingTransfers, setPendingTransfers] = useState<PrepStockTransferRow[]>([]);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
   const [balances, setBalances] = useState<BalanceMap>(() => {
@@ -95,11 +102,13 @@ export function PrepStockPage() {
     if (!opts?.quiet) setRefreshing(true);
     setError(null);
     try {
-      const [rows, catalog] = await Promise.all([
+      const [rows, catalog, transfers] = await Promise.all([
         listPrepStockBalances(),
         listPrepStockCatalogItems().catch(() => null),
+        listPrepStockTransfers("pending").catch(() => [] as PrepStockTransferRow[]),
       ]);
       setBalances(toMap(rows));
+      setPendingTransfers(transfers);
       if (catalog && catalog.length) {
         setStockItems(
           catalog.map((item) => ({
@@ -173,6 +182,17 @@ export function PrepStockPage() {
     }
     setBusyItem(dialog.item.id);
     try {
+      if (dialog.moveType === "to_warehouse" || dialog.moveType === "to_kitchen") {
+        const { transfer, balance } = await createPrepStockTransfer(
+          dialog.item.id,
+          dialog.moveType,
+          qty,
+        );
+        applyBalance(balance);
+        setDialog(null);
+        router.push(`/orders/prep-stock/transfers/${encodeURIComponent(transfer.id)}`);
+        return;
+      }
       const row = await movePrepStock(dialog.item.id, dialog.moveType, qty);
       applyBalance(row);
       setDialog(null);
@@ -289,6 +309,38 @@ export function PrepStockPage() {
         </label>
       </div>
 
+      {pendingTransfers.length ? (
+        <section className="orders-prepTransferList" aria-label={t("prep_stock_transfers_pending")}>
+          <h2 className="orders-prepTransferListTitle">{t("prep_stock_transfers_pending")}</h2>
+          {pendingTransfers.map((transfer) => {
+            const item = stockItems.find((row) => row.id === transfer.itemId);
+            const label = item
+              ? staffStockLabel(item, lang)
+              : transfer.itemId;
+            const note = item ? staffStockNote(item) : "";
+            const directionLabel =
+              transfer.direction === "to_warehouse"
+                ? t("prep_stock_to_warehouse")
+                : t("prep_stock_to_kitchen");
+            return (
+              <Link
+                key={transfer.id}
+                href={`/orders/prep-stock/transfers/${encodeURIComponent(transfer.id)}`}
+                className="orders-prepTransferRow"
+              >
+                <b>
+                  {label}
+                  {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
+                </b>
+                <span>
+                  {directionLabel} · {transfer.qty} {pcsLabel}
+                </span>
+              </Link>
+            );
+          })}
+        </section>
+      ) : null}
+
       <div className="orders-prepStockList">
         {stockItems.map((item) => {
           const label = staffStockLabel(item, lang);
@@ -341,7 +393,7 @@ export function PrepStockPage() {
                 </div>
               </div>
 
-              <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint")}</p>
+              <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
               <div className="orders-prepStockMoves">
                 <button
                   type="button"
@@ -399,7 +451,11 @@ export function PrepStockPage() {
               {staffStockNote(dialog.item) ? ` / ${staffStockNote(dialog.item)}` : ""}
             </p>
             <p className="orders-prepStockModalHint">
-              {dialog.mode === "set" ? t("prep_stock_set_hint") : t("prep_stock_add_hint")}
+              {dialog.moveType === "to_warehouse" || dialog.moveType === "to_kitchen"
+                ? t("prep_stock_transfer_create_hint")
+                : dialog.mode === "set"
+                  ? t("prep_stock_set_hint")
+                  : t("prep_stock_add_hint")}
             </p>
             <label>
               <span>

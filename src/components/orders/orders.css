@@ -1249,6 +1249,104 @@
   font-size: 13px;
 }
 
+.orders-prepTransferList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.orders-prepTransferListTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.orders-prepTransferRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--orders-line);
+  background: var(--orders-card);
+  color: inherit;
+  text-decoration: none;
+}
+
+.orders-prepTransferRow b {
+  font-size: 15px;
+}
+
+.orders-prepTransferRow span {
+  color: var(--orders-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.orders-prepTransferTop {
+  margin-bottom: 10px;
+}
+
+.orders-prepTransferHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.orders-prepTransferHead h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.orders-prepTransferStatus {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff3d6;
+}
+
+.orders-prepTransferStatus.received {
+  background: #e5f7ea;
+}
+
+.orders-prepTransferMeta {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.orders-prepTransferMeta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orders-prepTransferMeta span {
+  color: var(--orders-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.orders-prepTransferMeta strong {
+  font-size: 14px;
+}
+
+.orders-prepTransferReceive {
+  margin-top: 12px;
+}
+
+.orders-prepAdminZalo {
+  margin-bottom: 12px;
+}
+
 .orders-prepAdminCheck {
   display: flex !important;
   flex-direction: row !important;
