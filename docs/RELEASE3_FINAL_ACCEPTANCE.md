@@ -4,6 +4,7 @@
 **Branch:** `release-3-final`  
 **Base authorized:** `f318635` (Phase 9H CONDITIONAL)  
 **Build fix included:** cherry-pick `8541c16` → `5a56a2b` (Vercel typecheck / `useErp().run`)  
+**Acceptance commit:** `79ec635`  
 **Overall status:** **READY WITH DISABLED FEATURES**
 
 10H Production Deployment and 10I Final Production Acceptance are **not** executed.  
