@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-27T08:38:51.713Z",
+  "auto_consume": "false",
+  "expense_auto": "false",
+  "periods": "t",
+  "sales": "t",
+  "audit_immut_triggers": "2",
+  "snap_immut_triggers": "2",
+  "period_protect_triggers": "21",
+  "cit_status": "accountant_tbd",
+  "products": "147",
+  "lots": "1",
+  "tax_rates": "6",
+  "auth_users": "5"
+}

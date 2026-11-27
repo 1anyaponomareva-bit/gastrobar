@@ -1,0 +1,87 @@
+[
+    {
+        "path":  "/erp",
+        "status":  200,
+        "len":  20458
+    },
+    {
+        "path":  "/erp/finance/overview",
+        "status":  200,
+        "len":  21121
+    },
+    {
+        "path":  "/erp/finance/sales",
+        "status":  200,
+        "len":  21107
+    },
+    {
+        "path":  "/erp/finance/expenses",
+        "status":  200,
+        "len":  21121
+    },
+    {
+        "path":  "/erp/finance/platforms",
+        "status":  200,
+        "len":  21135
+    },
+    {
+        "path":  "/erp/finance/profitability",
+        "status":  200,
+        "len":  21156
+    },
+    {
+        "path":  "/erp/finance/vat/input",
+        "status":  200,
+        "len":  21451
+    },
+    {
+        "path":  "/erp/finance/vat/output",
+        "status":  200,
+        "len":  21457
+    },
+    {
+        "path":  "/erp/finance/vat/settlement",
+        "status":  200,
+        "len":  21619
+    },
+    {
+        "path":  "/erp/finance/assets",
+        "status":  200,
+        "len":  21109
+    },
+    {
+        "path":  "/erp/finance/payables",
+        "status":  200,
+        "len":  21121
+    },
+    {
+        "path":  "/erp/finance/receivables",
+        "status":  200,
+        "len":  21139
+    },
+    {
+        "path":  "/erp/finance/pnl/accrual",
+        "status":  200,
+        "len":  21593
+    },
+    {
+        "path":  "/erp/finance/cashflow/management",
+        "status":  200,
+        "len":  21641
+    },
+    {
+        "path":  "/erp/finance/periods",
+        "status":  200,
+        "len":  21115
+    },
+    {
+        "path":  "/erp/finance/audit",
+        "status":  200,
+        "len":  21103
+    },
+    {
+        "path":  "/erp/finance",
+        "status":  200,
+        "len":  21232
+    }
+]

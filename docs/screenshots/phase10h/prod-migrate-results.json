@@ -1,0 +1,159 @@
+{
+  "checked_at": "2026-11-27T08:32:53.324Z",
+  "host": "aws-1-ap-southeast-1.pooler.supabase.com",
+  "db": "postgres",
+  "applied": [
+    {
+      "file": "supabase/migrations/20261127090000_erp_r3_sales_output_vat.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127091000_erp_r3_sales_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127100000_erp_r3_input_vat_register.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127101000_erp_r3_input_vat_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127110000_erp_r3_platform_settlements.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127111000_erp_r3_platform_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127120000_erp_r3_vat_settlement.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127121000_erp_r3_vat_settlement_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127130000_erp_r3_sales_bom_cogs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127131000_erp_r3_sales_bom_cogs_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127132000_erp_r3_profitability_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127140000_erp_r3_opex_assets_pnl.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127141000_erp_r3_opex_pnl_rpcs.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127150000_erp_r3_financial_periods.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase/migrations/20261127151000_erp_r3_financial_periods_rpcs.sql",
+      "status": "applied"
+    }
+  ],
+  "before": {
+    "products": 147,
+    "recipes": 9,
+    "dishes": 1,
+    "suppliers": 26,
+    "lots": 1,
+    "stock": 0,
+    "docs": 2,
+    "finance_tx": 0,
+    "tax_rates": 6,
+    "auth_users": 5,
+    "sales_docs_exists": "t",
+    "periods_exists": "f",
+    "auto_consume": "false"
+  },
+  "after": {
+    "products": 147,
+    "recipes": 9,
+    "dishes": 1,
+    "suppliers": 26,
+    "lots": 1,
+    "stock": 0,
+    "docs": 2,
+    "finance_tx": 0,
+    "tax_rates": 6,
+    "auth_users": 5,
+    "sales_docs_exists": "t",
+    "periods_exists": "t",
+    "auto_consume": "false"
+  },
+  "preserve": {
+    "products": {
+      "before": 147,
+      "after": 147,
+      "ok": true
+    },
+    "recipes": {
+      "before": 9,
+      "after": 9,
+      "ok": true
+    },
+    "dishes": {
+      "before": 1,
+      "after": 1,
+      "ok": true
+    },
+    "suppliers": {
+      "before": 26,
+      "after": 26,
+      "ok": true
+    },
+    "lots": {
+      "before": 1,
+      "after": 1,
+      "ok": true
+    },
+    "stock": {
+      "before": 0,
+      "after": 0,
+      "ok": true
+    },
+    "docs": {
+      "before": 2,
+      "after": 2,
+      "ok": true
+    },
+    "finance_tx": {
+      "before": 0,
+      "after": 0,
+      "ok": true
+    },
+    "tax_rates": {
+      "before": 6,
+      "after": 6,
+      "ok": true
+    },
+    "auth_users": {
+      "before": 5,
+      "after": 5,
+      "ok": true
+    }
+  },
+  "checks": {
+    "sales_table": true,
+    "periods_table": true,
+    "auto_consume_off": true,
+    "rpc_period_close": true,
+    "rpc_accrual_pnl": true,
+    "anon_no_close": true,
+    "auth_no_close": true
+  },
+  "ok": true
+}
