@@ -1,10 +1,8 @@
 "use client";
 
 /**
- * Temporary Prep Stock tab in Orders — same positions and Zalo paste as old /staff.
- * Does NOT sync with ERP полуфабрикаты yet; later prep catalog should feed this list.
- *
- * PDF (pdf-lib + fonts + i18n) loads only when Share is pressed — keeps tab open fast.
+ * Prep Stock in Orders — Prep Kitchen ↔ Warehouse balances (variant 1).
+ * Static item list for now; later ERP prep items will feed this screen.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,88 +14,152 @@ import {
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
 import {
-  clearStoredStockValues,
+  errorMessage,
+  listPrepStockBalances,
+  movePrepStock,
+  setPrepStockWarehouseFromPaste,
+  type PrepStockBalanceRow,
+  type PrepStockMoveType,
+} from "@/lib/orders/api";
+import {
   getStoredDate,
   getStoredEmployee,
-  getStoredStockValue,
-  parseNumber,
   setStoredDate,
   setStoredEmployee,
-  setStoredStockValue,
   todayIsoDate,
-  type StaffStockField,
 } from "@/lib/staffInventoryStorage";
 import { parseStockMessage } from "@/lib/staffStockParser";
+import { OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
 const VENUE = "gastrofood" as const;
 const VENUE_LABEL = STAFF_INVENTORY_VENUE_LABELS[VENUE];
 
-type FieldMap = Record<string, { restaurant: string; warehouse: string }>;
+type BalanceMap = Record<string, { kitchen: number; warehouse: number; total: number }>;
 
-function readFields(items: StaffStockItem[]): FieldMap {
-  const next: FieldMap = {};
-  for (const item of items) {
-    next[item.id] = {
-      restaurant: getStoredStockValue(VENUE, item.id, "restaurant"),
-      warehouse: item.noWarehouse ? "" : getStoredStockValue(VENUE, item.id, "warehouse"),
+function toMap(rows: PrepStockBalanceRow[]): BalanceMap {
+  const next: BalanceMap = {};
+  for (const row of rows) {
+    next[row.itemId] = {
+      kitchen: row.kitchen,
+      warehouse: row.warehouse,
+      total: row.total,
     };
   }
   return next;
 }
 
+function fmtQty(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 1000) / 1000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
 export function PrepStockPage() {
-  const { t, lang } = useOrders();
+  const { t, lang, displayName, email } = useOrders();
   const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
-  const [fields, setFields] = useState<FieldMap>(() => readFields(stockItems));
+  const [balances, setBalances] = useState<BalanceMap>({});
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busyItem, setBusyItem] = useState<string | null>(null);
   const [stockPaste, setStockPaste] = useState("");
   const [stockPasteResult, setStockPasteResult] = useState<{
     filled: number;
     unrecognized: string[];
   } | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [dialog, setDialog] = useState<{
+    item: StaffStockItem;
+    moveType: PrepStockMoveType;
+    title: string;
+  } | null>(null);
+  const [dialogQty, setDialogQty] = useState("");
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const rows = await listPrepStockBalances();
+      setBalances(toMap(rows));
+    } catch (err) {
+      setError(errorMessage(err, t("error_network"), t("error_load")));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
     setDate(getStoredDate() || todayIsoDate());
-    setEmployee(getStoredEmployee());
-    setFields(readFields(stockItems));
-    setHydrated(true);
-  }, [stockItems]);
+    setEmployee(getStoredEmployee() || displayName || email || "");
+    void load();
+  }, [displayName, email, load]);
 
-  const handleStockFieldChange = (itemId: string, field: StaffStockField, value: string) => {
-    setStoredStockValue(VENUE, itemId, field, value);
-    setFields((prev) => ({
+  const applyBalance = (row: PrepStockBalanceRow) => {
+    setBalances((prev) => ({
       ...prev,
-      [itemId]: {
-        restaurant: field === "restaurant" ? value : (prev[itemId]?.restaurant ?? ""),
-        warehouse: field === "warehouse" ? value : (prev[itemId]?.warehouse ?? ""),
+      [row.itemId]: {
+        kitchen: row.kitchen,
+        warehouse: row.warehouse,
+        total: row.total,
       },
     }));
   };
 
-  const handleStockPasteApply = () => {
-    const { values, unrecognized, noWarehouse } = parseStockMessage(stockPaste, stockItems);
-    if (values.length) {
-      setFields((prev) => {
-        const next = { ...prev };
-        for (const { itemId, warehouse } of values) {
-          setStoredStockValue(VENUE, itemId, "warehouse", warehouse);
-          next[itemId] = {
-            restaurant: next[itemId]?.restaurant ?? "",
-            warehouse,
-          };
-        }
-        return next;
-      });
-      setStockPaste("");
+  const askMove = (item: StaffStockItem, moveType: PrepStockMoveType, title: string) => {
+    setDialog({ item, moveType, title });
+    setDialogQty("");
+  };
+
+  const submitMove = async () => {
+    if (!dialog) return;
+    const qty = Number(String(dialogQty).replace(",", "."));
+    if (!Number.isFinite(qty) || qty < 0 || (dialog.moveType !== "set_warehouse" && dialog.moveType !== "set_kitchen" && qty <= 0)) {
+      window.alert(t("prep_stock_qty_invalid"));
+      return;
     }
-    setStockPasteResult({
-      filled: values.length,
-      unrecognized: [...unrecognized, ...noWarehouse],
-    });
+    setBusyItem(dialog.item.id);
+    try {
+      const row = await movePrepStock(dialog.item.id, dialog.moveType, qty);
+      applyBalance(row);
+      setDialog(null);
+    } catch (err) {
+      const code = err && typeof err === "object" && "code" in err ? String((err as { code: string }).code) : "";
+      window.alert(
+        code === "ERP_INSUFFICIENT"
+          ? t("prep_stock_insufficient")
+          : errorMessage(err, t("error_network"), t("prep_stock_move_fail")),
+      );
+    } finally {
+      setBusyItem(null);
+    }
+  };
+
+  const handleStockPasteApply = async () => {
+    const { values, unrecognized, noWarehouse } = parseStockMessage(stockPaste, stockItems);
+    if (!values.length) {
+      setStockPasteResult({ filled: 0, unrecognized: [...unrecognized, ...noWarehouse] });
+      return;
+    }
+    setBusyItem("__paste__");
+    try {
+      const result = await setPrepStockWarehouseFromPaste(
+        values.map((row) => ({
+          itemId: row.itemId,
+          warehouse: Number(String(row.warehouse).replace(",", ".")) || 0,
+        })),
+      );
+      setBalances(toMap(result.balances));
+      setStockPaste("");
+      setStockPasteResult({
+        filled: result.updated,
+        unrecognized: [...unrecognized, ...noWarehouse],
+      });
+    } catch (err) {
+      window.alert(errorMessage(err, t("error_network"), t("prep_stock_move_fail")));
+    } finally {
+      setBusyItem(null);
+    }
   };
 
   const handleDateChange = (value: string) => {
@@ -110,24 +172,8 @@ export function PrepStockPage() {
     setStoredEmployee(value);
   };
 
-  const handleNewDay = () => {
-    if (!window.confirm(t("prep_stock_new_day_confirm", { venue: VENUE_LABEL }))) return;
-    clearStoredStockValues(
-      VENUE,
-      stockItems.map((item) => item.id),
-    );
-    const today = todayIsoDate();
-    setDate(today);
-    setStoredDate(today);
-    setEmployee("");
-    setStoredEmployee("");
-    setFields(readFields(stockItems));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const handleExportPdf = useCallback(async () => {
     if (exportingPdf) return;
-
     setExportingPdf(true);
     try {
       const [{ deliverPdfFile, detectInAppBrowser }, { buildStaffInventoryPdfLabels }, pdf] =
@@ -139,43 +185,33 @@ export function PrepStockPage() {
 
       if (detectInAppBrowser()) {
         window.alert(t("prep_stock_inapp_blocked"));
-        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
       const stockRows = stockItems.map((item) => {
-        const restaurantValue = fields[item.id]?.restaurant ?? "";
-        const warehouseValue = fields[item.id]?.warehouse ?? "";
-        const hasRestaurant = restaurantValue.trim() !== "";
-        const hasWarehouse = !item.noWarehouse && warehouseValue.trim() !== "";
+        const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
+        const hasRestaurant = true;
+        const hasWarehouse = !item.noWarehouse;
+        const { lowInHouse, lowWarehouse, task } = evaluateStaffStock(
+          item,
+          bal.kitchen,
+          item.noWarehouse ? null : bal.warehouse,
+        );
         return {
           id: item.id,
           name: item.name.en,
           unit: staffStockUnit(item),
-          restaurant: parseNumber(restaurantValue),
-          warehouse: parseNumber(warehouseValue),
+          restaurant: bal.kitchen,
+          warehouse: bal.warehouse,
           hasRestaurant,
           hasWarehouse,
           noWarehouse: Boolean(item.noWarehouse),
-          filled: hasRestaurant || hasWarehouse,
-          lowInHouse: false,
-          lowWarehouse: false,
-          task: null as string | null,
+          filled: bal.total > 0,
+          lowInHouse,
+          lowWarehouse,
+          task,
         };
       });
-
-      for (let i = 0; i < stockRows.length; i += 1) {
-        const item = stockItems[i];
-        const row = stockRows[i];
-        const { lowInHouse, lowWarehouse, task } = evaluateStaffStock(
-          item,
-          row.hasRestaurant ? row.restaurant : null,
-          row.hasWarehouse ? row.warehouse : null,
-        );
-        row.lowInHouse = lowInHouse;
-        row.lowWarehouse = lowWarehouse;
-        row.task = task;
-      }
 
       const labels = buildStaffInventoryPdfLabels(
         lang,
@@ -204,11 +240,10 @@ export function PrepStockPage() {
     } finally {
       setExportingPdf(false);
     }
-  }, [date, employee, exportingPdf, fields, lang, stockItems, t]);
+  }, [balances, date, employee, exportingPdf, lang, stockItems, t]);
 
-  if (!hydrated) {
-    return <div className="orders-loading">{t("loading")}</div>;
-  }
+  if (loading) return <OrdersLoading />;
+  if (error) return <OrdersError text={error} onRetry={() => void load()} />;
 
   return (
     <div className="orders-prepStock">
@@ -226,12 +261,6 @@ export function PrepStockPage() {
             onChange={(event) => handleEmployeeChange(event.target.value)}
           />
         </label>
-      </div>
-
-      <div className="orders-prepStockActions">
-        <button type="button" className="orders-btn ghost" onClick={handleNewDay}>
-          {t("prep_stock_new_day")}
-        </button>
       </div>
 
       <p className="orders-prepStockMode">
@@ -254,10 +283,10 @@ export function PrepStockPage() {
         <button
           type="button"
           className="orders-btn primary"
-          onClick={handleStockPasteApply}
-          disabled={!stockPaste.trim()}
+          onClick={() => void handleStockPasteApply()}
+          disabled={!stockPaste.trim() || busyItem === "__paste__"}
         >
-          {t("prep_stock_paste_apply")}
+          {busyItem === "__paste__" ? t("prep_stock_busy") : t("prep_stock_paste_apply")}
         </button>
         {stockPasteResult ? (
           <div
@@ -285,41 +314,82 @@ export function PrepStockPage() {
         {stockItems.map((item) => {
           const label = item.name[lang] || item.name.en;
           const secondary = lang === "en" ? item.name.vn : item.name.en;
-          const values = fields[item.id] ?? { restaurant: "", warehouse: "" };
+          const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
+          const unit = staffStockUnit(item);
+          const busy = busyItem === item.id;
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
                 {secondary && secondary !== label ? <span> / {secondary}</span> : null}
+                <em className="orders-prepStockUnitTag">{unit}</em>
               </div>
-              <div className={`orders-prepStockRow ${item.noWarehouse ? "single" : ""}`}>
-                <label className="orders-prepStockField">
-                  <span>{t("prep_stock_in_house")}</span>
-                  <span className="orders-prepStockUnitInput">
-                    <input
-                      inputMode="decimal"
-                      value={values.restaurant}
-                      onChange={(event) =>
-                        handleStockFieldChange(item.id, "restaurant", event.target.value)
-                      }
-                    />
-                    <em>{staffStockUnit(item)}</em>
-                  </span>
-                </label>
+
+              <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
+                <div className="orders-prepStockBal">
+                  <span>{t("prep_stock_kitchen")}</span>
+                  <strong>{fmtQty(bal.kitchen)}</strong>
+                </div>
                 {item.noWarehouse ? null : (
-                  <label className="orders-prepStockField">
+                  <div className="orders-prepStockBal">
                     <span>{t("prep_stock_warehouse")}</span>
-                    <span className="orders-prepStockUnitInput">
-                      <input
-                        inputMode="decimal"
-                        value={values.warehouse}
-                        onChange={(event) =>
-                          handleStockFieldChange(item.id, "warehouse", event.target.value)
-                        }
-                      />
-                      <em>{staffStockUnit(item)}</em>
-                    </span>
-                  </label>
+                    <strong>{fmtQty(bal.warehouse)}</strong>
+                  </div>
+                )}
+                <div className="orders-prepStockBal total">
+                  <span>{t("prep_stock_total")}</span>
+                  <strong>{fmtQty(bal.total)}</strong>
+                </div>
+              </div>
+
+              <div className="orders-prepStockMoves">
+                <button
+                  type="button"
+                  className="orders-btn dark"
+                  disabled={busy}
+                  onClick={() => askMove(item, "produce", t("prep_stock_produce"))}
+                >
+                  {t("prep_stock_produce")}
+                </button>
+                {item.noWarehouse ? null : (
+                  <>
+                    <button
+                      type="button"
+                      className="orders-btn primary"
+                      disabled={busy}
+                      onClick={() => askMove(item, "to_warehouse", t("prep_stock_to_warehouse"))}
+                    >
+                      {t("prep_stock_to_warehouse")}
+                    </button>
+                    <button
+                      type="button"
+                      className="orders-btn ghost"
+                      disabled={busy}
+                      onClick={() => askMove(item, "to_kitchen", t("prep_stock_to_kitchen"))}
+                    >
+                      {t("prep_stock_to_kitchen")}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="orders-btn ghost"
+                  disabled={busy}
+                  onClick={() => askMove(item, "writeoff_kitchen", t("prep_stock_writeoff_kitchen"))}
+                >
+                  {t("prep_stock_writeoff_kitchen")}
+                </button>
+                {item.noWarehouse ? null : (
+                  <button
+                    type="button"
+                    className="orders-btn ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      askMove(item, "writeoff_warehouse", t("prep_stock_writeoff_warehouse"))
+                    }
+                  >
+                    {t("prep_stock_writeoff_warehouse")}
+                  </button>
                 )}
               </div>
             </div>
@@ -335,6 +405,43 @@ export function PrepStockPage() {
       >
         {exportingPdf ? t("prep_stock_sharing") : t("prep_stock_share_pdf")}
       </button>
+
+      {dialog ? (
+        <div className="orders-prepStockModal" role="dialog" aria-modal="true">
+          <div className="orders-prepStockModalCard">
+            <h3>{dialog.title}</h3>
+            <p>
+              {(dialog.item.name[lang] || dialog.item.name.en) +
+                ` · ${staffStockUnit(dialog.item)}`}
+            </p>
+            <label>
+              <span>{t("prep_stock_qty_prompt")}</span>
+              <input
+                inputMode="decimal"
+                autoFocus
+                value={dialogQty}
+                onChange={(event) => setDialogQty(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submitMove();
+                }}
+              />
+            </label>
+            <div className="orders-prepStockModalActions">
+              <button type="button" className="orders-btn ghost" onClick={() => setDialog(null)}>
+                {t("place_cancel") || "Cancel"}
+              </button>
+              <button
+                type="button"
+                className="orders-btn primary"
+                disabled={busyItem === dialog.item.id}
+                onClick={() => void submitMove()}
+              >
+                {busyItem === dialog.item.id ? t("prep_stock_busy") : t("prep_stock_move_ok")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
