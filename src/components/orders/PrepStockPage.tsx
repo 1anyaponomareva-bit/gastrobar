@@ -23,7 +23,6 @@ import {
   PrepStockApiError,
   prepStockErrorMessage,
   readPrepStockBalanceCache,
-  setPrepStockWarehouseFromPaste,
   type PrepStockBalanceRow,
   type PrepStockMoveType,
 } from "@/lib/orders/prepStockApi";
@@ -34,7 +33,6 @@ import {
   setStoredEmployee,
   todayIsoDate,
 } from "@/lib/staffInventoryStorage";
-import { parseStockMessage } from "@/lib/staffStockParser";
 import { OrdersError } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
@@ -95,11 +93,6 @@ export function PrepStockPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [busyItem, setBusyItem] = useState<string | null>(null);
-  const [stockPaste, setStockPaste] = useState("");
-  const [stockPasteResult, setStockPasteResult] = useState<{
-    filled: number;
-    unrecognized: string[];
-  } | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [dialog, setDialog] = useState<{
     item: StaffStockItem;
@@ -182,11 +175,6 @@ export function PrepStockPage() {
     }
   };
 
-  const itemById = useCallback(
-    (id: string) => stockItems.find((item) => item.id === id) ?? null,
-    [stockItems],
-  );
-
   const submitMove = async () => {
     if (!dialog) return;
     const packSize = staffStockPackSize(dialog.item);
@@ -221,39 +209,6 @@ export function PrepStockPage() {
           ? t("prep_stock_insufficient")
           : prepStockErrorMessage(err, t("error_network"), t("prep_stock_move_fail")),
       );
-    } finally {
-      setBusyItem(null);
-    }
-  };
-
-  const handleStockPasteApply = async () => {
-    const { values, unrecognized, noWarehouse } = parseStockMessage(stockPaste, stockItems);
-    if (!values.length) {
-      setStockPasteResult({ filled: 0, unrecognized: [...unrecognized, ...noWarehouse] });
-      return;
-    }
-    setBusyItem("__paste__");
-    try {
-      const result = await setPrepStockWarehouseFromPaste(
-        values.map((row) => {
-          const item = itemById(row.itemId);
-          const raw = Number(String(row.warehouse).replace(",", ".")) || 0;
-          const packSize = item ? staffStockPackSize(item) : null;
-          // Zalo warehouse messages are pack counts when the item is packed.
-          return {
-            itemId: row.itemId,
-            warehouse: packSize ? combinePackQty(raw, 0, packSize) : raw,
-          };
-        }),
-      );
-      setBalances(toMap(result.balances));
-      setStockPaste("");
-      setStockPasteResult({
-        filled: result.updated,
-        unrecognized: [...unrecognized, ...noWarehouse],
-      });
-    } catch (err) {
-      window.alert(prepStockErrorMessage(err, t("error_network"), t("prep_stock_move_fail")));
     } finally {
       setBusyItem(null);
     }
@@ -458,55 +413,11 @@ export function PrepStockPage() {
         </div>
       </section>
 
-      <div className="orders-prepStockPaste">
-        <label htmlFor="orders-prep-stock-paste">{t("prep_stock_paste_title")}</label>
-        <textarea
-          id="orders-prep-stock-paste"
-          rows={5}
-          placeholder={t("prep_stock_paste_placeholder")}
-          value={stockPaste}
-          onChange={(event) => {
-            setStockPaste(event.target.value);
-            setStockPasteResult(null);
-          }}
-        />
-        <button
-          type="button"
-          className="orders-btn primary"
-          onClick={() => void handleStockPasteApply()}
-          disabled={!stockPaste.trim() || busyItem === "__paste__"}
-        >
-          {busyItem === "__paste__" ? t("prep_stock_busy") : t("prep_stock_paste_apply")}
-        </button>
-        {stockPasteResult ? (
-          <div
-            className={`orders-prepStockPasteResult ${stockPasteResult.filled ? "" : "error"}`}
-            role="status"
-          >
-            {stockPasteResult.filled
-              ? t("prep_stock_paste_filled", { count: stockPasteResult.filled })
-              : t("prep_stock_paste_nothing")}
-            {stockPasteResult.unrecognized.length ? (
-              <div className="orders-prepStockUnknown">
-                {t("prep_stock_paste_unrecognized")}
-                <ul>
-                  {stockPasteResult.unrecognized.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
       <div className="orders-prepStockList">
         {stockItems.map((item) => {
           const label = item.name[lang] || item.name.en;
           const secondary = lang === "en" ? item.name.vn : item.name.en;
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
-          const unit = staffStockUnit(item);
-          const packSize = staffStockPackSize(item);
           const busy = busyItem === item.id;
           return (
             <div key={item.id} className="orders-prepStockCard">
