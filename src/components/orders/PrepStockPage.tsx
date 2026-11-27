@@ -242,6 +242,31 @@ export function PrepStockPage() {
     }
   }, [balances, date, employee, exportingPdf, lang, stockItems, t]);
 
+  const overviewRows = useMemo(() => {
+    return stockItems.map((item) => {
+      const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
+      return {
+        id: item.id,
+        name: item.name[lang] || item.name.en,
+        unit: staffStockUnit(item),
+        kitchen: bal.kitchen,
+        warehouse: item.noWarehouse ? null : bal.warehouse,
+        total: bal.total,
+        hasStock: bal.total > 0,
+      };
+    });
+  }, [balances, lang, stockItems]);
+
+  const overviewInStock = useMemo(() => overviewRows.filter((row) => row.hasStock), [overviewRows]);
+  const kitchenSum = useMemo(
+    () => overviewRows.reduce((sum, row) => sum + row.kitchen, 0),
+    [overviewRows],
+  );
+  const warehouseSum = useMemo(
+    () => overviewRows.reduce((sum, row) => sum + (row.warehouse ?? 0), 0),
+    [overviewRows],
+  );
+
   if (loading) return <OrdersLoading />;
   if (error) return <OrdersError text={error} onRetry={() => void load()} />;
 
@@ -267,6 +292,52 @@ export function PrepStockPage() {
         {t("prep_stock_mode", { venue: VENUE_LABEL, count: stockItems.length })}
       </p>
       <p className="orders-prepStockNote">{t("prep_stock_temp_note")}</p>
+
+      <section className="orders-prepStockOverview" aria-label={t("prep_stock_overview_title")}>
+        <div className="orders-prepStockOverviewHead">
+          <h2>{t("prep_stock_overview_title")}</h2>
+          <div className="orders-prepStockOverviewTotals">
+            <span>
+              {t("prep_stock_kitchen")}: <strong>{fmtQty(kitchenSum)}</strong>
+            </span>
+            <span>
+              {t("prep_stock_warehouse")}: <strong>{fmtQty(warehouseSum)}</strong>
+            </span>
+            <span>
+              {t("prep_stock_total")}: <strong>{fmtQty(kitchenSum + warehouseSum)}</strong>
+            </span>
+          </div>
+        </div>
+        {overviewInStock.length === 0 ? (
+          <p className="orders-prepStockOverviewEmpty">{t("prep_stock_overview_empty")}</p>
+        ) : (
+          <div className="orders-prepStockOverviewTableWrap">
+            <table className="orders-prepStockOverviewTable">
+              <thead>
+                <tr>
+                  <th>{t("prep_stock_overview_item")}</th>
+                  <th>{t("prep_stock_kitchen")}</th>
+                  <th>{t("prep_stock_warehouse")}</th>
+                  <th>{t("prep_stock_total")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overviewInStock.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <span className="orders-prepStockOverviewName">{row.name}</span>
+                      <em>{row.unit}</em>
+                    </td>
+                    <td>{fmtQty(row.kitchen)}</td>
+                    <td>{row.warehouse == null ? "—" : fmtQty(row.warehouse)}</td>
+                    <td>{fmtQty(row.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <div className="orders-prepStockPaste">
         <label htmlFor="orders-prep-stock-paste">{t("prep_stock_paste_title")}</label>

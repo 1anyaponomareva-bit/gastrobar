@@ -940,6 +940,111 @@
   word-break: break-word;
 }
 
+.orders-prepStockOverview {
+  background: var(--orders-card);
+  border: 1px solid var(--orders-line);
+  border-radius: 16px;
+  padding: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.orders-prepStockOverviewHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.orders-prepStockOverviewHead h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.orders-prepStockOverviewTotals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-muted);
+}
+
+.orders-prepStockOverviewTotals strong {
+  color: var(--orders-text);
+  font-weight: 800;
+}
+
+.orders-prepStockOverviewEmpty {
+  margin: 0;
+  color: var(--orders-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.orders-prepStockOverviewTableWrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.orders-prepStockOverviewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.orders-prepStockOverviewTable th,
+.orders-prepStockOverviewTable td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--orders-line);
+  text-align: right;
+  vertical-align: top;
+}
+
+.orders-prepStockOverviewTable th:first-child,
+.orders-prepStockOverviewTable td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.orders-prepStockOverviewTable th:last-child,
+.orders-prepStockOverviewTable td:last-child {
+  padding-right: 0;
+  font-weight: 800;
+}
+
+.orders-prepStockOverviewTable th {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--orders-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.orders-prepStockOverviewName {
+  display: block;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.orders-prepStockOverviewTable td em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orders-muted);
+  text-transform: uppercase;
+}
+
 .orders-prepStockPaste {
   display: flex;
   flex-direction: column;
