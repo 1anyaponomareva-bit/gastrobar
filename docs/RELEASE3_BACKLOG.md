@@ -1,18 +1,20 @@
-# Release 3 — Backlog (Post Production Deploy)
+# Release 3 — Backlog (Post Production + UI/Poster fix)
 
-**Updated:** Phase 10H/10I deploy · production git **`0767f22`**  
-**Report:** `docs/RELEASE3_PRODUCTION_DEPLOY_REPORT.md`
+**Updated:** UI periods visibility + permanent Poster ban  
+**Production:** https://gastrofood.vn · see `docs/RELEASE3_UI_FIX_POSTER_BAN.md`
 
 ---
 
-## Production status
+## Forbidden by owner
 
 | Item | Status |
 |------|--------|
-| R3 SQL (15 migrations) | **Applied on production** |
-| `main` / FE production | **`0767f22`** · Vercel **Ready** · https://gastrofood.vn |
-| Owner final user acceptance | **Pending** |
-| Release 4 | **Not started** |
+| **Poster POS ↔ ERP sync / auto-sync / live API** | **FORBIDDEN BY OWNER** (permanent) |
+| Poster tokens for ERP sync | Do not request |
+| Background Poster sync jobs | Do not create |
+| Manual Poster file import into ERP | Only after **separate** explicit owner OK |
+
+GASTROFOOD ERP operates **independently** of Poster POS. Historical poster-sourced rows may remain; no new sync.
 
 ---
 
@@ -21,20 +23,19 @@
 ### Production Blocker
 | Item | Notes |
 |------|-------|
-| Owner final acceptance of Release 3 UI | Login verified; authenticated walkthrough pending owner |
+| Owner final acceptance of Release 3 | Pending (periods menu fixed; re-check) |
 
 ### Deferred Integration
 | Item | Notes |
 |------|-------|
 | Live GrabMerchant raw CSV/XLSX | Needs real export sample |
-| Live Poster order auto-sync | OFF |
 | Staff Management → payroll live import | Manual accrual only |
 | Campaign ad allocation to dishes | Methodology deferred |
 
 ### Disabled Feature
 | Item | Notes |
 |------|-------|
-| Auto-consume | **OFF** on production |
+| Auto-consume | **OFF** |
 | Expense auto-allocation | **OFF** |
 | Grab raw merchant importer | Unsupported without sample |
 
@@ -44,11 +45,16 @@
 | CIT / Net Profit | `accountant_tbd` |
 | Input VAT edge recognition | Pending allowed |
 | Depreciation useful-life policy | `accountant_tbd` |
-| Official tax declaration packaging | Not claimed |
+| Proposed SQL Poster forbid in RPCs | `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` |
 
 ### Future Improvement
 | Item | Notes |
 |------|-------|
 | Full General Ledger | Out of R3 |
-| Authenticated screenshot pack (owner session) | Optional completeness |
-| Auto-consume go-live plan | `docs/RELEASE3_AUTO_CONSUME_PLAN.md` |
+| Auto-consume go-live | `docs/RELEASE3_AUTO_CONSUME_PLAN.md` |
+| Release 4 | **Not started** |
+
+### Removed from plan
+| Item | Notes |
+|------|-------|
+| Live Poster Integration / Auto-Sync | **FORBIDDEN BY OWNER** — removed from mandatory backlog |

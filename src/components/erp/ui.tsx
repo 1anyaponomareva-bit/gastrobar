@@ -90,6 +90,11 @@ export function errorText(codeOrErr: unknown, detail?: string): string {
       "Financial period is closed — historical edits are blocked",
       "Kỳ tài chính đã đóng — không được sửa lịch sử",
     ),
+    ERP_POSTER_SYNC_FORBIDDEN: T(
+      "Синхронизация ERP с Poster POS запрещена владельцем. GASTROFOOD работает независимо от Poster.",
+      "ERP ↔ Poster POS sync is forbidden by owner. GASTROFOOD runs independently of Poster.",
+      "Đồng bộ ERP với Poster POS bị chủ sở hữu cấm. GASTROFOOD hoạt động độc lập với Poster.",
+    ),
     ERP_NOT_POSTED: T("Документ ещё не проведён", "The document is not completed", "Chứng từ chưa ghi sổ"),
     ERP_CANCEL_BLOCKED: T(
       "Нельзя отменить: продукты из этого документа уже использованы в",

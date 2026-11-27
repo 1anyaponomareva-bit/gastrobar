@@ -132,7 +132,9 @@
 }
 
 .erpSideGroup.open .erpSideSub {
-  grid-template-rows: 1fr;
+  /* Use max-content so long Finance lists (periods/audit/…) are not clipped.
+     Parent .erpSideNav scrolls; inner overflow:hidden was hiding lower items. */
+  grid-template-rows: max-content;
 }
 
 .erpSideSub > div {
@@ -140,6 +142,11 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.erpSideGroup.open .erpSideSub > div {
+  overflow: visible;
+  min-height: auto;
 }
 
 .erpSideNav .erpSideSub a {

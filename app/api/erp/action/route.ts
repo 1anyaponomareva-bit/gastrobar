@@ -1,10 +1,27 @@
 import { after } from "next/server";
 import { extraNamesOnly } from "@/lib/erp/contentLang";
+import {
+  POSTER_ERP_SYNC_FORBIDDEN_CODE,
+  POSTER_ERP_SYNC_FORBIDDEN_DETAIL,
+  wouldSyncPosterToErp,
+} from "@/lib/erp/posterErpSyncForbidden";
 import { publishPrepStateToStaff, publishProductPrepToStaff } from "@/lib/erp/publishPrepToStaff";
 import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
 import type { ErpAction } from "@/lib/erp/types";
 import { mergeOldStaffCatalog, refreshStaffMirror } from "@/lib/erp/staffCatalogSource";
+
+function assertPosterErpSyncAllowed(input: {
+  source_system?: unknown;
+  source?: unknown;
+  poster_payload?: unknown;
+  live_fetch?: unknown;
+  auto_sync?: unknown;
+}) {
+  if (wouldSyncPosterToErp(input)) {
+    throw new ErpHttpError(403, POSTER_ERP_SYNC_FORBIDDEN_CODE, POSTER_ERP_SYNC_FORBIDDEN_DETAIL);
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -416,7 +433,9 @@ export async function POST(request: Request) {
         return timing.json({ id, patch: await fresh(FINANCE_PARTS) });
       }
       case "saveSalesDocument": {
-        const id = await rpc("erp_save_sales_document", { p: object(a.value, "value"), p_actor: actor });
+        const value = object(a.value, "value");
+        assertPosterErpSyncAllowed(value);
+        const id = await rpc("erp_save_sales_document", { p: value, p_actor: actor });
         return timing.json({ id, patch: await fresh(SALES_PARTS) });
       }
       case "postSalesDocument": {
@@ -442,6 +461,11 @@ export async function POST(request: Request) {
       }
       case "linkSalesSource": {
         const value = object(a.value, "value");
+        assertPosterErpSyncAllowed({
+          source_system: value.source_system,
+          source: value.source_system,
+          poster_payload: value.raw_payload,
+        });
         const id = await rpc("erp_sales_link_source", {
           p_sales_id: uuid(value.sales_document_id),
           p_source: String(value.source_system ?? ""),
@@ -463,6 +487,10 @@ export async function POST(request: Request) {
       }
       case "validateSalesImportStub": {
         const value = object(a.value, "value");
+        assertPosterErpSyncAllowed({
+          source_system: value.source_system ?? "import",
+          source: value.source_system ?? "import",
+        });
         const id = await rpc("erp_sales_import_stub_validate", {
           p_source: String(value.source_system ?? "import"),
           p_rows: value.rows ?? [],

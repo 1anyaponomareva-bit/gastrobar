@@ -1,0 +1,6 @@
+fix(erp): show Financial periods in Finance nav; forbid Poster sync
+
+- Fix sidebar clip so periods/audit are visible; raise menu order
+- Server-side ERP_POSTER_SYNC_FORBIDDEN on sales/import/link actions
+- Backlog: Poster Auto-Sync FORBIDDEN BY OWNER (permanent)
+- Proposed SQL guard documented; not applied without owner OK
