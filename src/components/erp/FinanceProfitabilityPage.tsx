@@ -78,7 +78,7 @@ export function FinanceProfitabilityOverviewPage() {
 
   const channels = (data?.channels as Array<Record<string, unknown>>) || [];
   const comp = (data?.completeness as Record<string, unknown>) || {};
-  const totals = channels.reduce(
+  const totals = channels.reduce<{ net: number; cogs: number; gp: number }>(
     (a, c) => ({
       net: a.net + Number(c.net_revenue || 0),
       cogs: a.cogs + Number(c.total_actual_cogs || 0),

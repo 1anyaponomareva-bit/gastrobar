@@ -95,11 +95,26 @@ export function ErpFormHost({ children }: { children: ReactNode }) {
     [reload],
   );
 
+  const run = useCallback(
+    async <T,>(action: ErpAction, successText: string | false = false): Promise<T> => {
+      const failBox: { error?: string; detail?: string } = {};
+      const data = await act<T>(action, successText);
+      // ErpFormHost act has no onFail; re-throw generic failure when null
+      if (data) return data;
+      const err = new Error(failBox.error ?? "server") as Error & { detail?: string; code?: string };
+      err.code = failBox.error ?? "server";
+      err.detail = failBox.detail;
+      throw err;
+    },
+    [act],
+  );
+
   const value: ErpContextValue = {
     email: email ?? "",
     state,
     reload,
     act,
+    run,
     busy,
     notify: setNotice,
     docsVersion: 0,

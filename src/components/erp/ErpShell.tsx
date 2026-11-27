@@ -32,6 +32,10 @@ export type ErpContextValue = {
    * returns as changed (or reloads everything when it returns none).
    */
   act: <T = Record<string, unknown>>(action: ErpAction, successText?: string | false, options?: ActOptions) => Promise<T | null>;
+  /**
+   * Same as `act`, but throws on failure (for try/catch UI pages). Success toast suppressed by default.
+   */
+  run: <T = Record<string, unknown>>(action: ErpAction, successText?: string | false) => Promise<T>;
   busy: boolean;
   notify: (notice: Notice) => void;
   /** Grows after every document change, so document lists know to refresh. */
@@ -343,10 +347,28 @@ function ErpData({
     [onExpired, reload],
   );
 
+  const run = useCallback(
+    async <T,>(action: ErpAction, successText: string | false = false): Promise<T> => {
+      const failBox: { error?: string; detail?: string } = {};
+      const data = await act<T>(action, successText, {
+        onFail: (payload) => {
+          failBox.error = typeof payload.error === "string" ? payload.error : undefined;
+          failBox.detail = typeof payload.detail === "string" ? payload.detail : undefined;
+        },
+      });
+      if (data) return data;
+      const err = new Error(failBox.error ?? "server") as Error & { detail?: string; code?: string };
+      err.code = failBox.error ?? "server";
+      err.detail = failBox.detail;
+      throw err;
+    },
+    [act],
+  );
+
   const items = navItems();
 
   return (
-    <ErpContext.Provider value={{ email, state, reload, act, busy, notify: setNotice, docsVersion }}>
+    <ErpContext.Provider value={{ email, state, reload, act, run, busy, notify: setNotice, docsVersion }}>
       <div className="erp erpApp">
         <aside className="erpSide">
           <div className="erpSideBrand">
