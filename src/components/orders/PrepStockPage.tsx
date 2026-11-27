@@ -534,22 +534,18 @@ export function PrepStockPage() {
         <div className="orders-prepStockModal" role="dialog" aria-modal="true">
           <div className="orders-prepStockModalCard">
             <h3>{dialog.title}</h3>
-            <p>
-              {(dialog.item.name[lang] || dialog.item.name.en) +
-                ` · ${
-                  staffStockPackSize(dialog.item)
-                    ? t("prep_stock_pack_unit", { size: staffStockPackSize(dialog.item)! })
-                    : staffStockUnit(dialog.item)
-                }`}
+            <p className="orders-prepStockModalItem">
+              {dialog.item.name[lang] || dialog.item.name.en}
             </p>
             <p className="orders-prepStockModalHint">
-              {dialog.mode === "set" ? t("prep_stock_set_hint") : t("prep_stock_add_hint")}
+              {staffStockPackSize(dialog.item)
+                ? t("prep_stock_pack_rule", { size: staffStockPackSize(dialog.item)! })
+                : dialog.mode === "set"
+                  ? t("prep_stock_set_hint")
+                  : t("prep_stock_add_hint")}
             </p>
             {staffStockPackSize(dialog.item) ? (
               <>
-                <p className="orders-prepStockModalHint">
-                  {t("prep_stock_pack_size_line", { size: staffStockPackSize(dialog.item)! })}
-                </p>
                 <div className="orders-prepStockPackInputs">
                   <label>
                     <span>{t("prep_stock_packs")}</span>

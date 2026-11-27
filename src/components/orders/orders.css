@@ -1331,17 +1331,24 @@ button.orders-prepStockBal.tap:active {
   margin: -4px 0 10px !important;
   font-size: 12px !important;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .orders-prepStockPackInputs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   margin-bottom: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .orders-prepStockPackInputs label {
   margin-bottom: 0 !important;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .orders-prepStockPackTotal {
@@ -1367,27 +1374,47 @@ button.orders-prepStockBal.tap:active {
   align-items: flex-end;
   justify-content: center;
   padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .orders-prepStockModalCard {
   width: 100%;
-  max-width: 420px;
+  max-width: min(420px, 100%);
+  max-height: min(90dvh, 100%);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border-radius: 18px;
   padding: 16px;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .orders-prepStockModalCard h3 {
   margin: 0 0 4px;
   font-size: 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.orders-prepStockModalItem {
+  margin: 0 0 8px !important;
+  font-weight: 700 !important;
+  color: var(--orders-text) !important;
 }
 
 .orders-prepStockModalCard p {
   margin: 0 0 12px;
   color: var(--orders-muted);
   font-size: 13px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .orders-prepStockModalCard label {
@@ -1395,6 +1422,8 @@ button.orders-prepStockBal.tap:active {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .orders-prepStockModalCard label span {
@@ -1408,6 +1437,10 @@ button.orders-prepStockBal.tap:active {
   border: 1px solid var(--orders-line);
   border-radius: 12px;
   min-height: 48px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 0 12px;
   font-size: 18px;
   font-weight: 800;
@@ -1415,8 +1448,20 @@ button.orders-prepStockBal.tap:active {
 
 .orders-prepStockModalActions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+  width: 100%;
+}
+
+.orders-prepStockModalActions .orders-btn {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (min-width: 420px) {
+  .orders-prepStockPackInputs {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 .orders-prepStockShare {
