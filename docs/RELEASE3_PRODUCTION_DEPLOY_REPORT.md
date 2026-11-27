@@ -1,7 +1,8 @@
 # Release 3 — Production Deploy Report (Phase 10H / 10I)
 
 **Date:** 2026-11-27 (UTC+7)  
-**Authorized version:** `0767f22`  
+**Authorized app version:** `0767f22`  
+**Deploy report commit:** `1c77ed5`  
 **Status:** **DEPLOYED — awaiting owner final user acceptance**
 
 ---
