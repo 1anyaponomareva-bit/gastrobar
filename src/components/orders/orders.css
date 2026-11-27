@@ -118,8 +118,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
   padding: 12px max(12px, env(safe-area-inset-right, 0px)) 0
     max(12px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
 }
 
 .orders-tabs {
@@ -134,13 +137,21 @@
 }
 
 .orders-tabs.orders-tabs3 {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .orders-tabs.orders-tabs3 a,
 .orders-tabs.orders-tabs3 .orders-tab {
   font-size: 13px;
   padding: 12px 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .orders-stage {
@@ -149,13 +160,22 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .orders-stage > * {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
 .orders-stage > .orders-catalog,
@@ -842,12 +862,19 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .orders-prepStockMeta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .orders-prepStockBox {
@@ -858,6 +885,9 @@
   border: 1px solid var(--orders-line);
   border-radius: 14px;
   padding: 10px 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .orders-prepStockBox span {
@@ -876,6 +906,10 @@
   font-weight: 700;
   color: var(--orders-text);
   min-height: 28px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .orders-prepStockActions {
@@ -887,6 +921,8 @@
   margin: 0;
   font-weight: 800;
   font-size: 14px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .orders-prepStockNote {
@@ -894,6 +930,8 @@
   color: var(--orders-muted);
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .orders-prepStockPaste {
@@ -904,15 +942,22 @@
   border: 1px solid var(--orders-line);
   border-radius: 16px;
   padding: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .orders-prepStockPaste label {
   font-size: 13px;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .orders-prepStockPaste textarea {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 110px;
   resize: vertical;
   border: 1px solid var(--orders-line);
@@ -921,6 +966,12 @@
   font-size: 14px;
   line-height: 1.4;
   background: #faf9f6;
+  box-sizing: border-box;
+}
+
+.orders-prepStockPaste .orders-btn {
+  width: 100%;
+  max-width: 100%;
 }
 
 .orders-prepStockPasteResult {
@@ -930,6 +981,9 @@
   color: var(--orders-ok);
   font-size: 13px;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .orders-prepStockPasteResult.error {
@@ -945,12 +999,16 @@
 .orders-prepStockUnknown ul {
   margin: 6px 0 0;
   padding-left: 18px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .orders-prepStockList {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 .orders-prepStockCard {
@@ -958,12 +1016,20 @@
   border: 1px solid var(--orders-line);
   border-radius: 16px;
   padding: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .orders-prepStockName {
   font-weight: 800;
   font-size: 15px;
   margin-bottom: 10px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .orders-prepStockName span {
@@ -974,18 +1040,22 @@
 
 .orders-prepStockRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .orders-prepStockRow.single {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .orders-prepStockField {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .orders-prepStockField > span:first-child {
@@ -1005,19 +1075,26 @@
   background: #faf9f6;
   padding: 0 10px;
   min-height: 44px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .orders-prepStockUnitInput input {
-  flex: 1;
+  flex: 1 1 0;
+  width: 100%;
   min-width: 0;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 16px;
   font-weight: 700;
+  box-sizing: border-box;
 }
 
 .orders-prepStockUnitInput em {
+  flex: 0 0 auto;
   font-style: normal;
   color: var(--orders-muted);
   font-size: 12px;
@@ -1027,16 +1104,31 @@
 .orders-prepStockShare {
   margin-top: 4px;
   margin-bottom: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .orders-prepStockMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-prepStockRow {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-tabs.orders-tabs3 a,
+  .orders-tabs.orders-tabs3 .orders-tab {
+    font-size: 11px;
+    padding: 10px 2px;
+    line-height: 1.15;
+  }
 }
 
 @media (max-width: 380px) {
   .orders-name,
   .orders-headingSupplier {
     font-size: 16px;
-  }
-
-  .orders-prepStockMeta {
-    grid-template-columns: 1fr;
   }
 
   .orders-tabs.orders-tabs3 a {
