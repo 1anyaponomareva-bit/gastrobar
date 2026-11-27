@@ -1,49 +1,72 @@
-# Release 3 — Backlog
+# Release 3 — Backlog (Phase 10)
 
-**Updated:** Phase 9H (`release-3-phase9h`)  
-**Rule:** items are **not** fully implemented until completed and tested on real formats / production acceptance.
+**Branch:** `release-3-final`  
+**Base:** Phase 9H `f318635` + Vercel typecheck fix `5a56a2b` (cherry-pick of `8541c16`)  
+**Updated:** Phase 10A–10G acceptance prep  
 
-## Status board
+**Rule:** disabled / untested / accountant-pending items are **not** fully complete.
 
-| Item | Status | Notes | Deadline gate |
-|------|--------|-------|---------------|
-| Dish BOM Explosion | **Done (9F-A)** | Snapshots + modifiers + prep stop | — |
-| Actual COGS Integration | **Done (9F-B)** | FIFO Actual; pending COGS; auto-consume still OFF | — |
-| Live GrabMerchant Import | **Partial (9D)** | Normalized OK; raw Grab blocked until sample | R3 final |
-| Live Poster Import | Open | Beyond validate-only stub | R3 final |
-| Auto-Consume Activation | **Open / OFF** | Not production-activated | Owner OK |
-| Production UI Acceptance | Open | Published FE + live screenshots | R3 final |
-| Full Regression Tests | Open | Beyond presence smoke | R3 final |
-| Tax Policy Approval | Open | Period/CIT/Input VAT recognition | Accountant |
-| Campaign ad allocation to dishes | Open | Methodology deferred | Owner |
-| Financial period hard lock | **Done (9H local)** | Close/protect/reopen/audit; prod SQL pending | Owner OK |
-| Full General Ledger | Open | Not in scope without separate OK | Owner |
+---
 
-## Phase sequencing
+## Classification
 
-- **9E** VAT Settlement — CONDITIONAL  
-- **9F** Actual COGS & Profitability — CONDITIONAL  
-- **9G** Operating Expenses, Accrual P&L & Cash Flow — CONDITIONAL  
-- **9H** Financial Periods, Closing & Audit — CONDITIONAL (this phase)  
-- **Phase 10** — **not started**
+### Production Blocker
+| Item | Notes |
+|------|-------|
+| Owner OK for production SQL (9B–9H migrations) | Not applied on prod |
+| Owner OK for merge → `main` | Not done |
+| Owner OK for production FE deploy | Not done |
+| Fresh production backup immediately before publish | Required at 10H |
 
-## Owner / accountant actions
+### Deferred Integration
+| Item | Notes |
+|------|-------|
+| Live GrabMerchant raw CSV/XLSX | Partial — needs real export sample |
+| Live Poster order sync (write path) | Read/contract only; auto-sync OFF |
+| Staff Management → payroll live import | Manual accrual OK; live import deferred |
+| Campaign ad allocation to dishes | Methodology deferred |
 
-1. Real GrabMerchant export sample.  
-2. Confirm CIT rate / status (currently `accountant_tbd`).  
-3. Confirm depreciation useful-life policy.  
-4. Confirm when auto expense allocation methods may be enabled.  
-5. Confirm Staff Management → payroll accrual import contract for live data.  
-6. Accept Phase 9H + authorize production SQL for 9B–9H when ready.  
-7. Confirm finance close/reopen actor lists for production settings.
+### Disabled Feature
+| Item | Notes |
+|------|-------|
+| Auto-consume stock on sales post | **OFF** (`sales_auto_consume_stock=false`) |
+| Expense auto-allocation | **OFF** |
+| Grab raw merchant file importer | Unsupported format → UI message; normalized path OK |
 
-## Remaining before Release 3 publish
+### Accountant Approval Required
+| Item | Notes |
+|------|-------|
+| CIT rate / Net Profit | `accountant_tbd` → Pending Tax Calculation |
+| Input VAT recognition policy edge cases | Pending marked, not auto-declared |
+| Depreciation useful-life policy | `depreciation_policy_status=accountant_tbd` |
+| Tax period kind (monthly/quarterly) | Configurable; not filed as official declaration |
 
-1. Owner accept 9H report.  
-2. Production migrations (owner-gated).  
-3. Publish frontend + live acceptance.  
-4. Live Grab / Poster imports.  
-5. Auto-consume decision (default OFF).  
-6. Accountant tax/CIT/depreciation sign-off.  
-7. Full regression.  
-8. Do **not** start Phase 10 until R3 publish gate cleared.
+### Future Improvement
+| Item | Notes |
+|------|-------|
+| Full General Ledger | Out of R3 scope |
+| Phase 10H/10I production publish | Separate owner confirmation |
+| Release 4 | Not started |
+| Richer UI live screenshots on staging FE+DB | Preview Ready; prod DB not used for test ops |
+
+---
+
+## Status board (R3 modules)
+
+| Module | Status | Gate |
+|--------|--------|------|
+| 9A Architecture | Done (design) | — |
+| 9B Sales & Output VAT | CONDITIONAL / local PASS | Prod SQL |
+| 9C Input VAT Register | CONDITIONAL / local PASS | Prod SQL |
+| 9D Platform Settlements | CONDITIONAL / Partial Grab raw | Sample + Prod SQL |
+| 9E VAT Settlement | CONDITIONAL / local PASS | Accountant + Prod SQL |
+| 9F Actual COGS & Profitability | CONDITIONAL / local PASS | Auto-consume OFF |
+| 9G Opex / Payroll / Assets / P&L / CF | CONDITIONAL / local PASS | Payroll live deferred |
+| 9H Periods / Audit | CONDITIONAL / local PASS | Prod SQL |
+| 10A–10G Acceptance prep | This phase | Owner publish OK |
+
+---
+
+## SQL migrations Release 3 (apply order)
+
+See `docs/RELEASE3_FINAL_ACCEPTANCE.md` § Migrations. Do **not** rewrite previously tested files without necessity.

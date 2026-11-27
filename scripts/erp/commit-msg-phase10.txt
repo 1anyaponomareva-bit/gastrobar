@@ -1,0 +1,6 @@
+docs(erp): Phase 10A-G final acceptance READY WITH DISABLED FEATURES
+
+- Branch release-3-final from 9H f318635 + Vercel typecheck fix
+- Free-path restore/migrate, E2E finance, security suites
+- Migration order, backlog classification, publish/rollback plans
+- No prod SQL, no main merge, no FE publish, auto-consume OFF

@@ -1,0 +1,274 @@
+{
+  "ok": true,
+  "dump": "C:\\Users\\Nikita Ponomarev\\GASTROBAR-backups\\prod-ulxmubivimwxevgxxxyu-2026-11-27T08-03-48-031Z.dump",
+  "targetDb": "gastrofood_r3_phase10",
+  "baseline": {
+    "products": 146,
+    "recipes": 9,
+    "dishes": 1,
+    "suppliers": 26,
+    "lots": 1,
+    "stock": 0,
+    "docs": 1,
+    "finance_tx": 0,
+    "tax_rates": 6,
+    "auth_users": 5
+  },
+  "after": {
+    "products": 146,
+    "recipes": 9,
+    "dishes": 1,
+    "suppliers": 26,
+    "lots": 1,
+    "stock": 0,
+    "docs": 1,
+    "finance_tx": 0,
+    "tax_rates": 6,
+    "auth_users": 5,
+    "sales_docs_table": "t",
+    "periods_table": "t",
+    "auto_consume": "false"
+  },
+  "results": [
+    {
+      "name": "dump_selected",
+      "ok": true,
+      "detail": "C:\\Users\\Nikita Ponomarev\\GASTROBAR-backups\\prod-ulxmubivimwxevgxxxyu-2026-11-27T08-03-48-031Z.dump"
+    },
+    {
+      "name": "dump_bytes",
+      "ok": true,
+      "detail": "1448414"
+    },
+    {
+      "name": "restore_products",
+      "ok": true,
+      "detail": "146"
+    },
+    {
+      "name": "baseline_has_catalog",
+      "ok": true,
+      "detail": "{\"products\":146,\"recipes\":9,\"dishes\":1,\"suppliers\":26,\"lots\":1,\"stock\":0,\"docs\":1,\"finance_tx\":0,\"tax_rates\":6,\"auth_users\":5}"
+    },
+    {
+      "name": "mig_exists_20261127090000_erp_r3_sales_output_vat.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127090000_erp_r3_sales_output_vat.sql"
+    },
+    {
+      "name": "mig_applied_20261127090000_erp_r3_sales_output_vat.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127091000_erp_r3_sales_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127091000_erp_r3_sales_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127091000_erp_r3_sales_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127100000_erp_r3_input_vat_register.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127100000_erp_r3_input_vat_register.sql"
+    },
+    {
+      "name": "mig_applied_20261127100000_erp_r3_input_vat_register.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127101000_erp_r3_input_vat_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127101000_erp_r3_input_vat_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127101000_erp_r3_input_vat_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127110000_erp_r3_platform_settlements.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127110000_erp_r3_platform_settlements.sql"
+    },
+    {
+      "name": "mig_applied_20261127110000_erp_r3_platform_settlements.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127111000_erp_r3_platform_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127111000_erp_r3_platform_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127111000_erp_r3_platform_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127120000_erp_r3_vat_settlement.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127120000_erp_r3_vat_settlement.sql"
+    },
+    {
+      "name": "mig_applied_20261127120000_erp_r3_vat_settlement.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127121000_erp_r3_vat_settlement_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127121000_erp_r3_vat_settlement_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127121000_erp_r3_vat_settlement_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127130000_erp_r3_sales_bom_cogs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127130000_erp_r3_sales_bom_cogs.sql"
+    },
+    {
+      "name": "mig_applied_20261127130000_erp_r3_sales_bom_cogs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127131000_erp_r3_sales_bom_cogs_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127131000_erp_r3_sales_bom_cogs_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127131000_erp_r3_sales_bom_cogs_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127132000_erp_r3_profitability_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127132000_erp_r3_profitability_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127132000_erp_r3_profitability_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127140000_erp_r3_opex_assets_pnl.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127140000_erp_r3_opex_assets_pnl.sql"
+    },
+    {
+      "name": "mig_applied_20261127140000_erp_r3_opex_assets_pnl.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127141000_erp_r3_opex_pnl_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127141000_erp_r3_opex_pnl_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127141000_erp_r3_opex_pnl_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127150000_erp_r3_financial_periods.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127150000_erp_r3_financial_periods.sql"
+    },
+    {
+      "name": "mig_applied_20261127150000_erp_r3_financial_periods.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "mig_exists_20261127151000_erp_r3_financial_periods_rpcs.sql",
+      "ok": true,
+      "detail": "supabase/migrations/20261127151000_erp_r3_financial_periods_rpcs.sql"
+    },
+    {
+      "name": "mig_applied_20261127151000_erp_r3_financial_periods_rpcs.sql",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "preserve_products",
+      "ok": true,
+      "detail": "146 → 146"
+    },
+    {
+      "name": "preserve_recipes",
+      "ok": true,
+      "detail": "9 → 9"
+    },
+    {
+      "name": "preserve_dishes",
+      "ok": true,
+      "detail": "1 → 1"
+    },
+    {
+      "name": "preserve_suppliers",
+      "ok": true,
+      "detail": "26 → 26"
+    },
+    {
+      "name": "preserve_lots",
+      "ok": true,
+      "detail": "1 → 1"
+    },
+    {
+      "name": "preserve_stock",
+      "ok": true,
+      "detail": "0 → 0"
+    },
+    {
+      "name": "preserve_docs",
+      "ok": true,
+      "detail": "1 → 1"
+    },
+    {
+      "name": "preserve_finance_tx",
+      "ok": true,
+      "detail": "0 → 0"
+    },
+    {
+      "name": "preserve_tax_rates",
+      "ok": true,
+      "detail": "6 → 6"
+    },
+    {
+      "name": "preserve_auth_users",
+      "ok": true,
+      "detail": "5 → 5"
+    },
+    {
+      "name": "r3_sales_table",
+      "ok": true,
+      "detail": "t"
+    },
+    {
+      "name": "r3_periods_table",
+      "ok": true,
+      "detail": "t"
+    },
+    {
+      "name": "auto_consume_off",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "r3_rpcs_present",
+      "ok": true,
+      "detail": "true"
+    }
+  ]
+}

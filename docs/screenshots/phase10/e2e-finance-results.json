@@ -1,0 +1,112 @@
+{
+  "ok": true,
+  "runId": "mwypbwnw",
+  "periodId": "0fd0f992-96f2-4fc3-b13c-7816b0892bec",
+  "results": [
+    {
+      "name": "catalog_product",
+      "ok": true,
+      "detail": "ecdab304-2a6c-4d2c-ae3d-a4adc42ad1b4"
+    },
+    {
+      "name": "catalog_dish",
+      "ok": true,
+      "detail": "34a2654c-9dd0-4e22-b9ff-a061c2bd5ce0"
+    },
+    {
+      "name": "catalog_wh",
+      "ok": true,
+      "detail": "14737282-81f6-4953-9255-707533b11307"
+    },
+    {
+      "name": "step_expense_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "step_input_vat_register",
+      "ok": true,
+      "detail": "register"
+    },
+    {
+      "name": "step_sale_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "step_bom_explode",
+      "ok": true,
+      "detail": "{\"note\": \"Stocked prep stops nested raw explode; future recipe edits do not rewrite this result once snapshotted\", \"line"
+    },
+    {
+      "name": "step_cogs_no_autoconsume",
+      "ok": true,
+      "detail": "{\"ok\": true, \"reason\": \"auto_consume_disabled\", \"cogs_status\": \"pending\"}"
+    },
+    {
+      "name": "auto_consume_off",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "step_platform_preview",
+      "ok": true,
+      "detail": "{\"errors\": [], \"status\": \"preview\", \"batch_id\": \"75d82a42-145b-4e59-bd38-22512604fe6b\", \"ok_count\": 1, \"row_count\": 1, \""
+    },
+    {
+      "name": "step_payroll_posted",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "step_depreciation",
+      "ok": true,
+      "detail": "c271483d-9a93-4c89-a808-c7e14248b1d7"
+    },
+    {
+      "name": "step_vat_settlement",
+      "ok": true,
+      "detail": "{\"note\":\"Pending and Non-Deductible excluded from deductible base\",\"rule_ref\":\"erp_vat_settlement_compute@9e\",\"output_va"
+    },
+    {
+      "name": "step_accrual_pnl",
+      "ok": true,
+      "detail": "{\"status\":\"Partial\",\"is_final\":false,\"pending_cogs_orders\":3}"
+    },
+    {
+      "name": "step_cashflow",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "step_apar",
+      "ok": true,
+      "detail": "summary"
+    },
+    {
+      "name": "step_period_close",
+      "ok": true,
+      "detail": "{\"ok\":true,\"checklist\":{\"checks\":[{\"count\":0,\"message\":\"Draft sales documents: 0"
+    },
+    {
+      "name": "no_double_expense",
+      "ok": true,
+      "detail": "1m"
+    },
+    {
+      "name": "sale_gross_stable",
+      "ok": true,
+      "detail": "99000"
+    },
+    {
+      "name": "step_correction_next_period",
+      "ok": true,
+      "detail": "posted"
+    },
+    {
+      "name": "original_untouched_after_corr",
+      "ok": true,
+      "detail": "1m"
+    }
+  ]
+}

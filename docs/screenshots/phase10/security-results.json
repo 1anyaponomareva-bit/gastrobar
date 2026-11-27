@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "runId": "mwypagmf",
+  "periodId": "ac01ae6f-5b9b-479d-bb2b-7f887128a3e6",
+  "results": [
+    {
+      "name": "rpc_anon_no_close",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "rpc_authenticated_no_close",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "rpc_service_role_probe",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "period_closed",
+      "ok": true,
+      "detail": "closed"
+    },
+    {
+      "name": "block_update_net",
+      "ok": true,
+      "detail": "net"
+    },
+    {
+      "name": "block_update_vat",
+      "ok": true,
+      "detail": "vat"
+    },
+    {
+      "name": "block_update_recognition_date",
+      "ok": true,
+      "detail": "recognition_date"
+    },
+    {
+      "name": "block_insert_closed",
+      "ok": true,
+      "detail": "insert"
+    },
+    {
+      "name": "block_delete_closed",
+      "ok": true,
+      "detail": "delete"
+    },
+    {
+      "name": "payment_fields_allowed",
+      "ok": true,
+      "detail": "UPDATE 1"
+    },
+    {
+      "name": "payment_cannot_change_net",
+      "ok": true,
+      "detail": "net intact"
+    },
+    {
+      "name": "payment_cannot_change_vat",
+      "ok": true,
+      "detail": "vat intact"
+    },
+    {
+      "name": "block_move_date_into_closed",
+      "ok": true,
+      "detail": "date move"
+    },
+    {
+      "name": "snapshot_immutable",
+      "ok": true,
+      "detail": "snap"
+    },
+    {
+      "name": "audit_immutable",
+      "ok": true,
+      "detail": "audit"
+    },
+    {
+      "name": "db_reachable_for_sec",
+      "ok": true,
+      "detail": "ok"
+    }
+  ]
+}
