@@ -146,12 +146,14 @@
 
 .orders-tabs.orders-tabs3 a,
 .orders-tabs.orders-tabs3 .orders-tab {
-  font-size: 13px;
-  padding: 12px 4px;
+  font-size: 11px;
+  padding: 8px 3px;
   min-width: 0;
+  min-height: 48px;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .orders-stage {
@@ -201,16 +203,20 @@
 
 .orders-tabs a,
 .orders-tabs .orders-tab {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   text-decoration: none;
   background: transparent;
   color: #555;
-  padding: 12px 8px;
+  padding: 10px 8px;
   border-radius: 12px;
   font-weight: 800;
   font-size: 15px;
   min-height: 44px;
+  line-height: 1.15;
+  box-sizing: border-box;
 }
 
 .orders-tabs a.active,
@@ -1119,8 +1125,9 @@
 
   .orders-tabs.orders-tabs3 a,
   .orders-tabs.orders-tabs3 .orders-tab {
-    font-size: 11px;
-    padding: 10px 2px;
+    font-size: 10px;
+    padding: 6px 2px;
+    min-height: 48px;
     line-height: 1.15;
   }
 }
@@ -1131,9 +1138,10 @@
     font-size: 16px;
   }
 
-  .orders-tabs.orders-tabs3 a {
-    font-size: 11px;
-    padding: 10px 2px;
+  .orders-tabs.orders-tabs3 a,
+  .orders-tabs.orders-tabs3 .orders-tab {
+    font-size: 9px;
+    padding: 6px 1px;
   }
 
   .orders-searchRow {

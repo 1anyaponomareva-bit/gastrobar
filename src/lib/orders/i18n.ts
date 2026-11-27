@@ -13,9 +13,9 @@ export const ORDERS_LANG_KEY = "gastrofood-orders-lang";
 const TABLE: Record<OrdersLang, Record<string, string>> = {
   ru: {
     app_title: "GASTROFOOD",
-    order_list: "Order List",
-    orders_section: "Заказы",
-    prep_stock: "Prep Stock",
+    order_list: "ORDER LIST",
+    orders_section: "ORDERS & STOCK",
+    prep_stock: "PREP STOCK",
     prep_stock_date: "Дата",
     prep_stock_employee: "Сотрудник",
     prep_stock_employee_placeholder: "Имя",
@@ -196,9 +196,9 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
   },
   en: {
     app_title: "GASTROFOOD",
-    order_list: "Order List",
-    orders_section: "Orders",
-    prep_stock: "Prep Stock",
+    order_list: "ORDER LIST",
+    orders_section: "ORDERS & STOCK",
+    prep_stock: "PREP STOCK",
     prep_stock_date: "Date",
     prep_stock_employee: "Employee",
     prep_stock_employee_placeholder: "Name",
@@ -377,9 +377,9 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
   },
   vn: {
     app_title: "GASTROFOOD",
-    order_list: "Order List",
-    orders_section: "Đơn hàng",
-    prep_stock: "Prep Stock",
+    order_list: "ORDER LIST",
+    orders_section: "ORDERS & STOCK",
+    prep_stock: "PREP STOCK",
     prep_stock_date: "Ngày",
     prep_stock_employee: "Nhân viên",
     prep_stock_employee_placeholder: "Tên",
