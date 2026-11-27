@@ -336,7 +336,6 @@ export function PrepStockPage() {
       <section className="orders-prepStockOverview" aria-label={t("prep_stock_overview_title")}>
         <div className="orders-prepStockOverviewHead">
           <h2>{t("prep_stock_overview_title")}</h2>
-          <p className="orders-prepStockOverviewPackRule">{t("prep_stock_pack_rule", { size: 20 })}</p>
         </div>
         <div className="orders-prepStockOverviewTableWrap">
           <table className="orders-prepStockOverviewTable matrix">
