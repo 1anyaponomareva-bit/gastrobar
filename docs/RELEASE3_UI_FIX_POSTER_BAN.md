@@ -27,7 +27,7 @@ Direct: https://gastrofood.vn/erp/finance/periods
 | Historical poster-sourced rows | **Kept** (read) |
 | Grab / manual / generic import | **Allowed** |
 | Guest `poster-test` app | Unrelated to ERP sync; not used as ERP integration |
-| SQL DB-level guard | **Proposed only** — `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` (not applied) |
+| SQL DB-level guard | **APPLIED** — `20261127160000_erp_r3_poster_erp_sync_forbidden.sql` (`docs/RELEASE3_POSTER_SQL_BAN_APPLIED.md`) |
 
 Server module: `src/lib/erp/posterErpSyncForbidden.ts`  
 Enforced in: `app/api/erp/action/route.ts`

@@ -15,8 +15,8 @@
 - Historical poster-sourced rows may remain read-only.  
 - Manual Poster **file** import into ERP only after a **separate** explicit owner OK.  
 - Guest/marketing `poster-test` is **not** an ERP sync channel.  
-- Server enforcement: `src/lib/erp/posterErpSyncForbidden.ts` + `/api/erp/action`.  
-- Optional DB RPC guard: proposed only — `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` (**not applied** until owner OK).
+- Server enforcement: `src/lib/erp/posterErpSyncForbidden.ts` + `/api/erp/action` (aliases).  
+- DB enforcement **APPLIED**: `20261127160000_erp_r3_poster_erp_sync_forbidden.sql` — see `docs/RELEASE3_POSTER_SQL_BAN_APPLIED.md`.
 
 GASTROFOOD ERP must operate **independently** of Poster POS.
 

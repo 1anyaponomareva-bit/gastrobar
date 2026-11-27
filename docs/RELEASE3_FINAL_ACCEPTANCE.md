@@ -212,7 +212,7 @@ Grab raw format: keep Partial; UI must show unsupported raw format (normalized i
 
 | Topic | Status |
 |-------|--------|
-| Poster | **FORBIDDEN BY OWNER** — no ERP sync; API ban at pin `1c23863`; SQL guard proposed only |
+| Poster | **FORBIDDEN BY OWNER** — no ERP sync; API + SQL ban (`20261127160000`); see `docs/RELEASE3_POSTER_SQL_BAN_APPLIED.md` |
 | Grab | Normalized OK; **raw GrabMerchant DEFERRED** until real file |
 | Auto-consume | **OFF**; activation plan = separate owner OK + go-live date; no historical backfill consume |
 | Payroll / Staff | Accrual engine OK; **live import DEFERRED**; P&L completeness Partial when missing |

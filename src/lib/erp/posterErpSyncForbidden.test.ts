@@ -11,11 +11,17 @@ describe("posterErpSyncForbidden", () => {
     assert.equal(POSTER_ERP_SYNC_FORBIDDEN, true);
   });
 
-  it("detects poster source", () => {
+  it("detects poster source and aliases", () => {
     assert.equal(isPosterErpSource("poster"), true);
     assert.equal(isPosterErpSource("Poster"), true);
+    assert.equal(isPosterErpSource("poster_pos"), true);
+    assert.equal(isPosterErpSource("poster-api"), true);
+    assert.equal(isPosterErpSource("joinposter"), true);
+    assert.equal(isPosterErpSource("poster.sync"), true);
+    assert.equal(isPosterErpSource("poster_import"), true);
     assert.equal(isPosterErpSource("grab"), false);
     assert.equal(isPosterErpSource("manual"), false);
+    assert.equal(isPosterErpSource("import"), false);
   });
 
   it("blocks poster sync/import payloads", () => {

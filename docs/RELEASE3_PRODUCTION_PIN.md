@@ -11,7 +11,7 @@
 
 - Release 3 finance modules (9B–9H) on production schema + FE  
 - Financial periods navigation fix (sidebar visibility)  
-- Permanent **Poster POS ↔ ERP sync ban** (API-enforced)  
+- Permanent **Poster POS ↔ ERP sync ban** (API + SQL applied)  
 - Auto-consume **OFF**
 
 ## Standing rules
@@ -24,6 +24,6 @@
 ## Related
 
 - `docs/RELEASE3_UI_FIX_POSTER_BAN.md`  
-- `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` (SQL **not** applied)  
+- `docs/RELEASE3_POSTER_SQL_BAN_APPLIED.md` (SQL **applied** on production)  
 - `docs/RELEASE3_BACKLOG.md`  
 - `docs/RELEASE3_FINANCIAL_ARCHITECTURE.md` § Poster ban  

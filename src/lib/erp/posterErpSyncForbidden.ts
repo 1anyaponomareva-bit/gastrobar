@@ -1,6 +1,6 @@
 /**
  * Owner permanent ban: GASTROFOOD ERP must not sync with Poster POS.
- * Enforced in API (and proposed SQL) — not merely by hiding UI.
+ * Enforced in API and SQL — not merely by hiding UI.
  *
  * Historical poster-sourced rows may remain read-only.
  * Manual file import from Poster requires a separate explicit owner OK
@@ -14,10 +14,29 @@ export const POSTER_ERP_SYNC_FORBIDDEN_CODE = "ERP_POSTER_SYNC_FORBIDDEN";
 export const POSTER_ERP_SYNC_FORBIDDEN_DETAIL =
   "Poster POS sync is permanently forbidden by owner. GASTROFOOD ERP runs independently of Poster.";
 
+/** Exact + common aliases — keep in sync with SQL erp_is_poster_erp_source. */
+const POSTER_SOURCE_ALIASES = new Set([
+  "poster",
+  "poster_pos",
+  "poster-pos",
+  "posterpos",
+  "joinposter",
+  "poster_api",
+  "poster-api",
+  "poster.api",
+  "poster_sync",
+  "poster-sync",
+]);
+
 export function isPosterErpSource(source: unknown): boolean {
-  return String(source ?? "")
+  const s = String(source ?? "")
     .trim()
-    .toLowerCase() === "poster";
+    .toLowerCase();
+  if (!s) return false;
+  if (POSTER_SOURCE_ALIASES.has(s)) return true;
+  if (/^poster[_-]/.test(s)) return true;
+  if (s.startsWith("poster.")) return true;
+  return false;
 }
 
 /** True when an action would create/sync/import Poster→ERP data. */

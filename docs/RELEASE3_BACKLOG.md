@@ -46,7 +46,7 @@ GASTROFOOD ERP operates **independently** of Poster POS. Historical poster-sourc
 | CIT / Net Profit | `accountant_tbd` |
 | Input VAT edge recognition | Pending allowed |
 | Depreciation useful-life policy | `accountant_tbd` |
-| Proposed SQL Poster forbid in RPCs | `docs/PROPOSED_SQL_POSTER_ERP_SYNC_FORBIDDEN.md` |
+| SQL Poster forbid in RPCs + triggers | **APPLIED** — `docs/RELEASE3_POSTER_SQL_BAN_APPLIED.md` |
 
 ### Future Improvement
 | Item | Notes |

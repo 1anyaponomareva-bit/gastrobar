@@ -1,0 +1,41 @@
+{
+  "checked_at": "2026-11-27T10:41:44.925Z",
+  "host": "aws-1-ap-southeast-1.pooler.supabase.com",
+  "db": "postgres",
+  "migration": "supabase/migrations/20261127160000_erp_r3_poster_erp_sync_forbidden.sql",
+  "before": {
+    "products": 147,
+    "sales": 13,
+    "poster_sales": 2,
+    "grab_sales": 0,
+    "manual_sales": 11,
+    "auto_consume": "false"
+  },
+  "after": {
+    "products": 147,
+    "sales": 13,
+    "poster_sales": 2,
+    "grab_sales": 0,
+    "manual_sales": 11,
+    "auto_consume": "false",
+    "assert_fn": "t",
+    "is_fn": "t",
+    "triggers": 6,
+    "anon_assert": "false",
+    "auth_assert": "false",
+    "srv_assert": "true",
+    "save_patched": "true"
+  },
+  "checks": {
+    "preserveOk": true,
+    "assert_fn": true,
+    "is_fn": true,
+    "triggers_ge_6": true,
+    "anon_no_exec": true,
+    "auth_no_exec": true,
+    "service_exec": true,
+    "save_patched": true,
+    "auto_consume_off": true
+  },
+  "ok": true
+}

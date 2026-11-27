@@ -163,7 +163,7 @@ No schema/API hard-fail on public route shell. Authenticated API not exercised w
 |---------|--------|
 | Auto-consume | **OFF** |
 | Expense auto-allocate | **OFF** |
-| Poster Auto-Sync / live ERP sync | **FORBIDDEN BY OWNER** (permanent; API-enforced at `1c23863`) |
+| Poster Auto-Sync / live ERP sync | **FORBIDDEN BY OWNER** (permanent; API + SQL applied 2026-11-27) |
 | Grab Raw CSV/XLSX | **Partial** — unsupported without real sample |
 | Live Payroll Import | **Deferred** |
 | Automatic CIT | **Pending** (`accountant_tbd`) |
