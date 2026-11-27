@@ -3,26 +3,18 @@
 /**
  * Temporary Prep Stock tab in Orders — same positions and Zalo paste as old /staff.
  * Does NOT sync with ERP полуфабрикаты yet; later prep catalog should feed this list.
+ *
+ * PDF (pdf-lib + fonts + i18n) loads only when Share is pressed — keeps tab open fast.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   evaluateStaffStock,
   getStaffStockItems,
   staffStockUnit,
+  type StaffStockItem,
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
-import {
-  deliverPdfFile,
-  detectInAppBrowser,
-  type DeliverPdfResult,
-} from "@/lib/deliverPdfFile";
-import { buildStaffInventoryPdfLabels } from "@/lib/staffInventoryI18n";
-import {
-  getStaffInventoryPdfFileName,
-  makeStaffInventoryPdfBlob,
-  preloadStaffInventoryPdfFonts,
-} from "@/lib/staffInventoryPdf";
 import {
   clearStoredStockValues,
   getStoredDate,
@@ -36,104 +28,76 @@ import {
   type StaffStockField,
 } from "@/lib/staffInventoryStorage";
 import { parseStockMessage } from "@/lib/staffStockParser";
-import type { StaffStockRow } from "@/components/staff/staffInventoryTypes";
 import { useOrders } from "./OrdersShell";
 
 const VENUE = "gastrofood" as const;
 const VENUE_LABEL = STAFF_INVENTORY_VENUE_LABELS[VENUE];
 
-function buildStockRows(): StaffStockRow[] {
-  return getStaffStockItems(VENUE).map((item) => {
-    const restaurantValue = getStoredStockValue(VENUE, item.id, "restaurant");
-    const warehouseValue = getStoredStockValue(VENUE, item.id, "warehouse");
-    const hasRestaurant = restaurantValue.trim() !== "";
-    const hasWarehouse = !item.noWarehouse && warehouseValue.trim() !== "";
-    const restaurant = parseNumber(restaurantValue);
-    const warehouse = parseNumber(warehouseValue);
-    const { lowInHouse, lowWarehouse, task } = evaluateStaffStock(
-      item,
-      hasRestaurant ? restaurant : null,
-      hasWarehouse ? warehouse : null,
-    );
-    return {
-      id: item.id,
-      name: item.name.en,
-      unit: staffStockUnit(item),
-      restaurant,
-      warehouse,
-      hasRestaurant,
-      hasWarehouse,
-      noWarehouse: Boolean(item.noWarehouse),
-      filled: hasRestaurant || hasWarehouse,
-      lowInHouse,
-      lowWarehouse,
-      task,
+type FieldMap = Record<string, { restaurant: string; warehouse: string }>;
+
+function readFields(items: StaffStockItem[]): FieldMap {
+  const next: FieldMap = {};
+  for (const item of items) {
+    next[item.id] = {
+      restaurant: getStoredStockValue(VENUE, item.id, "restaurant"),
+      warehouse: item.noWarehouse ? "" : getStoredStockValue(VENUE, item.id, "warehouse"),
     };
-  });
+  }
+  return next;
 }
 
 export function PrepStockPage() {
   const { t, lang } = useOrders();
-  const [hydrated, setHydrated] = useState(false);
-  const [date, setDate] = useState("");
+  const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
+  const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
+  const [fields, setFields] = useState<FieldMap>(() => readFields(stockItems));
   const [stockPaste, setStockPaste] = useState("");
   const [stockPasteResult, setStockPasteResult] = useState<{
     filled: number;
     unrecognized: string[];
   } | null>(null);
-  const [revision, setRevision] = useState(0);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const sharePrepareRef = useRef<{ key: string; promise: Promise<Blob> } | null>(null);
-
-  const bump = useCallback(() => setRevision((value) => value + 1), []);
-  const stockItems = useMemo(() => getStaffStockItems(VENUE), []);
-
-  const pdfLabels = useMemo(
-    () =>
-      buildStaffInventoryPdfLabels(
-        lang,
-        VENUE_LABEL,
-        date,
-        employee,
-        stockItems.length,
-        "staff_pdf_stock_doc_title",
-      ),
-    [lang, date, employee, stockItems.length],
-  );
-
-  useEffect(() => {
-    preloadStaffInventoryPdfFonts();
-  }, []);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setDate(getStoredDate() || todayIsoDate());
     setEmployee(getStoredEmployee());
+    setFields(readFields(stockItems));
     setHydrated(true);
-  }, []);
-
-  const stockRows = useMemo(() => {
-    void revision;
-    if (!hydrated) return [];
-    return buildStockRows();
-  }, [hydrated, revision]);
+  }, [stockItems]);
 
   const handleStockFieldChange = (itemId: string, field: StaffStockField, value: string) => {
     setStoredStockValue(VENUE, itemId, field, value);
-    bump();
+    setFields((prev) => ({
+      ...prev,
+      [itemId]: {
+        restaurant: field === "restaurant" ? value : (prev[itemId]?.restaurant ?? ""),
+        warehouse: field === "warehouse" ? value : (prev[itemId]?.warehouse ?? ""),
+      },
+    }));
   };
 
   const handleStockPasteApply = () => {
     const { values, unrecognized, noWarehouse } = parseStockMessage(stockPaste, stockItems);
-    values.forEach(({ itemId, warehouse }) => {
-      setStoredStockValue(VENUE, itemId, "warehouse", warehouse);
-    });
+    if (values.length) {
+      setFields((prev) => {
+        const next = { ...prev };
+        for (const { itemId, warehouse } of values) {
+          setStoredStockValue(VENUE, itemId, "warehouse", warehouse);
+          next[itemId] = {
+            restaurant: next[itemId]?.restaurant ?? "",
+            warehouse,
+          };
+        }
+        return next;
+      });
+      setStockPaste("");
+    }
     setStockPasteResult({
       filled: values.length,
       unrecognized: [...unrecognized, ...noWarehouse],
     });
-    if (values.length) setStockPaste("");
-    bump();
   };
 
   const handleDateChange = (value: string) => {
@@ -157,78 +121,90 @@ export function PrepStockPage() {
     setStoredDate(today);
     setEmployee("");
     setStoredEmployee("");
-    bump();
+    setFields(readFields(stockItems));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const buildShareKey = useCallback(() => {
-    const data = stockRows.map(
-      (row) => `${row.id}:${row.restaurant}:${row.warehouse}:${row.hasRestaurant}:${row.hasWarehouse}`,
-    );
-    return [date, employee.trim(), data.join("|")].join("::");
-  }, [date, employee, stockRows]);
-
-  const buildPdfOptions = useCallback(
-    () => ({
-      venueLabel: VENUE_LABEL,
-      date,
-      employee,
-      rows: [],
-      stockRows,
-      labels: pdfLabels,
-    }),
-    [date, employee, stockRows, pdfLabels],
-  );
-
-  const beginSharePreparation = useCallback(() => {
-    const key = buildShareKey();
-    sharePrepareRef.current = {
-      key,
-      promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
-    };
-  }, [buildShareKey, buildPdfOptions]);
-
-  useEffect(() => {
-    if (!hydrated) {
-      sharePrepareRef.current = null;
-      return;
-    }
-    const key = buildShareKey();
-    sharePrepareRef.current = {
-      key,
-      promise: makeStaffInventoryPdfBlob(buildPdfOptions()),
-    };
-  }, [hydrated, buildShareKey, buildPdfOptions]);
-
-  const handleSharePdfResult = (result: DeliverPdfResult) => {
-    if (result === "cancelled" || result === "downloaded") return;
-    window.alert(t("prep_stock_share_error"));
-  };
-
-  const handleExportPdf = async () => {
+  const handleExportPdf = useCallback(async () => {
     if (exportingPdf) return;
-    if (detectInAppBrowser()) {
-      window.alert(t("prep_stock_inapp_blocked"));
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
 
     setExportingPdf(true);
     try {
-      const fileName = getStaffInventoryPdfFileName(VENUE_LABEL, date, "PrepStock");
-      const key = buildShareKey();
-      const prepared = sharePrepareRef.current;
-      const blob =
-        prepared?.key === key ? await prepared.promise : await makeStaffInventoryPdfBlob(buildPdfOptions());
+      const [{ deliverPdfFile, detectInAppBrowser }, { buildStaffInventoryPdfLabels }, pdf] =
+        await Promise.all([
+          import("@/lib/deliverPdfFile"),
+          import("@/lib/staffInventoryI18n"),
+          import("@/lib/staffInventoryPdf"),
+        ]);
+
+      if (detectInAppBrowser()) {
+        window.alert(t("prep_stock_inapp_blocked"));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      const stockRows = stockItems.map((item) => {
+        const restaurantValue = fields[item.id]?.restaurant ?? "";
+        const warehouseValue = fields[item.id]?.warehouse ?? "";
+        const hasRestaurant = restaurantValue.trim() !== "";
+        const hasWarehouse = !item.noWarehouse && warehouseValue.trim() !== "";
+        return {
+          id: item.id,
+          name: item.name.en,
+          unit: staffStockUnit(item),
+          restaurant: parseNumber(restaurantValue),
+          warehouse: parseNumber(warehouseValue),
+          hasRestaurant,
+          hasWarehouse,
+          noWarehouse: Boolean(item.noWarehouse),
+          filled: hasRestaurant || hasWarehouse,
+          lowInHouse: false,
+          lowWarehouse: false,
+          task: null as string | null,
+        };
+      });
+
+      for (let i = 0; i < stockRows.length; i += 1) {
+        const item = stockItems[i];
+        const row = stockRows[i];
+        const { lowInHouse, lowWarehouse, task } = evaluateStaffStock(
+          item,
+          row.hasRestaurant ? row.restaurant : null,
+          row.hasWarehouse ? row.warehouse : null,
+        );
+        row.lowInHouse = lowInHouse;
+        row.lowWarehouse = lowWarehouse;
+        row.task = task;
+      }
+
+      const labels = buildStaffInventoryPdfLabels(
+        lang,
+        VENUE_LABEL,
+        date,
+        employee,
+        stockItems.length,
+        "staff_pdf_stock_doc_title",
+      );
+      const blob = await pdf.makeStaffInventoryPdfBlob({
+        venueLabel: VENUE_LABEL,
+        date,
+        employee,
+        rows: [],
+        stockRows,
+        labels,
+      });
+      const fileName = pdf.getStaffInventoryPdfFileName(VENUE_LABEL, date, "PrepStock");
       const result = await deliverPdfFile(blob, fileName);
-      if (result !== "shared") handleSharePdfResult(result);
+      if (result !== "shared" && result !== "cancelled" && result !== "downloaded") {
+        window.alert(t("prep_stock_share_error"));
+      }
     } catch (error) {
       console.error(error);
       window.alert(t("prep_stock_share_error"));
     } finally {
       setExportingPdf(false);
     }
-  };
+  }, [date, employee, exportingPdf, fields, lang, stockItems, t]);
 
   if (!hydrated) {
     return <div className="orders-loading">{t("loading")}</div>;
@@ -309,6 +285,7 @@ export function PrepStockPage() {
         {stockItems.map((item) => {
           const label = item.name[lang] || item.name.en;
           const secondary = lang === "en" ? item.name.vn : item.name.en;
+          const values = fields[item.id] ?? { restaurant: "", warehouse: "" };
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
@@ -321,7 +298,7 @@ export function PrepStockPage() {
                   <span className="orders-prepStockUnitInput">
                     <input
                       inputMode="decimal"
-                      value={getStoredStockValue(VENUE, item.id, "restaurant")}
+                      value={values.restaurant}
                       onChange={(event) =>
                         handleStockFieldChange(item.id, "restaurant", event.target.value)
                       }
@@ -335,7 +312,7 @@ export function PrepStockPage() {
                     <span className="orders-prepStockUnitInput">
                       <input
                         inputMode="decimal"
-                        value={getStoredStockValue(VENUE, item.id, "warehouse")}
+                        value={values.warehouse}
                         onChange={(event) =>
                           handleStockFieldChange(item.id, "warehouse", event.target.value)
                         }
@@ -353,8 +330,6 @@ export function PrepStockPage() {
       <button
         type="button"
         className="orders-btn primary block orders-prepStockShare"
-        onPointerDown={beginSharePreparation}
-        onTouchStart={beginSharePreparation}
         onClick={() => void handleExportPdf()}
         disabled={exportingPdf}
       >

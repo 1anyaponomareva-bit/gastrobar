@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { GastrofoodFavicon } from "@/components/GastrofoodFavicon";
-import { errorMessage, getSession } from "@/lib/orders/api";
+import { getSession } from "@/lib/orders/api";
 import { ORDERS_LANGS, ordersT, readOrdersLang, writeOrdersLang, type OrdersLang } from "@/lib/orders/i18n";
 import "./orders.css";
 
@@ -40,7 +40,6 @@ export function OrdersShell({ children }: { children: ReactNode }) {
   const [erpAdmin, setErpAdmin] = useState(false);
   const [publicAccess, setPublicAccess] = useState(true);
   const [displayName, setDisplayName] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
 
   const t = useCallback((key: string, vars?: Record<string, string | number>) => ordersT(lang, key, vars), [lang]);
 
@@ -52,6 +51,7 @@ export function OrdersShell({ children }: { children: ReactNode }) {
     document.documentElement.lang = lang === "vn" ? "vi" : lang;
   }, [lang]);
 
+  // Do not block first paint on session — kitchen/public UI must open immediately.
   useEffect(() => {
     void getSession()
       .then((session) => {
@@ -63,14 +63,21 @@ export function OrdersShell({ children }: { children: ReactNode }) {
       .catch(() => {
         setPublicAccess(true);
         setDisplayName(null);
-      })
-      .finally(() => setReady(true));
+      });
   }, []);
 
-  const setLang = (next: OrdersLang) => {
+  // Warm Order List catalog while user is on any Orders tab.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ctrl = new AbortController();
+    void fetch("/api/orders/catalog", { signal: ctrl.signal, credentials: "same-origin" }).catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+
+  const setLang = useCallback((next: OrdersLang) => {
     setLangState(next);
     writeOrdersLang(next);
-  };
+  }, []);
 
   const ctx = useMemo<OrdersContextValue>(
     () => ({
@@ -82,20 +89,11 @@ export function OrdersShell({ children }: { children: ReactNode }) {
       t,
       setLang,
     }),
-    [displayName, email, erpAdmin, lang, publicAccess, t],
+    [displayName, email, erpAdmin, lang, publicAccess, setLang, t],
   );
 
   const tab = isOrdersTab(pathname);
   const adminPath = (pathname ?? "").startsWith("/orders/admin");
-
-  if (!ready) {
-    return (
-      <div className="orders-app">
-        <GastrofoodFavicon />
-        <div className="orders-loading">{t("loading")}</div>
-      </div>
-    );
-  }
 
   if (adminPath) {
     return (
