@@ -409,15 +409,38 @@ function drawStockTableHeader(ctx: PdfContext, labels: StaffInventoryPdfLabels) 
   ctx.y = topY - total;
 }
 
-const STOCK_COL_IN_HOUSE = 290;
-const STOCK_COL_WAREHOUSE = 375;
-const STOCK_COL_TASK = 465;
+const STOCK_COL_IN_HOUSE = 268;
+const STOCK_COL_WAREHOUSE = 372;
+const STOCK_COL_TASK = 475;
+
+function stockQtyText(
+  label: string | undefined,
+  value: number,
+  unit: string,
+  filled: boolean,
+): string {
+  if (label != null && label !== "") return label;
+  if (!filled) return "";
+  return `${money(value)} ${unit}`;
+}
 
 function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   const rowHeight = 22;
   const total = rowHeight + 6;
 
   const flagged = row.task !== null;
+  const inHouseText = row.hasRestaurant
+    ? stockQtyText(row.restaurantLabel, row.restaurant, row.unit, true)
+    : "";
+  const warehouseText = row.noWarehouse
+    ? row.warehouseLabel || "—"
+    : stockQtyText(
+        row.warehouseLabel,
+        row.hasWarehouse ? row.warehouse : 0,
+        row.unit,
+        true,
+      );
+  const qtyFontSize = Math.max(inHouseText.length, warehouseText.length) > 14 ? 7.5 : 9;
 
   ensureSpace(ctx, total);
   const rowTop = ctx.y;
@@ -435,25 +458,23 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
   drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
   if (row.task) {
-    drawTextLine(ctx, row.task, STOCK_COL_TASK, baseline, 9, ctx.fontBold, COLORS.red);
+    drawTextLine(ctx, row.task, STOCK_COL_TASK, baseline, 8, ctx.fontBold, COLORS.red);
   }
   drawTextLine(
     ctx,
-    row.hasRestaurant ? `${money(row.restaurant)} ${row.unit}` : "",
+    inHouseText,
     STOCK_COL_IN_HOUSE,
     baseline,
-    9,
+    qtyFontSize,
     row.lowInHouse ? ctx.fontBold : ctx.font,
     row.lowInHouse ? COLORS.red : COLORS.text,
   );
   drawTextLine(
     ctx,
-    row.noWarehouse
-      ? "—"
-      : `${money(row.hasWarehouse ? row.warehouse : 0)} ${row.unit}`,
+    warehouseText,
     STOCK_COL_WAREHOUSE,
     baseline,
-    9,
+    qtyFontSize,
     row.lowWarehouse ? ctx.fontBold : ctx.font,
     row.lowWarehouse ? COLORS.red : COLORS.text,
   );

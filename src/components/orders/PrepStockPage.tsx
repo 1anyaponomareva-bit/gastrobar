@@ -81,11 +81,19 @@ function unitLabel(item: StaffStockItem | undefined, pcsLabel: string): string {
   return item.purchaseUnit || item.baseUnit || pcsLabel;
 }
 
-function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem, lang = "en"): string {
+function formatBalance(
+  value: number,
+  pcsLabel: string,
+  item?: StaffStockItem,
+  lang = "en",
+  opts?: { compact?: boolean },
+): string {
+  const compact = Boolean(opts?.compact);
   const packSize = item ? staffStockPackSize(item) : null;
   if (packSize) {
     const total = Math.max(0, Math.round(Number(value) || 0));
     const parts = formatPackQty(total, packSize, localizePackType(staffStockPackType(item!), lang));
+    if (compact) return parts;
     return `${fmtQty(total)} ${pcsLabel} · ${parts}`;
   }
   const qty = Number(value) || 0;
@@ -102,6 +110,7 @@ function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem, l
           : split.loose > 0
             ? `${fmtQty(split.loose)} ${unit}`
             : `0 ${packWord}`;
+    if (compact) return parts;
     return `${fmtQty(rounded)} ${unit} · ${parts}`;
   }
   return `${fmtQty(rounded)} ${unitLabel(item, pcsLabel)}`;
@@ -316,6 +325,8 @@ export function PrepStockPage() {
     setStoredEmployee(value);
   };
 
+  const pcsLabel = t("prep_stock_pcs_short");
+
   const handleExportPdf = useCallback(async () => {
     if (exportingPdf) return;
     setExportingPdf(true);
@@ -347,6 +358,10 @@ export function PrepStockPage() {
           unit: staffStockUnit(item),
           restaurant: bal.kitchen,
           warehouse: bal.warehouse,
+          restaurantLabel: formatBalance(bal.kitchen, pcsLabel, item, lang, { compact: true }),
+          warehouseLabel: item.noWarehouse
+            ? "—"
+            : formatBalance(bal.warehouse, pcsLabel, item, lang, { compact: true }),
           hasRestaurant,
           hasWarehouse,
           noWarehouse: Boolean(item.noWarehouse),
@@ -384,9 +399,7 @@ export function PrepStockPage() {
     } finally {
       setExportingPdf(false);
     }
-  }, [balances, date, employee, exportingPdf, lang, stockItems, t]);
-
-  const pcsLabel = t("prep_stock_pcs_short");
+  }, [balances, date, employee, exportingPdf, lang, pcsLabel, stockItems, t]);
 
   return (
     <div className="orders-prepStock">

@@ -19,6 +19,9 @@ export type StaffStockRow = {
   hasWarehouse: boolean;
   noWarehouse: boolean;
   unit: string;
+  /** Pre-formatted qty (packs + loose). When set, PDF uses this instead of `${qty} ${unit}`. */
+  restaurantLabel?: string;
+  warehouseLabel?: string;
   filled: boolean;
   lowInHouse: boolean;
   lowWarehouse: boolean;
