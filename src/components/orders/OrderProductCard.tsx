@@ -3,6 +3,7 @@
 import {
   formatOrderPackagingLine,
   formatOrderPackTotal,
+  orderPackTotalContent,
   parseOrderPackaging,
 } from "@/lib/erp/orderPackaging";
 import { productDisplayName } from "@/lib/erp/productName";
@@ -31,6 +32,11 @@ type Props = {
   onQty: (qty: string) => void;
   onPack: (packId: string) => void;
 };
+
+function fmtAmount(value: number): string {
+  const rounded = Math.round(value * 1000) / 1000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
 
 export function OrderProductCard({
   product,
@@ -62,14 +68,24 @@ export function OrderProductCard({
     per: "/",
   });
   const packCount = parseQty(current.qty);
-  const packingTotal =
+
+  // Ingredient path: selected purchase pack (e.g. Pack 1 kg) × qty → total kg/l/pcs.
+  const packBase = pack && pack.qty_base > 0 ? pack.qty_base : null;
+  const packBaseUnit = pack ? orderPackUnit(pack, product.unit) : product.unit;
+  const ingredientTotal =
+    packCount != null && packCount > 0 && packBase != null
+      ? Math.round(packCount * packBase * 1000) / 1000
+      : null;
+
+  // Structured ERP packing (often used for semi-finished / Orders packing fields).
+  const erpTotal =
     packingLine && packCount != null && packCount > 0
-      ? formatOrderPackTotal(packCount, erpPacking.contentQty, erpPacking.contentUnit, {
+      ? formatOrderPackTotal(packCount, erpPacking.contentQty, erpPacking.contentUnit || "pcs", {
           packs: t("order_packing_packs"),
           total: t("order_packing_total"),
         })
       : null;
-  // Prefer ERP structured packing; fall back to catalog pack caption (no free-text edit).
+
   const caption = packingLine ?? (pack ? orderPackCaption(pack) : null);
   const unit = packingLine
     ? erpPacking.type || (pack ? orderPackUnit(pack, product.unit) : product.unit)
@@ -77,12 +93,30 @@ export function OrderProductCard({
       ? orderPackUnit(pack, product.unit)
       : product.unit;
 
+  const packName = pack ? orderPackDisplayName(pack, lang) : "";
+  const ingredientHint =
+    pack && packBase != null
+      ? `${t("order_packing_label")}: ${packName || pack.label} · ${fmtAmount(packBase)} ${packBaseUnit}`
+      : null;
+  const ingredientTotalLine =
+    ingredientTotal != null && packCount != null
+      ? `${t("order_packing_packs")}: ${fmtAmount(packCount)} · ${t("order_packing_total")}: ${fmtAmount(ingredientTotal)} ${packBaseUnit}`
+      : null;
+
+  // Prefer purchase-pack total for ingredients when ERP structured packing has no content unit/qty.
+  const showIngredientMath = Boolean(ingredientHint) && (!erpPacking.contentQty || !erpPacking.contentUnit);
+  const erpContentPreview =
+    erpPacking.contentQty != null
+      ? orderPackTotalContent(packCount ?? 0, erpPacking.contentQty)
+      : null;
+
   return (
     <div className={`orders-card ${marked ? "marked" : ""}`}>
       <div className="orders-name">{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</div>
       {details ? <div className="orders-meta">{details}</div> : null}
       {packingLine ? <div className="orders-packHint">{packingLine}</div> : null}
-      {product.packs.length > 1 && !packingLine ? (
+      {showIngredientMath && ingredientHint ? <div className="orders-packHint">{ingredientHint}</div> : null}
+      {product.packs.length > 1 ? (
         <div className="orders-field" style={{ margin: "8px 0" }}>
           <label>{packLabel}</label>
           <select className="orders-select" value={current.packId ?? ""} onChange={(event) => onPack(event.target.value)}>
@@ -90,7 +124,7 @@ export function OrderProductCard({
               const name = orderPackDisplayName(item, lang);
               return (
                 <option key={item.pack_id} value={item.pack_id}>
-                  {item.code ? `${name} · ${item.code}` : name}
+                  {item.code ? `${name} · ${item.code}` : `${name} · ${fmtAmount(item.qty_base)} ${orderPackUnit(item, product.unit)}`}
                 </option>
               );
             })}
@@ -98,8 +132,16 @@ export function OrderProductCard({
         </div>
       ) : null}
       <QtyField label={qtyLabel} unit={unit} value={current.qty} onChange={onQty} />
-      {packingTotal ? <div className="orders-packHint">{packingTotal}</div> : null}
-      {!packingLine && caption ? <div className="orders-packHint">{caption}</div> : null}
+      {erpTotal ? <div className="orders-packHint">{erpTotal}</div> : null}
+      {showIngredientMath && ingredientTotalLine ? (
+        <div className="orders-packHint">{ingredientTotalLine}</div>
+      ) : null}
+      {!showIngredientMath && !erpTotal && erpContentPreview != null && packCount != null && packCount > 0 ? (
+        <div className="orders-packHint">
+          {t("order_packing_total")}: {fmtAmount(erpContentPreview)} {erpPacking.contentUnit || "pcs"}
+        </div>
+      ) : null}
+      {!packingLine && !showIngredientMath && caption ? <div className="orders-packHint">{caption}</div> : null}
     </div>
   );
 }

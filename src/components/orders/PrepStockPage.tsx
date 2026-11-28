@@ -1,19 +1,23 @@
 "use client";
 
 /**
- * Prep Stock in Orders — Prep Kitchen ↔ Warehouse balances (variant 1).
- * Static item list for now; later ERP prep items will feed this screen.
- * Quantities are pieces only (no packs / pack formulas in UI).
+ * Prep Stock in Orders — Prep Kitchen ↔ Warehouse balances.
+ * Semi-finished: packs + loose pcs using ERP order_pack_content_qty (e.g. 20 pcs/bag).
+ * Stored qty is always pieces.
  */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  combinePackQty,
   evaluateStaffStock,
+  formatPackQty,
   staffStockLabel,
   staffStockNote,
+  staffStockPackSize,
   staffStockUnit,
+  splitPackQty,
   type StaffStockItem,
 } from "@/data/staffInStockItems";
 import { STAFF_INVENTORY_VENUE_LABELS } from "@/data/staffInventoryItems";
@@ -63,8 +67,13 @@ function fmtQty(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
-function formatPcs(value: number, pcsLabel: string): string {
+function formatPcs(value: number, pcsLabel: string, item?: StaffStockItem): string {
   const total = Math.max(0, Math.round(Number(value) || 0));
+  const packSize = item ? staffStockPackSize(item) : null;
+  if (packSize) {
+    const parts = formatPackQty(total, packSize);
+    return `${fmtQty(total)} ${pcsLabel} · ${parts}`;
+  }
   return `${fmtQty(total)} ${pcsLabel}`;
 }
 
@@ -95,6 +104,8 @@ export function PrepStockPage() {
     mode: "add" | "set";
   } | null>(null);
   const [dialogQty, setDialogQty] = useState("");
+  const [dialogPacks, setDialogPacks] = useState("");
+  const [dialogLoosePcs, setDialogLoosePcs] = useState("");
 
   const load = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!opts?.quiet) setRefreshing(true);
@@ -113,6 +124,7 @@ export function PrepStockPage() {
           name: item.name,
           note: item.note || undefined,
           noWarehouse: item.noWarehouse,
+          packSize: item.packSize && item.packSize > 1 ? item.packSize : undefined,
         })),
       );
     } catch (err) {
@@ -160,14 +172,39 @@ export function PrepStockPage() {
   ) => {
     const mode = opts?.mode ?? (moveType === "set_kitchen" || moveType === "set_warehouse" ? "set" : "add");
     setDialog({ item, moveType, title, mode });
-    setDialogQty(
-      opts?.initialQty != null && Number.isFinite(opts.initialQty) ? fmtQty(opts.initialQty) : "",
-    );
+    const packSize = staffStockPackSize(item);
+    const initial = opts?.initialQty != null && Number.isFinite(opts.initialQty) ? opts.initialQty : null;
+    if (packSize && mode === "set" && initial != null) {
+      const split = splitPackQty(initial, packSize);
+      setDialogPacks(split.packs ? String(split.packs) : "");
+      setDialogLoosePcs(split.pcs ? String(split.pcs) : "");
+      setDialogQty("");
+    } else if (packSize) {
+      setDialogPacks("");
+      setDialogLoosePcs("");
+      setDialogQty("");
+    } else {
+      setDialogPacks("");
+      setDialogLoosePcs("");
+      setDialogQty(initial != null ? fmtQty(initial) : "");
+    }
   };
 
   const submitMove = async () => {
     if (!dialog) return;
-    const qty = parseLooseNumber(dialogQty);
+    const packSize = staffStockPackSize(dialog.item);
+    let qty: number;
+    if (packSize) {
+      const packs = parseLooseNumber(dialogPacks || "0");
+      const loose = parseLooseNumber(dialogLoosePcs || "0");
+      if (!Number.isFinite(packs) || !Number.isFinite(loose) || packs < 0 || loose < 0) {
+        window.alert(t("prep_stock_qty_invalid"));
+        return;
+      }
+      qty = combinePackQty(packs, loose, packSize);
+    } else {
+      qty = parseLooseNumber(dialogQty);
+    }
     if (
       !Number.isFinite(qty) ||
       qty < 0 ||
@@ -366,7 +403,7 @@ export function PrepStockPage() {
                   }
                 >
                   <span>PREP</span>
-                  <strong>{formatPcs(bal.kitchen, pcsLabel)}</strong>
+                  <strong>{formatPcs(bal.kitchen, pcsLabel, item)}</strong>
                   <em>{t("prep_stock_tap_edit")}</em>
                 </button>
                 {item.noWarehouse ? null : (
@@ -382,16 +419,21 @@ export function PrepStockPage() {
                     }
                   >
                     <span>WAREHOUSE</span>
-                    <strong>{formatPcs(bal.warehouse, pcsLabel)}</strong>
+                    <strong>{formatPcs(bal.warehouse, pcsLabel, item)}</strong>
                     <em>{t("prep_stock_tap_edit")}</em>
                   </button>
                 )}
                 <div className="orders-prepStockBal total">
                   <span>{t("prep_stock_total")}</span>
-                  <strong>{formatPcs(bal.total, pcsLabel)}</strong>
+                  <strong>{formatPcs(bal.total, pcsLabel, item)}</strong>
                 </div>
               </div>
 
+              {staffStockPackSize(item) ? (
+                <p className="orders-prepStockMoveHint">
+                  {t("prep_stock_pack_size_line").replace("{size}", String(staffStockPackSize(item)))}
+                </p>
+              ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
               <div className="orders-prepStockMoves">
                 <button
@@ -456,20 +498,65 @@ export function PrepStockPage() {
                   ? t("prep_stock_set_hint")
                   : t("prep_stock_add_hint")}
             </p>
-            <label>
-              <span>
-                {dialog.mode === "set" ? t("prep_stock_qty_set_prompt") : t("prep_stock_qty_prompt")}
-              </span>
-              <input
-                inputMode="numeric"
-                autoFocus
-                value={dialogQty}
-                onChange={(event) => setDialogQty(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void submitMove();
-                }}
-              />
-            </label>
+            {staffStockPackSize(dialog.item) ? (
+              <>
+                <p className="orders-prepStockModalHint">
+                  {t("prep_stock_pack_size_line").replace(
+                    "{size}",
+                    String(staffStockPackSize(dialog.item)),
+                  )}
+                </p>
+                <label>
+                  <span>{t("prep_stock_packs")}</span>
+                  <input
+                    inputMode="numeric"
+                    autoFocus
+                    value={dialogPacks}
+                    onChange={(event) => setDialogPacks(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void submitMove();
+                    }}
+                  />
+                </label>
+                <label>
+                  <span>{t("prep_stock_pcs")}</span>
+                  <input
+                    inputMode="numeric"
+                    value={dialogLoosePcs}
+                    onChange={(event) => setDialogLoosePcs(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void submitMove();
+                    }}
+                  />
+                </label>
+                <p className="orders-prepStockModalHint">
+                  {t("prep_stock_total")}:{" "}
+                  {fmtQty(
+                    combinePackQty(
+                      parseLooseNumber(dialogPacks || "0") || 0,
+                      parseLooseNumber(dialogLoosePcs || "0") || 0,
+                      staffStockPackSize(dialog.item)!,
+                    ),
+                  )}{" "}
+                  {pcsLabel}
+                </p>
+              </>
+            ) : (
+              <label>
+                <span>
+                  {dialog.mode === "set" ? t("prep_stock_qty_set_prompt") : t("prep_stock_qty_prompt")}
+                </span>
+                <input
+                  inputMode="numeric"
+                  autoFocus
+                  value={dialogQty}
+                  onChange={(event) => setDialogQty(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void submitMove();
+                  }}
+                />
+              </label>
+            )}
             <div className="orders-prepStockModalActions">
               <button type="button" className="orders-btn ghost" onClick={() => setDialog(null)}>
                 {t("place_cancel") || "Cancel"}

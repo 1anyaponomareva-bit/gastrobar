@@ -14,6 +14,7 @@ export async function GET(request: Request) {
         name: item.name,
         note: item.note ?? "",
         noWarehouse: Boolean(item.noWarehouse),
+        packSize: item.packSize ?? null,
         sortOrder: item.sortOrder,
       })),
     };
