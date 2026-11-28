@@ -8,6 +8,8 @@ export type PrepStockBalanceRow = {
   kitchen: number;
   warehouse: number;
   total: number;
+  /** ISO timestamptz — last qty change for this card. */
+  changedAt?: string | null;
 };
 
 export type PrepStockCatalogItemRow = {
@@ -50,7 +52,7 @@ export class PrepStockApiError extends Error {
   }
 }
 
-const CACHE_KEY = "gf_prep_stock_balances_v1";
+const CACHE_KEY = "gf_prep_stock_balances_v2";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -64,11 +66,13 @@ function pick(row: Record<string, unknown>, ...keys: string[]): unknown {
 }
 
 function balanceOf(row: Record<string, unknown>): PrepStockBalanceRow {
+  const changedRaw = pick(row, "changedAt", "changed_at");
   return {
     itemId: String(pick(row, "itemId", "item_id") ?? ""),
     kitchen: Number(pick(row, "kitchen") ?? 0) || 0,
     warehouse: Number(pick(row, "warehouse") ?? 0) || 0,
     total: Number(pick(row, "total") ?? 0) || 0,
+    changedAt: typeof changedRaw === "string" && changedRaw.trim() ? changedRaw.trim() : null,
   };
 }
 

@@ -7,7 +7,7 @@ import Script from "next/script";
  */
 const DAILY_CACHE_BUST = `(function(){
   /* Append stamp when a same-day UI must reach phones with sticky Cache Storage. */
-  var v = new Date().toISOString().slice(0, 10) + "-stock-alert";
+  var v = new Date().toISOString().slice(0, 10) + "-stock-date";
   var key = "gastrobar_app_version";
   var bustOnce = "gastrobar_version_bust_pending";
   try {

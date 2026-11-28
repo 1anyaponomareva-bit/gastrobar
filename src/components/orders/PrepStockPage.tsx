@@ -37,6 +37,7 @@ import {
   type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
 import { localizePackType, splitPackAndLoose } from "@/lib/erp/orderPackaging";
+import { formatVietnamDate } from "@/lib/orders/datetime";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -50,7 +51,10 @@ import { useOrders } from "./OrdersShell";
 const VENUE = "gastrofood" as const;
 const VENUE_LABEL = STAFF_INVENTORY_VENUE_LABELS[VENUE];
 
-type BalanceMap = Record<string, { kitchen: number; warehouse: number; total: number }>;
+type BalanceMap = Record<
+  string,
+  { kitchen: number; warehouse: number; total: number; changedAt?: string | null }
+>;
 
 function toMap(rows: PrepStockBalanceRow[]): BalanceMap {
   const next: BalanceMap = {};
@@ -59,6 +63,7 @@ function toMap(rows: PrepStockBalanceRow[]): BalanceMap {
       kitchen: row.kitchen,
       warehouse: row.warehouse,
       total: row.total,
+      changedAt: row.changedAt ?? null,
     };
   }
   return next;
@@ -203,6 +208,7 @@ export function PrepStockPage() {
         kitchen: row.kitchen,
         warehouse: row.warehouse,
         total: row.total,
+        changedAt: row.changedAt ?? new Date().toISOString(),
       },
     }));
   };
@@ -441,14 +447,18 @@ export function PrepStockPage() {
         {stockItems.map((item) => {
           const label = staffStockLabel(item, lang);
           const note = staffStockNote(item);
-          const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0 };
+          const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0, changedAt: null };
           const busy = busyItem === item.id;
+          const changedLabel = bal.changedAt
+            ? t("prep_stock_changed_at", { date: formatVietnamDate(bal.changedAt) })
+            : t("prep_stock_changed_at_empty");
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
                 {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
               </div>
+              <p className="orders-prepStockChangedAt">{changedLabel}</p>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
                 <button

@@ -20,6 +20,8 @@ export type PrepStockBalance = {
   kitchen: number;
   warehouse: number;
   total: number;
+  /** ISO timestamptz of last movement that changed this item's qty. */
+  changedAt?: string | null;
 };
 
 export type PrepStockMoveResult = PrepStockBalance & {
@@ -50,11 +52,19 @@ function num(value: unknown): number {
 }
 
 function asBalance(row: Record<string, unknown>): PrepStockBalance {
+  const changedRaw = row.changed_at ?? row.changedAt;
+  const changedAt =
+    typeof changedRaw === "string" && changedRaw.trim()
+      ? changedRaw.trim()
+      : changedRaw instanceof Date
+        ? changedRaw.toISOString()
+        : null;
   return {
     itemId: String(row.item_id ?? row.itemId ?? ""),
     kitchen: num(row.kitchen),
     warehouse: num(row.warehouse),
     total: num(row.total ?? num(row.kitchen) + num(row.warehouse)),
+    changedAt,
   };
 }
 
