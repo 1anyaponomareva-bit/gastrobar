@@ -430,9 +430,14 @@ function prepNamePayload(
     orderPackType?: string;
     orderPackContentQty?: number | null;
     orderPackContentUnit?: string;
+    staffStockAlertQty?: number | null;
   },
 ) {
   const showInOrders = extras?.showInOrders ?? Boolean(product.staff_listed);
+  const alertQty =
+    extras && Object.prototype.hasOwnProperty.call(extras, "staffStockAlertQty")
+      ? extras.staffStockAlertQty
+      : product.staff_stock_alert_qty ?? null;
   return {
     id: product.id,
     type: product.type,
@@ -462,6 +467,8 @@ function prepNamePayload(
         : product.order_pack_content_qty ?? null,
     order_pack_content_unit:
       (extras?.orderPackContentUnit ?? product.order_pack_content_unit ?? "").trim() || null,
+    staff_stock_alert_qty:
+      alertQty != null && Number.isFinite(alertQty) && alertQty >= 0 ? alertQty : null,
   };
 }
 
@@ -542,6 +549,9 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     product.order_pack_content_qty ?? null,
   );
   const [orderPackContentUnit, setOrderPackContentUnit] = useState(product.order_pack_content_unit ?? "");
+  const [staffStockAlertQty, setStaffStockAlertQty] = useState<number | null>(
+    product.staff_stock_alert_qty ?? null,
+  );
   const [composeOpen, setComposeOpen] = useState(true);
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [sheetBusy, setSheetBusy] = useState(false);
@@ -567,7 +577,8 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     showInOrders !== Boolean(product.staff_listed) ||
     orderPackType.trim() !== String(product.order_pack_type ?? "").trim() ||
     (orderPackContentQty ?? null) !== (product.order_pack_content_qty ?? null) ||
-    orderPackContentUnit.trim() !== String(product.order_pack_content_unit ?? "").trim();
+    orderPackContentUnit.trim() !== String(product.order_pack_content_unit ?? "").trim() ||
+    (staffStockAlertQty ?? null) !== (product.staff_stock_alert_qty ?? null);
   const productDirty = namesDirty || pieceDirty || ordersDirty;
   useDirtyGuard(dirty || productDirty);
 
@@ -586,6 +597,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     setOrderPackType(product.order_pack_type ?? "");
     setOrderPackContentQty(product.order_pack_content_qty ?? null);
     setOrderPackContentUnit(product.order_pack_content_unit ?? "");
+    setStaffStockAlertQty(product.staff_stock_alert_qty ?? null);
     setPieceWeight(product.unit_weight_kg);
   }, [recipes, product, viewId]);
 
@@ -673,6 +685,7 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           orderPackType,
           orderPackContentQty,
           orderPackContentUnit,
+          staffStockAlertQty,
         }),
       },
       quiet ? false : T("Карточка сохранена", "Card saved", "Đã lưu thẻ"),
@@ -962,6 +975,21 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               disabled={readOnly}
               onChange={(e) => setOrderPackContentUnit(e.target.value)}
               placeholder={T("шт. / г", "pcs / g", "cái / g")}
+            />
+          </Field>
+          <Field
+            label={T("Контроль остатков", "Stock control", "Kiểm soát tồn")}
+            hint={T(
+              "Критическое значение в единице учёта. В Prep Stock при печати Share PDF строки с остатком ≤ этого числа подсвечиваются красным (произвести).",
+              "Critical qty in stock unit. Prep Stock Share PDF highlights rows in red when qty ≤ this (produce).",
+              "Ngưỡng theo đơn vị tồn. Prep Stock Share PDF tô đỏ dòng khi tồn ≤ mức này (sản xuất).",
+            )}
+          >
+            <NumberInput
+              value={staffStockAlertQty}
+              disabled={readOnly}
+              onChange={setStaffStockAlertQty}
+              placeholder={unit ? String(unit) : "0"}
             />
           </Field>
         </div>
