@@ -75,6 +75,12 @@ export type OrderProduct = {
   supplierId: string | null;
   sort: number;
   hidden?: boolean;
+  /** Accountable Item from ERP (`staff_listed`). */
+  accountable?: boolean;
+  /** Structured ERP packing for Orders (read-only in Orders). */
+  orderPackType?: string | null;
+  orderPackContentQty?: number | null;
+  orderPackContentUnit?: string | null;
   packs: OrderProductPack[];
 };
 

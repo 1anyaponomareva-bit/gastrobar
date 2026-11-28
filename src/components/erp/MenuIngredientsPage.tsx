@@ -141,6 +141,7 @@ function MenuIngredientsList() {
   const suppliers = list.supplier;
   const archived = list.archived;
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [accountableFilter, setAccountableFilter] = useState<"all" | "yes" | "no">("all");
   const stockMap = useMemo(() => (state ? stockByProduct(state.stock, null) : new Map()), [state]);
   if (!state) return null;
 
@@ -154,6 +155,8 @@ function MenuIngredientsList() {
   const pool = state.products.filter((p) => allowed.has(p.type) && Boolean(p.archived_at) === archived);
   const rows: Row[] = pool
     .filter((p) => {
+      if (accountableFilter === "yes" && !p.staff_listed) return false;
+      if (accountableFilter === "no" && p.staff_listed) return false;
       if (catSet.size && !catSet.has(p.category_id ?? "none")) return false;
       if (unitSet.size && !unitSet.has(p.base_unit ?? "none")) return false;
       const ids = packSupplierIds(p.id, packs);
@@ -225,6 +228,15 @@ function MenuIngredientsList() {
       label: T("Ед. измерения", "Unit", "Đơn vị"),
       cell: (row) => (row.base_unit ? unitLabel(row.base_unit) : "—"),
       text: (row) => row.base_unit ?? "",
+    },
+    {
+      id: "accountable",
+      label: T("Подотчётный", "Accountable", "Cần theo dõi"),
+      cell: (row) =>
+        row.staff_listed
+          ? T("Да", "Yes", "Có")
+          : T("Нет", "No", "Không"),
+      text: (row) => (row.staff_listed ? "yes" : "no"),
     },
     {
       id: "pieceWeight",
@@ -326,6 +338,16 @@ function MenuIngredientsList() {
             onChange={(value) => list.set({ supplier: value })}
             searchable
           />
+          <select
+            className="erpFilterBtn"
+            value={accountableFilter}
+            onChange={(e) => setAccountableFilter(e.target.value as "all" | "yes" | "no")}
+            aria-label={T("Подотчётный товар", "Accountable Item", "Hàng Hóa Cần Theo Dõi")}
+          >
+            <option value="all">{T("Все товары", "All items", "Tất cả")}</option>
+            <option value="yes">{T("Подотчётные", "Accountable", "Cần theo dõi")}</option>
+            <option value="no">{T("Неподотчётные", "Not accountable", "Không theo dõi")}</option>
+          </select>
           <DropMenu
             trigger={({ open, toggle }) => (
               <button type="button" className={`erpFilterBtn ${archived ? "on" : ""}`} aria-expanded={open} onClick={toggle}>

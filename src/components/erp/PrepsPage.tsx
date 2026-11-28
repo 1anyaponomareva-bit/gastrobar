@@ -86,20 +86,25 @@ const yieldText = (recipe: ErpRecipe | undefined, unit: ErpUnit | null) => {
 export function PrepsPage() {
   const { state } = useErp();
   const [query, setQuery] = useState("");
+  const [accountableFilter, setAccountableFilter] = useState<"all" | "yes" | "no">("all");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = usePageSize();
   const ctx = useMemo(
     () => (state ? prepCompositionCostContext(state.products, state.recipes, state.costSources) : null),
     [state],
   );
-  useEffect(() => setPage(0), [query, pageSize]);
+  useEffect(() => setPage(0), [query, pageSize, accountableFilter]);
   if (!state || !ctx) return null;
 
   const all = state.products
     .filter((p) => !p.archived_at && (p.type === "semi_finished" || p.type === "finished"))
     .sort((a, b) => a.name_en.localeCompare(b.name_en));
   const q = query.trim().toLowerCase();
-  const list = all.filter((p) => !q || namesHaystack(p).toLowerCase().includes(q));
+  const list = all.filter((p) => {
+    if (accountableFilter === "yes" && !p.staff_listed) return false;
+    if (accountableFilter === "no" && p.staff_listed) return false;
+    return !q || namesHaystack(p).toLowerCase().includes(q);
+  });
   const pages = Math.max(1, Math.ceil(list.length / pageSize));
   const current = Math.min(page, pages - 1);
   const pageRows = list.slice(current * pageSize, current * pageSize + pageSize);
@@ -138,16 +143,23 @@ export function PrepsPage() {
         />
       ) : (
         <>
-          {all.length > 6 ? (
-            <div className="erpToolbar">
-              <input
-                type="search"
-                placeholder={T("Найти полуфабрикат…", "Find…", "Tìm…")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-          ) : null}
+          <div className="erpToolbar">
+            <input
+              type="search"
+              placeholder={T("Найти полуфабрикат…", "Find…", "Tìm…")}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <select
+              value={accountableFilter}
+              onChange={(e) => setAccountableFilter(e.target.value as "all" | "yes" | "no")}
+              aria-label={T("Подотчётный товар", "Accountable Item", "Hàng Hóa Cần Theo Dõi")}
+            >
+              <option value="all">{T("Все товары", "All items", "Tất cả")}</option>
+              <option value="yes">{T("Подотчётные", "Accountable", "Cần theo dõi")}</option>
+              <option value="no">{T("Неподотчётные", "Not accountable", "Không theo dõi")}</option>
+            </select>
+          </div>
           {!list.length ? (
             noSearchResults(() => setQuery(""))
           ) : (
@@ -156,6 +168,7 @@ export function PrepsPage() {
                 <thead>
                   <tr>
                     <th>{T("Название", "Name", "Tên")}</th>
+                    <th>{T("Подотчётный", "Accountable", "Cần theo dõi")}</th>
                     <th>{T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}</th>
                     <th className="num">{T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}</th>
                     <th />
@@ -181,6 +194,9 @@ export function PrepsPage() {
                           ) : draft ? (
                             <span className="erpCellSub">{T("есть новый черновик", "a new draft exists", "có bản nháp mới")}</span>
                           ) : null}
+                        </td>
+                        <td data-label={T("Подотчётный", "Accountable", "Cần theo dõi")}>
+                          {p.staff_listed ? T("Да", "Yes", "Có") : T("Нет", "No", "Không")}
                         </td>
                         <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(costRecipe, p.base_unit)}</td>
                         <td className="num" data-label={T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}>

@@ -269,6 +269,10 @@ function productOf(raw: Json): OrderProduct {
     supplierId: optStr(pick(raw, "supplierId", "supplier_id")),
     sort: num(pick(raw, "sort", "staff_sort", "staffSort")),
     hidden: Boolean(pick(raw, "hidden", "staff_hidden")),
+    accountable: Boolean(pick(raw, "accountable", "staff_listed", "staffListed")),
+    orderPackType: optStr(pick(raw, "orderPackType", "order_pack_type")),
+    orderPackContentQty: optNum(pick(raw, "orderPackContentQty", "order_pack_content_qty")),
+    orderPackContentUnit: optStr(pick(raw, "orderPackContentUnit", "order_pack_content_unit")),
     packs: listOf(pick(raw, "packs", "productPacks", "product_packs") ?? raw, ["packs"], packOf),
   };
 }

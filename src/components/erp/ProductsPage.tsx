@@ -265,6 +265,11 @@ type ProductForm = {
   brand: string;
   est_unit_cost: number | null;
   storageOptions: StorageOption[];
+  /** Accountable Item → Orders (`staff_listed`). Default off for new products. */
+  accountable: boolean;
+  order_pack_type: string;
+  order_pack_content_qty: number | null;
+  order_pack_content_unit: string;
 } & LossPcts;
 
 const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): ProductForm => ({
@@ -279,6 +284,10 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   brand: product?.brand ?? "",
   est_unit_cost: product?.est_unit_cost ?? null,
   storageOptions: parseStorageOptions(product?.storage_conditions, product?.shelf_life_days),
+  accountable: Boolean(product?.staff_listed),
+  order_pack_type: product?.order_pack_type ?? "",
+  order_pack_content_qty: product?.order_pack_content_qty ?? null,
+  order_pack_content_unit: product?.order_pack_content_unit ?? "",
   ...Object.fromEntries(LOSS_METHODS.map((m) => [`loss_${m}_pct`, product?.[`loss_${m}_pct`] ?? null])),
   ...preset,
 });
@@ -408,7 +417,8 @@ function ProductEditor({
   const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
-    const { storageOptions, ...formRest } = form;
+    const { storageOptions, accountable, order_pack_type, order_pack_content_qty, order_pack_content_unit, ...formRest } =
+      form;
     const storagePayload = serializeStorageOptions(storageOptions);
     const result = await act<{ id: string }>(
       {
@@ -424,6 +434,19 @@ function ProductEditor({
           shelf_life_days: storagePayload.shelf_life_days,
           storage_conditions: storagePayload.storage_conditions,
           packs,
+          accountable,
+          staff_listed: accountable,
+          staff: {
+            listed: accountable,
+            unit: product?.staff_unit || form.base_unit || null,
+            pack: product?.staff_pack ?? null,
+            supplier_id: product?.staff_supplier_id ?? defaultPackSupplier() ?? null,
+            item_no: product?.staff_item_no ?? null,
+            hidden: Boolean(product?.staff_hidden),
+          },
+          order_pack_type: order_pack_type.trim() || null,
+          order_pack_content_qty: order_pack_content_qty,
+          order_pack_content_unit: order_pack_content_unit.trim() || null,
         },
       },
       isNew ? T("Продукт создан", "Product created", "Đã tạo sản phẩm") : T("Изменения сохранены", "Changes saved", "Đã lưu thay đổi"),
@@ -466,6 +489,25 @@ function ProductEditor({
         enTestId="product-name"
         vnTestId="product-name-vn"
       />
+      <label className="erpCheck" style={{ gridColumn: "1 / -1" }}>
+        <input
+          type="checkbox"
+          checked={form.accountable}
+          onChange={(e) => set("accountable", e.target.checked)}
+        />
+        <span>
+          {T("Подотчётный товар", "Accountable Item", "Hàng Hóa Cần Theo Dõi")}
+          <span className="erpCellSub">
+            {" "}
+            —{" "}
+            {T(
+              "показывать в Orders. Снятие не удаляет товар и не меняет остатки.",
+              "show in Orders. Clearing does not delete the product or change stock.",
+              "hiện trong Orders. Bỏ chọn không xóa hàng và không đổi tồn.",
+            )}
+          </span>
+        </span>
+      </label>
       {ingredientCard ? (
         <Field
           label={T("Поставщик", "Supplier", "Nhà cung cấp")}
@@ -843,6 +885,37 @@ function ProductEditor({
         options={form.storageOptions}
         onChange={(value) => set("storageOptions", value)}
       />
+      {form.type === "semi_finished" || form.type === "ingredient" ? (
+        <div className="erpGrid two" style={{ marginTop: 12 }}>
+          <Field
+            label={T("Фасовка — тип упаковки", "Packing — package type", "Quy cách — loại bao bì")}
+            hint={T(
+              "Для Orders. Не путать с выходом производства и складской единицей.",
+              "For Orders. Not production yield and not the stock unit.",
+              "Cho Orders. Không phải năng suất SX và không phải đơn vị kho.",
+            )}
+          >
+            <input
+              value={form.order_pack_type}
+              onChange={(e) => set("order_pack_type", e.target.value)}
+              placeholder={T("пакет / pack / túi", "pack / bag", "túi / pack")}
+            />
+          </Field>
+          <Field label={T("Количество в упаковке", "Units per pack", "Số lượng trong bao")}>
+            <NumberInput
+              value={form.order_pack_content_qty}
+              onChange={(value) => set("order_pack_content_qty", value)}
+            />
+          </Field>
+          <Field label={T("Единица содержимого", "Content unit", "Đơn vị nội dung")}>
+            <input
+              value={form.order_pack_content_unit}
+              onChange={(e) => set("order_pack_content_unit", e.target.value)}
+              placeholder={T("шт. / г", "pcs / g", "cái / g")}
+            />
+          </Field>
+        </div>
+      ) : null}
       {product ? (
         <>
           <h3>{T("Остатки", "In stock", "Tồn kho")}</h3>

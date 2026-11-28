@@ -96,6 +96,44 @@ async function applyExtraNames(
   }
 }
 
+/** Accountable Item + structured Orders packing — columns may lag behind erp_save_product. */
+async function applyOrdersCatalogFields(
+  id: string,
+  payload: Record<string, unknown>,
+  actor: string,
+) {
+  const patch: Record<string, unknown> = { updated_by: actor };
+  const staff = isObject(payload.staff) ? payload.staff : null;
+  if (staff && Object.prototype.hasOwnProperty.call(staff, "listed")) {
+    patch.staff_listed = Boolean(staff.listed);
+  } else if (Object.prototype.hasOwnProperty.call(payload, "staff_listed")) {
+    patch.staff_listed = Boolean(payload.staff_listed);
+  } else if (Object.prototype.hasOwnProperty.call(payload, "accountable")) {
+    patch.staff_listed = Boolean(payload.accountable);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, "order_pack_type")) {
+    const raw = payload.order_pack_type;
+    patch.order_pack_type = typeof raw === "string" && raw.trim() ? raw.trim() : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "order_pack_content_qty")) {
+    const raw = payload.order_pack_content_qty;
+    const n = raw === null || raw === undefined || raw === "" ? null : Number(raw);
+    patch.order_pack_content_qty = n != null && Number.isFinite(n) && n > 0 ? n : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "order_pack_content_unit")) {
+    const raw = payload.order_pack_content_unit;
+    patch.order_pack_content_unit = typeof raw === "string" && raw.trim() ? raw.trim() : null;
+  }
+
+  if (Object.keys(patch).length <= 1) return;
+  const result = await erpDb().from("erp_products").update(patch).eq("id", id);
+  if (result.error) {
+    if (["PGRST204", "PGRST205", "42703"].includes(result.error.code ?? "")) return;
+    throw check(result);
+  }
+}
+
 /**
  * Older live SQL still drops typed net on nested prep SKUs.
  * Net may be greater than brutto (soak / cook gain) — that is allowed.
@@ -152,6 +190,7 @@ export async function POST(request: Request) {
         const payload = object(a.product, "product");
         const id = await rpc<string>("erp_save_product", { p: payload, p_actor: actor });
         await applyExtraNames(rpc, "product", id, payload);
+        await applyOrdersCatalogFields(id, payload, actor);
         mirrorStaffLater();
         const patch = await fresh(["products", "packs", "productPacks", "recipes", "costSources"]);
         const product = patch.products?.find((row) => row.id === id);
