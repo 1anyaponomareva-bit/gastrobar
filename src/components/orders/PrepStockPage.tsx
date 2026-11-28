@@ -482,14 +482,16 @@ export function PrepStockPage() {
               ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
               <div className="orders-prepStockMoves">
-                <button
-                  type="button"
-                  className="orders-btn dark"
-                  disabled={busy}
-                  onClick={() => askMove(item, "produce", t("prep_stock_produce"), { mode: "add" })}
-                >
-                  {t("prep_stock_produce")}
-                </button>
+                {item.productType === "semi_finished" ? (
+                  <button
+                    type="button"
+                    className="orders-btn dark"
+                    disabled={busy}
+                    onClick={() => askMove(item, "produce", t("prep_stock_produce"), { mode: "add" })}
+                  >
+                    {t("prep_stock_produce")}
+                  </button>
+                ) : null}
                 {item.noWarehouse ? null : (
                   <>
                     <button
