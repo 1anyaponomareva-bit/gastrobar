@@ -36,6 +36,11 @@ export type StaffStockItem = {
   unitWeightGrams?: number;
   /** In-house amount at or below this value is flagged as PREP ORDER. */
   prepOrderAtOrBelow?: number;
+  /**
+   * ERP «Контроль остатков» — when kitchen and/or warehouse qty ≤ this value,
+   * Share PDF highlights the row red (PREP ORDER / FOOD ORDER by product type).
+   */
+  stockAlertAtOrBelow?: number;
   /** Warehouse amount at or below this value is flagged as FOOD ORDER (default 0). */
   warehouseOrderAtOrBelow?: number;
 };
@@ -153,6 +158,18 @@ export function evaluateStaffStock(
 ): { lowInHouse: boolean; lowWarehouse: boolean; task: StaffStockTask | null } {
   if (item.noAlerts) {
     return { lowInHouse: false, lowWarehouse: false, task: null };
+  }
+  if (item.stockAlertAtOrBelow !== undefined) {
+    const threshold = item.stockAlertAtOrBelow;
+    const lowInHouse = restaurant !== null && restaurant <= threshold;
+    const lowWarehouse =
+      !item.noWarehouse && warehouse !== null && warehouse <= threshold;
+    if (!lowInHouse && !lowWarehouse) {
+      return { lowInHouse: false, lowWarehouse: false, task: null };
+    }
+    const task: StaffStockTask =
+      item.productType === "semi_finished" ? "PREP ORDER" : "FOOD ORDER";
+    return { lowInHouse, lowWarehouse, task };
   }
   if (item.prepOrderAtOrBelow !== undefined) {
     const lowInHouse = restaurant !== null && restaurant <= item.prepOrderAtOrBelow;

@@ -21,6 +21,7 @@ export async function GET(request: Request) {
         purchasePackLabel: item.purchasePackLabel ?? null,
         purchaseQtyBase: item.purchaseQtyBase ?? null,
         purchaseUnit: item.purchaseUnit ?? null,
+        stockAlertAtOrBelow: item.stockAlertAtOrBelow ?? null,
         sortOrder: item.sortOrder,
       })),
     };

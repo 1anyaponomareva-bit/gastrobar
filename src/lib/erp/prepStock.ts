@@ -108,6 +108,9 @@ function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStoc
     productType !== "semi_finished" && Number.isFinite(purchaseQtyRaw) && purchaseQtyRaw > 0
       ? purchaseQtyRaw
       : undefined;
+  const alertRaw = Number(row.stock_alert_qty ?? row.stockAlertQty ?? row.staff_stock_alert_qty);
+  const stockAlertAtOrBelow =
+    Number.isFinite(alertRaw) && alertRaw >= 0 ? alertRaw : undefined;
   return {
     id: String(row.id ?? ""),
     name: {
@@ -130,6 +133,7 @@ function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStoc
       productType !== "semi_finished"
         ? String(row.purchase_unit ?? row.purchaseUnit ?? "").trim() || undefined
         : undefined,
+    stockAlertAtOrBelow,
     sortOrder: Number(row.sort_order ?? row.sortOrder) || (index + 1) * 10,
     archived: false,
   };

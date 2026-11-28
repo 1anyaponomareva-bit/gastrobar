@@ -126,6 +126,11 @@ async function applyOrdersCatalogFields(
     const raw = payload.order_pack_content_unit;
     patch.order_pack_content_unit = typeof raw === "string" && raw.trim() ? raw.trim() : null;
   }
+  if (Object.prototype.hasOwnProperty.call(payload, "staff_stock_alert_qty")) {
+    const raw = payload.staff_stock_alert_qty;
+    const n = raw === null || raw === undefined || raw === "" ? null : Number(raw);
+    patch.staff_stock_alert_qty = n != null && Number.isFinite(n) && n >= 0 ? n : null;
+  }
 
   if (Object.keys(patch).length <= 1) return;
   const result = await erpDb().from("erp_products").update(patch).eq("id", id);

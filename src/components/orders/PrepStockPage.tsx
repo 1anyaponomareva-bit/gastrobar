@@ -157,6 +157,10 @@ export function PrepStockPage() {
           name: item.name,
           note: item.note || undefined,
           noWarehouse: item.noWarehouse,
+          stockAlertAtOrBelow:
+            item.stockAlertAtOrBelow != null && item.stockAlertAtOrBelow >= 0
+              ? item.stockAlertAtOrBelow
+              : undefined,
           productType: item.productType || undefined,
           baseUnit: item.baseUnit || undefined,
           packSize: item.packSize && item.packSize > 1 ? item.packSize : undefined,

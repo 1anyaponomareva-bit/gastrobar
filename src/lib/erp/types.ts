@@ -273,6 +273,8 @@ export type ErpProduct = Archivable & LossPcts & {
   order_pack_type?: string | null;
   order_pack_content_qty?: number | null;
   order_pack_content_unit?: string | null;
+  /** Prep Stock control: highlight on Share PDF when qty ≤ this value. */
+  staff_stock_alert_qty?: number | null;
   photo?: string | null;
 };
 

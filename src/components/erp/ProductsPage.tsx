@@ -270,6 +270,8 @@ type ProductForm = {
   order_pack_type: string;
   order_pack_content_qty: number | null;
   order_pack_content_unit: string;
+  /** Critical Prep Stock qty — Share PDF red when kitchen/warehouse ≤ this. */
+  staff_stock_alert_qty: number | null;
 } & LossPcts;
 
 const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): ProductForm => ({
@@ -288,6 +290,7 @@ const formOf = (product: ErpProduct | null, preset?: Partial<ProductForm>): Prod
   order_pack_type: product?.order_pack_type ?? "",
   order_pack_content_qty: product?.order_pack_content_qty ?? null,
   order_pack_content_unit: product?.order_pack_content_unit ?? "",
+  staff_stock_alert_qty: product?.staff_stock_alert_qty ?? null,
   ...Object.fromEntries(LOSS_METHODS.map((m) => [`loss_${m}_pct`, product?.[`loss_${m}_pct`] ?? null])),
   ...preset,
 });
@@ -417,8 +420,15 @@ function ProductEditor({
   const canSave = form.name_en.trim() !== "" && (!isNew || unit !== null) && validPacks && validLosses && (dirty || isNew);
 
   const save = async (createAnother = false) => {
-    const { storageOptions, accountable, order_pack_type, order_pack_content_qty, order_pack_content_unit, ...formRest } =
-      form;
+    const {
+      storageOptions,
+      accountable,
+      order_pack_type,
+      order_pack_content_qty,
+      order_pack_content_unit,
+      staff_stock_alert_qty,
+      ...formRest
+    } = form;
     const storagePayload = serializeStorageOptions(storageOptions);
     const result = await act<{ id: string }>(
       {
@@ -451,6 +461,10 @@ function ProductEditor({
             (order_pack_content_qty != null && order_pack_content_qty > 0
               ? String(unit || product?.base_unit || "").trim() || null
               : null),
+          staff_stock_alert_qty:
+            staff_stock_alert_qty != null && Number.isFinite(staff_stock_alert_qty) && staff_stock_alert_qty >= 0
+              ? staff_stock_alert_qty
+              : null,
         },
       },
       isNew ? T("Продукт создан", "Product created", "Đã tạo sản phẩm") : T("Изменения сохранены", "Changes saved", "Đã lưu thay đổi"),
@@ -948,6 +962,20 @@ function ProductEditor({
               value={form.order_pack_content_unit}
               onChange={(e) => set("order_pack_content_unit", e.target.value)}
               placeholder={T("шт. / г / кг", "pcs / g / kg", "cái / g / kg")}
+            />
+          </Field>
+          <Field
+            label={T("Контроль остатков", "Stock control", "Kiểm soát tồn")}
+            hint={T(
+              "Критическое значение в единице учёта. В Prep Stock при печати Share PDF строки с остатком ≤ этого числа подсвечиваются красным (произвести / закупить).",
+              "Critical qty in stock unit. Prep Stock Share PDF highlights rows in red when qty ≤ this (produce / order).",
+              "Ngưỡng theo đơn vị tồn. Prep Stock Share PDF tô đỏ dòng khi tồn ≤ mức này (sản xuất / đặt hàng).",
+            )}
+          >
+            <NumberInput
+              value={form.staff_stock_alert_qty}
+              onChange={(value) => set("staff_stock_alert_qty", value)}
+              placeholder={unit ? String(unit) : "0"}
             />
           </Field>
         </div>

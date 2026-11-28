@@ -25,6 +25,8 @@ export type PrepStockCatalogItemRow = {
   purchasePackLabel?: string | null;
   purchaseQtyBase?: number | null;
   purchaseUnit?: string | null;
+  /** ERP staff_stock_alert_qty — red on Share PDF when qty ≤ this. */
+  stockAlertAtOrBelow?: number | null;
   sortOrder: number;
 };
 
@@ -142,6 +144,7 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
       const packSizeRaw = Number(r.packSize ?? r.pack_size);
       const packType = String(r.packType ?? r.pack_type ?? "").trim();
       const purchaseQtyRaw = Number(r.purchaseQtyBase ?? r.purchase_qty_base);
+      const alertRaw = Number(r.stockAlertAtOrBelow ?? r.stock_alert_qty ?? r.staff_stock_alert_qty);
       return {
         id: String(r.id ?? ""),
         name: {
@@ -170,6 +173,8 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
           productType === "semi_finished"
             ? null
             : String(r.purchaseUnit ?? r.purchase_unit ?? "").trim() || null,
+        stockAlertAtOrBelow:
+          Number.isFinite(alertRaw) && alertRaw >= 0 ? alertRaw : null,
         sortOrder: Number(r.sortOrder ?? r.sort_order ?? 0) || 0,
       };
     })
