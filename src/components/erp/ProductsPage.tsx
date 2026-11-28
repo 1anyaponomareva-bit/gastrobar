@@ -967,9 +967,9 @@ function ProductEditor({
           <Field
             label={T("Контроль остатков", "Stock control", "Kiểm soát tồn")}
             hint={T(
-              "Критическое значение в единице учёта. В Prep Stock при печати Share PDF строки с остатком ≤ этого числа подсвечиваются красным (произвести / закупить).",
-              "Critical qty in stock unit. Prep Stock Share PDF highlights rows in red when qty ≤ this (produce / order).",
-              "Ngưỡng theo đơn vị tồn. Prep Stock Share PDF tô đỏ dòng khi tồn ≤ mức này (sản xuất / đặt hàng).",
+              "Критическое значение в единице учёта. В Prep Stock при печати Share PDF строка красная, если PREP + WAREHOUSE ≤ этого числа (произвести / закупить).",
+              "Critical qty in stock unit. Prep Stock Share PDF marks the row red when PREP + WAREHOUSE ≤ this (produce / order).",
+              "Ngưỡng theo đơn vị tồn. Prep Stock Share PDF tô đỏ dòng khi PREP + WAREHOUSE ≤ mức này (sản xuất / đặt hàng).",
             )}
           >
             <NumberInput

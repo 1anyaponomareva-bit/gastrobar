@@ -4,7 +4,7 @@ alter table public.erp_products
   add column if not exists staff_stock_alert_qty numeric(12, 4);
 
 comment on column public.erp_products.staff_stock_alert_qty is
-  'Prep Stock control: when kitchen/warehouse qty <= this value, Share PDF highlights the row red (PREP ORDER / FOOD ORDER).';
+  'Prep Stock control: when total (kitchen + warehouse) <= this value, Share PDF highlights the row red (PREP ORDER / FOOD ORDER).';
 
 create or replace function public.erp_prep_stock_catalog()
 returns jsonb
