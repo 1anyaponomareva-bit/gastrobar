@@ -409,38 +409,62 @@ function drawStockTableHeader(ctx: PdfContext, labels: StaffInventoryPdfLabels) 
   ctx.y = topY - total;
 }
 
-const STOCK_COL_IN_HOUSE = 268;
-const STOCK_COL_WAREHOUSE = 372;
-const STOCK_COL_TASK = 475;
+const STOCK_COL_IN_HOUSE = 255;
+const STOCK_COL_WAREHOUSE = 360;
+const STOCK_COL_TASK = 470;
+const STOCK_QTY_WIDTH = 100;
+const STOCK_NAME_WIDTH = 210;
 
-function stockQtyText(
-  label: string | undefined,
-  value: number,
-  unit: string,
-  filled: boolean,
-): string {
-  if (label != null && label !== "") return label;
-  if (!filled) return "";
-  return `${money(value)} ${unit}`;
+/** "48 pcs · 2 bag + 8 pcs" → ["48 pcs", "2 bag + 8 pcs"] so base unit stays primary. */
+function stockQtyLines(label: string | undefined, value: number, unit: string): string[] {
+  const raw = String(label ?? "").trim();
+  if (raw) {
+    return raw
+      .split("·")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return [`${money(value)} ${unit}`];
+}
+
+function drawStockQtyBlock(
+  ctx: PdfContext,
+  lines: string[],
+  x: number,
+  topBaseline: number,
+  size: number,
+  activeFont: PDFFont,
+  color: ReturnType<typeof rgb>,
+) {
+  let y = topBaseline;
+  lines.forEach((line) => {
+    const clipped =
+      activeFont.widthOfTextAtSize(line, size) <= STOCK_QTY_WIDTH
+        ? line
+        : wrapText(line, activeFont, size, STOCK_QTY_WIDTH)[0] || line;
+    drawTextLine(ctx, clipped, x, y, size, activeFont, color);
+    y -= size + 2;
+  });
 }
 
 function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
-  const rowHeight = 22;
-  const total = rowHeight + 6;
-
   const flagged = row.task !== null;
-  const inHouseText = row.hasRestaurant
-    ? stockQtyText(row.restaurantLabel, row.restaurant, row.unit, true)
-    : "";
-  const warehouseText = row.noWarehouse
-    ? row.warehouseLabel || "—"
-    : stockQtyText(
+  const inHouseLines = row.hasRestaurant
+    ? stockQtyLines(row.restaurantLabel, row.restaurant, row.unit)
+    : [];
+  const warehouseLines = row.noWarehouse
+    ? [row.warehouseLabel || "—"]
+    : stockQtyLines(
         row.warehouseLabel,
         row.hasWarehouse ? row.warehouse : 0,
         row.unit,
-        true,
       );
-  const qtyFontSize = Math.max(inHouseText.length, warehouseText.length) > 14 ? 7.5 : 9;
+  const nameLines = wrapText(row.name, ctx.fontBold, 9, STOCK_NAME_WIDTH);
+  const qtyLines = Math.max(inHouseLines.length, warehouseLines.length, 1);
+  const nameBlock = nameLines.length * 9 + Math.max(0, nameLines.length - 1) * 2;
+  const qtyBlock = qtyLines * 8 + Math.max(0, qtyLines - 1) * 2;
+  const rowHeight = Math.max(22, Math.max(nameBlock, qtyBlock) + 12);
+  const total = rowHeight + 6;
 
   ensureSpace(ctx, total);
   const rowTop = ctx.y;
@@ -454,27 +478,31 @@ function drawStockRow(ctx: PdfContext, row: StaffStockRow, index: number) {
     flagged ? COLORS.redLine : COLORS.line,
   );
 
-  const baseline = rowTop - 14;
+  const baseline = rowTop - 12;
   drawTextLine(ctx, String(index + 1), MARGIN_LEFT + 8, baseline, 9, ctx.font);
-  drawTextLine(ctx, row.name, MARGIN_LEFT + 28, baseline, 9, ctx.fontBold);
+  let nameY = baseline;
+  nameLines.forEach((line) => {
+    drawTextLine(ctx, line, MARGIN_LEFT + 28, nameY, 9, ctx.fontBold);
+    nameY -= 11;
+  });
   if (row.task) {
     drawTextLine(ctx, row.task, STOCK_COL_TASK, baseline, 8, ctx.fontBold, COLORS.red);
   }
-  drawTextLine(
+  drawStockQtyBlock(
     ctx,
-    inHouseText,
+    inHouseLines,
     STOCK_COL_IN_HOUSE,
     baseline,
-    qtyFontSize,
+    8,
     row.lowInHouse ? ctx.fontBold : ctx.font,
     row.lowInHouse ? COLORS.red : COLORS.text,
   );
-  drawTextLine(
+  drawStockQtyBlock(
     ctx,
-    warehouseText,
+    warehouseLines,
     STOCK_COL_WAREHOUSE,
     baseline,
-    qtyFontSize,
+    8,
     row.lowWarehouse ? ctx.fontBold : ctx.font,
     row.lowWarehouse ? COLORS.red : COLORS.text,
   );

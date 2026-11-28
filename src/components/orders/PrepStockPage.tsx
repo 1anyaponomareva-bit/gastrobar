@@ -358,10 +358,11 @@ export function PrepStockPage() {
           unit: staffStockUnit(item),
           restaurant: bal.kitchen,
           warehouse: bal.warehouse,
-          restaurantLabel: formatBalance(bal.kitchen, pcsLabel, item, lang, { compact: true }),
+          // Same string as Prep Stock cards: "48 pcs · 2 bag + 8 pcs" (never "48 bags").
+          restaurantLabel: formatBalance(bal.kitchen, pcsLabel, item, lang),
           warehouseLabel: item.noWarehouse
             ? "—"
-            : formatBalance(bal.warehouse, pcsLabel, item, lang, { compact: true }),
+            : formatBalance(bal.warehouse, pcsLabel, item, lang),
           hasRestaurant,
           hasWarehouse,
           noWarehouse: Boolean(item.noWarehouse),
