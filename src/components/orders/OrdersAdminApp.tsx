@@ -362,9 +362,6 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
             </button>
           </div>
         </form>
-        <button type="button" className="dark staffAdminAdd" onClick={() => setEditingPrep("new")}>
-          {t("admin_add_prep_item")}
-        </button>
         <div className="mode">
           <span>{t("admin_prep_hint")}</span>
         </div>
@@ -372,16 +369,18 @@ function CatalogEditor({ email, onLogout, onExpired }: { email: string; onLogout
           const label = staffStockLabel(item, lang);
           const note = String(item.note || "").trim();
           return (
-            <button key={item.id} type="button" className="staffAdminRow" onClick={() => setEditingPrep(item)}>
+            <div key={item.id} className="staffAdminRow">
               <b>
                 {label}
                 {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
               </b>
-              <span>{item.noWarehouse ? "Prep only" : "Prep · Warehouse"}</span>
-            </button>
+              <span>ERP</span>
+            </div>
           );
         })}
-        {!prepItems.length ? <div className="empty">Ничего не найдено</div> : null}
+        {!prepItems.length ? (
+          <div className="empty">Пока пусто — включите галку в ERP</div>
+        ) : null}
       </>
     );
   }

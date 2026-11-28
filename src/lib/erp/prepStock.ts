@@ -1,10 +1,10 @@
-import {
-  getStaffStockItems,
-  type StaffStockItem,
-} from "@/data/staffInStockItems";
+import { type StaffStockItem } from "@/data/staffInStockItems";
 import { check, ErpHttpError, erpDb, rpc } from "@/lib/erp/server";
 
 if (typeof window !== "undefined") throw new Error("erp/prepStock is server-only");
+
+const PRODUCT_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type PrepStockMoveType =
   | "produce"
@@ -73,14 +73,6 @@ function fromDbRow(row: DbItemRow): PrepStockCatalogItem {
   };
 }
 
-function seedRows(): PrepStockCatalogItem[] {
-  return getStaffStockItems("gastrofood").map((item, index) => ({
-    ...item,
-    sortOrder: (index + 1) * 10,
-    archived: false,
-  }));
-}
-
 function isMissingCatalog(error: { code?: string } | null): boolean {
   return ["PGRST205", "42P01"].includes(error?.code ?? "");
 }
@@ -100,33 +92,6 @@ async function readCatalogRows(includeArchived: boolean): Promise<DbItemRow[] | 
   return (result.data ?? []) as DbItemRow[];
 }
 
-async function seedCatalogIfEmpty(): Promise<PrepStockCatalogItem[]> {
-  const existing = await readCatalogRows(true);
-  if (existing === null) return seedRows();
-  if (existing.length > 0) {
-    return existing.filter((row) => !row.archived_at).map(fromDbRow);
-  }
-
-  const seed = seedRows();
-  const payload = seed.map((item) => ({
-    id: item.id,
-    name_en: item.name.en,
-    name_ru: item.name.ru,
-    name_vn: item.name.vn,
-    note: item.note ?? "",
-    no_warehouse: Boolean(item.noWarehouse),
-    sort_order: item.sortOrder,
-    updated_at: new Date().toISOString(),
-    updated_by: "seed",
-  }));
-  const inserted = await erpDb().from("erp_prep_stock_items").upsert(payload, { onConflict: "id" });
-  if (inserted.error) {
-    if (isMissingCatalog(inserted.error)) return seed;
-    throw check(inserted);
-  }
-  return seed;
-}
-
 async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
   const result = await erpDb()
     .from("erp_products")
@@ -137,39 +102,48 @@ async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
     if (["PGRST204", "PGRST205", "42703"].includes(result.error.code ?? "")) return [];
     throw check(result);
   }
+  const metaRows = await readCatalogRows(true);
+  const metaById = new Map((metaRows ?? []).map((row) => [row.id, row]));
   return ((result.data ?? []) as Array<Record<string, unknown>>).map((row, index) => {
+    const id = String(row.id);
     const names =
       row.names && typeof row.names === "object" && !Array.isArray(row.names)
         ? (row.names as Record<string, unknown>)
         : {};
     const ru = typeof names.ru === "string" ? names.ru.trim() : "";
+    const meta = metaById.get(id);
     return {
-      id: String(row.id),
+      id,
       name: {
         en: String(row.name_en ?? "").trim(),
-        ru,
-        vn: String(row.name_vn ?? "").trim(),
+        ru: ru || String(meta?.name_ru ?? "").trim(),
+        vn: String(row.name_vn ?? "").trim() || String(meta?.name_vn ?? "").trim(),
       },
-      sortOrder: Number(row.staff_sort) || (index + 1) * 10,
+      note: String(meta?.note ?? "").trim() || undefined,
+      noWarehouse: Boolean(meta?.no_warehouse),
+      sortOrder: Number(meta?.sort_order) || Number(row.staff_sort) || (index + 1) * 10,
       archived: false,
     } satisfies PrepStockCatalogItem;
   });
 }
 
+/** Prep Stock catalog = ERP products with «Show in Prep Stock» only. No legacy seed list. */
 export async function listPrepStockItems(opts?: {
   includeArchived?: boolean;
 }): Promise<PrepStockCatalogItem[]> {
   const includeArchived = Boolean(opts?.includeArchived);
-  const rows = await readCatalogRows(includeArchived);
-  const legacy =
-    rows === null ? seedRows() : rows.length === 0 ? await seedCatalogIfEmpty() : rows.map(fromDbRow);
-  const fromDb = legacy.filter((item) => includeArchived || !item.archived);
-  const fromErp = includeArchived ? [] : await listErpFlaggedPrepStockItems();
-  const byId = new Map<string, PrepStockCatalogItem>();
-  for (const item of fromDb) byId.set(item.id, item);
-  for (const item of fromErp) {
-    const prev = byId.get(item.id);
-    byId.set(item.id, prev ? { ...prev, name: item.name, archived: false } : item);
+  const active = await listErpFlaggedPrepStockItems();
+  if (!includeArchived) {
+    return active.sort(
+      (a, b) => a.sortOrder - b.sortOrder || a.name.en.localeCompare(b.name.en) || a.id.localeCompare(b.id),
+    );
+  }
+  const rows = await readCatalogRows(true);
+  const byId = new Map(active.map((item) => [item.id, item]));
+  for (const row of rows ?? []) {
+    if (!PRODUCT_UUID.test(row.id)) continue;
+    if (byId.has(row.id)) continue;
+    byId.set(row.id, fromDbRow(row));
   }
   return [...byId.values()].sort(
     (a, b) => a.sortOrder - b.sortOrder || a.name.en.localeCompare(b.name.en) || a.id.localeCompare(b.id),
@@ -206,31 +180,9 @@ export async function syncPrepStockFromErpProduct(input: {
 async function requireCatalogItem(itemId: string): Promise<PrepStockCatalogItem> {
   const id = String(itemId || "").trim();
   if (!id) throw new ErpHttpError(400, "ERP_INVALID", "item_id");
-  const result = await erpDb()
-    .from("erp_prep_stock_items")
-    .select("id,name_en,name_ru,name_vn,note,no_warehouse,sort_order,archived_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (result.error) {
-    if (isMissingCatalog(result.error)) {
-      const fallback = seedRows().find((item) => item.id === id);
-      if (!fallback) throw new ErpHttpError(400, "ERP_INVALID", "item_id");
-      return fallback;
-    }
-    throw check(result);
-  }
-  if (result.data && !result.data.archived_at) {
-    return fromDbRow(result.data as DbItemRow);
-  }
   const erp = await listErpFlaggedPrepStockItems();
   const fromErp = erp.find((item) => item.id === id);
   if (fromErp) return fromErp;
-  if (!result.data) {
-    const seeded = await seedCatalogIfEmpty();
-    const found = seeded.find((item) => item.id === id && !item.archived);
-    if (!found) throw new ErpHttpError(400, "ERP_INVALID", "item_id");
-    return found;
-  }
   throw new ErpHttpError(400, "ERP_INVALID", "item_id");
 }
 
@@ -277,7 +229,6 @@ export async function upsertPrepStockItem(input: {
   if (existing === null) {
     throw new ErpHttpError(503, "ERP_NOT_INSTALLED", "erp_prep_stock_items");
   }
-  if (existing.length === 0) await seedCatalogIfEmpty();
 
   const current = existing.find((row) => row.id === id);
   const sortOrder = current

@@ -1,13 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  getStaffStockItems,
-  staffStockLabel,
-  staffStockNote,
-  type StaffStockItem,
-} from "@/data/staffInStockItems";
+import { useCallback, useEffect, useState } from "react";
+import { staffStockLabel, staffStockNote, type StaffStockItem } from "@/data/staffInStockItems";
 import { deliverPdfFile, detectInAppBrowser } from "@/lib/deliverPdfFile";
 import { formatVietnamDateTime } from "@/lib/orders/datetime";
 import { supplierZaloHref } from "@/lib/orders/orderList";
@@ -23,12 +18,9 @@ import {
 import { OrdersEmpty, OrdersError, OrdersLoading } from "./LoadState";
 import { useOrders } from "./OrdersShell";
 
-const VENUE = "gastrofood" as const;
-
 export function PrepStockTransferPage({ transferId }: { transferId: string }) {
   const { t, lang } = useOrders();
-  const fallbackItems = useMemo(() => getStaffStockItems(VENUE), []);
-  const [items, setItems] = useState<StaffStockItem[]>(fallbackItems);
+  const [items, setItems] = useState<StaffStockItem[]>([]);
   const [transfer, setTransfer] = useState<PrepStockTransferRow | null>(null);
   const [zaloUrl, setZaloUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +37,7 @@ export function PrepStockTransferPage({ transferId }: { transferId: string }) {
       ]);
       setTransfer(loaded);
       setZaloUrl(settings.zaloUrl);
-      if (catalog?.length) {
+      if (catalog) {
         setItems(
           catalog.map((item) => ({
             id: item.id,

@@ -8,10 +8,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   evaluateStaffStock,
-  getStaffStockItems,
   staffStockLabel,
   staffStockNote,
   staffStockUnit,
@@ -77,8 +76,7 @@ function parseLooseNumber(raw: string): number {
 export function PrepStockPage() {
   const router = useRouter();
   const { t, lang, displayName, email } = useOrders();
-  const fallbackItems = useMemo(() => getStaffStockItems(VENUE), []);
-  const [stockItems, setStockItems] = useState<StaffStockItem[]>(fallbackItems);
+  const [stockItems, setStockItems] = useState<StaffStockItem[]>([]);
   const [pendingTransfers, setPendingTransfers] = useState<PrepStockTransferRow[]>([]);
   const [date, setDate] = useState(() => todayIsoDate());
   const [employee, setEmployee] = useState("");
@@ -109,7 +107,7 @@ export function PrepStockPage() {
       ]);
       setBalances(toMap(rows));
       setPendingTransfers(transfers);
-      if (catalog && catalog.length) {
+      if (catalog) {
         setStockItems(
           catalog.map((item) => ({
             id: item.id,

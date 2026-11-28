@@ -252,7 +252,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     admin_order_hint: "Категории сверху, как в меню. В категории только её позиции.",
     admin_suppliers_hint: "Поставщики по алфавиту.",
     admin_prep_hint:
-      "Названия RU / EN / VN вводите сами. Справа от названия в Prep Stock показывается поле «Инфо» (не перевод).",
+      "Позиции только из ERP: поставьте галку «Показывать в Prep Stock» на карточке продукта. Здесь — просмотр.",
     admin_prep_name_ru: "Название (RU)",
     admin_prep_name_en: "Название (EN)",
     admin_prep_name_vn: "Название (VN)",
@@ -510,7 +510,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     admin_order_hint: "Categories at the top, like the menu. Open a category to see only its items.",
     admin_suppliers_hint: "Suppliers in A–Z order.",
     admin_prep_hint:
-      "Enter RU / EN / VN names yourself. The Info field is shown to the right of the name in Prep Stock (not a translation).",
+      "Items come from ERP only: enable «Show in Prep Stock» on the product card. This screen is read-only.",
     admin_prep_name_ru: "Name (RU)",
     admin_prep_name_en: "Name (EN)",
     admin_prep_name_vn: "Name (VN)",
@@ -768,7 +768,7 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     admin_order_hint: "Danh mục ở trên, như menu. Vào danh mục chỉ thấy mặt hàng của nó.",
     admin_suppliers_hint: "Nhà cung cấp theo A–Z.",
     admin_prep_hint:
-      "Tự nhập tên RU / EN / VN. Trường Info hiện bên phải tên trong Prep Stock (không phải bản dịch).",
+      "Chỉ lấy từ ERP: bật «Hiện trong Prep Stock» trên thẻ sản phẩm. Màn hình này chỉ xem.",
     admin_prep_name_ru: "Tên (RU)",
     admin_prep_name_en: "Tên (EN)",
     admin_prep_name_vn: "Tên (VN)",
