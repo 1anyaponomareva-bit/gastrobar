@@ -231,7 +231,7 @@ function MenuIngredientsList() {
     },
     {
       id: "accountable",
-      label: T("В Orders", "In Orders", "Trong Orders"),
+      label: T("Prep Stock", "Prep Stock", "Prep Stock"),
       cell: (row) =>
         row.staff_listed
           ? T("Да", "Yes", "Có")
@@ -342,11 +342,11 @@ function MenuIngredientsList() {
             className="erpFilterBtn"
             value={accountableFilter}
             onChange={(e) => setAccountableFilter(e.target.value as "all" | "yes" | "no")}
-            aria-label={T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
+            aria-label={T("Показывать в Prep Stock", "Show in Prep Stock", "Hiện trong Prep Stock")}
           >
             <option value="all">{T("Все товары", "All items", "Tất cả")}</option>
-            <option value="yes">{T("В Orders", "In Orders", "Trong Orders")}</option>
-            <option value="no">{T("Не в Orders", "Not in Orders", "Không trong Orders")}</option>
+            <option value="yes">{T("В Prep Stock", "In Prep Stock", "Trong Prep Stock")}</option>
+            <option value="no">{T("Не в Prep Stock", "Not in Prep Stock", "Không trong Prep Stock")}</option>
           </select>
           <DropMenu
             trigger={({ open, toggle }) => (

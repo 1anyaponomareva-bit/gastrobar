@@ -1,10 +1,11 @@
 import { after } from "next/server";
-import { extraNamesOnly } from "@/lib/erp/contentLang";
+import { extraNamesOnly, langMapGet } from "@/lib/erp/contentLang";
 import {
   POSTER_ERP_SYNC_FORBIDDEN_CODE,
   POSTER_ERP_SYNC_FORBIDDEN_DETAIL,
   wouldSyncPosterToErp,
 } from "@/lib/erp/posterErpSyncForbidden";
+import { syncPrepStockFromErpProduct } from "@/lib/erp/prepStock";
 import { publishPrepStateToStaff, publishProductPrepToStaff } from "@/lib/erp/publishPrepToStaff";
 import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
@@ -191,6 +192,30 @@ export async function POST(request: Request) {
         const id = await rpc<string>("erp_save_product", { p: payload, p_actor: actor });
         await applyExtraNames(rpc, "product", id, payload);
         await applyOrdersCatalogFields(id, payload, actor);
+        const staff = isObject(payload.staff) ? payload.staff : null;
+        const listed =
+          staff && Object.prototype.hasOwnProperty.call(staff, "listed")
+            ? Boolean(staff.listed)
+            : Object.prototype.hasOwnProperty.call(payload, "staff_listed")
+              ? Boolean(payload.staff_listed)
+              : Object.prototype.hasOwnProperty.call(payload, "accountable")
+                ? Boolean(payload.accountable)
+                : null;
+        if (listed !== null) {
+          const names = isObject(payload.names) ? (payload.names as Record<string, string>) : {};
+          try {
+            await syncPrepStockFromErpProduct({
+              productId: id,
+              listed,
+              nameEn: String(payload.name_en ?? ""),
+              nameRu: langMapGet(names, "ru"),
+              nameVn: String(payload.name_vn ?? ""),
+              actor,
+            });
+          } catch (error) {
+            if (!(error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED")) throw error;
+          }
+        }
         mirrorStaffLater();
         const patch = await fresh(["products", "packs", "productPacks", "recipes", "costSources"]);
         const product = patch.products?.find((row) => row.id === id);

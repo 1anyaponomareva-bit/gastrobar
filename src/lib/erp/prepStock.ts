@@ -127,14 +127,80 @@ async function seedCatalogIfEmpty(): Promise<PrepStockCatalogItem[]> {
   return seed;
 }
 
+async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
+  const result = await erpDb()
+    .from("erp_products")
+    .select("id,name_en,name_vn,names,staff_listed,archived_at,staff_sort")
+    .eq("staff_listed", true)
+    .is("archived_at", null);
+  if (result.error) {
+    if (["PGRST204", "PGRST205", "42703"].includes(result.error.code ?? "")) return [];
+    throw check(result);
+  }
+  return ((result.data ?? []) as Array<Record<string, unknown>>).map((row, index) => {
+    const names =
+      row.names && typeof row.names === "object" && !Array.isArray(row.names)
+        ? (row.names as Record<string, unknown>)
+        : {};
+    const ru = typeof names.ru === "string" ? names.ru.trim() : "";
+    return {
+      id: String(row.id),
+      name: {
+        en: String(row.name_en ?? "").trim(),
+        ru,
+        vn: String(row.name_vn ?? "").trim(),
+      },
+      sortOrder: Number(row.staff_sort) || (index + 1) * 10,
+      archived: false,
+    } satisfies PrepStockCatalogItem;
+  });
+}
+
 export async function listPrepStockItems(opts?: {
   includeArchived?: boolean;
 }): Promise<PrepStockCatalogItem[]> {
   const includeArchived = Boolean(opts?.includeArchived);
   const rows = await readCatalogRows(includeArchived);
-  if (rows === null) return seedRows();
-  if (rows.length === 0) return seedCatalogIfEmpty();
-  return rows.map(fromDbRow).filter((item) => includeArchived || !item.archived);
+  const legacy =
+    rows === null ? seedRows() : rows.length === 0 ? await seedCatalogIfEmpty() : rows.map(fromDbRow);
+  const fromDb = legacy.filter((item) => includeArchived || !item.archived);
+  const fromErp = includeArchived ? [] : await listErpFlaggedPrepStockItems();
+  const byId = new Map<string, PrepStockCatalogItem>();
+  for (const item of fromDb) byId.set(item.id, item);
+  for (const item of fromErp) {
+    const prev = byId.get(item.id);
+    byId.set(item.id, prev ? { ...prev, name: item.name, archived: false } : item);
+  }
+  return [...byId.values()].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.name.en.localeCompare(b.name.en) || a.id.localeCompare(b.id),
+  );
+}
+
+/** Checkbox staff_listed → upsert/archive matching Prep Stock catalog row (id = product uuid). */
+export async function syncPrepStockFromErpProduct(input: {
+  productId: string;
+  listed: boolean;
+  nameEn: string;
+  nameRu?: string | null;
+  nameVn?: string | null;
+  actor: string;
+}): Promise<void> {
+  const productId = String(input.productId || "").trim();
+  if (!productId) return;
+  if (input.listed) {
+    await upsertPrepStockItem({
+      id: productId,
+      nameEn: input.nameEn,
+      nameRu: String(input.nameRu ?? "").trim(),
+      nameVn: String(input.nameVn ?? "").trim(),
+      actor: input.actor,
+    });
+    return;
+  }
+  const existing = await readCatalogRows(true);
+  if (existing === null) return;
+  if (!existing.some((row) => row.id === productId && !row.archived_at)) return;
+  await archivePrepStockItem({ id: productId, actor: input.actor });
 }
 
 async function requireCatalogItem(itemId: string): Promise<PrepStockCatalogItem> {
@@ -153,15 +219,19 @@ async function requireCatalogItem(itemId: string): Promise<PrepStockCatalogItem>
     }
     throw check(result);
   }
+  if (result.data && !result.data.archived_at) {
+    return fromDbRow(result.data as DbItemRow);
+  }
+  const erp = await listErpFlaggedPrepStockItems();
+  const fromErp = erp.find((item) => item.id === id);
+  if (fromErp) return fromErp;
   if (!result.data) {
-    // First-time seed may not have run yet.
     const seeded = await seedCatalogIfEmpty();
     const found = seeded.find((item) => item.id === id && !item.archived);
     if (!found) throw new ErpHttpError(400, "ERP_INVALID", "item_id");
     return found;
   }
-  if (result.data.archived_at) throw new ErpHttpError(400, "ERP_INVALID", "item_id");
-  return fromDbRow(result.data as DbItemRow);
+  throw new ErpHttpError(400, "ERP_INVALID", "item_id");
 }
 
 export function slugifyPrepStockId(nameEn: string): string {

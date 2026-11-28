@@ -153,11 +153,11 @@ export function PrepsPage() {
             <select
               value={accountableFilter}
               onChange={(e) => setAccountableFilter(e.target.value as "all" | "yes" | "no")}
-              aria-label={T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
+              aria-label={T("Показывать в Prep Stock", "Show in Prep Stock", "Hiện trong Prep Stock")}
             >
               <option value="all">{T("Все товары", "All items", "Tất cả")}</option>
-              <option value="yes">{T("В Orders", "In Orders", "Trong Orders")}</option>
-              <option value="no">{T("Не в Orders", "Not in Orders", "Không trong Orders")}</option>
+              <option value="yes">{T("В Prep Stock", "In Prep Stock", "Trong Prep Stock")}</option>
+              <option value="no">{T("Не в Prep Stock", "Not in Prep Stock", "Không trong Prep Stock")}</option>
             </select>
           </div>
           {!list.length ? (
@@ -168,7 +168,7 @@ export function PrepsPage() {
                 <thead>
                   <tr>
                     <th>{T("Название", "Name", "Tên")}</th>
-                    <th>{T("В Orders", "In Orders", "Trong Orders")}</th>
+                    <th>{T("Prep Stock", "Prep Stock", "Prep Stock")}</th>
                     <th>{T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}</th>
                     <th className="num">{T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}</th>
                     <th />
@@ -195,7 +195,7 @@ export function PrepsPage() {
                             <span className="erpCellSub">{T("есть новый черновик", "a new draft exists", "có bản nháp mới")}</span>
                           ) : null}
                         </td>
-                        <td data-label={T("В Orders", "In Orders", "Trong Orders")}>
+                        <td data-label={T("Prep Stock", "Prep Stock", "Prep Stock")}>
                           {p.staff_listed ? T("Да", "Yes", "Có") : T("Нет", "No", "Không")}
                         </td>
                         <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(costRecipe, p.base_unit)}</td>
@@ -899,14 +899,14 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
             onChange={(e) => setShowInOrders(e.target.checked)}
           />
           <span>
-            {T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
+            {T("Показывать в Prep Stock", "Show in Prep Stock", "Hiện trong Prep Stock")}
             <span className="erpCellSub">
               {" "}
               —{" "}
               {T(
-                "для полуфабрикатов. Снятие не удаляет товар и не меняет остатки.",
-                "for semi-finished. Clearing does not delete the product or change stock.",
-                "cho bán thành phẩm. Bỏ chọn không xóa hàng và không đổi tồn.",
+                "только Prep Stock. Order List не зависит от этой галки. Поставщик не обязателен.",
+                "Prep Stock only. Order List ignores this checkbox. Supplier is optional.",
+                "chỉ Prep Stock. Order List không phụ thuộc. Nhà cung cấp không bắt buộc.",
               )}
             </span>
           </span>

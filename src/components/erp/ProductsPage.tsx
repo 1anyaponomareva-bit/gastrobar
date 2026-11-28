@@ -131,9 +131,9 @@ export function ProductsPage() {
         <Empty
           title={T("Каталог пока пуст", "The catalog is empty", "Danh mục còn trống")}
           text={T(
-            "Загрузите продукты, которые уже есть в приложении заказов Staff, или создайте первый продукт вручную.",
-            "Import the products you already have in the Staff ordering app, or create the first one by hand.",
-            "Nhập sản phẩm có sẵn trong ứng dụng Staff hoặc tự tạo sản phẩm đầu tiên.",
+            "Загрузите продукты из справочника или создайте первый продукт вручную.",
+            "Import products from the catalog or create the first one by hand.",
+            "Nhập sản phẩm từ danh mục hoặc tự tạo sản phẩm đầu tiên.",
           )}
           action={
             <>
@@ -265,7 +265,7 @@ type ProductForm = {
   brand: string;
   est_unit_cost: number | null;
   storageOptions: StorageOption[];
-  /** Accountable Item → Orders (`staff_listed`). Default off for new products. */
+  /** Show in Prep Stock (`staff_listed`). Default off. Order List ignores this flag. */
   accountable: boolean;
   order_pack_type: string;
   order_pack_content_qty: number | null;
@@ -496,14 +496,14 @@ function ProductEditor({
           onChange={(e) => set("accountable", e.target.checked)}
         />
         <span>
-          {T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
+          {T("Показывать в Prep Stock", "Show in Prep Stock", "Hiện trong Prep Stock")}
           <span className="erpCellSub">
             {" "}
             —{" "}
             {T(
-              "для ингредиентов и полуфабрикатов. Снятие не удаляет товар и не меняет остатки.",
-              "for ingredients and semi-finished. Clearing does not delete the product or change stock.",
-              "cho nguyên liệu và bán thành phẩm. Bỏ chọn không xóa hàng và không đổi tồn.",
+              "только Prep Stock. Order List не зависит от этой галки. Поставщик не обязателен.",
+              "Prep Stock only. Order List ignores this checkbox. Supplier is optional.",
+              "chỉ Prep Stock. Order List không phụ thuộc. Nhà cung cấp không bắt buộc.",
             )}
           </span>
         </span>

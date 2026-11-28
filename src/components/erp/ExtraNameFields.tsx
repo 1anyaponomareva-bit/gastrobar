@@ -5,6 +5,8 @@ import { ContentLangBar } from "./ContentLangBar";
 import { erpLang } from "./i18n";
 import { Field, T } from "./ui";
 
+const LOCKED_LANGS = ["en", "vn", "ru"] as const;
+
 export function ExtraNameFields({
   en,
   vn,
@@ -35,8 +37,9 @@ export function ExtraNameFields({
   omitLocked?: boolean;
 }) {
   const extra = extraNamesOnly(names);
-  const langs = shownContentLangs(Object.keys(extra));
-  const extraLangs = langs.filter((code) => code !== "en" && code !== "vn");
+  const langs = shownContentLangs([...Object.keys(extra), ...(omitLocked ? [] : ["ru"])]);
+  const locked = omitLocked ? [] : [...LOCKED_LANGS];
+  const extraLangs = langs.filter((code) => !locked.includes(code as (typeof LOCKED_LANGS)[number]));
   const ui = erpLang();
   const label = T("Название", "Name", "Tên");
 
@@ -45,7 +48,7 @@ export function ExtraNameFields({
       {!readOnly && !hideBar ? (
         <ContentLangBar
           langs={omitLocked ? extraLangs : langs}
-          locked={omitLocked ? [] : ["en", "vn"]}
+          locked={locked}
           onAdd={(code) => onNames({ ...extra, [code]: extra[code] ?? "" })}
           onRemove={(code) => {
             const next = { ...extra };
@@ -74,6 +77,15 @@ export function ExtraNameFields({
                 onChange={(event) => onVn(event.target.value)}
                 maxLength={200}
                 data-testid={vnTestId}
+              />
+            </Field>
+            <Field label={`${label} (${contentLangLabel("ru", ui)})`}>
+              <input
+                value={extra.ru ?? ""}
+                disabled={readOnly}
+                onChange={(event) => onNames({ ...extra, ru: event.target.value })}
+                maxLength={200}
+                data-testid="product-name-ru"
               />
             </Field>
           </>

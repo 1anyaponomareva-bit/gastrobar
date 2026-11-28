@@ -2254,16 +2254,19 @@ async function main() {
     await saveProduct({ ...base, id: lime, brand: "Farm B", staff: { ...staff, listed: false } });
     assert.equal((await staffExport()).items.some((i) => i.id === code), false, "unlisted in the ERP → gone from Staff orders");
     await saveProduct({ ...base, id: lime, brand: "Farm B", staff });
-    // Missing Staff settings: refused with the list of fields, nothing saved.
-    const before = n(await value("select count(*) from public.erp_products"));
-    const failure = async (p: Record<string, unknown>) => {
-      const error = (await saveProduct(p).then(() => null, (e: Error & { detail?: string }) => e))!;
-      assert.ok(error, "expected an error");
-      return [error.message, error.detail];
-    };
-    assert.deepEqual(await failure({ ...base, name_en: "Test lemon", staff: { ...staff, supplier_id: null, unit: "" } }), ["ERP_STAFF_INCOMPLETE", "supplier,unit"]);
-    assert.deepEqual(await failure({ ...base, name_en: "Test lemon", category_id: null, staff }), ["ERP_STAFF_INCOMPLETE", "category"]);
-    assert.equal(n(await value("select count(*) from public.erp_products")), before);
+    // Prep Stock flag (staff_listed): supplier / category / unit are optional.
+    const lemonId = await saveProduct({
+      ...base,
+      name_en: "Test lemon",
+      category_id: null,
+      staff: { ...staff, supplier_id: null, unit: "" },
+    });
+    assert.ok(lemonId);
+    assert.equal(
+      await value("select staff_listed from public.erp_products where id = $1", [lemonId]),
+      true,
+      "listed without supplier is allowed for Prep Stock",
+    );
     assert.deepEqual(await workCounts(), work);
   });
 

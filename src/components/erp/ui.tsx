@@ -227,10 +227,10 @@ export function errorText(codeOrErr: unknown, detail?: string): string {
     const fields: Record<string, string> = {
       category: T("категория", "category", "nhóm hàng"),
       supplier: T("поставщик", "supplier", "nhà cung cấp"),
-      unit: T("единица заказа", "order unit", "đơn vị đặt"),
+      unit: T("единица", "unit", "đơn vị"),
     };
     const missing = (detailText ?? "").split(",").filter(Boolean).map((f) => fields[f] ?? f).join(", ");
-    return `${T("Чтобы показать продукт в Staff, заполните", "To show the product in Staff, fill in", "Để hiện trong Staff, hãy điền")}: ${missing}`;
+    return `${T("Проверьте поля для Prep Stock", "Check Prep Stock fields", "Kiểm tra trường Prep Stock")}: ${missing}`;
   }
   if (code === "ERP_INVALID" && /net_qty/i.test(detailText ?? "")) {
     return texts.ERP_NET_QTY_ZERO;
