@@ -909,15 +909,23 @@ function ProductEditor({
         options={form.storageOptions}
         onChange={(value) => set("storageOptions", value)}
       />
-      {form.type === "semi_finished" ? (
+      {form.type === "semi_finished" || form.type === "ingredient" ? (
         <div className="erpGrid two" style={{ marginTop: 12 }}>
           <Field
             label={T("Фасовка — тип упаковки", "Packing — package type", "Quy cách — loại bao bì")}
-            hint={T(
-              "Только для полуфабрикатов (Prep Stock: 1 bag = 20 pcs). У ингредиентов — фасовка закупки ниже.",
-              "Semi-finished only (Prep Stock: 1 bag = 20 pcs). Ingredients use purchase packs.",
-              "Chỉ bán thành phẩm. Nguyên liệu dùng quy cách mua.",
-            )}
+            hint={
+              form.type === "semi_finished"
+                ? T(
+                    "Для Prep Stock: 1 bag = 20 pcs. Не путать с фасовкой закупки.",
+                    "For Prep Stock: 1 bag = 20 pcs. Not the purchase pack.",
+                    "Cho Prep Stock: 1 bag = 20 pcs. Không phải quy cách mua.",
+                  )
+                : T(
+                    "Для Orders / Prep Stock. Фасовка закупки (Pack 1 kg) — отдельно в таблице ниже.",
+                    "For Orders / Prep Stock. Purchase packs (Pack 1 kg) stay in the table below.",
+                    "Cho Orders / Prep Stock. Quy cách mua ở bảng bên dưới.",
+                  )
+            }
           >
             <input
               value={form.order_pack_type}
@@ -935,7 +943,7 @@ function ProductEditor({
             <input
               value={form.order_pack_content_unit}
               onChange={(e) => set("order_pack_content_unit", e.target.value)}
-              placeholder={T("шт. / г", "pcs / g", "cái / g")}
+              placeholder={T("шт. / г / кг", "pcs / g / kg", "cái / g / kg")}
             />
           </Field>
         </div>

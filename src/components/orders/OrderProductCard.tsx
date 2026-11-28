@@ -9,7 +9,6 @@ import { productDisplayName } from "@/lib/erp/productName";
 import {
   defaultPackId,
   isMarkedQty,
-  orderPackCaption,
   orderPackDisplayName,
   orderPackUnit,
   packOf,
@@ -93,14 +92,9 @@ export function OrderProductCard({
       ? orderPackUnit(pack, product.unit)
       : product.unit;
 
-  const packName = pack ? orderPackDisplayName(pack, lang) : "";
-  const purchaseHint =
-    !isSemi && pack && packBase != null
-      ? `${t("order_packing_label")}: ${packName || pack.label} · ${fmtAmount(packBase)} ${packBaseUnit}`
-      : null;
   const purchaseTotalLine =
     purchaseTotal != null && packCount != null
-      ? `${t("order_packing_packs")}: ${fmtAmount(packCount)} · ${t("order_packing_total")}: ${fmtAmount(purchaseTotal)} ${packBaseUnit}`
+      ? `${t("order_packing_total")}: ${fmtAmount(purchaseTotal)} ${packBaseUnit}`
       : null;
 
   return (
@@ -108,7 +102,6 @@ export function OrderProductCard({
       <div className="orders-name">{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</div>
       {details ? <div className="orders-meta">{details}</div> : null}
       {packingLine ? <div className="orders-packHint">{packingLine}</div> : null}
-      {purchaseHint ? <div className="orders-packHint">{purchaseHint}</div> : null}
       {product.packs.length > 1 ? (
         <div className="orders-field" style={{ margin: "8px 0" }}>
           <label>{packLabel}</label>
@@ -117,9 +110,7 @@ export function OrderProductCard({
               const name = orderPackDisplayName(item, lang);
               return (
                 <option key={item.pack_id} value={item.pack_id}>
-                  {item.code
-                    ? `${name} · ${item.code}`
-                    : `${name} · ${fmtAmount(item.qty_base)} ${orderPackUnit(item, product.unit)}`}
+                  {item.code ? `${name} · ${item.code}` : name}
                 </option>
               );
             })}
@@ -129,9 +120,6 @@ export function OrderProductCard({
       <QtyField label={qtyLabel} unit={unit} value={current.qty} onChange={onQty} />
       {erpTotal ? <div className="orders-packHint">{erpTotal}</div> : null}
       {purchaseTotalLine ? <div className="orders-packHint">{purchaseTotalLine}</div> : null}
-      {!packingLine && !purchaseHint && pack ? (
-        <div className="orders-packHint">{orderPackCaption(pack)}</div>
-      ) : null}
     </div>
   );
 }

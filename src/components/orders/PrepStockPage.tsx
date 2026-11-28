@@ -84,12 +84,7 @@ function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem): 
   }
   const qty = Number(value) || 0;
   const rounded = Math.round(qty * 1000) / 1000;
-  const unit = unitLabel(item, pcsLabel);
-  if (item?.purchaseQtyBase && item.purchaseQtyBase > 0 && item.purchasePackLabel) {
-    const packs = Math.round((rounded / item.purchaseQtyBase) * 1000) / 1000;
-    return `${fmtQty(rounded)} ${unit} · ${fmtQty(packs)} × ${item.purchasePackLabel}`;
-  }
-  return `${fmtQty(rounded)} ${unit}`;
+  return `${fmtQty(rounded)} ${unitLabel(item, pcsLabel)}`;
 }
 
 function isIngredientPurchase(item: StaffStockItem): boolean {
@@ -474,11 +469,6 @@ export function PrepStockPage() {
                 <p className="orders-prepStockMoveHint">
                   {formatPackRule(staffStockPackSize(item)!, staffStockPackType(item))}
                 </p>
-              ) : isIngredientPurchase(item) ? (
-                <p className="orders-prepStockMoveHint">
-                  {t("order_packing_label")}: {item.purchasePackLabel} · {fmtQty(item.purchaseQtyBase!)}{" "}
-                  {item.purchaseUnit || item.baseUnit || ""}
-                </p>
               ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
               <div className="orders-prepStockMoves">
@@ -597,10 +587,6 @@ export function PrepStockPage() {
               </>
             ) : isIngredientPurchase(dialog.item) ? (
               <>
-                <p className="orders-prepStockModalHint">
-                  {t("order_packing_label")}: {dialog.item.purchasePackLabel} ·{" "}
-                  {fmtQty(dialog.item.purchaseQtyBase!)} {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}
-                </p>
                 <label>
                   <span>{t("order_packing_packs")}</span>
                   <input
