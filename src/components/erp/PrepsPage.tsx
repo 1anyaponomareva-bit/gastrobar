@@ -153,11 +153,11 @@ export function PrepsPage() {
             <select
               value={accountableFilter}
               onChange={(e) => setAccountableFilter(e.target.value as "all" | "yes" | "no")}
-              aria-label={T("Подотчётный товар", "Accountable Item", "Hàng Hóa Cần Theo Dõi")}
+              aria-label={T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
             >
               <option value="all">{T("Все товары", "All items", "Tất cả")}</option>
-              <option value="yes">{T("Подотчётные", "Accountable", "Cần theo dõi")}</option>
-              <option value="no">{T("Неподотчётные", "Not accountable", "Không theo dõi")}</option>
+              <option value="yes">{T("В Orders", "In Orders", "Trong Orders")}</option>
+              <option value="no">{T("Не в Orders", "Not in Orders", "Không trong Orders")}</option>
             </select>
           </div>
           {!list.length ? (
@@ -168,7 +168,7 @@ export function PrepsPage() {
                 <thead>
                   <tr>
                     <th>{T("Название", "Name", "Tên")}</th>
-                    <th>{T("Подотчётный", "Accountable", "Cần theo dõi")}</th>
+                    <th>{T("В Orders", "In Orders", "Trong Orders")}</th>
                     <th>{T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}</th>
                     <th className="num">{T("Себестоимость единицы", "Unit cost", "Giá vốn / đơn vị")}</th>
                     <th />
@@ -195,7 +195,7 @@ export function PrepsPage() {
                             <span className="erpCellSub">{T("есть новый черновик", "a new draft exists", "có bản nháp mới")}</span>
                           ) : null}
                         </td>
-                        <td data-label={T("Подотчётный", "Accountable", "Cần theo dõi")}>
+                        <td data-label={T("В Orders", "In Orders", "Trong Orders")}>
                           {p.staff_listed ? T("Да", "Yes", "Có") : T("Нет", "No", "Không")}
                         </td>
                         <td data-label={T("Нормативный выход", "Standard yield", "Sản lượng chuẩn")}>{yieldText(costRecipe, p.base_unit)}</td>
@@ -425,7 +425,14 @@ function prepNamePayload(
   nameVn: string,
   names: Record<string, string>,
   pieceWeight = product.unit_weight_kg,
+  extras?: {
+    showInOrders?: boolean;
+    orderPackType?: string;
+    orderPackContentQty?: number | null;
+    orderPackContentUnit?: string;
+  },
 ) {
+  const showInOrders = extras?.showInOrders ?? Boolean(product.staff_listed);
   return {
     id: product.id,
     type: product.type,
@@ -438,6 +445,23 @@ function prepNamePayload(
     brand: product.brand ?? "",
     shelf_life_days: product.shelf_life_days,
     storage_conditions: product.storage_conditions ?? "",
+    accountable: showInOrders,
+    staff_listed: showInOrders,
+    staff: {
+      listed: showInOrders,
+      unit: product.staff_unit || product.base_unit || null,
+      pack: product.staff_pack ?? null,
+      supplier_id: product.staff_supplier_id ?? null,
+      item_no: product.staff_item_no ?? null,
+      hidden: Boolean(product.staff_hidden),
+    },
+    order_pack_type: (extras?.orderPackType ?? product.order_pack_type ?? "").trim() || null,
+    order_pack_content_qty:
+      extras && Object.prototype.hasOwnProperty.call(extras, "orderPackContentQty")
+        ? extras.orderPackContentQty
+        : product.order_pack_content_qty ?? null,
+    order_pack_content_unit:
+      (extras?.orderPackContentUnit ?? product.order_pack_content_unit ?? "").trim() || null,
   };
 }
 
@@ -512,6 +536,12 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
   const [nameVn, setNameVn] = useState(product.name_vn ?? "");
   const [names, setNames] = useState<Record<string, string>>(() => extraNamesOnly(product.names));
   const [pieceWeight, setPieceWeight] = useState<number | null>(product.unit_weight_kg);
+  const [showInOrders, setShowInOrders] = useState(Boolean(product.staff_listed));
+  const [orderPackType, setOrderPackType] = useState(product.order_pack_type ?? "");
+  const [orderPackContentQty, setOrderPackContentQty] = useState<number | null>(
+    product.order_pack_content_qty ?? null,
+  );
+  const [orderPackContentUnit, setOrderPackContentUnit] = useState(product.order_pack_content_unit ?? "");
   const [composeOpen, setComposeOpen] = useState(true);
   const [cutsOpen, setCutsOpen] = useState<Set<number>>(new Set());
   const [sheetBusy, setSheetBusy] = useState(false);
@@ -533,7 +563,12 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     nameVn.trim() !== (product.name_vn ?? "").trim() ||
     !namesEqual(names, product.names);
   const pieceDirty = (pieceWeight ?? null) !== (product.unit_weight_kg ?? null);
-  const productDirty = namesDirty || pieceDirty;
+  const ordersDirty =
+    showInOrders !== Boolean(product.staff_listed) ||
+    orderPackType.trim() !== String(product.order_pack_type ?? "").trim() ||
+    (orderPackContentQty ?? null) !== (product.order_pack_content_qty ?? null) ||
+    orderPackContentUnit.trim() !== String(product.order_pack_content_unit ?? "").trim();
+  const productDirty = namesDirty || pieceDirty || ordersDirty;
   useDirtyGuard(dirty || productDirty);
 
   useEffect(() => {
@@ -547,6 +582,10 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     setNameEn(product.name_en);
     setNameVn(product.name_vn ?? "");
     setNames(extraNamesOnly(product.names));
+    setShowInOrders(Boolean(product.staff_listed));
+    setOrderPackType(product.order_pack_type ?? "");
+    setOrderPackContentQty(product.order_pack_content_qty ?? null);
+    setOrderPackContentUnit(product.order_pack_content_unit ?? "");
     setPieceWeight(product.unit_weight_kg);
   }, [recipes, product, viewId]);
 
@@ -627,7 +666,15 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
     if (!nextEn) return false;
     const nextNames = extraNamesOnly(names);
     const result = await act<{ id: string }>(
-      { action: "saveProduct", product: prepNamePayload(product, nextEn, nextVn, nextNames, pieceWeight) },
+      {
+        action: "saveProduct",
+        product: prepNamePayload(product, nextEn, nextVn, nextNames, pieceWeight, {
+          showInOrders,
+          orderPackType,
+          orderPackContentQty,
+          orderPackContentUnit,
+        }),
+      },
       quiet ? false : T("Карточка сохранена", "Card saved", "Đã lưu thẻ"),
     );
     if (!result) return false;
@@ -844,6 +891,26 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
 
       <div className="erpCard">
         <h2>{T("Хранение", "Storage", "Bảo quản")}</h2>
+        <label className="erpCheck" style={{ marginBottom: 12 }}>
+          <input
+            type="checkbox"
+            checked={showInOrders}
+            disabled={readOnly}
+            onChange={(e) => setShowInOrders(e.target.checked)}
+          />
+          <span>
+            {T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
+            <span className="erpCellSub">
+              {" "}
+              —{" "}
+              {T(
+                "для полуфабрикатов. Снятие не удаляет товар и не меняет остатки.",
+                "for semi-finished. Clearing does not delete the product or change stock.",
+                "cho bán thành phẩm. Bỏ chọn không xóa hàng và không đổi tồn.",
+              )}
+            </span>
+          </span>
+        </label>
         <div className="erpGrid">
           <Field
             label={T("Вес 1 штуки", "Weight of 1 piece", "Khối lượng 1 cái")}
@@ -859,6 +926,34 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               <NumberInput value={form.yield_pieces} disabled={readOnly} onChange={(v) => set("yield_pieces", v === null ? null : Math.round(v))} />
             </Field>
           ) : null}
+        </div>
+        <div className="erpGrid two" style={{ marginTop: 12 }}>
+          <Field
+            label={T("Фасовка — тип упаковки", "Packing — package type", "Quy cách — loại bao bì")}
+            hint={T(
+              "Для Orders. Не путать с выходом производства и складской единицей.",
+              "For Orders. Not production yield and not the stock unit.",
+              "Cho Orders. Không phải năng suất SX và không phải đơn vị kho.",
+            )}
+          >
+            <input
+              value={orderPackType}
+              disabled={readOnly}
+              onChange={(e) => setOrderPackType(e.target.value)}
+              placeholder={T("пакет / pack / túi", "pack / bag", "túi / pack")}
+            />
+          </Field>
+          <Field label={T("Количество в упаковке", "Units per pack", "Số lượng trong bao")}>
+            <NumberInput value={orderPackContentQty} disabled={readOnly} onChange={setOrderPackContentQty} />
+          </Field>
+          <Field label={T("Единица содержимого", "Content unit", "Đơn vị nội dung")}>
+            <input
+              value={orderPackContentUnit}
+              disabled={readOnly}
+              onChange={(e) => setOrderPackContentUnit(e.target.value)}
+              placeholder={T("шт. / г", "pcs / g", "cái / g")}
+            />
+          </Field>
         </div>
         <div className="erpStorageBlock">
           <h3 className="erpStorageTitle">{T("Сроки и условия хранения", "Shelf life and storage", "Hạn dùng và bảo quản")}</h3>

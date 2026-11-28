@@ -496,14 +496,14 @@ function ProductEditor({
           onChange={(e) => set("accountable", e.target.checked)}
         />
         <span>
-          {T("Подотчётный товар", "Accountable Item", "Hàng Hóa Cần Theo Dõi")}
+          {T("Показывать в Orders", "Show in Orders", "Hiện trong Orders")}
           <span className="erpCellSub">
             {" "}
             —{" "}
             {T(
-              "показывать в Orders. Снятие не удаляет товар и не меняет остатки.",
-              "show in Orders. Clearing does not delete the product or change stock.",
-              "hiện trong Orders. Bỏ chọn không xóa hàng và không đổi tồn.",
+              "для ингредиентов и полуфабрикатов. Снятие не удаляет товар и не меняет остатки.",
+              "for ingredients and semi-finished. Clearing does not delete the product or change stock.",
+              "cho nguyên liệu và bán thành phẩm. Bỏ chọn không xóa hàng và không đổi tồn.",
             )}
           </span>
         </span>

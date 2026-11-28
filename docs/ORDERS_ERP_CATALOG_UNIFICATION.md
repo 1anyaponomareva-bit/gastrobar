@@ -7,7 +7,7 @@
 
 | Spec | ERP today | Notes |
 |------|-----------|--------|
-| Подотчётный товар / Accountable Item | `erp_products.staff_listed` | Default `false`. UI label per owner copy. |
+| Показывать в Orders / Show in Orders | `erp_products.staff_listed` | Default `false`. Owner enables per item. |
 | Скрыт в заявках | `erp_products.staff_hidden` | Kept; accountable + not hidden required for Orders. |
 | ERP Product ID | `erp_products.id` (uuid) | Orders lines already store `product_id`. |
 | Наименование / категория / единица | `name_*`, `category_id`, `base_unit` | Already from ERP. |
@@ -20,7 +20,7 @@
 
 1. SQL: `order_pack_type`, `order_pack_content_qty`, `order_pack_content_unit`.
 2. Backfill `staff_listed = true` for products already visible in Orders (supplier + unit), then **require** `staff_listed` in order catalog RPCs.
-3. ERP UI: checkbox «Подотчётный товар» on ingredient/product card; packing fields in «Хранение» for semi-finished; list filter + column.
+3. ERP UI: checkbox «Показывать в Orders» on ingredient + prep cards; packing in «Хранение»; list filter + column.
 4. Orders UI: read-only packing line + packs × content = total; no free-text packing edit.
 5. Order snapshot already freezes names/pack labels at place time — extend with packing fields when present.
 
@@ -57,8 +57,8 @@
 
 | Setting | Path |
 |---------|------|
-| Ingredient card / Accountable | `/erp/menu/ingredients` → product → checkbox |
-| Prep card / Accountable + фасовка | `/erp/menu/preps` → open prep → Хранение |
+| Ingredient — Show in Orders | `/erp/menu/ingredients` → product → checkbox |
+| Prep — Show in Orders + фасовка | `/erp/menu/preps` → open prep → Хранение |
 | Product card (general) | `/erp/products/{id}` |
 | Orders list | `/orders` |
 | Orders admin (ERP products) | `/orders/admin` |
