@@ -632,6 +632,7 @@ export type ErpCountPreview = {
 
 export type ErpAction =
   | { action: "saveProduct"; product: Record<string, unknown> }
+  | { action: "setPrepStockListed"; id: string; listed: boolean }
   | { action: "savePack"; pack: Record<string, unknown> }
   | { action: "setArchived"; entity: string; id: string; archived: boolean }
   | { action: "saveRef"; entity: "category" | "supplier" | "warehouse" | "channel"; value: Record<string, unknown> }

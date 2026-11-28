@@ -895,8 +895,18 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
           <input
             type="checkbox"
             checked={showInOrders}
-            disabled={readOnly}
-            onChange={(e) => setShowInOrders(e.target.checked)}
+            disabled={Boolean(busy)}
+            onChange={async (e) => {
+              const next = e.target.checked;
+              setShowInOrders(next);
+              const result = await act<{ id: string; staff_listed?: boolean }>(
+                { action: "setPrepStockListed", id: product.id, listed: next },
+                next
+                  ? T("Добавлено в Prep Stock", "Added to Prep Stock", "Đã thêm vào Prep Stock")
+                  : T("Убрано из Prep Stock", "Removed from Prep Stock", "Đã bỏ khỏi Prep Stock"),
+              );
+              if (!result) setShowInOrders(!next);
+            }}
           />
           <span>
             {T("Показывать в Prep Stock", "Show in Prep Stock", "Hiện trong Prep Stock")}
@@ -904,9 +914,9 @@ function RecipeEditor({ state, product, from }: { state: ErpState; product: ErpP
               {" "}
               —{" "}
               {T(
-                "только Prep Stock. Order List не зависит от этой галки. Поставщик не обязателен.",
-                "Prep Stock only. Order List ignores this checkbox. Supplier is optional.",
-                "chỉ Prep Stock. Order List không phụ thuộc. Nhà cung cấp không bắt buộc.",
+                "сохраняется сразу. Order List не зависит от этой галки. Поставщик не обязателен.",
+                "saves immediately. Order List ignores this checkbox. Supplier is optional.",
+                "lưu ngay. Order List không phụ thuộc. Nhà cung cấp không bắt buộc.",
               )}
             </span>
           </span>

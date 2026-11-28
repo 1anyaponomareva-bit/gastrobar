@@ -5,7 +5,7 @@ import {
   POSTER_ERP_SYNC_FORBIDDEN_DETAIL,
   wouldSyncPosterToErp,
 } from "@/lib/erp/posterErpSyncForbidden";
-import { syncPrepStockFromErpProduct } from "@/lib/erp/prepStock";
+import { setProductPrepStockListed, syncPrepStockFromErpProduct } from "@/lib/erp/prepStock";
 import { publishPrepStateToStaff, publishProductPrepToStaff } from "@/lib/erp/publishPrepToStaff";
 import { check, erpDb, ErpHttpError, requireAdmin, rpc as rawRpc, ServerTiming } from "@/lib/erp/server";
 import { loadDocument, loadState, type StatePart } from "@/lib/erp/stateLoader";
@@ -187,6 +187,14 @@ export async function POST(request: Request) {
     const a = body as ErpAction;
 
     switch (a.action) {
+      case "setPrepStockListed": {
+        const id = String(a.id || "").trim();
+        if (!UUID.test(id)) throw new ErpHttpError(400, "ERP_INVALID", "id");
+        const listed = Boolean(a.listed);
+        const saved = await setProductPrepStockListed({ productId: id, listed, actor });
+        const patch = await fresh(["products"]);
+        return timing.json({ id: saved.id, staff_listed: saved.staff_listed, patch });
+      }
       case "saveProduct": {
         const payload = object(a.product, "product");
         const id = await rpc<string>("erp_save_product", { p: payload, p_actor: actor });

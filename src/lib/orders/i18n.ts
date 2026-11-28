@@ -34,6 +34,8 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     prep_stock_overview_title: "Остатки сейчас",
     prep_stock_overview_item: "Позиция",
     prep_stock_overview_empty: "Пока нет остатков — начните с «Произвели».",
+    prep_stock_catalog_empty:
+      "Пока пусто. В ERP на карточке продукта включите «Показывать в Prep Stock» — позиция появится сразу.",
     prep_stock_col_item: "Товар",
     prep_stock_pack_rule: "1 pack = {size} pcs",
     prep_stock_table_legend: "403 шт. — всего · (20×20)+3 — 20 пакетов по 20 шт и 3 шт отдельно",
@@ -294,6 +296,8 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     prep_stock_overview_title: "Current stock",
     prep_stock_overview_item: "Item",
     prep_stock_overview_empty: "No stock yet — start with Produced.",
+    prep_stock_catalog_empty:
+      "Empty for now. In ERP open the product and enable «Show in Prep Stock» — it appears immediately.",
     prep_stock_col_item: "Item",
     prep_stock_pack_rule: "1 pack = {size} pcs",
     prep_stock_table_legend: "403 pcs — total · (20×20)+3 — 20 packs of 20 + 3 loose",
@@ -552,6 +556,8 @@ const TABLE: Record<OrdersLang, Record<string, string>> = {
     prep_stock_overview_title: "Tồn hiện tại",
     prep_stock_overview_item: "Món",
     prep_stock_overview_empty: "Chưa có tồn — bắt đầu bằng Đã sản xuất.",
+    prep_stock_catalog_empty:
+      "Đang trống. Trong ERP bật «Hiện trong Prep Stock» trên thẻ sản phẩm — sẽ hiện ngay.",
     prep_stock_col_item: "Hàng",
     prep_stock_pack_rule: "1 pack = {size} pcs",
     prep_stock_table_legend: "403 pcs — tổng · (20×20)+3 — 20 pack × 20 + 3 pcs lẻ",

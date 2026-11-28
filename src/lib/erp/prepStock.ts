@@ -92,19 +92,43 @@ async function readCatalogRows(includeArchived: boolean): Promise<DbItemRow[] | 
   return (result.data ?? []) as DbItemRow[];
 }
 
+function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStockCatalogItem {
+  return {
+    id: String(row.id ?? ""),
+    name: {
+      en: String(row.name_en ?? row.nameEn ?? "").trim(),
+      ru: String(row.name_ru ?? row.nameRu ?? "").trim(),
+      vn: String(row.name_vn ?? row.nameVn ?? "").trim(),
+    },
+    note: String(row.note ?? "").trim() || undefined,
+    noWarehouse: Boolean(row.no_warehouse ?? row.noWarehouse),
+    sortOrder: Number(row.sort_order ?? row.sortOrder) || (index + 1) * 10,
+    archived: false,
+  };
+}
+
 async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
+  try {
+    const raw = await rpc<unknown>("erp_prep_stock_catalog", {});
+    if (Array.isArray(raw)) {
+      return raw
+        .map((row, index) => mapCatalogRpcRow((row || {}) as Record<string, unknown>, index))
+        .filter((item) => item.id);
+    }
+  } catch (error) {
+    if (!(error instanceof ErpHttpError && error.code === "ERP_NOT_INSTALLED")) throw error;
+  }
+
+  // Fallback if RPC not yet deployed: PostgREST + active mirror rows.
   const result = await erpDb()
     .from("erp_products")
-    .select("id,name_en,name_vn,names,staff_listed,archived_at,staff_sort")
+    .select("id,name_en,name_vn,names,staff_sort")
     .eq("staff_listed", true)
     .is("archived_at", null);
-  if (result.error) {
-    if (["PGRST204", "PGRST205", "42703"].includes(result.error.code ?? "")) return [];
-    throw check(result);
-  }
-  const metaRows = await readCatalogRows(true);
+  if (result.error) throw check(result);
+  const metaRows = await readCatalogRows(false);
   const metaById = new Map((metaRows ?? []).map((row) => [row.id, row]));
-  return ((result.data ?? []) as Array<Record<string, unknown>>).map((row, index) => {
+  const fromProducts = ((result.data ?? []) as Array<Record<string, unknown>>).map((row, index) => {
     const id = String(row.id);
     const names =
       row.names && typeof row.names === "object" && !Array.isArray(row.names)
@@ -125,6 +149,11 @@ async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
       archived: false,
     } satisfies PrepStockCatalogItem;
   });
+  if (fromProducts.length) return fromProducts;
+  // Last resort: mirror table rows created by checkbox sync.
+  return (metaRows ?? [])
+    .filter((row) => PRODUCT_UUID.test(row.id))
+    .map(fromDbRow);
 }
 
 /** Prep Stock catalog = ERP products with «Show in Prep Stock» only. No legacy seed list. */
@@ -148,6 +177,53 @@ export async function listPrepStockItems(opts?: {
   return [...byId.values()].sort(
     (a, b) => a.sortOrder - b.sortOrder || a.name.en.localeCompare(b.name.en) || a.id.localeCompare(b.id),
   );
+}
+
+/** Toggle Prep Stock flag without a full product save. */
+export async function setProductPrepStockListed(input: {
+  productId: string;
+  listed: boolean;
+  actor: string;
+}): Promise<{ id: string; staff_listed: boolean }> {
+  const productId = String(input.productId || "").trim();
+  if (!PRODUCT_UUID.test(productId)) throw new ErpHttpError(400, "ERP_INVALID", "product_id");
+  const listed = Boolean(input.listed);
+  const result = await erpDb()
+    .from("erp_products")
+    .update({
+      staff_listed: listed,
+      updated_by: input.actor,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId)
+    .is("archived_at", null)
+    .select("id,name_en,name_vn,staff_listed")
+    .maybeSingle();
+  if (result.error) throw check(result);
+  if (!result.data) throw new ErpHttpError(404, "ERP_NOT_FOUND", "product");
+  const row = result.data as Record<string, unknown>;
+  let nameRu = "";
+  try {
+    const namesRow = await erpDb().from("erp_products").select("names").eq("id", productId).maybeSingle();
+    const names =
+      namesRow.data &&
+      typeof (namesRow.data as { names?: unknown }).names === "object" &&
+      !Array.isArray((namesRow.data as { names?: unknown }).names)
+        ? ((namesRow.data as { names: Record<string, unknown> }).names ?? {})
+        : {};
+    nameRu = typeof names.ru === "string" ? names.ru : "";
+  } catch {
+    nameRu = "";
+  }
+  await syncPrepStockFromErpProduct({
+    productId,
+    listed,
+    nameEn: String(row.name_en ?? ""),
+    nameRu,
+    nameVn: String(row.name_vn ?? ""),
+    actor: input.actor,
+  });
+  return { id: productId, staff_listed: listed };
 }
 
 /** Checkbox staff_listed → upsert/archive matching Prep Stock catalog row (id = product uuid). */

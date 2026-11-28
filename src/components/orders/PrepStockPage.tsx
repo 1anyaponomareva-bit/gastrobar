@@ -102,21 +102,19 @@ export function PrepStockPage() {
     try {
       const [rows, catalog, transfers] = await Promise.all([
         listPrepStockBalances(),
-        listPrepStockCatalogItems().catch(() => null),
+        listPrepStockCatalogItems(),
         listPrepStockTransfers("pending").catch(() => [] as PrepStockTransferRow[]),
       ]);
       setBalances(toMap(rows));
       setPendingTransfers(transfers);
-      if (catalog) {
-        setStockItems(
-          catalog.map((item) => ({
-            id: item.id,
-            name: item.name,
-            note: item.note || undefined,
-            noWarehouse: item.noWarehouse,
-          })),
-        );
-      }
+      setStockItems(
+        catalog.map((item) => ({
+          id: item.id,
+          name: item.name,
+          note: item.note || undefined,
+          noWarehouse: item.noWarehouse,
+        })),
+      );
     } catch (err) {
       // Keep cached balances on screen if refresh fails.
       setError(prepStockErrorMessage(err, t("error_network"), t("error_load")));
@@ -340,6 +338,9 @@ export function PrepStockPage() {
       ) : null}
 
       <div className="orders-prepStockList">
+        {!stockItems.length && !refreshing ? (
+          <p className="orders-prepStockMoveHint">{t("prep_stock_catalog_empty")}</p>
+        ) : null}
         {stockItems.map((item) => {
           const label = staffStockLabel(item, lang);
           const note = staffStockNote(item);
