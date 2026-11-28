@@ -4,6 +4,7 @@ import {
   formatOrderPackagingLine,
   formatOrderPackTotal,
   localizePackType,
+  orderPackTotalContent,
   parseOrderPackaging,
 } from "@/lib/erp/orderPackaging";
 import { productDisplayName } from "@/lib/erp/productName";
@@ -29,6 +30,7 @@ type Props = {
   qtyLabel: string;
   packLabel: string;
   onQty: (qty: string) => void;
+  onLooseQty?: (qty: string) => void;
   onPack: (packId: string) => void;
 };
 
@@ -45,12 +47,13 @@ export function OrderProductCard({
   qtyLabel,
   packLabel,
   onQty,
+  onLooseQty,
   onPack,
 }: Props) {
   const { lang, t } = useOrders();
-  const current = row ?? { packId: defaultPackId(product), qty: "" };
+  const current = row ?? { packId: defaultPackId(product), qty: "", looseQty: "" };
   const pack = packOf(product, current.packId);
-  const marked = isMarkedQty(current.qty);
+  const marked = isMarkedQty(current.qty) || isMarkedQty(current.looseQty);
   const details = productDetailLine({
     brand: product.brand,
     supplierName,
@@ -59,6 +62,7 @@ export function OrderProductCard({
   });
   const isSemi = product.type === "semi_finished";
   const packCount = parseQty(current.qty);
+  const looseCount = parseQty(current.looseQty);
 
   // Card packing (тип + количество в упаковке) — multiplier for weight / pcs.
   const cardPack = parseOrderPackaging({
@@ -68,12 +72,13 @@ export function OrderProductCard({
   });
   const hasCardMultiplier = cardPack.contentQty != null && cardPack.contentQty > 0;
   const cardUnit = cardPack.contentUnit || product.unit;
-  const cardTotal =
-    hasCardMultiplier && packCount != null && packCount > 0
-      ? Math.round(packCount * (cardPack.contentQty as number) * 1000) / 1000
-      : null;
+  const dualInputs = hasCardMultiplier && typeof onLooseQty === "function";
+  const cardTotal = hasCardMultiplier
+    ? orderPackTotalContent(packCount, cardPack.contentQty, looseCount)
+    : null;
 
   const packWord = localizePackType(cardPack.type || "pack", lang);
+  const looseUnitLabel = isSemi ? t("prep_stock_pcs") : cardUnit || product.unit;
 
   // Semi-finished: show bag packing line + packs+content total.
   const packingLine = isSemi
@@ -86,11 +91,11 @@ export function OrderProductCard({
       : null;
 
   const erpTotal =
-    isSemi && packingLine && packCount != null && packCount > 0
+    isSemi && packingLine && cardTotal != null
       ? formatOrderPackTotal(packCount, cardPack.contentQty, cardUnit || "pcs", {
           packs: t("order_packing_packs"),
           total: t("order_packing_total"),
-        })
+        }, looseCount)
       : null;
 
   // Ingredient without card packing: fall back to purchase pack × qty.
@@ -136,14 +141,26 @@ export function OrderProductCard({
           </select>
         </div>
       ) : null}
-      <QtyField
-        label={hasCardMultiplier ? t("order_packing_packs") : qtyLabel}
-        unit={unit}
-        value={current.qty}
-        onChange={onQty}
-      />
+      {dualInputs ? (
+        <>
+          <QtyField label={t("order_packing_packs")} unit={packWord} value={current.qty} onChange={onQty} />
+          <QtyField
+            label={isSemi ? t("prep_stock_pcs") : t("order_packing_loose", { unit: cardUnit || "kg" })}
+            unit={looseUnitLabel}
+            value={current.looseQty ?? ""}
+            onChange={onLooseQty}
+          />
+        </>
+      ) : (
+        <QtyField
+          label={hasCardMultiplier ? t("order_packing_packs") : qtyLabel}
+          unit={unit}
+          value={current.qty}
+          onChange={onQty}
+        />
+      )}
       {erpTotal ? <div className="orders-packHint">{erpTotal}</div> : null}
-      {totalLine ? <div className="orders-packHint">{totalLine}</div> : null}
+      {totalLine ? <div className="orders-packHint orders-packHintStrong">{totalLine}</div> : null}
     </div>
   );
 }

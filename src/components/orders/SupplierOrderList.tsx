@@ -266,12 +266,17 @@ export function SupplierOrderList({
   const visible = filterByCategory(products.filter(matchesSearch), category);
 
   const setQty = (product: OrderProduct, qty: string) => {
-    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
+    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "", looseQty: "" };
     scheduleSave({ ...selection, [product.id]: { ...current, qty } });
   };
 
+  const setLooseQty = (product: OrderProduct, looseQty: string) => {
+    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "", looseQty: "" };
+    scheduleSave({ ...selection, [product.id]: { ...current, looseQty } });
+  };
+
   const setPack = (product: OrderProduct, packId: string) => {
-    const current = selection[product.id] ?? { packId, qty: "" };
+    const current = selection[product.id] ?? { packId, qty: "", looseQty: "" };
     scheduleSave({ ...selection, [product.id]: { ...current, packId } });
   };
 
@@ -455,6 +460,7 @@ export function SupplierOrderList({
             qtyLabel={t("qty_label")}
             packLabel={t("pack_label")}
             onQty={(qty) => setQty(product, qty)}
+            onLooseQty={(looseQty) => setLooseQty(product, looseQty)}
             onPack={(packId) => setPack(product, packId)}
           />
         ))

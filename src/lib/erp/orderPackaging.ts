@@ -63,10 +63,28 @@ export function formatOrderPackagingLine(
 export function orderPackTotalContent(
   packCount: number,
   contentQty: number | null,
+  looseContent = 0,
 ): number | null {
-  if (!Number.isFinite(packCount) || packCount <= 0) return null;
-  if (contentQty == null || !(contentQty > 0)) return null;
-  return Math.round(packCount * contentQty * 1000) / 1000;
+  const packs = Number.isFinite(packCount) && packCount > 0 ? packCount : 0;
+  const loose = Number.isFinite(looseContent) && looseContent > 0 ? looseContent : 0;
+  if (packs <= 0 && loose <= 0) return null;
+  if (contentQty == null || !(contentQty > 0)) {
+    return loose > 0 ? Math.round(loose * 1000) / 1000 : null;
+  }
+  return Math.round((packs * contentQty + loose) * 1000) / 1000;
+}
+
+/** Split base weight/qty into full packs + leftover content units. */
+export function splitPackAndLoose(
+  totalContent: number,
+  contentQty: number,
+): { packs: number; loose: number } {
+  if (!(contentQty > 0) || !Number.isFinite(totalContent) || totalContent <= 0) {
+    return { packs: 0, loose: Math.max(0, Number(totalContent) || 0) };
+  }
+  const packs = Math.floor((totalContent + 1e-9) / contentQty);
+  const loose = Math.round((totalContent - packs * contentQty) * 1000) / 1000;
+  return { packs, loose: loose > 0 ? loose : 0 };
 }
 
 export function formatOrderPackTotal(
@@ -74,9 +92,18 @@ export function formatOrderPackTotal(
   contentQty: number | null,
   contentUnit: string,
   labels: { packs: string; total: string },
+  looseContent = 0,
 ): string | null {
-  const total = orderPackTotalContent(packCount, contentQty);
+  const total = orderPackTotalContent(packCount, contentQty, looseContent);
   if (total == null) return null;
   const unit = contentUnit.trim() || "pcs";
-  return `${labels.packs}: ${packCount} · ${labels.total}: ${total} ${unit}`;
+  const packs = Number.isFinite(packCount) && packCount > 0 ? packCount : 0;
+  const loose = Number.isFinite(looseContent) && looseContent > 0 ? looseContent : 0;
+  if (loose > 0 && packs > 0) {
+    return `${labels.packs}: ${packs} + ${loose} ${unit} · ${labels.total}: ${total} ${unit}`;
+  }
+  if (loose > 0) {
+    return `${labels.total}: ${total} ${unit}`;
+  }
+  return `${labels.packs}: ${packs} · ${labels.total}: ${total} ${unit}`;
 }

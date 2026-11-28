@@ -4,7 +4,7 @@ import { orderPdfLineCode, orderPdfPrintWarehouse, type OrderPdfInput, type Orde
 import { formatQty, isPositiveQty, lineOpenReceiveQty, parseQty, receiveLineUnits, type ReceiveMode } from "./qty";
 import type { OrderLineDetail, OrderProduct, OrderProductPack, OrderStatus, OrderWarehouse } from "./types";
 
-export type SelectionRow = { packId: string | null; qty: string };
+export type SelectionRow = { packId: string | null; qty: string; looseQty?: string };
 
 export type SelectionMap = Record<string, SelectionRow>;
 
@@ -65,7 +65,9 @@ export function isMarkedQty(qty: string | number | null | undefined): boolean {
 }
 
 export function isProductMarked(productId: string, selection: SelectionMap): boolean {
-  return isMarkedQty(selection[productId]?.qty);
+  const row = selection[productId];
+  if (!row) return false;
+  return isMarkedQty(row.qty) || isMarkedQty(row.looseQty);
 }
 
 /** Badge on a supplier tab = count of selected rows whose current/default supplier is that supplier. */
@@ -428,24 +430,54 @@ export function clearSupplierSelection(selection: SelectionMap, productIds: stri
 export function clearQuantities(selection: SelectionMap, productIds: string[], packIdOf: (id: string) => string | null): SelectionMap {
   const next = { ...selection };
   for (const id of productIds) {
-    next[id] = { packId: selection[id]?.packId ?? packIdOf(id), qty: "" };
+    next[id] = { packId: selection[id]?.packId ?? packIdOf(id), qty: "", looseQty: "" };
   }
   return next;
 }
 
 export function filledProductIds(products: Array<{ id: string }>, selection: SelectionMap): string[] {
-  return products.filter((product) => (selection[product.id]?.qty ?? "").trim() !== "").map((product) => product.id);
+  return products
+    .filter((product) => {
+      const row = selection[product.id];
+      return Boolean((row?.qty ?? "").trim() || (row?.looseQty ?? "").trim());
+    })
+    .map((product) => product.id);
+}
+
+/** Pack count × card content + loose content → base qty for draft / place. */
+export function selectionLineBaseQty(
+  product: Pick<OrderProduct, "orderPackContentQty" | "type">,
+  row: SelectionRow | undefined,
+): number {
+  if (!row) return 0;
+  const packs = parseQty(row.qty);
+  const loose = parseQty(row.looseQty);
+  const content = product.orderPackContentQty;
+  if (content != null && content > 0) {
+    const packPart = packs > 0 ? packs * content : 0;
+    const loosePart = loose > 0 ? loose : 0;
+    return Math.round((packPart + loosePart) * 1000) / 1000;
+  }
+  return packs > 0 ? packs : 0;
 }
 
 export function selectionDraftLines(
-  products: Array<{ id: string }>,
+  products: Array<Pick<OrderProduct, "id" | "orderPackContentQty" | "type">>,
   selection: SelectionMap,
 ): Array<{ product_id: string; pack_id: string | null; qty: number }> {
   const lines: Array<{ product_id: string; pack_id: string | null; qty: number }> = [];
   for (const product of products) {
     const row = selection[product.id];
-    if (!row || !isPositiveQty(row.qty)) continue;
-    lines.push({ product_id: product.id, pack_id: row.packId, qty: parseQty(row.qty) });
+    if (!row) continue;
+    const qty = selectionLineBaseQty(product, row);
+    if (!(qty > 0)) continue;
+    // Card packing → order in base units (kg/pcs); keep pack_id only when no multiplier.
+    const useMultiplier = product.orderPackContentQty != null && product.orderPackContentQty > 0;
+    lines.push({
+      product_id: product.id,
+      pack_id: useMultiplier ? null : row.packId,
+      qty,
+    });
   }
   return lines;
 }
@@ -507,14 +539,28 @@ export function supplierPrintPdfInput(
     lines: marked.map((product) => {
       const row = selection[product.id];
       const pack = packOf(product, row?.packId ?? null);
+      const content = product.orderPackContentQty;
+      const useMultiplier = content != null && content > 0;
+      const packs = parseQty(row?.qty);
+      const loose = parseQty(row?.looseQty);
+      const baseQty = selectionLineBaseQty(product, row);
+      const packType = String(product.orderPackType || "pack").trim() || "pack";
+      const contentUnit = String(product.orderPackContentUnit || product.unit || "").trim() || product.unit;
+      let packLabel = pack?.label ?? "";
+      if (useMultiplier) {
+        const bits: string[] = [];
+        if (packs > 0) bits.push(`${formatQty(packs)} ${packType}`);
+        if (loose > 0) bits.push(`${formatQty(loose)} ${contentUnit}`);
+        packLabel = bits.join(" + ") || packLabel;
+      }
       return {
         nameEn: product.nameEn,
         nameVn: product.nameVn,
         brand: product.brand ?? "",
-        packLabel: pack?.label ?? "",
+        packLabel,
         packCode: orderPdfLineCode(pack?.code, product.productCode),
-        unit: pack ? orderPackUnit(pack, product.unit) : product.unit,
-        qty: parseQty(row?.qty),
+        unit: useMultiplier ? contentUnit : pack ? orderPackUnit(pack, product.unit) : product.unit,
+        qty: useMultiplier ? baseQty : parseQty(row?.qty),
       };
     }),
   };

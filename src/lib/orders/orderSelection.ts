@@ -19,13 +19,14 @@ export function readOrderSelection(): SelectionMap {
     for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
       if (!id) continue;
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        const row = value as { packId?: unknown; qty?: unknown };
+        const row = value as { packId?: unknown; qty?: unknown; looseQty?: unknown };
         next[id] = {
           packId: typeof row.packId === "string" && row.packId ? row.packId : null,
           qty: typeof row.qty === "string" ? row.qty : "",
+          looseQty: typeof row.looseQty === "string" ? row.looseQty : "",
         };
       } else if (typeof value === "string") {
-        next[id] = { packId: null, qty: value };
+        next[id] = { packId: null, qty: value, looseQty: "" };
       }
     }
     return next;

@@ -36,7 +36,7 @@ import {
   type PrepStockMoveType,
   type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
-import { localizePackType } from "@/lib/erp/orderPackaging";
+import { localizePackType, splitPackAndLoose } from "@/lib/erp/orderPackaging";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -85,6 +85,20 @@ function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem, l
   }
   const qty = Number(value) || 0;
   const rounded = Math.round(qty * 1000) / 1000;
+  if (item && isIngredientPurchase(item) && item.purchaseQtyBase) {
+    const split = splitPackAndLoose(rounded, item.purchaseQtyBase);
+    const packWord = ingredientPackWord(item, lang);
+    const unit = item.purchaseUnit || item.baseUnit || "";
+    const parts =
+      split.packs > 0 && split.loose > 0
+        ? `${split.packs} ${packWord} + ${fmtQty(split.loose)} ${unit}`
+        : split.packs > 0
+          ? `${split.packs} ${packWord}`
+          : split.loose > 0
+            ? `${fmtQty(split.loose)} ${unit}`
+            : `0 ${packWord}`;
+    return `${fmtQty(rounded)} ${unit} · ${parts}`;
+  }
   return `${fmtQty(rounded)} ${unitLabel(item, pcsLabel)}`;
 }
 
@@ -209,9 +223,9 @@ export function PrepStockPage() {
       setDialogLoosePcs("");
       setDialogQty("");
     } else if (isIngredientPurchase(item) && mode === "set" && initial != null && item.purchaseQtyBase) {
-      const packs = Math.round((initial / item.purchaseQtyBase) * 1000) / 1000;
-      setDialogPacks(packs ? String(packs) : "");
-      setDialogLoosePcs("");
+      const split = splitPackAndLoose(initial, item.purchaseQtyBase);
+      setDialogPacks(split.packs ? String(split.packs) : "");
+      setDialogLoosePcs(split.loose ? String(split.loose) : "");
       setDialogQty("");
     } else if (isIngredientPurchase(item)) {
       setDialogPacks("");
@@ -238,11 +252,12 @@ export function PrepStockPage() {
       qty = combinePackQty(packs, loose, packSize);
     } else if (isIngredientPurchase(dialog.item) && dialog.item.purchaseQtyBase) {
       const packs = parseLooseNumber(dialogPacks || "0");
-      if (!Number.isFinite(packs) || packs < 0) {
+      const loose = parseLooseNumber(dialogLoosePcs || "0");
+      if (!Number.isFinite(packs) || !Number.isFinite(loose) || packs < 0 || loose < 0) {
         window.alert(t("prep_stock_qty_invalid"));
         return;
       }
-      qty = Math.round(packs * dialog.item.purchaseQtyBase * 1000) / 1000;
+      qty = Math.round((packs * dialog.item.purchaseQtyBase + loose) * 1000) / 1000;
     } else {
       qty = parseLooseNumber(dialogQty);
     }
@@ -623,11 +638,28 @@ export function PrepStockPage() {
                     }}
                   />
                 </label>
-                <p className="orders-prepStockModalHint">
+                <label>
+                  <span>
+                    {t("order_packing_loose", {
+                      unit: dialog.item.purchaseUnit || dialog.item.baseUnit || "kg",
+                    })}
+                  </span>
+                  <input
+                    inputMode="decimal"
+                    value={dialogLoosePcs}
+                    onChange={(event) => setDialogLoosePcs(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void submitMove();
+                    }}
+                  />
+                </label>
+                <p className="orders-prepStockModalHint orders-packHintStrong">
                   {t("prep_stock_total")}:{" "}
                   {fmtQty(
                     Math.round(
-                      (parseLooseNumber(dialogPacks || "0") || 0) * (dialog.item.purchaseQtyBase || 0) * 1000,
+                      ((parseLooseNumber(dialogPacks || "0") || 0) * (dialog.item.purchaseQtyBase || 0) +
+                        (parseLooseNumber(dialogLoosePcs || "0") || 0)) *
+                        1000,
                     ) / 1000,
                   )}{" "}
                   {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}

@@ -90,8 +90,11 @@ export function OrderList({ initialTab }: Props) {
     writeOrderSelection(next);
   }, []);
 
-  const updateSelection = (product: OrderProduct, patch: Partial<{ packId: string | null; qty: string }>) => {
-    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "" };
+  const updateSelection = (
+    product: OrderProduct,
+    patch: Partial<{ packId: string | null; qty: string; looseQty: string }>,
+  ) => {
+    const current = selection[product.id] ?? { packId: defaultPackId(product), qty: "", looseQty: "" };
     storeSelection({ ...selection, [product.id]: { ...current, ...patch } });
   };
 
@@ -251,6 +254,7 @@ export function OrderList({ initialTab }: Props) {
                     qtyLabel={t("qty_label")}
                     packLabel={t("pack_label")}
                     onQty={(qty) => updateSelection(product, { qty })}
+                    onLooseQty={(looseQty) => updateSelection(product, { looseQty })}
                     onPack={(packId) => updateSelection(product, { packId })}
                   />
                 );
