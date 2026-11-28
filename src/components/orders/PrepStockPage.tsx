@@ -37,7 +37,7 @@ import {
   type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
 import { localizePackType, splitPackAndLoose } from "@/lib/erp/orderPackaging";
-import { formatVietnamDateTime } from "@/lib/orders/datetime";
+import { formatVietnamDateTime, vietnamIsoDate, vietnamTodayIso } from "@/lib/orders/datetime";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -452,13 +452,18 @@ export function PrepStockPage() {
           const changedLabel = bal.changedAt
             ? t("prep_stock_changed_at", { date: formatVietnamDateTime(bal.changedAt) })
             : t("prep_stock_changed_at_empty");
+          const changedTone = bal.changedAt
+            ? vietnamIsoDate(bal.changedAt) === vietnamTodayIso()
+              ? "today"
+              : "stale"
+            : "empty";
           return (
             <div key={item.id} className="orders-prepStockCard">
               <div className="orders-prepStockName">
                 {label}
                 {note ? <span className="orders-prepStockNote"> / {note}</span> : null}
               </div>
-              <p className="orders-prepStockChangedAt">{changedLabel}</p>
+              <p className={`orders-prepStockChangedAt ${changedTone}`}>{changedLabel}</p>
 
               <div className={`orders-prepStockBalances ${item.noWarehouse ? "single" : ""}`}>
                 <button

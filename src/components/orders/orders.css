@@ -1242,6 +1242,15 @@
   color: var(--orders-muted);
 }
 
+.orders-prepStockChangedAt.today {
+  color: var(--orders-ok);
+}
+
+.orders-prepStockChangedAt.stale,
+.orders-prepStockChangedAt.empty {
+  color: var(--orders-muted);
+}
+
 .orders-prepStockName {
   font-weight: 800;
   font-size: 15px;
