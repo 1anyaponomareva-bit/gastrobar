@@ -469,6 +469,11 @@ export function PrepStockPage() {
                 <p className="orders-prepStockMoveHint">
                   {formatPackRule(staffStockPackSize(item)!, staffStockPackType(item))}
                 </p>
+              ) : isIngredientPurchase(item) ? (
+                <p className="orders-prepStockMoveHint">
+                  1 {item.purchasePackLabel || "pack"} = {fmtQty(item.purchaseQtyBase!)}{" "}
+                  {item.purchaseUnit || item.baseUnit || ""}
+                </p>
               ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
               <div className="orders-prepStockMoves">
@@ -587,8 +592,12 @@ export function PrepStockPage() {
               </>
             ) : isIngredientPurchase(dialog.item) ? (
               <>
+                <p className="orders-prepStockModalHint">
+                  1 {dialog.item.purchasePackLabel || "pack"} = {fmtQty(dialog.item.purchaseQtyBase!)}{" "}
+                  {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}
+                </p>
                 <label>
-                  <span>{t("order_packing_packs")}</span>
+                  <span>{dialog.item.purchasePackLabel || t("order_packing_packs")}</span>
                   <input
                     inputMode="decimal"
                     autoFocus

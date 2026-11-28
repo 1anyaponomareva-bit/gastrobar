@@ -57,52 +57,65 @@ export function OrderProductCard({
     packCode: pack?.code,
   });
   const isSemi = product.type === "semi_finished";
-  const erpPacking = parseOrderPackaging({
-    order_pack_type: isSemi ? product.orderPackType : null,
-    order_pack_content_qty: isSemi ? product.orderPackContentQty ?? null : null,
-    order_pack_content_unit: isSemi ? product.orderPackContentUnit : null,
-  });
-  const packingLine = isSemi
-    ? formatOrderPackagingLine(erpPacking, {
-        packing: t("order_packing_label"),
-        per: "/",
-      })
-    : null;
   const packCount = parseQty(current.qty);
 
-  // Ingredients (and non-semi): purchase pack × qty → total in base unit.
-  const packBase = pack && pack.qty_base > 0 ? pack.qty_base : null;
-  const packBaseUnit = pack ? orderPackUnit(pack, product.unit) : product.unit;
-  const purchaseTotal =
-    !isSemi && packCount != null && packCount > 0 && packBase != null
-      ? Math.round(packCount * packBase * 1000) / 1000
+  // Card packing (тип + количество в упаковке) — multiplier for weight / pcs.
+  const cardPack = parseOrderPackaging({
+    order_pack_type: product.orderPackType,
+    order_pack_content_qty: product.orderPackContentQty ?? null,
+    order_pack_content_unit: product.orderPackContentUnit || product.unit,
+  });
+  const hasCardMultiplier = cardPack.contentQty != null && cardPack.contentQty > 0;
+  const cardUnit = cardPack.contentUnit || product.unit;
+  const cardTotal =
+    hasCardMultiplier && packCount != null && packCount > 0
+      ? Math.round(packCount * (cardPack.contentQty as number) * 1000) / 1000
+      : null;
+
+  // Semi-finished: show bag packing line + packs+content total.
+  const packingLine = isSemi
+    ? formatOrderPackagingLine(cardPack, { packing: t("order_packing_label"), per: "/" })
+    : hasCardMultiplier
+      ? `${t("order_packing_label")}: 1 ${cardPack.type || "pack"} = ${fmtAmount(cardPack.contentQty!)} ${cardUnit}`
       : null;
 
   const erpTotal =
     isSemi && packingLine && packCount != null && packCount > 0
-      ? formatOrderPackTotal(packCount, erpPacking.contentQty, erpPacking.contentUnit || "pcs", {
+      ? formatOrderPackTotal(packCount, cardPack.contentQty, cardUnit || "pcs", {
           packs: t("order_packing_packs"),
           total: t("order_packing_total"),
         })
       : null;
 
-  const unit = isSemi
-    ? erpPacking.type || (pack ? orderPackUnit(pack, product.unit) : product.unit)
-    : pack
-      ? orderPackUnit(pack, product.unit)
-      : product.unit;
-
-  const purchaseTotalLine =
-    purchaseTotal != null && packCount != null
-      ? `${t("order_packing_total")}: ${fmtAmount(purchaseTotal)} ${packBaseUnit}`
+  // Ingredient without card packing: fall back to purchase pack × qty.
+  const packBase = !hasCardMultiplier && pack && pack.qty_base > 0 ? pack.qty_base : null;
+  const packBaseUnit = pack ? orderPackUnit(pack, product.unit) : product.unit;
+  const purchaseTotal =
+    !isSemi && !hasCardMultiplier && packCount != null && packCount > 0 && packBase != null
+      ? Math.round(packCount * packBase * 1000) / 1000
       : null;
+
+  const unit = hasCardMultiplier
+    ? cardPack.type || "pack"
+    : isSemi
+      ? cardPack.type || (pack ? orderPackUnit(pack, product.unit) : product.unit)
+      : pack
+        ? orderPackUnit(pack, product.unit)
+        : product.unit;
+
+  const totalLine =
+    cardTotal != null
+      ? `${t("order_packing_total")}: ${fmtAmount(cardTotal)} ${cardUnit}`
+      : purchaseTotal != null
+        ? `${t("order_packing_total")}: ${fmtAmount(purchaseTotal)} ${packBaseUnit}`
+        : null;
 
   return (
     <div className={`orders-card ${marked ? "marked" : ""}`}>
       <div className="orders-name">{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</div>
       {details ? <div className="orders-meta">{details}</div> : null}
       {packingLine ? <div className="orders-packHint">{packingLine}</div> : null}
-      {product.packs.length > 1 ? (
+      {product.packs.length > 1 && !hasCardMultiplier ? (
         <div className="orders-field" style={{ margin: "8px 0" }}>
           <label>{packLabel}</label>
           <select className="orders-select" value={current.packId ?? ""} onChange={(event) => onPack(event.target.value)}>
@@ -117,9 +130,14 @@ export function OrderProductCard({
           </select>
         </div>
       ) : null}
-      <QtyField label={qtyLabel} unit={unit} value={current.qty} onChange={onQty} />
+      <QtyField
+        label={hasCardMultiplier ? t("order_packing_packs") : qtyLabel}
+        unit={unit}
+        value={current.qty}
+        onChange={onQty}
+      />
       {erpTotal ? <div className="orders-packHint">{erpTotal}</div> : null}
-      {purchaseTotalLine ? <div className="orders-packHint">{purchaseTotalLine}</div> : null}
+      {totalLine ? <div className="orders-packHint">{totalLine}</div> : null}
     </div>
   );
 }

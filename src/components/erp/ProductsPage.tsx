@@ -921,9 +921,9 @@ function ProductEditor({
                     "Cho Prep Stock: 1 bag = 20 pcs. Không phải quy cách mua.",
                   )
                 : T(
-                    "Для Orders / Prep Stock. Фасовка закупки (Pack 1 kg) — отдельно в таблице ниже.",
-                    "For Orders / Prep Stock. Purchase packs (Pack 1 kg) stay in the table below.",
-                    "Cho Orders / Prep Stock. Quy cách mua ở bảng bên dưới.",
+                    "Мультипликатор веса: число пакетов × количество в упаковке (напр. 3 × 5 kg = 15 kg). Фасовка закупки — в таблице ниже.",
+                    "Weight multiplier: pack count × units per pack (e.g. 3 × 5 kg = 15 kg). Purchase packs stay in the table below.",
+                    "Hệ số khối lượng: số pack × số trong pack (vd 3 × 5 kg = 15 kg). Quy cách mua ở bảng dưới.",
                   )
             }
           >
