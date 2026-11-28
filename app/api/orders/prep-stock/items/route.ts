@@ -14,8 +14,13 @@ export async function GET(request: Request) {
         name: item.name,
         note: item.note ?? "",
         noWarehouse: Boolean(item.noWarehouse),
+        productType: item.productType ?? null,
+        baseUnit: item.baseUnit ?? null,
         packSize: item.packSize ?? null,
         packType: item.packType ?? null,
+        purchasePackLabel: item.purchasePackLabel ?? null,
+        purchaseQtyBase: item.purchaseQtyBase ?? null,
+        purchaseUnit: item.purchaseUnit ?? null,
         sortOrder: item.sortOrder,
       })),
     };

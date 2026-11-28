@@ -69,6 +69,8 @@ export type OrderProduct = {
   categoryName: string | null;
   categoryNameVn?: string | null;
   unit: string;
+  /** ERP product type: ingredient | semi_finished | … */
+  type?: string | null;
   itemNo: string | null;
   /** ERP `product_code` only — not Staff itemNo. PDF SKU fallback when pack.code is empty. */
   productCode?: string | null;
@@ -77,7 +79,7 @@ export type OrderProduct = {
   hidden?: boolean;
   /** Accountable Item from ERP (`staff_listed`). */
   accountable?: boolean;
-  /** Structured ERP packing for Orders (read-only in Orders). */
+  /** Structured ERP packing for Orders — semi-finished only. */
   orderPackType?: string | null;
   orderPackContentQty?: number | null;
   orderPackContentUnit?: string | null;

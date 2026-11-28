@@ -69,14 +69,31 @@ function fmtQty(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
-function formatPcs(value: number, pcsLabel: string, item?: StaffStockItem): string {
-  const total = Math.max(0, Math.round(Number(value) || 0));
+function unitLabel(item: StaffStockItem | undefined, pcsLabel: string): string {
+  if (!item) return pcsLabel;
+  if (staffStockPackSize(item)) return pcsLabel;
+  return item.purchaseUnit || item.baseUnit || pcsLabel;
+}
+
+function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem): string {
   const packSize = item ? staffStockPackSize(item) : null;
   if (packSize) {
+    const total = Math.max(0, Math.round(Number(value) || 0));
     const parts = formatPackQty(total, packSize, staffStockPackType(item!));
     return `${fmtQty(total)} ${pcsLabel} · ${parts}`;
   }
-  return `${fmtQty(total)} ${pcsLabel}`;
+  const qty = Number(value) || 0;
+  const rounded = Math.round(qty * 1000) / 1000;
+  const unit = unitLabel(item, pcsLabel);
+  if (item?.purchaseQtyBase && item.purchaseQtyBase > 0 && item.purchasePackLabel) {
+    const packs = Math.round((rounded / item.purchaseQtyBase) * 1000) / 1000;
+    return `${fmtQty(rounded)} ${unit} · ${fmtQty(packs)} × ${item.purchasePackLabel}`;
+  }
+  return `${fmtQty(rounded)} ${unit}`;
+}
+
+function isIngredientPurchase(item: StaffStockItem): boolean {
+  return item.productType !== "semi_finished" && Boolean(item.purchaseQtyBase && item.purchaseQtyBase > 0);
 }
 
 function parseLooseNumber(raw: string): number {
@@ -126,8 +143,13 @@ export function PrepStockPage() {
           name: item.name,
           note: item.note || undefined,
           noWarehouse: item.noWarehouse,
+          productType: item.productType || undefined,
+          baseUnit: item.baseUnit || undefined,
           packSize: item.packSize && item.packSize > 1 ? item.packSize : undefined,
           packType: item.packType || undefined,
+          purchasePackLabel: item.purchasePackLabel || undefined,
+          purchaseQtyBase: item.purchaseQtyBase && item.purchaseQtyBase > 0 ? item.purchaseQtyBase : undefined,
+          purchaseUnit: item.purchaseUnit || undefined,
         })),
       );
     } catch (err) {
@@ -186,6 +208,15 @@ export function PrepStockPage() {
       setDialogPacks("");
       setDialogLoosePcs("");
       setDialogQty("");
+    } else if (isIngredientPurchase(item) && mode === "set" && initial != null && item.purchaseQtyBase) {
+      const packs = Math.round((initial / item.purchaseQtyBase) * 1000) / 1000;
+      setDialogPacks(packs ? String(packs) : "");
+      setDialogLoosePcs("");
+      setDialogQty("");
+    } else if (isIngredientPurchase(item)) {
+      setDialogPacks("");
+      setDialogLoosePcs("");
+      setDialogQty("");
     } else {
       setDialogPacks("");
       setDialogLoosePcs("");
@@ -205,6 +236,13 @@ export function PrepStockPage() {
         return;
       }
       qty = combinePackQty(packs, loose, packSize);
+    } else if (isIngredientPurchase(dialog.item) && dialog.item.purchaseQtyBase) {
+      const packs = parseLooseNumber(dialogPacks || "0");
+      if (!Number.isFinite(packs) || packs < 0) {
+        window.alert(t("prep_stock_qty_invalid"));
+        return;
+      }
+      qty = Math.round(packs * dialog.item.purchaseQtyBase * 1000) / 1000;
     } else {
       qty = parseLooseNumber(dialogQty);
     }
@@ -406,7 +444,7 @@ export function PrepStockPage() {
                   }
                 >
                   <span>PREP</span>
-                  <strong>{formatPcs(bal.kitchen, pcsLabel, item)}</strong>
+                  <strong>{formatBalance(bal.kitchen, pcsLabel, item)}</strong>
                   <em>{t("prep_stock_tap_edit")}</em>
                 </button>
                 {item.noWarehouse ? null : (
@@ -422,19 +460,24 @@ export function PrepStockPage() {
                     }
                   >
                     <span>WAREHOUSE</span>
-                    <strong>{formatPcs(bal.warehouse, pcsLabel, item)}</strong>
+                    <strong>{formatBalance(bal.warehouse, pcsLabel, item)}</strong>
                     <em>{t("prep_stock_tap_edit")}</em>
                   </button>
                 )}
                 <div className="orders-prepStockBal total">
                   <span>{t("prep_stock_total")}</span>
-                  <strong>{formatPcs(bal.total, pcsLabel, item)}</strong>
+                  <strong>{formatBalance(bal.total, pcsLabel, item)}</strong>
                 </div>
               </div>
 
               {staffStockPackSize(item) ? (
                 <p className="orders-prepStockMoveHint">
                   {formatPackRule(staffStockPackSize(item)!, staffStockPackType(item))}
+                </p>
+              ) : isIngredientPurchase(item) ? (
+                <p className="orders-prepStockMoveHint">
+                  {t("order_packing_label")}: {item.purchasePackLabel} · {fmtQty(item.purchaseQtyBase!)}{" "}
+                  {item.purchaseUnit || item.baseUnit || ""}
                 </p>
               ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
@@ -548,6 +591,34 @@ export function PrepStockPage() {
                     ),
                   )}{" "}
                   {pcsLabel})
+                </p>
+              </>
+            ) : isIngredientPurchase(dialog.item) ? (
+              <>
+                <p className="orders-prepStockModalHint">
+                  {t("order_packing_label")}: {dialog.item.purchasePackLabel} ·{" "}
+                  {fmtQty(dialog.item.purchaseQtyBase!)} {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}
+                </p>
+                <label>
+                  <span>{t("order_packing_packs")}</span>
+                  <input
+                    inputMode="decimal"
+                    autoFocus
+                    value={dialogPacks}
+                    onChange={(event) => setDialogPacks(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void submitMove();
+                    }}
+                  />
+                </label>
+                <p className="orders-prepStockModalHint">
+                  {t("prep_stock_total")}:{" "}
+                  {fmtQty(
+                    Math.round(
+                      (parseLooseNumber(dialogPacks || "0") || 0) * (dialog.item.purchaseQtyBase || 0) * 1000,
+                    ) / 1000,
+                  )}{" "}
+                  {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}
                 </p>
               </>
             ) : (

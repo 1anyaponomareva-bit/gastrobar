@@ -18,8 +18,17 @@ export type StaffStockItem = {
    * Prep Stock stores qty in pieces.
    */
   packSize?: number;
-  /** ERP order_pack_type (bag / pack / túi…). Shown as «1 bag = 20 pcs». */
+  /** ERP order_pack_type (bag / pack / túi…). Shown as «1 bag = 20 pcs». Semi-finished only. */
   packType?: string;
+  /** ingredient | semi_finished | … from ERP. */
+  productType?: string;
+  /** Base stock unit (kg / pcs / …). */
+  baseUnit?: string;
+  /** Ingredient purchase pack label, e.g. Pack (1 kg). */
+  purchasePackLabel?: string;
+  /** Ingredient: kg/l/pcs in one purchase pack. */
+  purchaseQtyBase?: number;
+  purchaseUnit?: string;
   /**
    * Weight of 1 piece in grams. Later from ERP product; Prep Stock TOTAL shows
    * unitWeightGrams × total pieces. Stub 0 until ERP weight is wired.

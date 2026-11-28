@@ -15,10 +15,16 @@ export type PrepStockCatalogItemRow = {
   name: { en: string; ru: string; vn: string };
   note: string;
   noWarehouse: boolean;
+  productType?: string | null;
+  baseUnit?: string | null;
   /** Pieces per pack from ERP order_pack_content_qty (semi-finished). */
   packSize?: number | null;
   /** ERP order_pack_type (bag / pack / …). */
   packType?: string | null;
+  /** Ingredient purchase pack from erp_product_packs. */
+  purchasePackLabel?: string | null;
+  purchaseQtyBase?: number | null;
+  purchaseUnit?: string | null;
   sortOrder: number;
 };
 
@@ -132,8 +138,10 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
     .map((row) => {
       const r = asRecord(row);
       const name = asRecord(r.name);
+      const productType = String(r.productType ?? r.product_type ?? "").trim();
       const packSizeRaw = Number(r.packSize ?? r.pack_size);
       const packType = String(r.packType ?? r.pack_type ?? "").trim();
+      const purchaseQtyRaw = Number(r.purchaseQtyBase ?? r.purchase_qty_base);
       return {
         id: String(r.id ?? ""),
         name: {
@@ -143,8 +151,25 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
         },
         note: String(r.note ?? ""),
         noWarehouse: Boolean(r.noWarehouse ?? r.no_warehouse),
-        packSize: Number.isFinite(packSizeRaw) && packSizeRaw > 1 ? Math.round(packSizeRaw) : null,
-        packType: packType || null,
+        productType: productType || null,
+        baseUnit: String(r.baseUnit ?? r.base_unit ?? "").trim() || null,
+        packSize:
+          productType === "semi_finished" && Number.isFinite(packSizeRaw) && packSizeRaw > 1
+            ? Math.round(packSizeRaw)
+            : null,
+        packType: productType === "semi_finished" ? packType || null : null,
+        purchasePackLabel:
+          productType === "semi_finished"
+            ? null
+            : String(r.purchasePackLabel ?? r.purchase_pack_label ?? "").trim() || null,
+        purchaseQtyBase:
+          productType !== "semi_finished" && Number.isFinite(purchaseQtyRaw) && purchaseQtyRaw > 0
+            ? purchaseQtyRaw
+            : null,
+        purchaseUnit:
+          productType === "semi_finished"
+            ? null
+            : String(r.purchaseUnit ?? r.purchase_unit ?? "").trim() || null,
         sortOrder: Number(r.sortOrder ?? r.sort_order ?? 0) || 0,
       };
     })

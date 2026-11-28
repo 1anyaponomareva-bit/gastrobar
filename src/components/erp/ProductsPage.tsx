@@ -909,14 +909,14 @@ function ProductEditor({
         options={form.storageOptions}
         onChange={(value) => set("storageOptions", value)}
       />
-      {form.type === "semi_finished" || form.type === "ingredient" ? (
+      {form.type === "semi_finished" ? (
         <div className="erpGrid two" style={{ marginTop: 12 }}>
           <Field
             label={T("Фасовка — тип упаковки", "Packing — package type", "Quy cách — loại bao bì")}
             hint={T(
-              "Для Orders. Не путать с выходом производства и складской единицей.",
-              "For Orders. Not production yield and not the stock unit.",
-              "Cho Orders. Không phải năng suất SX và không phải đơn vị kho.",
+              "Только для полуфабрикатов (Prep Stock: 1 bag = 20 pcs). У ингредиентов — фасовка закупки ниже.",
+              "Semi-finished only (Prep Stock: 1 bag = 20 pcs). Ingredients use purchase packs.",
+              "Chỉ bán thành phẩm. Nguyên liệu dùng quy cách mua.",
             )}
           >
             <input

@@ -93,9 +93,21 @@ async function readCatalogRows(includeArchived: boolean): Promise<DbItemRow[] | 
 }
 
 function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStockCatalogItem {
+  const productType = String(row.product_type ?? row.productType ?? "").trim() || undefined;
   const packSizeRaw = Number(row.pack_size ?? row.packSize);
-  const packSize = Number.isFinite(packSizeRaw) && packSizeRaw > 1 ? Math.round(packSizeRaw) : undefined;
-  const packType = String(row.pack_type ?? row.packType ?? "").trim() || undefined;
+  const packSize =
+    productType === "semi_finished" && Number.isFinite(packSizeRaw) && packSizeRaw > 1
+      ? Math.round(packSizeRaw)
+      : undefined;
+  const packType =
+    productType === "semi_finished"
+      ? String(row.pack_type ?? row.packType ?? "").trim() || undefined
+      : undefined;
+  const purchaseQtyRaw = Number(row.purchase_qty_base ?? row.purchaseQtyBase);
+  const purchaseQtyBase =
+    productType !== "semi_finished" && Number.isFinite(purchaseQtyRaw) && purchaseQtyRaw > 0
+      ? purchaseQtyRaw
+      : undefined;
   return {
     id: String(row.id ?? ""),
     name: {
@@ -105,8 +117,19 @@ function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStoc
     },
     note: String(row.note ?? "").trim() || undefined,
     noWarehouse: Boolean(row.no_warehouse ?? row.noWarehouse),
+    productType,
+    baseUnit: String(row.base_unit ?? row.baseUnit ?? "").trim() || undefined,
     packSize,
     packType,
+    purchasePackLabel:
+      productType !== "semi_finished"
+        ? String(row.purchase_pack_label ?? row.purchasePackLabel ?? "").trim() || undefined
+        : undefined,
+    purchaseQtyBase,
+    purchaseUnit:
+      productType !== "semi_finished"
+        ? String(row.purchase_unit ?? row.purchaseUnit ?? "").trim() || undefined
+        : undefined,
     sortOrder: Number(row.sort_order ?? row.sortOrder) || (index + 1) * 10,
     archived: false,
   };
