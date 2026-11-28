@@ -95,6 +95,7 @@ async function readCatalogRows(includeArchived: boolean): Promise<DbItemRow[] | 
 function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStockCatalogItem {
   const packSizeRaw = Number(row.pack_size ?? row.packSize);
   const packSize = Number.isFinite(packSizeRaw) && packSizeRaw > 1 ? Math.round(packSizeRaw) : undefined;
+  const packType = String(row.pack_type ?? row.packType ?? "").trim() || undefined;
   return {
     id: String(row.id ?? ""),
     name: {
@@ -105,6 +106,7 @@ function mapCatalogRpcRow(row: Record<string, unknown>, index: number): PrepStoc
     note: String(row.note ?? "").trim() || undefined,
     noWarehouse: Boolean(row.no_warehouse ?? row.noWarehouse),
     packSize,
+    packType,
     sortOrder: Number(row.sort_order ?? row.sortOrder) || (index + 1) * 10,
     archived: false,
   };
@@ -141,6 +143,7 @@ async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
     const meta = metaById.get(id);
     const packSizeRaw = Number(row.order_pack_content_qty);
     const packSize = Number.isFinite(packSizeRaw) && packSizeRaw > 1 ? Math.round(packSizeRaw) : undefined;
+    const packType = String(row.order_pack_type ?? "").trim() || undefined;
     return {
       id,
       name: {
@@ -151,6 +154,7 @@ async function listErpFlaggedPrepStockItems(): Promise<PrepStockCatalogItem[]> {
       note: String(meta?.note ?? "").trim() || undefined,
       noWarehouse: Boolean(meta?.no_warehouse),
       packSize,
+      packType,
       sortOrder: Number(meta?.sort_order) || Number(row.staff_sort) || (index + 1) * 10,
       archived: false,
     } satisfies PrepStockCatalogItem;

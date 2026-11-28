@@ -17,6 +17,8 @@ export type PrepStockCatalogItemRow = {
   noWarehouse: boolean;
   /** Pieces per pack from ERP order_pack_content_qty (semi-finished). */
   packSize?: number | null;
+  /** ERP order_pack_type (bag / pack / …). */
+  packType?: string | null;
   sortOrder: number;
 };
 
@@ -131,6 +133,7 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
       const r = asRecord(row);
       const name = asRecord(r.name);
       const packSizeRaw = Number(r.packSize ?? r.pack_size);
+      const packType = String(r.packType ?? r.pack_type ?? "").trim();
       return {
         id: String(r.id ?? ""),
         name: {
@@ -141,6 +144,7 @@ function catalogItemsOf(data: unknown): PrepStockCatalogItemRow[] {
         note: String(r.note ?? ""),
         noWarehouse: Boolean(r.noWarehouse ?? r.no_warehouse),
         packSize: Number.isFinite(packSizeRaw) && packSizeRaw > 1 ? Math.round(packSizeRaw) : null,
+        packType: packType || null,
         sortOrder: Number(r.sortOrder ?? r.sort_order ?? 0) || 0,
       };
     })

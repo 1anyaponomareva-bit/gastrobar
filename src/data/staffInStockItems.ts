@@ -14,10 +14,12 @@ export type StaffStockItem = {
   noAlerts?: boolean;
   unit?: StaffStockUnit;
   /**
-   * Pieces in one pack/bag (per item). Later from ERP product pack settings —
-   * sausages may differ from beef patty, etc. Prep Stock stores qty in pieces.
+   * Pieces in one pack/bag (per item). From ERP order_pack_content_qty.
+   * Prep Stock stores qty in pieces.
    */
   packSize?: number;
+  /** ERP order_pack_type (bag / pack / túi…). Shown as «1 bag = 20 pcs». */
+  packType?: string;
   /**
    * Weight of 1 piece in grams. Later from ERP product; Prep Stock TOTAL shows
    * unitWeightGrams × total pieces. Stub 0 until ERP weight is wired.
@@ -82,6 +84,12 @@ export function staffStockPackSize(item: StaffStockItem): number | null {
   return typeof size === "number" && size > 1 ? size : null;
 }
 
+/** ERP packing container word (bag / pack / …). */
+export function staffStockPackType(item: { packType?: string | null }): string {
+  const raw = String(item.packType || "").trim();
+  return raw || "pack";
+}
+
 export function splitPackQty(
   totalPieces: number,
   packSize: number,
@@ -97,12 +105,20 @@ export function combinePackQty(packs: number, pcs: number, packSize: number): nu
   return p * packSize + loose;
 }
 
-export function formatPackQty(totalPieces: number, packSize: number): string {
-  const { packs, pcs, total } = splitPackQty(totalPieces, packSize);
+export function formatPackQty(totalPieces: number, packSize: number, packType = "pack"): string {
+  const word = String(packType || "pack").trim() || "pack";
+  const { packs, pcs } = splitPackQty(totalPieces, packSize);
   if (packs <= 0 && pcs <= 0) return "0";
   if (packs <= 0) return `${pcs} pcs`;
-  if (pcs <= 0) return `${packs} pack`;
-  return `${packs} pack + ${pcs} pcs`;
+  if (pcs <= 0) return `${packs} ${word}`;
+  return `${packs} ${word} + ${pcs} pcs`;
+}
+
+/** «1 bag = 20 pcs» from ERP packing fields. */
+export function formatPackRule(packSize: number, packType = "pack", unit = "pcs"): string {
+  const word = String(packType || "pack").trim() || "pack";
+  const u = String(unit || "pcs").trim() || "pcs";
+  return `1 ${word} = ${packSize} ${u}`;
 }
 
 /** Grams for one piece — ERP later; currently 0 stub. */

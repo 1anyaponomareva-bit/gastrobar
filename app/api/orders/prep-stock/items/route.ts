@@ -15,6 +15,7 @@ export async function GET(request: Request) {
         note: item.note ?? "",
         noWarehouse: Boolean(item.noWarehouse),
         packSize: item.packSize ?? null,
+        packType: item.packType ?? null,
         sortOrder: item.sortOrder,
       })),
     };

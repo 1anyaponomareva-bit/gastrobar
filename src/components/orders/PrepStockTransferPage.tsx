@@ -45,6 +45,7 @@ export function PrepStockTransferPage({ transferId }: { transferId: string }) {
             note: item.note || undefined,
             noWarehouse: item.noWarehouse,
             packSize: item.packSize && item.packSize > 1 ? item.packSize : undefined,
+            packType: item.packType || undefined,
           })),
         );
       }

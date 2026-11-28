@@ -13,9 +13,11 @@ import {
   combinePackQty,
   evaluateStaffStock,
   formatPackQty,
+  formatPackRule,
   staffStockLabel,
   staffStockNote,
   staffStockPackSize,
+  staffStockPackType,
   staffStockUnit,
   splitPackQty,
   type StaffStockItem,
@@ -71,7 +73,7 @@ function formatPcs(value: number, pcsLabel: string, item?: StaffStockItem): stri
   const total = Math.max(0, Math.round(Number(value) || 0));
   const packSize = item ? staffStockPackSize(item) : null;
   if (packSize) {
-    const parts = formatPackQty(total, packSize);
+    const parts = formatPackQty(total, packSize, staffStockPackType(item!));
     return `${fmtQty(total)} ${pcsLabel} · ${parts}`;
   }
   return `${fmtQty(total)} ${pcsLabel}`;
@@ -125,6 +127,7 @@ export function PrepStockPage() {
           note: item.note || undefined,
           noWarehouse: item.noWarehouse,
           packSize: item.packSize && item.packSize > 1 ? item.packSize : undefined,
+          packType: item.packType || undefined,
         })),
       );
     } catch (err) {
@@ -431,7 +434,7 @@ export function PrepStockPage() {
 
               {staffStockPackSize(item) ? (
                 <p className="orders-prepStockMoveHint">
-                  {t("prep_stock_pack_size_line").replace("{size}", String(staffStockPackSize(item)))}
+                  {formatPackRule(staffStockPackSize(item)!, staffStockPackType(item))}
                 </p>
               ) : null}
               <p className="orders-prepStockMoveHint">{t("prep_stock_move_hint_v2")}</p>
@@ -501,13 +504,10 @@ export function PrepStockPage() {
             {staffStockPackSize(dialog.item) ? (
               <>
                 <p className="orders-prepStockModalHint">
-                  {t("prep_stock_pack_size_line").replace(
-                    "{size}",
-                    String(staffStockPackSize(dialog.item)),
-                  )}
+                  {formatPackRule(staffStockPackSize(dialog.item)!, staffStockPackType(dialog.item))}
                 </p>
                 <label>
-                  <span>{t("prep_stock_packs")}</span>
+                  <span>{staffStockPackType(dialog.item)}</span>
                   <input
                     inputMode="numeric"
                     autoFocus
@@ -531,14 +531,23 @@ export function PrepStockPage() {
                 </label>
                 <p className="orders-prepStockModalHint">
                   {t("prep_stock_total")}:{" "}
-                  {fmtQty(
+                  {formatPackQty(
+                    combinePackQty(
+                      parseLooseNumber(dialogPacks || "0") || 0,
+                      parseLooseNumber(dialogLoosePcs || "0") || 0,
+                      staffStockPackSize(dialog.item)!,
+                    ),
+                    staffStockPackSize(dialog.item)!,
+                    staffStockPackType(dialog.item),
+                  )}{" "}
+                  ({fmtQty(
                     combinePackQty(
                       parseLooseNumber(dialogPacks || "0") || 0,
                       parseLooseNumber(dialogLoosePcs || "0") || 0,
                       staffStockPackSize(dialog.item)!,
                     ),
                   )}{" "}
-                  {pcsLabel}
+                  {pcsLabel})
                 </p>
               </>
             ) : (
