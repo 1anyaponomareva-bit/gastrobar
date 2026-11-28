@@ -37,7 +37,7 @@ import {
   type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
 import { localizePackType, splitPackAndLoose } from "@/lib/erp/orderPackaging";
-import { formatVietnamDate } from "@/lib/orders/datetime";
+import { formatVietnamDateTime } from "@/lib/orders/datetime";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -450,7 +450,7 @@ export function PrepStockPage() {
           const bal = balances[item.id] ?? { kitchen: 0, warehouse: 0, total: 0, changedAt: null };
           const busy = busyItem === item.id;
           const changedLabel = bal.changedAt
-            ? t("prep_stock_changed_at", { date: formatVietnamDate(bal.changedAt) })
+            ? t("prep_stock_changed_at", { date: formatVietnamDateTime(bal.changedAt) })
             : t("prep_stock_changed_at_empty");
           return (
             <div key={item.id} className="orders-prepStockCard">
