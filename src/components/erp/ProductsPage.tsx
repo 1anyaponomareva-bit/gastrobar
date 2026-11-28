@@ -446,7 +446,11 @@ function ProductEditor({
           },
           order_pack_type: order_pack_type.trim() || null,
           order_pack_content_qty: order_pack_content_qty,
-          order_pack_content_unit: order_pack_content_unit.trim() || null,
+          order_pack_content_unit:
+            order_pack_content_unit.trim() ||
+            (order_pack_content_qty != null && order_pack_content_qty > 0
+              ? String(unit || product?.base_unit || "").trim() || null
+              : null),
         },
       },
       isNew ? T("Продукт создан", "Product created", "Đã tạo sản phẩm") : T("Изменения сохранены", "Changes saved", "Đã lưu thay đổi"),

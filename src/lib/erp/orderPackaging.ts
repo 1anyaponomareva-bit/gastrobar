@@ -6,15 +6,42 @@ export type OrderPackaging = {
   contentUnit: string;
 };
 
+/** bag / pack / túi → readable word for the active Orders locale. */
+export function localizePackType(raw: string | null | undefined, lang: string): string {
+  const key = String(raw || "").trim().toLowerCase();
+  if (!key) {
+    if (lang === "ru") return "пакет";
+    if (lang === "vn") return "túi";
+    return "pack";
+  }
+  if (key === "bag" || key === "пакет" || key === "пакеты" || key === "túi" || key === "tui") {
+    if (lang === "ru") return "пакет";
+    if (lang === "vn") return "túi";
+    return "bag";
+  }
+  if (key === "pack" || key === "packs" || key === "упаковка") {
+    if (lang === "ru") return "пакет";
+    if (lang === "vn") return "pack";
+    return "pack";
+  }
+  return String(raw || "").trim();
+}
+
 export function parseOrderPackaging(product: {
   order_pack_type?: string | null;
-  order_pack_content_qty?: number | null;
+  order_pack_content_qty?: number | string | null;
   order_pack_content_unit?: string | null;
 }): OrderPackaging {
-  const qty = product.order_pack_content_qty;
+  const raw = product.order_pack_content_qty;
+  const qty =
+    typeof raw === "number"
+      ? raw
+      : raw === null || raw === undefined || raw === ""
+        ? NaN
+        : Number(String(raw).trim().replace(",", "."));
   return {
     type: String(product.order_pack_type || "").trim(),
-    contentQty: typeof qty === "number" && Number.isFinite(qty) && qty > 0 ? qty : null,
+    contentQty: Number.isFinite(qty) && qty > 0 ? qty : null,
     contentUnit: String(product.order_pack_content_unit || "").trim(),
   };
 }

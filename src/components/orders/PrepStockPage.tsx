@@ -36,6 +36,7 @@ import {
   type PrepStockMoveType,
   type PrepStockTransferRow,
 } from "@/lib/orders/prepStockApi";
+import { localizePackType } from "@/lib/erp/orderPackaging";
 import {
   getStoredDate,
   getStoredEmployee,
@@ -75,11 +76,11 @@ function unitLabel(item: StaffStockItem | undefined, pcsLabel: string): string {
   return item.purchaseUnit || item.baseUnit || pcsLabel;
 }
 
-function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem): string {
+function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem, lang = "en"): string {
   const packSize = item ? staffStockPackSize(item) : null;
   if (packSize) {
     const total = Math.max(0, Math.round(Number(value) || 0));
-    const parts = formatPackQty(total, packSize, staffStockPackType(item!));
+    const parts = formatPackQty(total, packSize, localizePackType(staffStockPackType(item!), lang));
     return `${fmtQty(total)} ${pcsLabel} · ${parts}`;
   }
   const qty = Number(value) || 0;
@@ -89,6 +90,10 @@ function formatBalance(value: number, pcsLabel: string, item?: StaffStockItem): 
 
 function isIngredientPurchase(item: StaffStockItem): boolean {
   return item.productType !== "semi_finished" && Boolean(item.purchaseQtyBase && item.purchaseQtyBase > 0);
+}
+
+function ingredientPackWord(item: StaffStockItem, lang: string): string {
+  return localizePackType(item.purchasePackLabel || "pack", lang);
 }
 
 function parseLooseNumber(raw: string): number {
@@ -439,7 +444,7 @@ export function PrepStockPage() {
                   }
                 >
                   <span>PREP</span>
-                  <strong>{formatBalance(bal.kitchen, pcsLabel, item)}</strong>
+                  <strong>{formatBalance(bal.kitchen, pcsLabel, item, lang)}</strong>
                   <em>{t("prep_stock_tap_edit")}</em>
                 </button>
                 {item.noWarehouse ? null : (
@@ -455,23 +460,26 @@ export function PrepStockPage() {
                     }
                   >
                     <span>WAREHOUSE</span>
-                    <strong>{formatBalance(bal.warehouse, pcsLabel, item)}</strong>
+                    <strong>{formatBalance(bal.warehouse, pcsLabel, item, lang)}</strong>
                     <em>{t("prep_stock_tap_edit")}</em>
                   </button>
                 )}
                 <div className="orders-prepStockBal total">
                   <span>{t("prep_stock_total")}</span>
-                  <strong>{formatBalance(bal.total, pcsLabel, item)}</strong>
+                  <strong>{formatBalance(bal.total, pcsLabel, item, lang)}</strong>
                 </div>
               </div>
 
               {staffStockPackSize(item) ? (
-                <p className="orders-prepStockMoveHint">
-                  {formatPackRule(staffStockPackSize(item)!, staffStockPackType(item))}
+                <p className="orders-prepStockMoveHint orders-packHintStrong">
+                  {formatPackRule(
+                    staffStockPackSize(item)!,
+                    localizePackType(staffStockPackType(item), lang),
+                  )}
                 </p>
               ) : isIngredientPurchase(item) ? (
-                <p className="orders-prepStockMoveHint">
-                  1 {item.purchasePackLabel || "pack"} = {fmtQty(item.purchaseQtyBase!)}{" "}
+                <p className="orders-prepStockMoveHint orders-packHintStrong">
+                  1 {ingredientPackWord(item, lang)} = {fmtQty(item.purchaseQtyBase!)}{" "}
                   {item.purchaseUnit || item.baseUnit || ""}
                 </p>
               ) : null}
@@ -537,17 +545,24 @@ export function PrepStockPage() {
             <p className="orders-prepStockModalHint">
               {dialog.moveType === "to_warehouse" || dialog.moveType === "to_kitchen"
                 ? t("prep_stock_transfer_create_hint")
-                : dialog.mode === "set"
-                  ? t("prep_stock_set_hint")
-                  : t("prep_stock_add_hint")}
+                : isIngredientPurchase(dialog.item)
+                  ? dialog.mode === "set"
+                    ? t("prep_stock_set_hint_packs")
+                    : t("prep_stock_add_hint_packs")
+                  : dialog.mode === "set"
+                    ? t("prep_stock_set_hint")
+                    : t("prep_stock_add_hint")}
             </p>
             {staffStockPackSize(dialog.item) ? (
               <>
-                <p className="orders-prepStockModalHint">
-                  {formatPackRule(staffStockPackSize(dialog.item)!, staffStockPackType(dialog.item))}
+                <p className="orders-prepStockModalHint orders-packHintStrong">
+                  {formatPackRule(
+                    staffStockPackSize(dialog.item)!,
+                    localizePackType(staffStockPackType(dialog.item), lang),
+                  )}
                 </p>
                 <label>
-                  <span>{staffStockPackType(dialog.item)}</span>
+                  <span>{localizePackType(staffStockPackType(dialog.item), lang)}</span>
                   <input
                     inputMode="numeric"
                     autoFocus
@@ -578,7 +593,7 @@ export function PrepStockPage() {
                       staffStockPackSize(dialog.item)!,
                     ),
                     staffStockPackSize(dialog.item)!,
-                    staffStockPackType(dialog.item),
+                    localizePackType(staffStockPackType(dialog.item), lang),
                   )}{" "}
                   ({fmtQty(
                     combinePackQty(
@@ -592,12 +607,12 @@ export function PrepStockPage() {
               </>
             ) : isIngredientPurchase(dialog.item) ? (
               <>
-                <p className="orders-prepStockModalHint">
-                  1 {dialog.item.purchasePackLabel || "pack"} = {fmtQty(dialog.item.purchaseQtyBase!)}{" "}
+                <p className="orders-prepStockModalHint orders-packHintStrong">
+                  1 {ingredientPackWord(dialog.item, lang)} = {fmtQty(dialog.item.purchaseQtyBase!)}{" "}
                   {dialog.item.purchaseUnit || dialog.item.baseUnit || ""}
                 </p>
                 <label>
-                  <span>{dialog.item.purchasePackLabel || t("order_packing_packs")}</span>
+                  <span>{ingredientPackWord(dialog.item, lang)}</span>
                   <input
                     inputMode="decimal"
                     autoFocus

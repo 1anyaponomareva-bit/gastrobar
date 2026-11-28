@@ -578,6 +578,12 @@
   overflow-wrap: anywhere;
 }
 
+.orders-packHintStrong {
+  color: #1d1d1b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .orders-mode {
   display: flex;
   justify-content: space-between;
@@ -1448,6 +1454,11 @@ button.orders-prepStockBal.tap:active {
   font-weight: 700;
   color: var(--orders-muted);
   line-height: 1.35;
+}
+
+.orders-prepStockMoveHint.orders-packHintStrong {
+  font-size: 13px;
+  color: #1d1d1b;
 }
 
 .orders-prepStockMoves {

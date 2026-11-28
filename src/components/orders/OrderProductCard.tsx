@@ -3,6 +3,7 @@
 import {
   formatOrderPackagingLine,
   formatOrderPackTotal,
+  localizePackType,
   parseOrderPackaging,
 } from "@/lib/erp/orderPackaging";
 import { productDisplayName } from "@/lib/erp/productName";
@@ -72,11 +73,16 @@ export function OrderProductCard({
       ? Math.round(packCount * (cardPack.contentQty as number) * 1000) / 1000
       : null;
 
+  const packWord = localizePackType(cardPack.type || "pack", lang);
+
   // Semi-finished: show bag packing line + packs+content total.
   const packingLine = isSemi
-    ? formatOrderPackagingLine(cardPack, { packing: t("order_packing_label"), per: "/" })
+    ? formatOrderPackagingLine(
+        { ...cardPack, type: packWord },
+        { packing: t("order_packing_label"), per: "/" },
+      )
     : hasCardMultiplier
-      ? `${t("order_packing_label")}: 1 ${cardPack.type || "pack"} = ${fmtAmount(cardPack.contentQty!)} ${cardUnit}`
+      ? `${t("order_packing_label")}: 1 ${packWord} = ${fmtAmount(cardPack.contentQty!)} ${cardUnit}`
       : null;
 
   const erpTotal =
@@ -96,9 +102,9 @@ export function OrderProductCard({
       : null;
 
   const unit = hasCardMultiplier
-    ? cardPack.type || "pack"
+    ? packWord
     : isSemi
-      ? cardPack.type || (pack ? orderPackUnit(pack, product.unit) : product.unit)
+      ? packWord || (pack ? orderPackUnit(pack, product.unit) : product.unit)
       : pack
         ? orderPackUnit(pack, product.unit)
         : product.unit;
@@ -114,7 +120,7 @@ export function OrderProductCard({
     <div className={`orders-card ${marked ? "marked" : ""}`}>
       <div className="orders-name">{productDisplayName({ locale: lang, nameEn: product.nameEn, nameVn: product.nameVn })}</div>
       {details ? <div className="orders-meta">{details}</div> : null}
-      {packingLine ? <div className="orders-packHint">{packingLine}</div> : null}
+      {packingLine ? <div className="orders-packHint orders-packHintStrong">{packingLine}</div> : null}
       {product.packs.length > 1 && !hasCardMultiplier ? (
         <div className="orders-field" style={{ margin: "8px 0" }}>
           <label>{packLabel}</label>
